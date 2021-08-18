@@ -18,8 +18,8 @@ std::vector<float> loadWavFx(const char* path) {
 
   std::vector<float> wavData;
   if (bytesRead > 0) {
-    static const uint16_t BUFFER_SIZE = 4096;
-    uint16_t* buffer = new uint16_t[BUFFER_SIZE];
+    static const int16_t BUFFER_SIZE = 4096;
+    int16_t* buffer = new int16_t[BUFFER_SIZE];
 
     bytesRead = fread(
         buffer,
@@ -28,7 +28,7 @@ std::vector<float> loadWavFx(const char* path) {
         file);
     while (bytesRead > 0) {
       for (int i = 0; i < bytesRead; i++) {
-        wavData.push_back(buffer[i] / 32767.0);
+        wavData.push_back(static_cast<float>(buffer[i]) / 32767.0);
       }
       bytesRead = fread(
           buffer,
