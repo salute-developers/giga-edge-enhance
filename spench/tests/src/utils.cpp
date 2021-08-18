@@ -1,6 +1,7 @@
-#include "utils.h"
+#include "tests/src/utils.h"
 #include <vector>
 #include <string>
+#include <algorithm>
 #include <cmath>
 #include <catch.hpp>
 
@@ -24,8 +25,7 @@ std::vector<float> loadWavFx(const char* path) {
         buffer,
         sizeof buffer[0],
         BUFFER_SIZE / (sizeof buffer[0]),
-        file
-    );
+        file);
     while (bytesRead > 0) {
       for (int i = 0; i < bytesRead; i++) {
         wavData.push_back(buffer[i] / 32767.0);
@@ -34,8 +34,7 @@ std::vector<float> loadWavFx(const char* path) {
           buffer,
           sizeof buffer[0],
           BUFFER_SIZE / (sizeof buffer[0]),
-          file
-      );
+          file);
     }
 
     delete [] buffer;

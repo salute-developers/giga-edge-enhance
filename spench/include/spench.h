@@ -11,7 +11,7 @@ namespace spench {
 class AudioDenoise {
  public:
     void                            Reset();
-    void                            Finalize() {return;};
+    void                            Finalize() {return;}
     std::vector<float>              ProcessChunk(const std::vector<int16_t>);
     std::vector<float>              ProcessChunk(const std::vector<float>);
 

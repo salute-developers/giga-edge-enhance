@@ -7,19 +7,19 @@
 
 typedef struct WAV_HEADER {
   uint8_t RIFF[4];
-  uint32_t chunkSize; // RIFF Chunk Size
+  uint32_t chunkSize;  // RIFF Chunk Size
   uint8_t WAVE[4];
   uint8_t fmt[4];
-  uint32_t subchunk1Size; // Size of the fmt chunk
-  uint16_t audioFormat; // must be 1 (PCM)
+  uint32_t subchunk1Size;  // Size of the fmt chunk
+  uint16_t audioFormat;  // must be 1 (PCM)
   uint16_t numOfChan;
   uint32_t sampleRate;
-  uint32_t bytesPerSec; // bytes per second
+  uint32_t bytesPerSec;  // bytes per second
   uint16_t blockAlign;
   uint16_t bitsPerSample;
   /* "data" sub-chunk */
-  uint8_t subchunk2ID[4]; // "data"
-  uint32_t subchunk2Size; // Sampled data length
+  uint8_t subchunk2ID[4];  // "data"
+  uint32_t subchunk2Size;  // Sampled data length
 } WavHeader;
 
 template <typename InputType, typename OutputType>
