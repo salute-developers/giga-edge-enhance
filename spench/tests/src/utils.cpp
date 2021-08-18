@@ -14,7 +14,6 @@ std::vector<float> loadWavFx(const char* path) {
 
   WavHeader header;
   int bytesRead = fread(&header, 1, 44, file);
-  // int bytesRead = fread(header, 1, 44, file);
 
   std::vector<float> wavData;
   if (bytesRead > 0) {
@@ -29,10 +28,8 @@ std::vector<float> loadWavFx(const char* path) {
     );
     while (bytesRead > 0) {
       for (int i = 0; i < bytesRead; i++) {
-        // std::cout << buffer[i] << " | " << buffer[i] / 32767.0 << " ";
         wavData.push_back(buffer[i] / 32767.0);
       }
-      // std::cout << std::endl;
       bytesRead = fread(
           buffer,
           sizeof buffer[0],
