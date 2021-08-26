@@ -52,3 +52,27 @@ void IsVectorsClose(const std::vector<float>& v1, const std::vector<float>& v2, 
     REQUIRE(v1[i] == Approx(v2[i]).margin(eps));
   }
 }
+
+std::vector<std::vector<float>> chunkWav(const std::vector<float>& wav, int sample_rate, int chunk_size_ms) {
+  std::vector<std::vector<float>> chunks;
+  size_t step_size_samples = (sample_rate * chunk_size_ms) / 1000;
+
+  if (step_size_samples > wav.size()) {
+    return {wav};
+  }
+
+  size_t num_steps = (wav.size() + step_size_samples - 1) / step_size_samples;
+  chunks.reserve(num_steps);
+  for (size_t step = 0; step < num_steps; ++step) {
+    std::vector<float> wav_chunk(wav.begin() + step * step_size_samples,
+                                 wav.begin() + std::min((step + 1) * step_size_samples, wav.size()));
+
+    // padding
+    if (wav_chunk.size() < step_size_samples) {
+      std::vector<float> zeroes(step_size_samples - wav_chunk.size(), 0.0);
+      wav_chunk.insert(wav_chunk.end(), zeroes.begin(), zeroes.end());
+    }
+    chunks.push_back(wav_chunk);
+  }
+  return chunks;
+}

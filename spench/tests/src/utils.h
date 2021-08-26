@@ -54,3 +54,5 @@ void SaveVectorToBinaryFile(const std::string& fname, const std::vector<InputTyp
 std::vector<float> loadWavFx(const char* path);
 
 void IsVectorsClose(const std::vector<float>& v1, const std::vector<float>& v2, float eps);
+
+std::vector<std::vector<float>> chunkWav(const std::vector<float>& wav, int sample_rate, int chunk_size_ms);
