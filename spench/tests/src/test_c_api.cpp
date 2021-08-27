@@ -23,46 +23,48 @@ struct TestCAPI {
 };
 
 
-// TEST_CASE("Two Infers a tensors with ones with reset and via C API", "[spench]") {
-//   auto data = std::move(TestCAPI()
-//       .InitModel());
-//   std::vector<float> predictions;
-//   int16_t ones[480] = {32767};
+TEST_CASE("Run inferense twise with const values and with reset via C API", "[spench]") {
+  auto data = std::move(TestCAPI()
+      .InitModel());
+  std::vector<int16_t> predictions;
+  int16_t const_input[480];
+  std::fill_n(const_input, 480, 300);
+  int32_t ret_size = 0;
 
-//   int32_t ret_size = 0;
-//   const std::vector<float>& reference_prediction =
-//                       LoadVectorFromBinaryFile<float, float>("data/results/ones_enhanced.raw");
-//   for (int16_t chunk = 0; chunk < 5; ++chunk) {
-//     unsigned char* ret = NULL;
-//     SpenchWrapperAddChunk(data.denoiser,
-//                           (const unsigned char*)(*(&ones)),
-//                           sizeof(ones) / sizeof(ones[0]),
-//                           &ret,
-//                           &ret_size);
-//     int16_t* pred = reinterpret_cast<int16_t*>(ret);
-//     predictions.insert(predictions.end(), pred, pred+ret_size/2);
-//     free(ret);
-//     ret = NULL;
-//   }
+  const std::vector<int16_t>& reference_prediction =
+                      LoadVectorFromBinaryFile<int16_t, int16_t>("data/results/dummy_enhanced.raw");
+  for (int16_t chunk = 0; chunk < 5; ++chunk) {
+    unsigned char* ret = NULL;
+    SpenchWrapperAddChunk(data.denoiser,
+                          (const unsigned char*) const_input,
+                          sizeof(const_input) / sizeof(const_input[0]),
+                          &ret,
+                          &ret_size);
+    int16_t* pred = reinterpret_cast<int16_t*>(ret);
+    std::vector<int16_t>  tmp_preds(pred, pred + ret_size / 2);
+    predictions.insert(predictions.end(), pred, pred + ret_size / 2);
+    free(ret);
+    ret = NULL;
+  }
 
-//   // IsVectorsClose(reference_prediction, predictions, 0.001);
+  IsVectorsClose(reference_prediction, predictions, 1.0);
 
-//   SpenchWrapperReset(data.denoiser);
-//   predictions.clear();
+  SpenchWrapperReset(data.denoiser);
+  predictions.clear();
 
-//   for (int16_t chunk = 0; chunk < 5; ++chunk) {
-//     unsigned char* ret = NULL;
-//     SpenchWrapperAddChunk(data.denoiser,
-//                           (const unsigned char*)(*(&ones)),
-//                           sizeof(ones) / sizeof(ones[0]),
-//                           &ret,
-//                           &ret_size);
-//     int16_t* pred = reinterpret_cast<int16_t*>(ret);
-//     predictions.insert(predictions.end(), pred, pred+ret_size/2);
-//     free(ret);
-//     ret = NULL;
-//   }
-//   // IsVectorsClose(reference_prediction, predictions, 0.001);
+  for (int16_t chunk = 0; chunk < 5; ++chunk) {
+    unsigned char* ret = NULL;
+    SpenchWrapperAddChunk(data.denoiser,
+                          (const unsigned char*) const_input,
+                          sizeof(const_input) / sizeof(const_input[0]),
+                          &ret,
+                          &ret_size);
+    int16_t* pred = reinterpret_cast<int16_t*>(ret);
+    predictions.insert(predictions.end(), pred, pred + ret_size / 2);
+    free(ret);
+    ret = NULL;
+  }
+  IsVectorsClose(reference_prediction, predictions, 1.0);
 
-//   SpenchWrapperFree(data.denoiser);
-// }
+  SpenchWrapperFree(data.denoiser);
+}
