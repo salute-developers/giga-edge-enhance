@@ -51,8 +51,10 @@ void SaveVectorToBinaryFile(const std::string& fname, const std::vector<InputTyp
   f.write(reinterpret_cast<const char*>(data.data()), sizeof(InputType) * data.size());
 }
 
-std::vector<float> loadWavFx(const char* path);
+void loadWavFx(const char* path, std::vector<float>&);
+void loadWavFx(const char* path, std::vector<int16_t>&);
 
 void IsVectorsClose(const std::vector<float>& v1, const std::vector<float>& v2, float eps);
+void IsVectorsClose(const std::vector<int16_t>& v1, const std::vector<int16_t>& v2, float eps);
 
-std::vector<std::vector<float>> chunkWav(const std::vector<float>& wav, int sample_rate, int chunk_size_ms);
+std::vector<std::vector<int16_t>> chunkWav(const std::vector<int16_t>& wav, int sample_rate, int chunk_size_ms);

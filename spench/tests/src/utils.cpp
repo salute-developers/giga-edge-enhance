@@ -6,7 +6,17 @@
 #include <catch.hpp>
 
 
-std::vector<float> loadWavFx(const char* path) {
+void loadWavFx(const char* path, std::vector<float>& wavData) {
+  std::vector<int16_t> pcm16;
+  wavData.clear();
+  loadWavFx(path, pcm16);
+  std::for_each(pcm16.begin(), pcm16.end(),
+                [&wavData](int16_t const & item) {
+                    wavData.push_back(static_cast<float>(item));
+                                                        });
+}
+
+void loadWavFx(const char* path, std::vector<int16_t>& wavData) {
   FILE* file = fopen(path, "r");
   if (file == nullptr) {
     std::string errorMsg = "Can't open file: " + std::string(path);
@@ -16,7 +26,7 @@ std::vector<float> loadWavFx(const char* path) {
   WavHeader header;
   int bytesRead = fread(&header, 1, 44, file);
 
-  std::vector<float> wavData;
+  wavData.clear();
   if (bytesRead > 0) {
     static const int16_t BUFFER_SIZE = 4096;
     int16_t* buffer = new int16_t[BUFFER_SIZE];
@@ -28,7 +38,7 @@ std::vector<float> loadWavFx(const char* path) {
         file);
     while (bytesRead > 0) {
       for (int i = 0; i < bytesRead; i++) {
-        wavData.push_back(static_cast<float>(buffer[i]) / 32767.0);
+        wavData.push_back(buffer[i]);
       }
       bytesRead = fread(
           buffer,
@@ -42,19 +52,34 @@ std::vector<float> loadWavFx(const char* path) {
   }
 
   fclose(file);
-  return wavData;
 }
 
 void IsVectorsClose(const std::vector<float>& v1, const std::vector<float>& v2, float eps) {
   size_t num_samples = std::min(v1.size(), v2.size());
+  REQUIRE(v1.size() == v2.size());
   for (size_t i = 0; i < num_samples; ++i) {
     CAPTURE(i);
     REQUIRE(v1[i] == Approx(v2[i]).margin(eps));
   }
 }
 
-std::vector<std::vector<float>> chunkWav(const std::vector<float>& wav, int sample_rate, int chunk_size_ms) {
-  std::vector<std::vector<float>> chunks;
+void IsVectorsClose(const std::vector<int16_t>& v1, const std::vector<int16_t>& v2, float eps) {
+  std::vector<float> v1_float;
+  std::vector<float> v2_float;
+
+  std::for_each(v1.begin(), v1.end(),
+                [&v1_float](int16_t const & item) {
+                    v1_float.push_back(static_cast<float>(item));
+                                                        });
+  std::for_each(v2.begin(), v2.end(),
+                [&v2_float](int16_t const & item) {
+                    v2_float.push_back(static_cast<int16_t>(item));
+                                                        });
+  IsVectorsClose(v1_float, v2_float, eps);
+}
+
+std::vector<std::vector<int16_t>> chunkWav(const std::vector<int16_t>& wav, int sample_rate, int chunk_size_ms) {
+  std::vector<std::vector<int16_t>> chunks;
   size_t step_size_samples = (sample_rate * chunk_size_ms) / 1000;
 
   if (step_size_samples > wav.size()) {
@@ -64,12 +89,12 @@ std::vector<std::vector<float>> chunkWav(const std::vector<float>& wav, int samp
   size_t num_steps = (wav.size() + step_size_samples - 1) / step_size_samples;
   chunks.reserve(num_steps);
   for (size_t step = 0; step < num_steps; ++step) {
-    std::vector<float> wav_chunk(wav.begin() + step * step_size_samples,
+    std::vector<int16_t> wav_chunk(wav.begin() + step * step_size_samples,
                                  wav.begin() + std::min((step + 1) * step_size_samples, wav.size()));
 
     // padding
     if (wav_chunk.size() < step_size_samples) {
-      std::vector<float> zeroes(step_size_samples - wav_chunk.size(), 0.0);
+      std::vector<int16_t> zeroes(step_size_samples - wav_chunk.size(), 0);
       wav_chunk.insert(wav_chunk.end(), zeroes.begin(), zeroes.end());
     }
     chunks.push_back(wav_chunk);
