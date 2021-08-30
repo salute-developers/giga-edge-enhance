@@ -12,8 +12,8 @@ class AudioDenoise {
  public:
     void                            Reset();
     void                            Finalize() {return;}
-    std::vector<int16_t>            ProcessChunk(const std::vector<int16_t>);
-    std::vector<float>              ProcessChunk(const std::vector<float>);
+    void                            ProcessChunk(const std::vector<int16_t>, std::vector<int16_t>&);
+    void                            ProcessChunk(const std::vector<float>, std::vector<float>&);
 
                                     AudioDenoise();
                                     ~AudioDenoise();
