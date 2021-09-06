@@ -10,8 +10,7 @@ namespace spench {
 
 class AudioDenoise {
  public:
-    void                            Reset();
-    void                            Finalize() {return;}
+    int16_t                         Reset();
     void                            ProcessChunk(const std::vector<int16_t>, std::vector<int16_t>&);
     void                            ProcessChunk(const std::vector<float>, std::vector<float>&);
 
@@ -24,6 +23,7 @@ class AudioDenoise {
     const uint16_t                  _frame_size = 480;
     const std::vector<float>        _init_infer_input;
     void                            warmUp();
+    void                            Finalize();
     void                            convertToPCM16(const std::vector<float>& input, std::vector<int16_t>& output);
     void                            convertToFloat32(const std::vector<int16_t>& input, std::vector<float>& output);
 };

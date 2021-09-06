@@ -37,7 +37,7 @@ TEST_CASE("Run inferense twise with const values and with reset via C API", "[sp
     unsigned char* ret = NULL;
     ret_code = SpenchWrapperProcessChunk(data.denoiser,
                           (const unsigned char*) const_input,
-                          sizeof(const_input) / sizeof(const_input[0]),
+                          sizeof(const_input),
                           &ret,
                           &ret_size);
     REQUIRE(ret_code == SPENCH_RET_SUC);
@@ -57,7 +57,7 @@ TEST_CASE("Run inferense twise with const values and with reset via C API", "[sp
     unsigned char* ret = NULL;
     ret_code = SpenchWrapperProcessChunk(data.denoiser,
                           (const unsigned char*) const_input,
-                          sizeof(const_input) / sizeof(const_input[0]),
+                          sizeof(const_input),
                           &ret,
                           &ret_size);
     REQUIRE(ret_code == SPENCH_RET_SUC);
@@ -87,7 +87,7 @@ TEST_CASE("Run inferense with invalid chunk size via C API", "[spench]") {
   int32_t ret_size = 0;
   ret_code = SpenchWrapperProcessChunk(data.denoiser,
                           (const unsigned char*) const_input1,
-                          sizeof(const_input1) / sizeof(const_input1[0]),
+                          sizeof(const_input1),
                           &ret,
                           &ret_size);
   REQUIRE(ret_code == SPENCH_RET_ERR_INVALID_CHUNK_SIZE);
@@ -95,7 +95,7 @@ TEST_CASE("Run inferense with invalid chunk size via C API", "[spench]") {
   SpenchWrapperReset(data.denoiser);
   ret_code = SpenchWrapperProcessChunk(data.denoiser,
                           (const unsigned char*) const_input2,
-                          sizeof(const_input2) / sizeof(const_input2[0]),
+                          sizeof(const_input2),
                           &ret,
                           &ret_size);
   REQUIRE(ret_code == SPENCH_RET_ERR_INVALID_CHUNK_SIZE);
