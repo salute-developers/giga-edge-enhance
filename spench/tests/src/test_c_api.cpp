@@ -2,6 +2,7 @@
 #include <catch.hpp>
 #include "include/spench_c_wrapper.h"
 #include "tests/src/utils.h"
+#include <chrono>
 
 struct TestCAPI {
   std::vector<int16_t> wav_data;
@@ -99,5 +100,46 @@ TEST_CASE("Run inferense with invalid chunk size via C API", "[spench]") {
                           &ret,
                           &ret_size);
   REQUIRE(ret_code == SPENCH_RET_ERR_INVALID_CHUNK_SIZE);
+  SpenchWrapperFree(data.denoiser);
+}
+
+
+TEST_CASE("Run inference on wav and compare inference time with ideal", "[spench]"){
+  auto data = std::move(TestCAPI()
+    .InitModel().SetWav("test1_48_noised.wav"));
+
+  // average and max inference time in nano seconds for 10ms chunk
+  uint32_t avg_upperbound = 1000000; // on reference hardware it is 574586
+  uint32_t max_upperbound = 2000000; // on reference hardware it is 636667
+
+  uint16_t chunk_size = 10;
+  auto chunks = chunkWav(data.wav_data, 48000, chunk_size);
+  unsigned char* ret = NULL;
+  int32_t ret_size = 0;
+
+  std::vector<uint32_t> stat;
+
+  for (auto& chunk : chunks) {
+    auto start = std::chrono::high_resolution_clock::now();
+    SpenchWrapperProcessChunk(data.denoiser,
+                            (const unsigned char*) chunk.data(),
+                            chunk.size() * 2,
+                            &ret,
+                            &ret_size);
+    auto end = std::chrono::high_resolution_clock::now();
+    uint32_t duration = (end - start).count();
+    stat.push_back(duration);
+  }
+
+  uint32_t sum = std::accumulate(stat.begin(), stat.end(), 0);
+  uint32_t avg_meausred = sum / stat.size();
+  uint32_t max_meausred = *max_element(stat.begin(), stat.end());
+
+  std::cout << "avg_meausred: " << avg_meausred << " ns" << std::endl;
+  std::cout << "max_meausred: " << max_meausred << " ns" << std::endl;
+
+  REQUIRE(avg_upperbound > avg_meausred);
+  REQUIRE(max_upperbound > max_meausred);
+
   SpenchWrapperFree(data.denoiser);
 }
