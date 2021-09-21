@@ -104,13 +104,13 @@ TEST_CASE("Run inferense with invalid chunk size via C API", "[spench]") {
 }
 
 
-TEST_CASE("Run inference on wav and compare inference time with ideal", "[spench]"){
+TEST_CASE("Run inference on wav and compare inference time with threshold", "[spench]"){
   auto data = std::move(TestCAPI()
     .InitModel().SetWav("test1_48_noised.wav"));
 
   // average and max inference time in nano seconds for 10ms chunk
-  uint32_t avg_upperbound = 1000000; // on reference hardware it is 574586
-  uint32_t max_upperbound = 2000000; // on reference hardware it is 636667
+  float avg_upperbound = 1.0f; // ms
+  float max_upperbound = 2.0f; // ms
 
   uint16_t chunk_size = 10;
   auto chunks = chunkWav(data.wav_data, 48000, chunk_size);
@@ -127,16 +127,15 @@ TEST_CASE("Run inference on wav and compare inference time with ideal", "[spench
                             &ret,
                             &ret_size);
     auto end = std::chrono::high_resolution_clock::now();
-    uint32_t duration = (end - start).count();
-    stat.push_back(duration);
+    stat.push_back((end - start).count());
   }
 
   uint32_t sum = std::accumulate(stat.begin(), stat.end(), 0);
-  uint32_t avg_meausred = sum / stat.size();
-  uint32_t max_meausred = *max_element(stat.begin(), stat.end());
+  float avg_meausred = (float)(sum / stat.size()) / 1000000;
+  float max_meausred = (float)(*max_element(stat.begin(), stat.end())) / 1000000;
 
-  std::cout << "avg_meausred: " << avg_meausred << " ns" << std::endl;
-  std::cout << "max_meausred: " << max_meausred << " ns" << std::endl;
+  std::cout << "avg_meausred: " << avg_meausred << " ms" << std::endl;
+  std::cout << "max_meausred: " << max_meausred << " ms" << std::endl;
 
   REQUIRE(avg_upperbound > avg_meausred);
   REQUIRE(max_upperbound > max_meausred);
