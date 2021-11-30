@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <algorithm>
 
 typedef struct WAV_HEADER {
   uint8_t RIFF[4];
@@ -51,10 +52,66 @@ void SaveVectorToBinaryFile(const std::string& fname, const std::vector<InputTyp
   f.write(reinterpret_cast<const char*>(data.data()), sizeof(InputType) * data.size());
 }
 
-void loadWavFx(const char* path, std::vector<float>&);
+void loadWavFx(const char* path, std::vector<float>&, float keepUnnorm = false);
 void loadWavFx(const char* path, std::vector<int16_t>&);
 
 void IsVectorsClose(const std::vector<float>& v1, const std::vector<float>& v2, float eps);
 void IsVectorsClose(const std::vector<int16_t>& v1, const std::vector<int16_t>& v2, float eps);
 
-std::vector<std::vector<int16_t>> chunkWav(const std::vector<int16_t>& wav, int sample_rate, int chunk_size_ms);
+template <typename InputType>
+std::vector<std::vector<InputType>> chunkWav(const std::vector<InputType>& wav,
+                                             int32_t sample_rate,
+                                             int32_t chunk_size_ms,
+                                             int32_t stride_ms) {
+  std::vector<std::vector<InputType>> chunks;
+  size_t step_size_samples = (sample_rate * chunk_size_ms) / 1000;
+  size_t hop_window_samples = (sample_rate * stride_ms) / 1000;
+
+  if (step_size_samples > wav.size()) {
+    return {wav};
+  }
+
+  size_t num_steps = (wav.size() + step_size_samples - 1) / hop_window_samples;
+  chunks.reserve(num_steps);
+  for (size_t step = 0; step < num_steps; ++step) {
+     std::vector<InputType> wav_chunk(wav.begin() + std::min(step * hop_window_samples, wav.size()),
+                                      wav.begin() + std::min(step * hop_window_samples +
+                                                                    step_size_samples, wav.size()));
+
+    // padding
+    if (wav_chunk.size() < step_size_samples) {
+      std::vector<InputType> zeroes(step_size_samples - wav_chunk.size(), 0);
+      wav_chunk.insert(wav_chunk.end(), zeroes.begin(), zeroes.end());
+    }
+    chunks.push_back(wav_chunk);
+  }
+  return chunks;
+}
+
+template <typename InputType>
+void loadBin(const char* path, uint32_t step_size_samples, std::vector<std::vector<InputType>>& output) {
+  std::ifstream ifs(path, std::ios::binary);
+
+  ifs.seekg(0, std::ios::end);
+  std::streampos fsize = ifs.tellg();
+  ifs.seekg(0, std::ios::beg);
+
+  int16_t loops = fsize / (step_size_samples * sizeof(InputType));
+  for (int16_t i = 0; i < loops; ++i) {
+    std::vector<InputType> stft_tensor(step_size_samples, 0.0);
+    ifs.read(reinterpret_cast<char*>(stft_tensor.data()), step_size_samples * sizeof(InputType));
+    output.emplace_back(stft_tensor);
+  }
+}
+
+template <typename InputType>
+void loadBin(const char* path, std::vector<InputType>& output) {
+  std::ifstream ifs(path, std::ios::binary);
+
+  ifs.seekg(0, std::ios::end);
+  std::streampos fsize = ifs.tellg();
+  ifs.seekg(0, ifs.beg);
+
+  output.resize(fsize / sizeof(InputType));
+  ifs.read(reinterpret_cast<char*>(output.data()), output.size() * sizeof(InputType));
+}

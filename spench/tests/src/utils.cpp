@@ -6,14 +6,22 @@
 #include <catch.hpp>
 
 
-void loadWavFx(const char* path, std::vector<float>& wavData) {
+void loadWavFx(const char* path, std::vector<float>& wavData, float keepUnnorm) {
   std::vector<int16_t> pcm16;
   wavData.clear();
   loadWavFx(path, pcm16);
+
   std::for_each(pcm16.begin(), pcm16.end(),
-                [&wavData](int16_t const & item) {
-                    wavData.push_back(static_cast<float>(item));
-                                                        });
+                [&wavData, keepUnnorm](int16_t const & item) {
+                    if (keepUnnorm) {
+                      wavData.push_back(static_cast<float>(item));
+                    } else {
+                      float value = (item < 0) ?
+                                    static_cast<float>(item) / 32768.0f :
+                                    static_cast<float>(item) / 32767.0f;
+                      wavData.push_back(static_cast<float>(value));
+                    }
+                });
 }
 
 void loadWavFx(const char* path, std::vector<int16_t>& wavData) {
@@ -76,28 +84,4 @@ void IsVectorsClose(const std::vector<int16_t>& v1, const std::vector<int16_t>& 
                     v2_float.push_back(static_cast<int16_t>(item));
                                                         });
   IsVectorsClose(v1_float, v2_float, eps);
-}
-
-std::vector<std::vector<int16_t>> chunkWav(const std::vector<int16_t>& wav, int sample_rate, int chunk_size_ms) {
-  std::vector<std::vector<int16_t>> chunks;
-  size_t step_size_samples = (sample_rate * chunk_size_ms) / 1000;
-
-  if (step_size_samples > wav.size()) {
-    return {wav};
-  }
-
-  size_t num_steps = (wav.size() + step_size_samples - 1) / step_size_samples;
-  chunks.reserve(num_steps);
-  for (size_t step = 0; step < num_steps; ++step) {
-    std::vector<int16_t> wav_chunk(wav.begin() + step * step_size_samples,
-                                 wav.begin() + std::min((step + 1) * step_size_samples, wav.size()));
-
-    // padding
-    if (wav_chunk.size() < step_size_samples) {
-      std::vector<int16_t> zeroes(step_size_samples - wav_chunk.size(), 0);
-      wav_chunk.insert(wav_chunk.end(), zeroes.begin(), zeroes.end());
-    }
-    chunks.push_back(wav_chunk);
-  }
-  return chunks;
 }

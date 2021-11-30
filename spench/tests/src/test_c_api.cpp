@@ -2,7 +2,7 @@
 #include <catch.hpp>
 #include "include/spench_c_wrapper.h"
 #include "tests/src/utils.h"
-#include <chrono>
+#include <chrono> // NOLINT
 
 struct TestCAPI {
   std::vector<int16_t> wav_data;
@@ -24,7 +24,7 @@ struct TestCAPI {
 };
 
 
-TEST_CASE("Run inferense twise with const values and with reset via C API", "[spench]") {
+TEST_CASE("Run inference twise with const values and with reset via C API", "[spench]") {
   auto data = std::move(TestCAPI()
       .InitModel());
   std::vector<int16_t> predictions;
@@ -73,7 +73,7 @@ TEST_CASE("Run inferense twise with const values and with reset via C API", "[sp
 }
 
 
-TEST_CASE("Run inferense with invalid chunk size via C API", "[spench]") {
+TEST_CASE("Run inference with invalid chunk size via C API", "[spench]") {
   auto data = std::move(TestCAPI()
       .InitModel());
   int16_t const_input1[481];
@@ -103,17 +103,16 @@ TEST_CASE("Run inferense with invalid chunk size via C API", "[spench]") {
   SpenchWrapperFree(data.denoiser);
 }
 
-
-TEST_CASE("Run inference on wav and compare inference time with threshold", "[spench]"){
+TEST_CASE("Run inference on wav and compare inference time with threshold", "[spench]") {
   auto data = std::move(TestCAPI()
     .InitModel().SetWav("test1_48_noised.wav"));
 
   // average and max inference time in nano seconds for 10ms chunk
-  float avg_upperbound = 1.0f; // ms
-  float max_upperbound = 2.0f; // ms
+  float avg_upperbound = 1.0f;  // ms
+  float max_upperbound = 2.0f;  // ms
 
   uint16_t chunk_size = 10;
-  auto chunks = chunkWav(data.wav_data, 48000, chunk_size);
+  auto chunks = chunkWav<int16_t>(data.wav_data, 48000, chunk_size, chunk_size);
   unsigned char* ret = NULL;
   int32_t ret_size = 0;
 
@@ -131,8 +130,8 @@ TEST_CASE("Run inference on wav and compare inference time with threshold", "[sp
   }
 
   uint32_t sum = std::accumulate(stat.begin(), stat.end(), 0);
-  float avg_meausred = (float)(sum / stat.size()) / 1000000;
-  float max_meausred = (float)(*max_element(stat.begin(), stat.end())) / 1000000;
+  float avg_meausred = static_cast<float>(sum / stat.size()) / 1000000;
+  float max_meausred = static_cast<float>(*max_element(stat.begin(), stat.end())) / 1000000;
 
   std::cout << "avg_meausred: " << avg_meausred << " ms" << std::endl;
   std::cout << "max_meausred: " << max_meausred << " ms" << std::endl;
