@@ -133,8 +133,8 @@ TEST_CASE("Run inference on wav and compare inference time with threshold", "[sp
   float avg_meausred = static_cast<float>(sum / stat.size()) / 1000000;
   float max_meausred = static_cast<float>(*max_element(stat.begin(), stat.end())) / 1000000;
 
-  std::cout << "avg_meausred: " << avg_meausred << " ms" << std::endl;
-  std::cout << "max_meausred: " << max_meausred << " ms" << std::endl;
+  std::cout << "avg_measured: " << avg_meausred << " ms" << std::endl;
+  std::cout << "max_measured: " << max_meausred << " ms" << std::endl;
 
   REQUIRE(avg_upperbound > avg_meausred);
   REQUIRE(max_upperbound > max_meausred);
