@@ -1,4 +1,9 @@
-#include "spench/feature_extractor.h"
+#define protected public
+  #define private public
+    #include "spench/feature_extractor.h"
+  #undef protected
+#undef private
+
 #include "spench/feature_params.h"
 #include <memory>
 #include <catch.hpp>
@@ -514,10 +519,7 @@ TEST_CASE("Run decompressCIRM with real input [spench]") {
   test_real_mask = std::get<0>(test_mask);
   test_imag_mask = std::get<1>(test_mask);
 
-  REQUIRE(gt_real_mask.size() != 0);
-  REQUIRE(test_real_mask.size() == gt_real_mask.size());
   IsVectorsClose(test_real_mask, gt_real_mask, 0.000001);
-  REQUIRE(test_imag_mask.size() == gt_real_mask.size());
   IsVectorsClose(test_imag_mask, gt_imag_mask, 0.000001);
 }
 
@@ -560,10 +562,7 @@ TEST_CASE("Run calcEnhancedPartsInPlace with real input [spench]") {
   std::vector<float> real = std::get<1>(test_spec);
   std::vector<float> imag = std::get<2>(test_spec);
 
-  REQUIRE(real.size() == 257);
   IsVectorsClose(real, gt_real, 0.000001);
-
-  REQUIRE(imag.size() == 257);
   IsVectorsClose(imag, gt_imag, 0.000001);
 }
 
@@ -600,7 +599,6 @@ TEST_CASE("Run cumSumNormalizeInPlace with real input [spench]") {
   feature_extractor.m_feature_extractor->cumSumNormalizeInPlace(mean_fb_stat,
                                                                 in_current_feats,
                                                                 num_freqs);
-  REQUIRE(in_current_feats.size() == gt_current_feats.size());
   IsVectorsClose(in_current_feats, gt_current_feats, 0.000001);
 }
 
@@ -610,12 +608,8 @@ TEST_CASE("Run elemWise with empty input 2 vectors [spench]") {
 
   std::vector<float> in1;
   std::vector<float> in2;
-  std::vector<float> ans;
 
-  ans = feature_extractor.m_feature_extractor->elemWise(std::plus<float>(), in1, in2);
-  REQUIRE(ans.size() == 0);
-
-  ans = feature_extractor.m_feature_extractor->elemWise(std::divides<float>(), in2, in1);
+  std::vector<float> ans = feature_extractor.m_feature_extractor->elemWise(std::plus<float>(), in1, in2);
   REQUIRE(ans.size() == 0);
 }
 
@@ -624,36 +618,37 @@ TEST_CASE("Run elemWise with empty input 1 vector and 1 scalar [spench]") {
   auto feature_extractor = std::move(TestFE().InitFE(params));
 
   std::vector<float> in1;
-  float in2;
-  std::vector<float> ans;
+  float in2 = 0;
 
-  ans = feature_extractor.m_feature_extractor->elemWise(std::plus<float>(), in1, in2);
-  REQUIRE(ans.size() == 0);
-
-  ans = feature_extractor.m_feature_extractor->elemWise(std::divides<float>(), in1, in2);
+  std::vector<float> ans = feature_extractor.m_feature_extractor->elemWise(std::plus<float>(), in1, in2);
   REQUIRE(ans.size() == 0);
 }
 
-TEST_CASE("Run elemWise with real input 2 vectors [spench]") {
+TEST_CASE("Run elemWise plus with real input 2 vectors [spench]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
 
   std::vector<float> in1{ 10.0, 20.0, 40.0 };
   std::vector<float> in2{ 1.0, 40.0, 10.0 };
-  std::vector<float> ans;
 
-  ans = feature_extractor.m_feature_extractor->elemWise(std::plus<float>(), in1, in2);
+  std::vector<float> ans = feature_extractor.m_feature_extractor->elemWise(std::plus<float>(), in1, in2);
   std::vector<float> gt{ 11.0, 60.0, 50.0 };
-  REQUIRE(ans.size() == gt.size());
-  IsVectorsClose(ans, gt, 0.0);
-
-  ans = feature_extractor.m_feature_extractor->elemWise(std::divides<float>(), in2, in1);
-  gt = { 0.1, 2.0, 0.25 };
-  REQUIRE(ans.size() == gt.size());
   IsVectorsClose(ans, gt, 0.0);
 }
 
-TEST_CASE("Run elemWise with real input 1 vector and 1 scalar [spench]") {
+TEST_CASE("Run elemWise divide with real input 2 vectors [spench]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
+  auto feature_extractor = std::move(TestFE().InitFE(params));
+
+  std::vector<float> in1{ 10.0, 20.0, 40.0 };
+  std::vector<float> in2{ 1.0, 40.0, 10.0 };
+
+  std::vector<float> ans = feature_extractor.m_feature_extractor->elemWise(std::divides<float>(), in2, in1);
+  std::vector<float> gt = { 0.1, 2.0, 0.25 };
+  IsVectorsClose(ans, gt, 0.0);
+}
+
+TEST_CASE("Run elemWise plus with real input 1 vector and 1 scalar [spench]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
 
@@ -663,12 +658,19 @@ TEST_CASE("Run elemWise with real input 1 vector and 1 scalar [spench]") {
 
   ans = feature_extractor.m_feature_extractor->elemWise(std::plus<float>(), in1, in2);
   std::vector<float> gt{ 6.0, 45.0, 15.0 };
-  REQUIRE(ans.size() == gt.size());
   IsVectorsClose(ans, gt, 0.0);
+}
+
+TEST_CASE("Run elemWise divide with real input 1 vector and 1 scalar [spench]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
+  auto feature_extractor = std::move(TestFE().InitFE(params));
+
+  std::vector<float> in1{ 1.0, 40.0, 10.0 };
+  float in2 = 5.0;
+  std::vector<float> ans;
 
   ans = feature_extractor.m_feature_extractor->elemWise(std::divides<float>(), in1, in2);
-  gt = { 0.2, 8.0, 2.0 };
-  REQUIRE(ans.size() == gt.size());
+  std::vector<float> gt = { 0.2, 8.0, 2.0 };
   IsVectorsClose(ans, gt, 0.0);
 }
 
@@ -706,8 +708,6 @@ TEST_CASE("Run sum0 with real input [spench]") {
   std::vector<float> gt_out{-4.5, -2.4, 2.13};
 
   feature_extractor.m_feature_extractor->sum0(test_in, test_out);
-
-  REQUIRE(test_out.size() == gt_out.size());
   IsVectorsClose(test_out, gt_out, 0.0);
 }
 
@@ -723,6 +723,5 @@ TEST_CASE("Run sum1 with real input [spench]") {
   std::vector<float> gt_out{4.9, -9.67};
 
   feature_extractor.m_feature_extractor->sum1(test_in, test_out);
-  REQUIRE(test_out.size() == gt_out.size());
   IsVectorsClose(test_out, gt_out, 0.0);
 }
