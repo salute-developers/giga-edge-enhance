@@ -573,8 +573,8 @@ TEST_CASE("Run cumSumNormalizeInPlace with empty input [spench]") {
   std::vector<float> empty_current_feats;
   size_t num_freqs = 257;
   feature_extractor.m_feature_extractor->cumSumNormalizeInPlace(empty_mean_fb_stat,
-                                                                empty_current_feats,
-                                                                num_freqs);
+                                                                num_freqs,
+                                                                empty_current_feats);
   REQUIRE(empty_current_feats.size() == 0);
 }
 
@@ -597,8 +597,8 @@ TEST_CASE("Run cumSumNormalizeInPlace with real input [spench]") {
                                     gt_current_feats);
 
   feature_extractor.m_feature_extractor->cumSumNormalizeInPlace(mean_fb_stat,
-                                                                in_current_feats,
-                                                                num_freqs);
+                                                                num_freqs,
+                                                                in_current_feats);
   IsVectorsClose(in_current_feats, gt_current_feats, 0.000001);
 }
 
