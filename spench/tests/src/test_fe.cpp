@@ -18,12 +18,7 @@ static spench::fe::FeatureParams DefaultSpeechFeatureParams16kHz() {
   params.sampling_freq = 16000;
   params.frame_size_ms = 32;
   params.frame_stride_ms = 16;
-  params.low_freq_filterbank = 0;
-  params.high_freq_filterbank = 8000;
-  params.zero_mean_frame = false;
   params.window_type = spench::fe::WindowType::HANNING;
-  params.normalize_gain = true;
-  params.normalize_features_across_axis_0 = true;
   params.wav_scaling = false;
   return params;
 }
