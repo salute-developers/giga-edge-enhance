@@ -56,7 +56,7 @@ struct TestOnnx {
 
 TEST_CASE("Run single dummy inference for onnx model", "[spench]") {
   auto data = std::move(TestOnnx()
-      .InitModel("our_fsn_std_16khz_1952.onnx"));
+      .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<const char*> input_names;
@@ -94,10 +94,9 @@ TEST_CASE("Run single dummy inference for onnx model", "[spench]") {
   }
 }
 
-
 TEST_CASE("Run dummy multi inference for onnx model and with one thread", "[spench]") {
   auto data = std::move(TestOnnx()
-      .InitModel("our_fsn_std_16khz_1952.onnx"));
+      .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<const char*> input_names;
@@ -142,7 +141,7 @@ TEST_CASE("Run dummy multi inference for onnx model and with one thread", "[spen
 
 TEST_CASE("Run dummy multi inference for onnx model and with two threads", "[spench]") {
   auto data = std::move(TestOnnx().SetThreadNum(2)
-      .InitModel("our_fsn_std_16khz_1952.onnx"));
+      .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<const char*> input_names;
@@ -186,7 +185,7 @@ TEST_CASE("Run dummy multi inference for onnx model and with two threads", "[spe
 
 TEST_CASE("Run dummy multi inference for onnx model and with four threads", "[spench]") {
   auto data = std::move(TestOnnx().SetThreadNum(4)
-      .InitModel("our_fsn_std_16khz_1952.onnx"));
+      .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<const char*> input_names;
@@ -227,4 +226,3 @@ TEST_CASE("Run dummy multi inference for onnx model and with four threads", "[sp
                                         tot <<
                                         " | " << static_cast<double>(tot) / data.m_nattempts << std::endl;
 }
-
