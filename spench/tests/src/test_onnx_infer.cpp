@@ -1,9 +1,12 @@
+#include "spench/util/onnx_runner.h"
+#include "tests/src/utils.h"
 #include <memory>
 #include <unordered_map>
 #include <catch.hpp>
 #include <iostream>
 
 #include <contrib/onnxruntime/cmake/external/onnxruntime-extensions/includes/onnxruntime/onnxruntime_cxx_api.h>
+
 void CreateConstInputsWithGivenShapes(const std::vector<std::vector<int64_t> >& input_shapes,
                                                         std::vector<Ort::Value>& tensors) {
   for (auto& shape : input_shapes) {
@@ -38,8 +41,8 @@ struct TestOnnx {
     m_session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
   }
 
-  TestOnnx& InitModel(const std::string& model_path) {
-    std::string full_model_path = m_kBase + "models/" + model_path;
+  TestOnnx& InitModel(const std::string& model_name) {
+    std::string full_model_path = m_kBase + "models/" + model_name;
 
     m_denoiser = std::unique_ptr<Ort::Session>(new Ort::Session(m_session_env,
                                                               full_model_path.c_str(),
@@ -50,6 +53,36 @@ struct TestOnnx {
   TestOnnx& SetThreadNum(int16_t th) {
     m_session_options.SetIntraOpNumThreads(th);
     m_session_options.SetInterOpNumThreads(th);
+    return *this;
+  }
+};
+
+struct TestOnnxRunner {
+  std::unique_ptr<util::onnx::SpenchQOnnxRunner> m_denoiser_runner;
+
+  const std::string m_kBase = "data/";
+
+ public:
+  TestOnnxRunner() = default;
+
+  TestOnnxRunner& InitRunner(const std::string& model_name,
+                             bool on_gpu = false) {
+    std::string model_path = m_kBase + "models/" + model_name;
+    m_denoiser_runner = std::unique_ptr<util::onnx::SpenchQOnnxRunner>(
+                                                new util::onnx::SpenchQOnnxRunner(model_name,
+                                                                                  model_path));
+    return *this;
+  }
+  TestOnnxRunner& LoadDataFromBin(const std::string& dump,
+                        std::vector<float>& output) {
+    std::string full_wav_path = m_kBase + "binary/" + dump;
+    loadBin(full_wav_path.c_str(), output);
+    return *this;
+  }
+  TestOnnxRunner& LoadDataFromBin(const std::string& dump,
+                        std::valarray<float>& output) {
+    std::string full_wav_path = m_kBase + "binary/" + dump;
+    loadBin(full_wav_path.c_str(), output);
     return *this;
   }
 };
@@ -225,4 +258,79 @@ TEST_CASE("Run dummy multi inference for onnx model and with four threads", "[sp
   std::cout << "infer with 4 threads completed: " <<
                                         tot <<
                                         " | " << static_cast<double>(tot) / data.m_nattempts << std::endl;
+}
+
+TEST_CASE("Run the best quality model with cpu onnx runner with zeroed hidden (audio 16kHz)", "[spench]") {
+  auto data = std::move(TestOnnxRunner()
+      .InitRunner("quality_model_with_layerNorm_16khz.onnx"));
+
+  std::valarray<float> real;
+  std::valarray<float> imag;
+  std::vector<float> gt_real;
+  std::vector<float> gt_imag;
+  std::vector<float> gt_fullband_hidden;
+  std::vector<float> gt_fullband_cell_state;
+  std::vector<float> gt_subband_hidden;
+  std::vector<float> gt_subband_cell_state;
+  data.LoadDataFromBin("1_real_wav_stft.dump", real);
+  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
+  data.LoadDataFromBin("1_real_network_output_for_zeroed_hiddens_16khz.dump", gt_real);
+  data.LoadDataFromBin("1_imag_network_output_for_zeroed_hiddens_16khz.dump", gt_imag);
+  data.LoadDataFromBin("1_predicted_full_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_fullband_hidden);
+  data.LoadDataFromBin("1_predicted_full_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_fullband_cell_state);
+  data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
+  data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
+  spench::DenoiseTask denoise_task;
+  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
+
+  data.m_denoiser_runner->Infer<float>(&denoise_task);
+
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTIONS);
+  IsVectorsClose(gt_real, denoise_task.m_data.m_network_output.real, 0.000001);
+  IsVectorsClose(gt_imag, denoise_task.m_data.m_network_output.imag, 0.000001);
+  IsVectorsClose(gt_fullband_hidden, denoise_task.m_data.m_context.m_fullband_hidden, 0.000001);
+  IsVectorsClose(gt_fullband_cell_state, denoise_task.m_data.m_context.m_fullband_cell_state, 0.000001);
+  IsVectorsClose(gt_subband_hidden, denoise_task.m_data.m_context.m_subband_hidden, 0.000001);
+  IsVectorsClose(gt_subband_cell_state, denoise_task.m_data.m_context.m_subband_cell_state, 0.000001);
+}
+
+TEST_CASE("Run the best quality model with cpu onnx runner (audio 16kHz)", "[spench]") {
+  auto data = std::move(TestOnnxRunner()
+      .InitRunner("quality_model_with_layerNorm_16khz.onnx"));
+
+  std::valarray<float> real;
+  std::valarray<float> imag;
+  std::vector<float> gt_real;
+  std::vector<float> gt_imag;
+  std::vector<float> gt_fullband_hidden;
+  std::vector<float> gt_fullband_cell_state;
+  std::vector<float> gt_subband_hidden;
+  std::vector<float> gt_subband_cell_state;
+  data.LoadDataFromBin("1_real_wav_stft.dump", real);
+  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
+  data.LoadDataFromBin("1_real_network_output_16khz.dump", gt_real);
+  data.LoadDataFromBin("1_imag_network_output_16khz.dump", gt_imag);
+  data.LoadDataFromBin("1_predicted_full_band_hidden_state_16khz.dump", gt_fullband_hidden);
+  data.LoadDataFromBin("1_predicted_full_band_cell_state_16khz.dump", gt_fullband_cell_state);
+  data.LoadDataFromBin("1_predicted_sub_band_hidden_state_16khz.dump", gt_subband_hidden);
+  data.LoadDataFromBin("1_predicted_sub_band_cell_state_16khz.dump", gt_subband_cell_state);
+
+  spench::DenoiseTask denoise_task;
+  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
+  data.LoadDataFromBin("full_band_hidden_state_1.dump", denoise_task.m_data.m_context.m_fullband_hidden);
+  data.LoadDataFromBin("full_band_cell_state_1.dump", denoise_task.m_data.m_context.m_fullband_cell_state);
+  data.LoadDataFromBin("sub_band_hidden_state_1.dump", denoise_task.m_data.m_context.m_subband_hidden);
+  data.LoadDataFromBin("sub_band_cell_state_1.dump", denoise_task.m_data.m_context.m_subband_cell_state);
+
+  data.m_denoiser_runner->Infer<float>(&denoise_task);
+
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTIONS);
+  IsVectorsClose(gt_real, denoise_task.m_data.m_network_output.real, 0.000001);
+  IsVectorsClose(gt_imag, denoise_task.m_data.m_network_output.imag, 0.000001);
+  IsVectorsClose(gt_fullband_hidden, denoise_task.m_data.m_context.m_fullband_hidden, 0.000001);
+  IsVectorsClose(gt_fullband_cell_state, denoise_task.m_data.m_context.m_fullband_cell_state, 0.000001);
+  IsVectorsClose(gt_subband_hidden, denoise_task.m_data.m_context.m_subband_hidden, 0.000001);
+  IsVectorsClose(gt_subband_cell_state, denoise_task.m_data.m_context.m_subband_cell_state, 0.000001);
 }
