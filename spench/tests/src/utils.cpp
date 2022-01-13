@@ -71,6 +71,15 @@ void IsVectorsClose(const std::vector<float>& v1, const std::vector<float>& v2, 
   }
 }
 
+void IsVectorsClose(const std::vector<float>& v1, const std::valarray<float>& v2, float eps) {
+  size_t num_samples = std::min(v1.size(), v2.size());
+  REQUIRE(v1.size() == v2.size());
+  for (size_t i = 0; i < num_samples; ++i) {
+    CAPTURE(i);
+    REQUIRE(v1[i] == Approx(v2[i]).margin(eps));
+  }
+}
+
 void IsVectorsClose(const std::vector<int16_t>& v1, const std::vector<int16_t>& v2, float eps) {
   std::vector<float> v1_float;
   std::vector<float> v2_float;

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <valarray>
 
 typedef struct WAV_HEADER {
   uint8_t RIFF[4];
@@ -57,6 +58,8 @@ void loadWavFx(const char* path, std::vector<int16_t>&);
 
 void IsVectorsClose(const std::vector<float>& v1, const std::vector<float>& v2, float eps);
 void IsVectorsClose(const std::vector<int16_t>& v1, const std::vector<int16_t>& v2, float eps);
+
+void IsVectorsClose(const std::vector<float>& v1, const std::valarray<float>& v2, float eps);
 
 template <typename InputType>
 std::vector<std::vector<InputType>> chunkWav(const std::vector<InputType>& wav,
@@ -114,4 +117,16 @@ void loadBin(const char* path, std::vector<InputType>& output) {
 
   output.resize(fsize / sizeof(InputType));
   ifs.read(reinterpret_cast<char*>(output.data()), output.size() * sizeof(InputType));
+}
+
+template <typename InputType>
+void loadBin(const char* path, std::valarray<InputType>& output) {
+  std::ifstream ifs(path, std::ios::binary);
+
+  ifs.seekg(0, std::ios::end);
+  std::streampos fsize = ifs.tellg();
+  ifs.seekg(0, ifs.beg);
+
+  output.resize(fsize / sizeof(InputType));
+  ifs.read(reinterpret_cast<char*>(&output[0]), output.size() * sizeof(InputType));
 }

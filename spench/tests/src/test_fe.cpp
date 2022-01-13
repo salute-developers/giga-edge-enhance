@@ -56,6 +56,13 @@ struct TestFE {
     loadBin(full_wav_path.c_str(), output);
     return *this;
   }
+  TestFE& LoadDataFromBin(const std::string& dump,
+                        std::valarray<float>& output) {
+    std::string full_wav_path = m_kBase + "binary/" + dump;
+    loadBin(full_wav_path.c_str(), output);
+    return *this;
+  }
+
   TestFE& InitFE(const spench::fe::FeatureParams& params) {
     m_feature_extractor =
             std::unique_ptr<spench::fe::FeatureExtractor<float> >(new spench::fe::FeatureExtractor<float>(params));
@@ -70,20 +77,14 @@ TEST_CASE("Run STFT with dummy zero vector (audio 16kHz) [spench]") {
                                      InitFE(params));
 
   const std::vector<float> kConst_input(512, 0.0);
-  std::vector<float> reference_mag(257, 0.0);
   std::vector<float> reference_real(257, 0.0);
   std::vector<float> reference_imag(257, 0.0);
-  std::vector<std::tuple<std::vector<float>,
-                               std::vector<float>,
-                               std::vector<float> > > result;
+  std::vector<spench::ComplexNumber<float>> result;
   feature_extractor.m_feature_extractor->STFTApply(kConst_input, result);
+
   REQUIRE(result.size() >= 1);
-  std::vector<float>& result_mag = std::get<0>(result[0]);
-  std::vector<float>& result_real = std::get<1>(result[0]);
-  std::vector<float>& result_imag = std::get<2>(result[0]);
-  IsVectorsClose(reference_mag, result_mag, 1.0);
-  IsVectorsClose(reference_real, result_real, 1.0);
-  IsVectorsClose(reference_imag, result_imag, 1.0);
+  IsVectorsClose(reference_real, result[0].real, 1.0);
+  IsVectorsClose(reference_imag, result[0].imag, 1.0);
 }
 
 TEST_CASE("Run 1000 STFT with dummy zero vector for speed measure (audio 16kHz) [spench]") {
@@ -95,9 +96,7 @@ TEST_CASE("Run 1000 STFT with dummy zero vector for speed measure (audio 16kHz) 
 
   auto ts_1 = std::chrono::steady_clock::now();
   for (size_t i = 0; i < feature_extractor.m_kNattempts; ++i) {
-    std::vector<std::tuple<std::vector<float>,
-                               std::vector<float>,
-                               std::vector<float> > > result;
+    std::vector<spench::ComplexNumber<float>> result;
     feature_extractor.m_feature_extractor->STFTApply(kConst_input, result);
     REQUIRE(result.size() >= 1);
   }
@@ -115,9 +114,7 @@ TEST_CASE("Run 1000 STFT with dummy zero vector for speed measure (audio 16kHz) 
 TEST_CASE("Run STFT with single real vector (audio 16kHz) [spench]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
-  std::vector<std::tuple<std::vector<float>,
-                               std::vector<float>,
-                               std::vector<float> > > result;
+
   const std::vector<float> kConst_input = {
        -0.00042725, -0.00036621, -0.00064087, -0.00048828, -0.00021362,
        -0.00039673, -0.00027466, -0.00018311, -0.0005188 , -0.00042725,
@@ -333,13 +330,12 @@ TEST_CASE("Run STFT with single real vector (audio 16kHz) [spench]") {
         -6.3304e-04,  2.8680e-04, -3.5757e-05,  7.5996e-07,  3.2257e-04,
         -3.1243e-04,  0.0000e+00
   };
+  std::vector<spench::ComplexNumber<float>> result;
   feature_extractor.m_feature_extractor->STFTApply(kConst_input, result);
   REQUIRE(result.size() >= 1);
-  std::vector<float>& result_real = std::get<1>(result[0]);
-  std::vector<float>& result_imag = std::get<2>(result[0]);
 
-  IsVectorsClose(reference_real, result_real, 0.000005);
-  IsVectorsClose(reference_imag, result_imag, 0.000005);
+  IsVectorsClose(reference_real, result[0].real, 0.000005);
+  IsVectorsClose(reference_imag, result[0].imag, 0.000005);
 }
 
 TEST_CASE("Run 10 STFT calculations with data from .wav file (audio 16kHz) [spench]") {
@@ -349,10 +345,8 @@ TEST_CASE("Run 10 STFT calculations with data from .wav file (audio 16kHz) [spen
                                      SetWav("rec_noise_001_16k.wav"));
 
   std::vector<std::vector<float>> reference_mag;
-  std::vector<std::vector<float>> result_mag;
-  std::vector<std::tuple<std::vector<float>,
-                               std::vector<float>,
-                               std::vector<float> > > result;
+  std::vector<std::valarray<float>> result_mag;
+  std::vector<spench::ComplexNumber<float>> result;
   size_t iterations = 11;
 
   feature_extractor.LoadDataFromBin("10_mag_stft_tensors.dump", reference_mag);
@@ -364,8 +358,7 @@ TEST_CASE("Run 10 STFT calculations with data from .wav file (audio 16kHz) [spen
 
   feature_extractor.m_feature_extractor->STFTApply(audio, result);
   for (size_t i = 0; i < iterations - 1 ; ++i) {
-    std::vector<float>& mag = std::get<0>(result[i]);
-    result_mag.push_back(mag);
+    result_mag.push_back(result[i].getMagnitude());
   }
 
   REQUIRE(reference_mag.size() == result_mag.size());
@@ -380,11 +373,11 @@ TEST_CASE("Run iSTFT with dummy complex zero vector (audio 16kHz) [spench]") {
   auto feature_extractor = std::move(TestFE().InitFE(params));
   // To get 256 samples we need to provide more for context
   const std::vector<float> kReference_signal(256, 0.0);
-  const std::vector<float> kReal_input(257 * 2, 0.0);
-  const std::vector<float> kImag_input(257 * 2, 0.0);
+  std::vector<float> kReal_input(257 * 2, 0.0);
+  std::vector<float> kImag_input(257 * 2, 0.0);
 
   std::vector<float> result;
-  auto kInput_complex = std::make_tuple(kReal_input, kImag_input);
+  spench::ComplexNumber<float> kInput_complex(kReal_input, kImag_input);
   feature_extractor.m_feature_extractor->iSTFTApply(kInput_complex, result);
   IsVectorsClose(kReference_signal, result, 0.0001);
 }
@@ -394,10 +387,10 @@ TEST_CASE("Run 1000 iSTFT with dummy zero vector for speed measure (audio 16kHz)
   auto feature_extractor = std::move(TestFE().InitFE(params));
   // To get 256 samples we need to provide more for context
   const std::vector<float> kReference_signal(256, 0.0);
-  const std::vector<float> kReal_input(257 * 2, 0.0);
-  const std::vector<float> kImag_input(257 * 2, 0.0);
+  std::vector<float> kReal_input(257 * 2, 0.0);
+  std::vector<float> kImag_input(257 * 2, 0.0);
 
-  auto kInput_complex = std::make_tuple(kReal_input, kImag_input);
+  spench::ComplexNumber<float> kInput_complex(kReal_input, kImag_input);
   std::vector<size_t> timings(feature_extractor.m_kNattempts);
 
   auto ts_1 = std::chrono::steady_clock::now();
@@ -428,15 +421,12 @@ TEST_CASE("Run 10 iSTFT calculations with real data from .bin file (audio 16kHz)
   std::vector<float> input_imag;
 
   std::vector<float> reference_signal;
-  std::vector<std::tuple<std::vector<float>,
-                               std::vector<float>,
-                               std::vector<float> > > result;
 
   feature_extractor.LoadDataFromBin("11_real_stft_tensors.dump", input_real);
   feature_extractor.LoadDataFromBin("11_imag_stft_tensors.dump", input_imag);
   REQUIRE(input_real.size() == iterations * 257);
   REQUIRE(input_imag.size() == iterations * 257);
-  auto input_complex = std::make_tuple(input_real, input_imag);
+  spench::ComplexNumber<float> input_complex(input_real, input_imag);
 
   feature_extractor.LoadDataFromBin("restored_istft_signal.dump", reference_signal);
   REQUIRE(reference_signal.size() == 256 * (iterations - 1));
@@ -459,9 +449,6 @@ TEST_CASE("Run iSTFT with single real complex vector (audio 16kHz) [spench]") {
   std::vector<float> input_imag;
 
   std::vector<float> reference_signal;
-  std::vector<std::tuple<std::vector<float>,
-                               std::vector<float>,
-                               std::vector<float> > > result;
 
   feature_extractor.LoadDataFromBin("11_real_stft_tensors.dump", input_real);
   feature_extractor.LoadDataFromBin("11_imag_stft_tensors.dump", input_imag);
@@ -470,7 +457,7 @@ TEST_CASE("Run iSTFT with single real complex vector (audio 16kHz) [spench]") {
 
   input_real.resize(iterations * 257);
   input_imag.resize(iterations * 257);
-  auto input_complex = std::make_tuple(input_real, input_imag);
+  spench::ComplexNumber<float> input_complex(input_real, input_imag);
 
   feature_extractor.LoadDataFromBin("restored_istft_signal.dump", reference_signal);
   REQUIRE(reference_signal.size() > 256 * (iterations - 1));
@@ -479,19 +466,6 @@ TEST_CASE("Run iSTFT with single real complex vector (audio 16kHz) [spench]") {
   feature_extractor.m_feature_extractor->iSTFTApply(input_complex, result_signal);
 
   IsVectorsClose(reference_signal, result_signal, 0.0001);
-}
-
-TEST_CASE("Run decompressCIRM with empty input [spench]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-  spench::ComplexNumber<float> empty;
-  feature_extractor.m_feature_extractor->decompressCIRMInPlace(empty);
-
-  std::vector<float> real_mask = std::get<0>(empty);
-  std::vector<float> imag_mask = std::get<1>(empty);
-
-  REQUIRE(real_mask.size() == 0);
-  REQUIRE(imag_mask.size() == 0);
 }
 
 TEST_CASE("Run decompressCIRM with real input [spench]") {
@@ -503,220 +477,52 @@ TEST_CASE("Run decompressCIRM with real input [spench]") {
   feature_extractor.LoadDataFromBin("cirm_gt_real.dump", gt_real_mask);
   feature_extractor.LoadDataFromBin("cirm_gt_imag.dump", gt_imag_mask);
 
-  std::vector<float> test_real_mask;
-  std::vector<float> test_imag_mask;
+  std::valarray<float> test_real_mask;
+  std::valarray<float> test_imag_mask;
   feature_extractor.LoadDataFromBin("cirm_in_real.dump", test_real_mask);
   feature_extractor.LoadDataFromBin("cirm_in_imag.dump", test_imag_mask);
 
-  spench::ComplexNumber<float> test_mask = std::make_tuple(test_real_mask, test_imag_mask);
+  spench::ComplexNumber<float> test_mask(test_real_mask, test_imag_mask);
   feature_extractor.m_feature_extractor->decompressCIRMInPlace(test_mask);
 
-  test_real_mask = std::get<0>(test_mask);
-  test_imag_mask = std::get<1>(test_mask);
-
-  IsVectorsClose(test_real_mask, gt_real_mask, 0.000001);
-  IsVectorsClose(test_imag_mask, gt_imag_mask, 0.000001);
+  IsVectorsClose(gt_real_mask, test_mask.real, 0.000001);
+  IsVectorsClose(gt_imag_mask, test_mask.imag, 0.000001);
 }
 
 TEST_CASE("Run calcEnhancedParts with empty input [spench]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   spench::ComplexNumber<float> empty_mask;
-  spench::ExtendedComplexNumber<float> empty_spec;
+  spench::ComplexNumber<float> empty_spec;
   feature_extractor.m_feature_extractor->calcEnhancedPartsInPlace(empty_mask, empty_spec);
-  REQUIRE(std::get<0>(empty_spec).size() == 0);
-  REQUIRE(std::get<1>(empty_spec).size() == 0);
+  REQUIRE(empty_spec.real.size() == 0);
+  REQUIRE(empty_spec.imag.size() == 0);
 }
 
 TEST_CASE("Run calcEnhancedPartsInPlace with real input [spench]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
 
-  std::vector<float> test_real_mask;
-  std::vector<float> test_imag_mask;
+  std::valarray<float> test_real_mask;
+  std::valarray<float> test_imag_mask;
   feature_extractor.LoadDataFromBin("cirm_in_real.dump", test_real_mask);
   feature_extractor.LoadDataFromBin("cirm_in_imag.dump", test_imag_mask);
-  spench::ComplexNumber<float> test_mask = std::make_tuple(test_real_mask, test_imag_mask);
+  spench::ComplexNumber<float> test_mask(test_real_mask, test_imag_mask);
 
-  std::vector<float> test_in_real;
-  std::vector<float> test_in_imag;
+  std::valarray<float> test_in_real;
+  std::valarray<float> test_in_imag;
   feature_extractor.LoadDataFromBin("calc_enhanced_in_real.dump", test_in_real);
   feature_extractor.LoadDataFromBin("calc_enhanced_in_imag.dump", test_in_imag);
 
-  // first in tuple should be mag, but it is not used in calcEnhancedPartsInPlace
-  spench::ExtendedComplexNumber<float> test_spec;
-  test_spec = std::make_tuple(test_in_real, test_in_real, test_in_imag);
+  spench::ComplexNumber<float> test_spec(test_in_real, test_in_imag);
 
-  std::vector<float> gt_real;
-  std::vector<float> gt_imag;
-  feature_extractor.LoadDataFromBin("calc_enhanced_gt_real.dump", gt_real);
-  feature_extractor.LoadDataFromBin("calc_enhanced_gt_imag.dump", gt_imag);
+  std::vector<float> gt_real_mask;
+  std::vector<float> gt_imag_mask;
+  feature_extractor.LoadDataFromBin("calc_enhanced_gt_real.dump", gt_real_mask);
+  feature_extractor.LoadDataFromBin("calc_enhanced_gt_imag.dump", gt_imag_mask);
 
   feature_extractor.m_feature_extractor->calcEnhancedPartsInPlace(test_mask, test_spec);
 
-  std::vector<float> real = std::get<1>(test_spec);
-  std::vector<float> imag = std::get<2>(test_spec);
-
-  IsVectorsClose(real, gt_real, 0.000001);
-  IsVectorsClose(imag, gt_imag, 0.000001);
-}
-
-TEST_CASE("Run cumSumNormalizeInPlace with empty input [spench]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-  std::vector<float> empty_mean_fb_stat;
-  std::vector<float> empty_current_feats;
-  size_t num_freqs = 257;
-  feature_extractor.m_feature_extractor->cumSumNormalizeInPlace(empty_mean_fb_stat,
-                                                                num_freqs,
-                                                                empty_current_feats);
-  REQUIRE(empty_current_feats.size() == 0);
-}
-
-TEST_CASE("Run cumSumNormalizeInPlace with real input [spench]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-
-  size_t num_freqs = 257;
-
-  std::vector<float> mean_fb_stat;
-  feature_extractor.LoadDataFromBin("cumSumNormalizeInPlace_mean_fb_stat.dump",
-                                    mean_fb_stat);
-
-  std::vector<float> in_current_feats;
-  feature_extractor.LoadDataFromBin("cumSumNormalizeInPlace_in_current_feats.dump",
-                                    in_current_feats);
-
-  std::vector<float> gt_current_feats;
-  feature_extractor.LoadDataFromBin("cumSumNormalizeInPlace_gt_current_feats.dump",
-                                    gt_current_feats);
-
-  feature_extractor.m_feature_extractor->cumSumNormalizeInPlace(mean_fb_stat,
-                                                                num_freqs,
-                                                                in_current_feats);
-  IsVectorsClose(in_current_feats, gt_current_feats, 0.000001);
-}
-
-TEST_CASE("Run elemWise with empty input 2 vectors [spench]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-
-  std::vector<float> in1;
-  std::vector<float> in2;
-
-  std::vector<float> ans = feature_extractor.m_feature_extractor->elemWise(std::plus<float>(), in1, in2);
-  REQUIRE(ans.size() == 0);
-}
-
-TEST_CASE("Run elemWise with empty input 1 vector and 1 scalar [spench]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-
-  std::vector<float> in1;
-  float in2 = 0;
-
-  std::vector<float> ans = feature_extractor.m_feature_extractor->elemWise(std::plus<float>(), in1, in2);
-  REQUIRE(ans.size() == 0);
-}
-
-TEST_CASE("Run elemWise plus with real input 2 vectors [spench]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-
-  std::vector<float> in1{ 10.0, 20.0, 40.0 };
-  std::vector<float> in2{ 1.0, 40.0, 10.0 };
-
-  std::vector<float> ans = feature_extractor.m_feature_extractor->elemWise(std::plus<float>(), in1, in2);
-  std::vector<float> gt{ 11.0, 60.0, 50.0 };
-  IsVectorsClose(ans, gt, 0.0);
-}
-
-TEST_CASE("Run elemWise divide with real input 2 vectors [spench]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-
-  std::vector<float> in1{ 10.0, 20.0, 40.0 };
-  std::vector<float> in2{ 1.0, 40.0, 10.0 };
-
-  std::vector<float> ans = feature_extractor.m_feature_extractor->elemWise(std::divides<float>(), in2, in1);
-  std::vector<float> gt = { 0.1, 2.0, 0.25 };
-  IsVectorsClose(ans, gt, 0.0);
-}
-
-TEST_CASE("Run elemWise plus with real input 1 vector and 1 scalar [spench]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-
-  std::vector<float> in1{ 1.0, 40.0, 10.0 };
-  float in2 = 5.0;
-  std::vector<float> ans;
-
-  ans = feature_extractor.m_feature_extractor->elemWise(std::plus<float>(), in1, in2);
-  std::vector<float> gt{ 6.0, 45.0, 15.0 };
-  IsVectorsClose(ans, gt, 0.0);
-}
-
-TEST_CASE("Run elemWise divide with real input 1 vector and 1 scalar [spench]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-
-  std::vector<float> in1{ 1.0, 40.0, 10.0 };
-  float in2 = 5.0;
-  std::vector<float> ans;
-
-  ans = feature_extractor.m_feature_extractor->elemWise(std::divides<float>(), in1, in2);
-  std::vector<float> gt = { 0.2, 8.0, 2.0 };
-  IsVectorsClose(ans, gt, 0.0);
-}
-
-TEST_CASE("Run sum0 with empty input [spench]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-
-  std::vector<std::vector<float>> test_in;
-  std::vector<float> test_out;
-
-  feature_extractor.m_feature_extractor->sum0(test_in, test_out);
-  REQUIRE(test_out.size() == 0);
-}
-
-TEST_CASE("Run sum1 with empty input [spench]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-
-  std::vector<std::vector<float>> test_in;
-  std::vector<float> test_out;
-
-  feature_extractor.m_feature_extractor->sum0(test_in, test_out);
-  REQUIRE(test_out.size() == 0);
-}
-
-TEST_CASE("Run sum0 with real input [spench]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-
-  std::vector<std::vector<float>> test_in(2);
-  test_in[0] = {4.5, -2.7, 3.1};
-  test_in[1] = {-9.0, 0.3, -0.97};
-
-  std::vector<float> test_out;
-  std::vector<float> gt_out{-4.5, -2.4, 2.13};
-
-  feature_extractor.m_feature_extractor->sum0(test_in, test_out);
-  IsVectorsClose(test_out, gt_out, 0.0);
-}
-
-TEST_CASE("Run sum1 with real input [spench]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-
-  std::vector<std::vector<float>> test_in(2);
-  test_in[0] = {4.5, -2.7, 3.1};
-  test_in[1] = {-9.0, 0.3, -0.97};
-
-  std::vector<float> test_out;
-  std::vector<float> gt_out{4.9, -9.67};
-
-  feature_extractor.m_feature_extractor->sum1(test_in, test_out);
-  IsVectorsClose(test_out, gt_out, 0.0);
+  IsVectorsClose(gt_real_mask, test_spec.real, 0.000001);
+  IsVectorsClose(gt_imag_mask, test_spec.imag, 0.000001);
 }
