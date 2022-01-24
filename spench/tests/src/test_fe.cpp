@@ -1,10 +1,9 @@
 #define protected public
-  #define private public
-    #include "spench/feature_extractor.h"
-  #undef protected
-#undef private
+  #include "spench/feature_extractor.h"
+#undef protected
 
 #include "spench/feature_params.h"
+#include "contrib/yaml-cpp/yaml.h"
 #include "spench/feature_extractor_runner.h"
 #include <memory>
 #include <catch.hpp>
@@ -20,7 +19,6 @@ static spench::fe::FeatureParams DefaultSpeechFeatureParams16kHz() {
   params.frame_size_ms = 32;
   params.frame_stride_ms = 16;
   params.window_type = spench::fe::WindowType::HANNING;
-  params.wav_scaling = false;
   return params;
 }
 
@@ -68,6 +66,11 @@ struct TestFE {
     m_feature_extractor =
             std::unique_ptr<spench::fe::FeatureExtractor<float> >(new spench::fe::FeatureExtractor<float>(params));
     return *this;
+  }
+
+  YAML::Node GetYAML(const std::string& yaml_config_name) {
+    std::string file_path = m_kBase + "config/" + yaml_config_name;
+    return YAML::LoadFile(file_path);
   }
 };
 
@@ -619,3 +622,104 @@ TEST_CASE("Run Feature Extractor Runner for masking with default parameters(audi
   IsVectorsClose(reference_signal, denoise_task.m_data.m_enhanced_wav, 0.001);
 }
 
+TEST_CASE("Read config for Feature Extractor Runner with modified .yaml file and check values [spench]") {
+  auto feature_extractor = std::move(TestFE().
+                                     SetWav("rec_noise_001_16k.wav"));
+
+  std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
+            std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
+
+  REQUIRE(feature_extractor_runner_ptr->GetSamplingFreq() == 16000);
+  REQUIRE(feature_extractor_runner_ptr->GetFrameSize() == 32);
+
+  YAML::Node config = feature_extractor.GetYAML("test_configuration_with_no_default_values.yaml");
+  feature_extractor_runner_ptr->ReadConfig(config["feature_params"]);
+  REQUIRE(feature_extractor_runner_ptr->GetSamplingFreq() == 8000);
+  REQUIRE(feature_extractor_runner_ptr->GetFrameSize() == 40);
+}
+
+TEST_CASE("Read config for Feature Extractor Runner with incorrect sampling frequency value [spench]") {
+  auto feature_extractor = std::move(TestFE().
+                                     SetWav("rec_noise_001_16k.wav"));
+
+  std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
+            std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
+
+  YAML::Node config = feature_extractor.GetYAML("test_configuration_with_incorrect_sampling_freq.yaml");
+  CHECK_THROWS(feature_extractor_runner_ptr->ReadConfig(config["feature_params"]));
+}
+
+TEST_CASE("Read config for Feature Extractor Runner with incorrect frame size value [spench]") {
+  auto feature_extractor = std::move(TestFE().
+                                     SetWav("rec_noise_001_16k.wav"));
+
+  std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
+            std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
+
+  YAML::Node config = feature_extractor.GetYAML("test_configuration_with_incorrect_frame_size.yaml");
+  CHECK_THROWS_WITH(feature_extractor_runner_ptr->ReadConfig(config["feature_params"]),
+                                                "Config reading error. Frame size is not a scalar!");
+}
+
+TEST_CASE("Read config for Feature Extractor Runner with incorrect window hop value [spench]") {
+  auto feature_extractor = std::move(TestFE().
+                                     SetWav("rec_noise_001_16k.wav"));
+
+  std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
+            std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
+
+  YAML::Node config = feature_extractor.GetYAML("test_configuration_with_incorrect_window_hop.yaml");
+  CHECK_THROWS_WITH(feature_extractor_runner_ptr->ReadConfig(config["feature_params"]),
+                                         "Config reading error. Window hop length is not a scalar!");
+}
+
+TEST_CASE("Read config for Feature Extractor Runner with incorrect window type value [spench]") {
+  auto feature_extractor = std::move(TestFE().
+                                     SetWav("rec_noise_001_16k.wav"));
+
+  std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
+            std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
+
+  YAML::Node config = feature_extractor.GetYAML("test_configuration_with_incorrect_window_type.yaml");
+  CHECK_THROWS_WITH(feature_extractor_runner_ptr->ReadConfig(config["feature_params"]),
+                                         "Window type must be in [\"hanning\", \"hamming\"]");
+}
+
+TEST_CASE("Run Feature Extractor Runner with configuration read from .yaml config (audio 16kHz) [spench]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
+  auto feature_extractor = std::move(TestFE().
+                                     InitFE(params).
+                                     SetWav("rec_noise_001_16k.wav"));
+
+  constexpr size_t kIterations = 1 + 1;
+
+  std::vector<std::vector<float>> reference_mag;
+  std::vector<std::valarray<float>> result_mag;
+  feature_extractor.LoadDataFromBin("10_mag_stft_tensors.dump", reference_mag);
+
+  std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
+            std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
+  YAML::Node config = feature_extractor.GetYAML("default_configuration_best_quality_onnx_16khz.yaml");
+  feature_extractor_runner_ptr->ReadConfig(config["feature_params"]);
+  REQUIRE(feature_extractor_runner_ptr->GetSamplingFreq() == 16000);
+  REQUIRE(feature_extractor_runner_ptr->GetFrameSize() == 32);
+
+  spench::DenoiseTask denoise_task;
+
+  denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
+  std::vector<float> audio(feature_extractor.m_wav_data.begin(),
+                           feature_extractor.m_wav_data.begin()+ 256 * kIterations);
+  denoise_task.m_data.m_waveform = audio;
+  REQUIRE(denoise_task.m_data.m_input_spec.size() == 0);
+
+  feature_extractor_runner_ptr->Run(&denoise_task);
+
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SPECTROGRAM);
+  REQUIRE(denoise_task.m_data.m_input_spec.size() == 1);
+
+  for (size_t i = 0; i < kIterations - 1 ; ++i) {
+    result_mag.push_back(denoise_task.m_data.m_input_spec[i].getMagnitude());
+  }
+
+  IsVectorsClose(reference_mag[0], result_mag[0], 0.0001);
+}
