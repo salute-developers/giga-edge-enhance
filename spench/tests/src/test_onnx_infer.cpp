@@ -1,4 +1,5 @@
 #include "spench/util/onnx_runner.h"
+#include "contrib/yaml-cpp/yaml.h"
 #include "tests/src/utils.h"
 #include <memory>
 #include <unordered_map>
@@ -65,14 +66,16 @@ struct TestOnnxRunner {
  public:
   TestOnnxRunner() = default;
 
-  TestOnnxRunner& InitRunner(const std::string& model_name,
-                             bool on_gpu = false) {
-    std::string model_path = m_kBase + "models/" + model_name;
+  TestOnnxRunner& InitRunner(const std::string& yaml_config_name) {
+    std::string file_path = m_kBase + "config/" + yaml_config_name;
+    YAML::Node node = YAML::LoadFile(file_path);
+    bool on_gpu = node["inference"]["gpu"].as<bool>();
     m_denoiser_runner = std::unique_ptr<util::onnx::SpenchQOnnxRunner>(
-                                                new util::onnx::SpenchQOnnxRunner(model_name,
-                                                                                  model_path));
+                                                new util::onnx::SpenchQOnnxRunner(node["model"],
+                                                                                  on_gpu));
     return *this;
   }
+
   TestOnnxRunner& LoadDataFromBin(const std::string& dump,
                         std::vector<float>& output) {
     std::string full_wav_path = m_kBase + "binary/" + dump;
@@ -260,9 +263,45 @@ TEST_CASE("Run dummy multi inference for onnx model and with four threads", "[sp
                                         " | " << static_cast<double>(tot) / data.m_nattempts << std::endl;
 }
 
+TEST_CASE("Read config for Inference Runner with incorrect model path", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_incorrect_model_path.yaml"),
+                                            "Config reading error. Model path parameter is not a single string!");
+}
+
+// TEST_CASE("Read config for Inference Runner with incorrect model type", "[spench]") {
+//   CHECK_THROWS_WITH(TestOnnxRunner()
+//       .InitRunner("test_configuration_with_incorrect_model_type.yaml"),
+//                                             "Model type must be in [\"best_quality\", \"best_speed\"]");
+// }
+
+TEST_CASE("Read config for Inference Runner with incorrect model inputs", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_incorrect_model_inputs.yaml"),
+                                            "Config reading error. Model inputs parameter is not a sequence!");
+}
+
+TEST_CASE("Read config for Inference Runner with incorrect model outputs", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_incorrect_model_outputs.yaml"),
+                                            "Config reading error. Model outputs parameter is not a sequence!");
+}
+
+TEST_CASE("Read config for Inference Runner with incorrect model context length", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_incorrect_model_ctx_len.yaml"),
+                                            "Config reading error. Model context length is not a scalar!");
+}
+
+TEST_CASE("Read config for Inference Runner with not existed model path", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_not_existed_model_path.yaml"),
+                                            "Model reading error. File does not exist!");
+}
+
 TEST_CASE("Run the best quality model with cpu onnx runner with zeroed hidden (audio 16kHz)", "[spench]") {
   auto data = std::move(TestOnnxRunner()
-      .InitRunner("quality_model_with_layerNorm_16khz.onnx"));
+      .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
 
   std::valarray<float> real;
   std::valarray<float> imag;
@@ -297,7 +336,7 @@ TEST_CASE("Run the best quality model with cpu onnx runner with zeroed hidden (a
 
 TEST_CASE("Run the best quality model with cpu onnx runner (audio 16kHz)", "[spench]") {
   auto data = std::move(TestOnnxRunner()
-      .InitRunner("quality_model_with_layerNorm_16khz.onnx"));
+      .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
 
   std::valarray<float> real;
   std::valarray<float> imag;
