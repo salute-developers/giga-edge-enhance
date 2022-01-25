@@ -132,7 +132,7 @@ TEST_CASE("Run single dummy inference for onnx model", "[spench]") {
   }
 }
 
-TEST_CASE("SUCCEED Run dummy multi inference for onnx model 16kHz and with one thread", "[spench]") {
+TEST_CASE("Run dummy multi inference for onnx model 16kHz and with one thread", "[spench]") {
   auto data = std::move(TestOnnx()
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
