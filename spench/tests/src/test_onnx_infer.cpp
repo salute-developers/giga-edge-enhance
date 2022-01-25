@@ -348,6 +348,42 @@ TEST_CASE("Read config for Inference Runner with not existed model path", "[spen
                                             "Model reading error. File does not exist!");
 }
 
+TEST_CASE("Read config for Inference Runner with incorrect model path", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_incorrect_model_path.yaml"),
+                                            "Config reading error. Model path parameter is not a single string!");
+}
+
+TEST_CASE("Read config for Inference Runner with incorrect model type", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_incorrect_model_type.yaml"),
+                                            "Model type must be in [\"best_quality\", \"best_speed\"]");
+}
+
+TEST_CASE("Read config for Inference Runner with incorrect model inputs", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_incorrect_model_inputs.yaml"),
+                                            "Config reading error. Model inputs parameter is not a sequence!");
+}
+
+TEST_CASE("Read config for Inference Runner with incorrect model outputs", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_incorrect_model_outputs.yaml"),
+                                            "Config reading error. Model outputs parameter is not a sequence!");
+}
+
+TEST_CASE("Read config for Inference Runner with incorrect model context length", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_incorrect_model_ctx_len.yaml"),
+                                            "Config reading error. Model context length is not a scalar!");
+}
+
+TEST_CASE("Read config for Inference Runner with not existed model path", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_not_existed_model_path.yaml"),
+                                            "Model reading error. File does not exist!");
+}
+
 TEST_CASE("Run the best quality model with cpu onnx runner with zeroed hidden (audio 16kHz)", "[spench]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
