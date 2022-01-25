@@ -4,6 +4,7 @@
 #include <memory>
 #include <unordered_map>
 #include <catch.hpp>
+#include <map>
 #include <iostream>
 
 #include <contrib/onnxruntime/cmake/external/onnxruntime-extensions/includes/onnxruntime/onnxruntime_cxx_api.h>
@@ -28,6 +29,7 @@ struct TestOnnx {
   const std::string m_kBase = "data/";
 
   const std::size_t m_nattempts = 100;
+  const float m_kFrame_size_ms = 16;
 
  private:
   Ort::SessionOptions m_session_options;
@@ -130,7 +132,7 @@ TEST_CASE("Run single dummy inference for onnx model", "[spench]") {
   }
 }
 
-TEST_CASE("Run dummy multi inference for onnx model and with one thread", "[spench]") {
+TEST_CASE("SUCCEED Run dummy multi inference for onnx model 16kHz and with one thread", "[spench]") {
   auto data = std::move(TestOnnx()
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
@@ -138,7 +140,6 @@ TEST_CASE("Run dummy multi inference for onnx model and with one thread", "[spen
   std::vector<const char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
   std::vector<const char*> output_names;
-
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
@@ -170,12 +171,13 @@ TEST_CASE("Run dummy multi inference for onnx model and with one thread", "[spen
   auto ts_2 = std::chrono::steady_clock::now();
 
   auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "infer with 1 thread completed: " <<
+  std::cout << "16kHz best quality model infer with 1 thread completed: " <<
                                       tot << " | "
-                                      << static_cast<double>(tot) / data.m_nattempts << std::endl;
+                                      << static_cast<double>(tot) / data.m_nattempts <<
+                                        " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for onnx model and with two threads", "[spench]") {
+TEST_CASE("Run dummy multi inference for onnx model 16kHz and with two threads", "[spench]") {
   auto data = std::move(TestOnnx().SetThreadNum(2)
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
@@ -214,12 +216,13 @@ TEST_CASE("Run dummy multi inference for onnx model and with two threads", "[spe
   }
   auto ts_2 = std::chrono::steady_clock::now();
   auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "infer with 2 threads completed: " <<
+  std::cout << "16kHz best quality model infer with 2 threads completed: " <<
                                       tot << " | "
-                                      << static_cast<double>(tot) / data.m_nattempts << std::endl;
+                                      << static_cast<double>(tot) / data.m_nattempts <<
+                                        " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for onnx model and with four threads", "[spench]") {
+TEST_CASE("Run dummy multi inference for onnx model 16kHz and with four threads", "[spench]") {
   auto data = std::move(TestOnnx().SetThreadNum(4)
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
@@ -258,9 +261,55 @@ TEST_CASE("Run dummy multi inference for onnx model and with four threads", "[sp
   }
   auto ts_2 = std::chrono::steady_clock::now();
   auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "infer with 4 threads completed: " <<
+  std::cout << "16kHz best quality model infer with 4 threads completed: " <<
                                         tot <<
-                                        " | " << static_cast<double>(tot) / data.m_nattempts << std::endl;
+                                        " | " << static_cast<double>(tot) / data.m_nattempts <<
+                                        " ms per infer" << std::endl;
+}
+
+TEST_CASE("Run dummy multi inference for onnx model 16kHz and with eight threads", "[spench]") {
+  auto data = std::move(TestOnnx().SetThreadNum(8)
+      .InitModel("quality_model_with_layerNorm_16khz.onnx"));
+
+  std::vector<Ort::Value> inputs;
+  std::vector<const char*> input_names;
+  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<const char*> output_names;
+
+  Ort::AllocatorWithDefaultOptions allocator;
+  for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
+    // print input node names
+    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+  }
+
+  for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
+    // print output node names
+    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+  }
+
+  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+
+  std::vector<size_t> timings(data.m_nattempts);
+  auto ts_1 = std::chrono::steady_clock::now();
+  for (size_t i = 0; i < data.m_nattempts; ++i) {
+    auto start = std::chrono::steady_clock::now();
+    Ort::RunOptions opt;
+    auto outputs = data.m_denoiser->Run(opt,
+                                      input_names.data(),
+                                      inputs.data(),
+                                      inputs.size(),
+                                      output_names.data(),
+                                      output_names.size());
+    auto stop = std::chrono::steady_clock::now();
+    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+  }
+  auto ts_2 = std::chrono::steady_clock::now();
+  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "16kHz best quality model infer with 8 threads completed: " <<
+                                        tot <<
+                                        " | " << static_cast<double>(tot) / data.m_nattempts <<
+                                        " ms per infer" << std::endl;
 }
 
 TEST_CASE("Read config for Inference Runner with incorrect model path", "[spench]") {
@@ -334,7 +383,7 @@ TEST_CASE("Run the best quality model with cpu onnx runner with zeroed hidden (a
   IsVectorsClose(gt_subband_cell_state, denoise_task.m_data.m_context.m_subband_cell_state, 0.000001);
 }
 
-TEST_CASE("Run the best quality model with cpu onnx runner (audio 16kHz)", "[spench]") {
+TEST_CASE("Run the best quality model 16kHz with cpu onnx runner", "[spench]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
 
@@ -372,4 +421,366 @@ TEST_CASE("Run the best quality model with cpu onnx runner (audio 16kHz)", "[spe
   IsVectorsClose(gt_fullband_cell_state, denoise_task.m_data.m_context.m_fullband_cell_state, 0.000001);
   IsVectorsClose(gt_subband_hidden, denoise_task.m_data.m_context.m_subband_hidden, 0.000001);
   IsVectorsClose(gt_subband_cell_state, denoise_task.m_data.m_context.m_subband_cell_state, 0.000001);
+}
+
+TEST_CASE("Run dummy multi inference for onnx model 24kHz and with one thread", "[spench]") {
+  auto data = std::move(TestOnnx()
+      .InitModel("quality_model_with_layerNorm_24khz.onnx"));
+
+  std::vector<Ort::Value> inputs;
+  std::vector<const char*> input_names;
+  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<const char*> output_names;
+
+  Ort::AllocatorWithDefaultOptions allocator;
+  for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
+    // print input node names
+    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+  }
+
+  for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
+    // print output node names
+    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+  }
+
+  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+
+  std::vector<size_t> timings(data.m_nattempts);
+  auto ts_1 = std::chrono::steady_clock::now();
+  for (size_t i = 0; i < data.m_nattempts; ++i) {
+    auto start = std::chrono::steady_clock::now();
+    Ort::RunOptions opt;
+    auto outputs = data.m_denoiser->Run(opt,
+                                      input_names.data(),
+                                      inputs.data(),
+                                      inputs.size(),
+                                      output_names.data(),
+                                      output_names.size());
+    auto stop = std::chrono::steady_clock::now();
+    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+  }
+  auto ts_2 = std::chrono::steady_clock::now();
+
+  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "24kHz best quality model infer with 1 thread completed: " <<
+                                      tot << " | "
+                                      << static_cast<double>(tot) / data.m_nattempts <<
+                                        " ms per infer" << std::endl;
+}
+
+TEST_CASE("Run dummy multi inference for onnx model 24kHz and with two threads", "[spench]") {
+  auto data = std::move(TestOnnx().SetThreadNum(2)
+      .InitModel("quality_model_with_layerNorm_24khz.onnx"));
+
+  std::vector<Ort::Value> inputs;
+  std::vector<const char*> input_names;
+  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<const char*> output_names;
+
+  Ort::AllocatorWithDefaultOptions allocator;
+  for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
+    // print input node names
+    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+  }
+
+  for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
+    // print output node names
+    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+  }
+
+  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+
+  std::vector<size_t> timings(data.m_nattempts);
+  auto ts_1 = std::chrono::steady_clock::now();
+  for (size_t i = 0; i < data.m_nattempts; ++i) {
+    auto start = std::chrono::steady_clock::now();
+    Ort::RunOptions opt;
+    auto outputs = data.m_denoiser->Run(opt,
+                                      input_names.data(),
+                                      inputs.data(),
+                                      inputs.size(),
+                                      output_names.data(),
+                                      output_names.size());
+    auto stop = std::chrono::steady_clock::now();
+    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+  }
+  auto ts_2 = std::chrono::steady_clock::now();
+  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "24kHz best quality model infer with 2 threads completed: " <<
+                                      tot << " | "
+                                      << static_cast<double>(tot) / data.m_nattempts <<
+                                        " ms per infer" << std::endl;
+}
+
+TEST_CASE("Run dummy multi inference for onnx model 24kHz and with four threads", "[spench]") {
+  auto data = std::move(TestOnnx().SetThreadNum(4)
+      .InitModel("quality_model_with_layerNorm_24khz.onnx"));
+
+  std::vector<Ort::Value> inputs;
+  std::vector<const char*> input_names;
+  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<const char*> output_names;
+
+  Ort::AllocatorWithDefaultOptions allocator;
+  for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
+    // print input node names
+    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+  }
+
+  for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
+    // print output node names
+    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+  }
+
+  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+
+  std::vector<size_t> timings(data.m_nattempts);
+  auto ts_1 = std::chrono::steady_clock::now();
+  for (size_t i = 0; i < data.m_nattempts; ++i) {
+    auto start = std::chrono::steady_clock::now();
+    Ort::RunOptions opt;
+    auto outputs = data.m_denoiser->Run(opt,
+                                      input_names.data(),
+                                      inputs.data(),
+                                      inputs.size(),
+                                      output_names.data(),
+                                      output_names.size());
+    auto stop = std::chrono::steady_clock::now();
+    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+  }
+  auto ts_2 = std::chrono::steady_clock::now();
+  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "24kHz best quality model infer with 4 threads completed: " <<
+                                        tot <<
+                                        " | " << static_cast<double>(tot) / data.m_nattempts <<
+                                        " ms per infer" << std::endl;
+}
+
+TEST_CASE("Run dummy multi inference for onnx model 24kHz and with eight threads", "[spench]") {
+  auto data = std::move(TestOnnx().SetThreadNum(8)
+      .InitModel("quality_model_with_layerNorm_24khz.onnx"));
+
+  std::vector<Ort::Value> inputs;
+  std::vector<const char*> input_names;
+  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<const char*> output_names;
+
+  Ort::AllocatorWithDefaultOptions allocator;
+  for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
+    // print input node names
+    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+  }
+
+  for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
+    // print output node names
+    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+  }
+
+  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+
+  std::vector<size_t> timings(data.m_nattempts);
+  auto ts_1 = std::chrono::steady_clock::now();
+  for (size_t i = 0; i < data.m_nattempts; ++i) {
+    auto start = std::chrono::steady_clock::now();
+    Ort::RunOptions opt;
+    auto outputs = data.m_denoiser->Run(opt,
+                                      input_names.data(),
+                                      inputs.data(),
+                                      inputs.size(),
+                                      output_names.data(),
+                                      output_names.size());
+    auto stop = std::chrono::steady_clock::now();
+    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+  }
+  auto ts_2 = std::chrono::steady_clock::now();
+  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "24kHz best quality model infer with 8 threads completed: " <<
+                                        tot <<
+                                        " | " << static_cast<double>(tot) / data.m_nattempts <<
+                                        " ms per infer" << std::endl;
+}
+
+TEST_CASE("Run dummy multi inference for onnx fast model 24kHz and with one thread", "[spench]") {
+  auto data = std::move(TestOnnx()
+      .InitModel("fast_model_24khz.onnx"));
+
+  std::vector<Ort::Value> inputs;
+  std::vector<const char*> input_names;
+  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<const char*> output_names;
+
+  Ort::AllocatorWithDefaultOptions allocator;
+  for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
+    // print input node names
+    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+  }
+
+  for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
+    // print output node names
+    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+  }
+
+  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+
+  std::vector<size_t> timings(data.m_nattempts);
+  auto ts_1 = std::chrono::steady_clock::now();
+  for (size_t i = 0; i < data.m_nattempts; ++i) {
+    auto start = std::chrono::steady_clock::now();
+    Ort::RunOptions opt;
+    auto outputs = data.m_denoiser->Run(opt,
+                                      input_names.data(),
+                                      inputs.data(),
+                                      inputs.size(),
+                                      output_names.data(),
+                                      output_names.size());
+    auto stop = std::chrono::steady_clock::now();
+    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+  }
+  auto ts_2 = std::chrono::steady_clock::now();
+
+  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "24kHz fast model infer with 1 thread completed: " <<
+                                      tot << " | "
+                                      << static_cast<double>(tot) / data.m_nattempts <<
+                                        " ms per infer" << std::endl;
+}
+
+TEST_CASE("Run dummy multi inference for fast onnx model 24kHz and with two threads", "[spench]") {
+  auto data = std::move(TestOnnx().SetThreadNum(2)
+      .InitModel("fast_model_24khz.onnx"));
+
+  std::vector<Ort::Value> inputs;
+  std::vector<const char*> input_names;
+  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<const char*> output_names;
+
+  Ort::AllocatorWithDefaultOptions allocator;
+  for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
+    // print input node names
+    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+  }
+
+  for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
+    // print output node names
+    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+  }
+
+  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+
+  std::vector<size_t> timings(data.m_nattempts);
+  auto ts_1 = std::chrono::steady_clock::now();
+  for (size_t i = 0; i < data.m_nattempts; ++i) {
+    auto start = std::chrono::steady_clock::now();
+    Ort::RunOptions opt;
+    auto outputs = data.m_denoiser->Run(opt,
+                                      input_names.data(),
+                                      inputs.data(),
+                                      inputs.size(),
+                                      output_names.data(),
+                                      output_names.size());
+    auto stop = std::chrono::steady_clock::now();
+    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+  }
+  auto ts_2 = std::chrono::steady_clock::now();
+  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "24kHz fast model infer with 2 threads completed: " <<
+                                      tot << " | "
+                                      << static_cast<double>(tot) / data.m_nattempts <<
+                                        " ms per infer" << std::endl;
+}
+
+TEST_CASE("Run dummy multi inference for fast onnx model 24kHz and with four threads", "[spench]") {
+  auto data = std::move(TestOnnx().SetThreadNum(4)
+      .InitModel("fast_model_24khz.onnx"));
+
+  std::vector<Ort::Value> inputs;
+  std::vector<const char*> input_names;
+  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<const char*> output_names;
+
+  Ort::AllocatorWithDefaultOptions allocator;
+  for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
+    // print input node names
+    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+  }
+
+  for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
+    // print output node names
+    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+  }
+
+  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+
+  std::vector<size_t> timings(data.m_nattempts);
+  auto ts_1 = std::chrono::steady_clock::now();
+  for (size_t i = 0; i < data.m_nattempts; ++i) {
+    auto start = std::chrono::steady_clock::now();
+    Ort::RunOptions opt;
+    auto outputs = data.m_denoiser->Run(opt,
+                                      input_names.data(),
+                                      inputs.data(),
+                                      inputs.size(),
+                                      output_names.data(),
+                                      output_names.size());
+    auto stop = std::chrono::steady_clock::now();
+    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+  }
+  auto ts_2 = std::chrono::steady_clock::now();
+  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "24kHz fast model infer with 4 threads completed: " <<
+                                        tot <<
+                                        " | " << static_cast<double>(tot) / data.m_nattempts <<
+                                        " ms per infer" << std::endl;
+}
+
+TEST_CASE("Run dummy multi inference for fast onnx model 24kHz and with eight threads", "[spench]") {
+  auto data = std::move(TestOnnx().SetThreadNum(8)
+      .InitModel("fast_model_24khz.onnx"));
+
+  std::vector<Ort::Value> inputs;
+  std::vector<const char*> input_names;
+  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<const char*> output_names;
+
+  Ort::AllocatorWithDefaultOptions allocator;
+  for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
+    // print input node names
+    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+  }
+
+  for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
+    // print output node names
+    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+  }
+
+  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+
+  std::vector<size_t> timings(data.m_nattempts);
+  auto ts_1 = std::chrono::steady_clock::now();
+  for (size_t i = 0; i < data.m_nattempts; ++i) {
+    auto start = std::chrono::steady_clock::now();
+    Ort::RunOptions opt;
+    auto outputs = data.m_denoiser->Run(opt,
+                                      input_names.data(),
+                                      inputs.data(),
+                                      inputs.size(),
+                                      output_names.data(),
+                                      output_names.size());
+    auto stop = std::chrono::steady_clock::now();
+    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+  }
+  auto ts_2 = std::chrono::steady_clock::now();
+  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "24kHz fast model infer with 8 threads completed: " <<
+                                        tot <<
+                                        " | " << static_cast<double>(tot) / data.m_nattempts <<
+                                        " ms per infer" << std::endl;
 }

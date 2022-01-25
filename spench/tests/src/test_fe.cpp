@@ -22,6 +22,16 @@ static spench::fe::FeatureParams DefaultSpeechFeatureParams16kHz() {
   return params;
 }
 
+static spench::fe::FeatureParams DefaultSpeechFeatureParams24kHz() {
+  spench::fe::FeatureParams params;
+
+  params.sampling_freq = 24000;
+  params.frame_size_ms = 32;
+  params.frame_stride_ms = 16;
+  params.window_type = spench::fe::WindowType::HANNING;
+  return params;
+}
+
 struct TestFE {
   std::unique_ptr<spench::fe::FeatureExtractor<float>> m_feature_extractor;
   const std::size_t m_kNattempts = 1000;
@@ -42,10 +52,10 @@ struct TestFE {
     loadBin(full_wav_path.c_str(), step_size_samples, output);
     return *this;
   }
-  TestFE& LoadDataFromBin(const std::string& dump,
+  TestFE& LoadSpecDataFromBin(const std::string& dump,
                         std::vector<std::vector<float>>& output) {
     std::string full_wav_path = m_kBase + "binary/" + dump;
-    uint32_t step_size_samples = m_feature_extractor->GetFeatureParams().FilterFreqResponseLen();
+    uint32_t step_size_samples = m_feature_extractor->GetFeatureParams().PowSpecFeatSz();
     loadBin(full_wav_path.c_str(), step_size_samples, output);
     return *this;
   }
@@ -79,9 +89,9 @@ TEST_CASE("Run STFT with dummy zero vector (audio 16kHz) [spench]") {
   auto feature_extractor = std::move(TestFE().
                                      InitFE(params));
 
-  const std::vector<float> kConst_input(512, 0.0);
-  std::vector<float> reference_real(257, 0.0);
-  std::vector<float> reference_imag(257, 0.0);
+  const std::vector<float> kConst_input(params.Nfft(), 0.0);
+  std::vector<float> reference_real(params.PowSpecFeatSz(), 0.0);
+  std::vector<float> reference_imag(params.PowSpecFeatSz(), 0.0);
   std::vector<spench::ComplexNumber<float>> result;
   feature_extractor.m_feature_extractor->STFTApply(kConst_input, result);
 
@@ -94,7 +104,7 @@ TEST_CASE("Run 1000 STFT with dummy zero vector for speed measure (audio 16kHz) 
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().
                                      InitFE(params));
-  const std::vector<float> kConst_input(512, 0.0);
+  const std::vector<float> kConst_input(params.Nfft(), 0.0);
   std::vector<size_t> timings(feature_extractor.m_kNattempts);
 
   auto ts_1 = std::chrono::steady_clock::now();
@@ -109,7 +119,33 @@ TEST_CASE("Run 1000 STFT with dummy zero vector for speed measure (audio 16kHz) 
   // t of STFT < 0.001 sec
   REQUIRE(static_cast<double>(tot) / (feature_extractor.m_kNattempts * 1000) < 0.001);
 
-  std::cout << "1000 STFT calculations complete. Takes in total (sec): " << static_cast<double>(tot) / 1000
+  std::cout << "1000 STFT calculations for nFFT " << params.Nfft()
+            << " complete. Takes in total (sec): " << static_cast<double>(tot) / 1000
+            << " | and average (sec): " << static_cast<double>(tot) / (feature_extractor.m_kNattempts * 1000)
+            << std::endl;
+}
+
+TEST_CASE("Run 1000 STFT with dummy zero vector for speed measure (audio 24kHz) [spench]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
+  auto feature_extractor = std::move(TestFE().
+                                     InitFE(params));
+  const std::vector<float> kConst_input(params.Nfft(), 0.0);
+  std::vector<size_t> timings(feature_extractor.m_kNattempts);
+
+  auto ts_1 = std::chrono::steady_clock::now();
+  for (size_t i = 0; i < feature_extractor.m_kNattempts; ++i) {
+    std::vector<spench::ComplexNumber<float>> result;
+    feature_extractor.m_feature_extractor->STFTApply(kConst_input, result);
+    REQUIRE(result.size() >= 1);
+  }
+  auto ts_2 = std::chrono::steady_clock::now();
+  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+
+  // t of STFT < 0.001 sec
+  REQUIRE(static_cast<double>(tot) / (feature_extractor.m_kNattempts * 1000) < 0.001);
+
+  std::cout << "1000 STFT calculations for nFFT " << params.Nfft()
+            << " complete. Takes in total (sec): " << static_cast<double>(tot) / 1000
             << " | and average (sec): " << static_cast<double>(tot) / (feature_extractor.m_kNattempts * 1000)
             << std::endl;
 }
@@ -352,12 +388,12 @@ TEST_CASE("Run 10 STFT calculations with data from .wav file (audio 16kHz) [spen
   std::vector<spench::ComplexNumber<float>> result;
   size_t iterations = 11;
 
-  feature_extractor.LoadDataFromBin("10_mag_stft_tensors.dump", reference_mag);
+  feature_extractor.LoadSpecDataFromBin("10_mag_stft_tensors.dump", reference_mag);
 
   REQUIRE(reference_mag.size() == iterations - 1);
 
   std::vector<float> audio(feature_extractor.m_wav_data.begin(),
-                           feature_extractor.m_wav_data.begin()+ 256 * iterations);
+                           feature_extractor.m_wav_data.begin() + params.NumFrameStrideSamples() * iterations);
 
   feature_extractor.m_feature_extractor->STFTApply(audio, result);
   for (size_t i = 0; i < iterations - 1 ; ++i) {
@@ -375,9 +411,9 @@ TEST_CASE("Run iSTFT with dummy complex zero vector (audio 16kHz) [spench]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   // To get 256 samples we need to provide more for context
-  const std::vector<float> kReference_signal(256, 0.0);
-  std::vector<float> kReal_input(257 * 2, 0.0);
-  std::vector<float> kImag_input(257 * 2, 0.0);
+  const std::vector<float> kReference_signal(params.NumFrameStrideSamples(), 0.0);
+  std::vector<float> kReal_input(params.PowSpecFeatSz() * 2, 0.0);
+  std::vector<float> kImag_input(params.PowSpecFeatSz() * 2, 0.0);
 
   std::vector<float> result;
   spench::ComplexNumber<float> kInput_complex(kReal_input, kImag_input);
@@ -388,10 +424,10 @@ TEST_CASE("Run iSTFT with dummy complex zero vector (audio 16kHz) [spench]") {
 TEST_CASE("Run 1000 iSTFT with dummy zero vector for speed measure (audio 16kHz) [spench]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
-  // To get 256 samples we need to provide more for context
-  const std::vector<float> kReference_signal(256, 0.0);
-  std::vector<float> kReal_input(257 * 2, 0.0);
-  std::vector<float> kImag_input(257 * 2, 0.0);
+  // To get M reference samples we need to provide more for context
+  const std::vector<float> kReference_signal(params.NumFrameStrideSamples(), 0.0);
+  std::vector<float> kReal_input(params.PowSpecFeatSz() * 2, 0.0);
+  std::vector<float> kImag_input(params.PowSpecFeatSz() * 2, 0.0);
 
   spench::ComplexNumber<float> kInput_complex(kReal_input, kImag_input);
   std::vector<size_t> timings(feature_extractor.m_kNattempts);
@@ -400,7 +436,7 @@ TEST_CASE("Run 1000 iSTFT with dummy zero vector for speed measure (audio 16kHz)
   for (size_t i = 0; i < feature_extractor.m_kNattempts; ++i) {
     std::vector<float> result;
     feature_extractor.m_feature_extractor->iSTFTApply(kInput_complex, result);
-    REQUIRE(result.size() == 256);
+    REQUIRE(result.size() == params.NumFrameStrideSamples());
   }
   auto ts_2 = std::chrono::steady_clock::now();
   auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
@@ -408,7 +444,37 @@ TEST_CASE("Run 1000 iSTFT with dummy zero vector for speed measure (audio 16kHz)
   // t of STFT < 0.001 sec
   REQUIRE(static_cast<double>(tot) / (feature_extractor.m_kNattempts * 1000) < 0.001);
 
-  std::cout << "1000 iSTFT calculations complete. Takes in total (sec): " << static_cast<double>(tot) / 1000
+  std::cout << "1000 iSTFT calculations for frame " << params.PowSpecFeatSz()
+            << " complete. Takes in total (sec): " << static_cast<double>(tot) / 1000
+            << " | and average (sec): " << static_cast<double>(tot) / (feature_extractor.m_kNattempts * 1000)
+            << std::endl;
+}
+
+TEST_CASE("Run 1000 iSTFT with dummy zero vector for speed measure (audio 24kHz) [spench]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
+  auto feature_extractor = std::move(TestFE().InitFE(params));
+  // To get M reference samples we need to provide more for context
+  const std::vector<float> kReference_signal(params.NumFrameStrideSamples(), 0.0);
+  std::vector<float> kReal_input(params.PowSpecFeatSz() * 2, 0.0);
+  std::vector<float> kImag_input(params.PowSpecFeatSz() * 2, 0.0);
+
+  spench::ComplexNumber<float> kInput_complex(kReal_input, kImag_input);
+  std::vector<size_t> timings(feature_extractor.m_kNattempts);
+
+  auto ts_1 = std::chrono::steady_clock::now();
+  for (size_t i = 0; i < feature_extractor.m_kNattempts; ++i) {
+    std::vector<float> result;
+    feature_extractor.m_feature_extractor->iSTFTApply(kInput_complex, result);
+    REQUIRE(result.size() == params.NumFrameStrideSamples());
+  }
+  auto ts_2 = std::chrono::steady_clock::now();
+  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+
+  // t of STFT < 0.001 sec
+  REQUIRE(static_cast<double>(tot) / (feature_extractor.m_kNattempts * 1000) < 0.001);
+
+  std::cout << "1000 iSTFT calculations for frame " << params.PowSpecFeatSz()
+            << " complete. Takes in total (sec): " << static_cast<double>(tot) / 1000
             << " | and average (sec): " << static_cast<double>(tot) / (feature_extractor.m_kNattempts * 1000)
             << std::endl;
 }
@@ -427,16 +493,16 @@ TEST_CASE("Run 10 iSTFT calculations with real data from .bin file (audio 16kHz)
 
   feature_extractor.LoadDataFromBin("11_real_stft_tensors.dump", input_real);
   feature_extractor.LoadDataFromBin("11_imag_stft_tensors.dump", input_imag);
-  REQUIRE(input_real.size() == iterations * 257);
-  REQUIRE(input_imag.size() == iterations * 257);
+  REQUIRE(input_real.size() == iterations * params.PowSpecFeatSz());
+  REQUIRE(input_imag.size() == iterations * params.PowSpecFeatSz());
   spench::ComplexNumber<float> input_complex(input_real, input_imag);
 
   feature_extractor.LoadDataFromBin("restored_istft_signal.dump", reference_signal);
-  REQUIRE(reference_signal.size() == 256 * (iterations - 1));
+  REQUIRE(reference_signal.size() == params.NumFrameStrideSamples() * (iterations - 1));
 
   feature_extractor.m_feature_extractor->iSTFTApply(input_complex, result_signal);
-  if (result_signal.size() > 256 * (iterations - 1)) {
-    result_signal.resize(256 * (iterations - 1));
+  if (result_signal.size() > params.NumFrameStrideSamples() * (iterations - 1)) {
+    result_signal.resize(params.NumFrameStrideSamples() * (iterations - 1));
   }
 
   IsVectorsClose(reference_signal, result_signal, 0.05);
@@ -455,16 +521,16 @@ TEST_CASE("Run iSTFT with single real complex vector (audio 16kHz) [spench]") {
 
   feature_extractor.LoadDataFromBin("11_real_stft_tensors.dump", input_real);
   feature_extractor.LoadDataFromBin("11_imag_stft_tensors.dump", input_imag);
-  REQUIRE(input_real.size() >= iterations * 257);
-  REQUIRE(input_imag.size() >= iterations * 257);
+  REQUIRE(input_real.size() >= iterations * params.PowSpecFeatSz());
+  REQUIRE(input_imag.size() >= iterations * params.PowSpecFeatSz());
 
-  input_real.resize(iterations * 257);
-  input_imag.resize(iterations * 257);
+  input_real.resize(iterations * params.PowSpecFeatSz());
+  input_imag.resize(iterations * params.PowSpecFeatSz());
   spench::ComplexNumber<float> input_complex(input_real, input_imag);
 
   feature_extractor.LoadDataFromBin("restored_istft_signal.dump", reference_signal);
-  REQUIRE(reference_signal.size() >= 256 * (iterations - 1));
-  reference_signal.resize(256 * (iterations - 1));
+  REQUIRE(reference_signal.size() >= params.NumFrameStrideSamples() * (iterations - 1));
+  reference_signal.resize(params.NumFrameStrideSamples() * (iterations - 1));
 
   feature_extractor.m_feature_extractor->iSTFTApply(input_complex, result_signal);
 
@@ -540,7 +606,7 @@ TEST_CASE("Run Feature Extractor Runner for extraction denoiser input with defau
   // std::vector<spench::ComplexNumber<float>> result;
   std::vector<std::vector<float>> reference_mag;
   std::vector<std::valarray<float>> result_mag;
-  feature_extractor.LoadDataFromBin("10_mag_stft_tensors.dump", reference_mag);
+  feature_extractor.LoadSpecDataFromBin("10_mag_stft_tensors.dump", reference_mag);
 
   std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
             std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
@@ -552,7 +618,7 @@ TEST_CASE("Run Feature Extractor Runner for extraction denoiser input with defau
 
   denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
   std::vector<float> audio(feature_extractor.m_wav_data.begin(),
-                           feature_extractor.m_wav_data.begin()+ 256 * kIterations);
+                           feature_extractor.m_wav_data.begin() + params.NumFrameStrideSamples() * kIterations);
   denoise_task.m_data.m_waveform = audio;
   REQUIRE(denoise_task.m_data.m_input_spec.size() == 0);
 
@@ -616,7 +682,7 @@ TEST_CASE("Run Feature Extractor Runner for masking with default parameters(audi
 
   feature_extractor_runner_ptr->Run(&denoise_task);
 
-  REQUIRE(denoise_task.m_data.m_enhanced_wav.size() == 256);
+  REQUIRE(denoise_task.m_data.m_enhanced_wav.size() == params.NumFrameStrideSamples());
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::ENHANCED_WAV);
 
   IsVectorsClose(reference_signal, denoise_task.m_data.m_enhanced_wav, 0.001);
@@ -695,7 +761,7 @@ TEST_CASE("Run Feature Extractor Runner with configuration read from .yaml confi
 
   std::vector<std::vector<float>> reference_mag;
   std::vector<std::valarray<float>> result_mag;
-  feature_extractor.LoadDataFromBin("10_mag_stft_tensors.dump", reference_mag);
+  feature_extractor.LoadSpecDataFromBin("10_mag_stft_tensors.dump", reference_mag);
 
   std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
             std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
@@ -708,7 +774,7 @@ TEST_CASE("Run Feature Extractor Runner with configuration read from .yaml confi
 
   denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
   std::vector<float> audio(feature_extractor.m_wav_data.begin(),
-                           feature_extractor.m_wav_data.begin()+ 256 * kIterations);
+                           feature_extractor.m_wav_data.begin() + params.NumFrameStrideSamples() * kIterations);
   denoise_task.m_data.m_waveform = audio;
   REQUIRE(denoise_task.m_data.m_input_spec.size() == 0);
 
@@ -722,4 +788,39 @@ TEST_CASE("Run Feature Extractor Runner with configuration read from .yaml confi
   }
 
   IsVectorsClose(reference_mag[0], result_mag[0], 0.0001);
+}
+
+TEST_CASE("Run Feature Extractor Runner with configuration read from .yaml config (audio 24kHz) [spench]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
+  auto feature_extractor = std::move(TestFE().
+                                     InitFE(params));
+  constexpr size_t kIterations = 1 + 1;
+
+  std::vector<std::vector<float>> reference_mag;
+  std::vector<std::valarray<float>> result_mag;
+  reference_mag.emplace_back(std::vector<float>(params.PowSpecFeatSz(), 0.0));
+
+  std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
+            std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
+  YAML::Node config = feature_extractor.GetYAML("default_configuration_best_quality_onnx_24khz.yaml");
+  feature_extractor_runner_ptr->ReadConfig(config["feature_params"]);
+  REQUIRE(feature_extractor_runner_ptr->GetSamplingFreq() == 24000);
+  REQUIRE(feature_extractor_runner_ptr->GetFrameSize() == 32);
+
+  spench::DenoiseTask denoise_task;
+
+  denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
+  std::vector<float> audio(params.NumFrameStrideSamples() * kIterations, 0.0);
+  denoise_task.m_data.m_waveform = audio;
+  REQUIRE(denoise_task.m_data.m_input_spec.size() == 0);
+
+  feature_extractor_runner_ptr->Run(&denoise_task);
+
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SPECTROGRAM);
+  REQUIRE(denoise_task.m_data.m_input_spec.size() == 1);
+
+  for (size_t i = 0; i < kIterations - 1 ; ++i) {
+    result_mag.push_back(denoise_task.m_data.m_input_spec[i].getMagnitude());
+  }
+  IsVectorsClose(reference_mag[0], result_mag[0], 0.00001);
 }
