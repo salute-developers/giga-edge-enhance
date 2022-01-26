@@ -428,6 +428,7 @@ TEST_CASE("Run 1000 iSTFT with dummy zero vector for speed measure (audio 16kHz)
   const std::vector<float> kReference_signal(params.NumFrameStrideSamples(), 0.0);
   std::vector<float> kReal_input(params.PowSpecFeatSz() * 2, 0.0);
   std::vector<float> kImag_input(params.PowSpecFeatSz() * 2, 0.0);
+
   spench::ComplexNumber<float> kInput_complex(kReal_input, kImag_input);
   std::vector<size_t> timings(feature_extractor.m_kNattempts);
 

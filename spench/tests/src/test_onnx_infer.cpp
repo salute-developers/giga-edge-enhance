@@ -61,7 +61,7 @@ struct TestOnnx {
 };
 
 struct TestOnnxRunner {
-  std::unique_ptr<util::onnx::SpenchQOnnxRunner> m_denoiser_runner;
+  std::unique_ptr<util::onnx::BaseOnnxRunner> m_denoiser_runner;
 
   const std::string m_kBase = "data/";
 
@@ -71,9 +71,15 @@ struct TestOnnxRunner {
   TestOnnxRunner& InitRunner(const std::string& yaml_config_name) {
     std::string file_path = m_kBase + "config/" + yaml_config_name;
     YAML::Node node = YAML::LoadFile(file_path);
-    bool on_gpu = node["inference"]["gpu"].as<bool>();
-    m_denoiser_runner = std::unique_ptr<util::onnx::SpenchQOnnxRunner>(
+    bool on_gpu = node["inference"]["gpu"].as<bool>(false);
+    std::string model_type= node["inference"]["model_type"].as<std::string>("best_quality");
+
+    m_denoiser_runner = (model_type == "best_quality") ?
+                    std::unique_ptr<util::onnx::BaseOnnxRunner>(
                                                 new util::onnx::SpenchQOnnxRunner(node["model"],
+                                                                                  on_gpu)):
+                    std::unique_ptr<util::onnx::BaseOnnxRunner>(
+                                                new util::onnx::SpenchFOnnxRunner(node["model"],
                                                                                   on_gpu));
     return *this;
   }
@@ -312,117 +318,6 @@ TEST_CASE("Run dummy multi inference for onnx model 16kHz and with eight threads
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Read config for Inference Runner with incorrect model path", "[spench]") {
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("test_configuration_with_incorrect_model_path.yaml"),
-                                            "Config reading error. Model path parameter is not a single string!");
-}
-
-// TEST_CASE("Read config for Inference Runner with incorrect model type", "[spench]") {
-//   CHECK_THROWS_WITH(TestOnnxRunner()
-//       .InitRunner("test_configuration_with_incorrect_model_type.yaml"),
-//                                             "Model type must be in [\"best_quality\", \"best_speed\"]");
-// }
-
-TEST_CASE("Read config for Inference Runner with incorrect model inputs", "[spench]") {
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("test_configuration_with_incorrect_model_inputs.yaml"),
-                                            "Config reading error. Model inputs parameter is not a sequence!");
-}
-
-TEST_CASE("Read config for Inference Runner with incorrect model outputs", "[spench]") {
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("test_configuration_with_incorrect_model_outputs.yaml"),
-                                            "Config reading error. Model outputs parameter is not a sequence!");
-}
-
-TEST_CASE("Read config for Inference Runner with incorrect model context length", "[spench]") {
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("test_configuration_with_incorrect_model_ctx_len.yaml"),
-                                            "Config reading error. Model context length is not a scalar!");
-}
-
-TEST_CASE("Read config for Inference Runner with not existed model path", "[spench]") {
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("test_configuration_with_not_existed_model_path.yaml"),
-                                            "Model reading error. File does not exist!");
-}
-
-TEST_CASE("Run the best quality model with cpu onnx runner with zeroed hidden (audio 16kHz)", "[spench]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
-
-  std::valarray<float> real;
-  std::valarray<float> imag;
-  std::vector<float> gt_real;
-  std::vector<float> gt_imag;
-  std::vector<float> gt_fullband_hidden;
-  std::vector<float> gt_fullband_cell_state;
-  std::vector<float> gt_subband_hidden;
-  std::vector<float> gt_subband_cell_state;
-  data.LoadDataFromBin("1_real_wav_stft.dump", real);
-  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
-  data.LoadDataFromBin("1_real_network_output_for_zeroed_hiddens_16khz.dump", gt_real);
-  data.LoadDataFromBin("1_imag_network_output_for_zeroed_hiddens_16khz.dump", gt_imag);
-  data.LoadDataFromBin("1_predicted_full_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_fullband_hidden);
-  data.LoadDataFromBin("1_predicted_full_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_fullband_cell_state);
-  data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
-  data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
-  spench::DenoiseTask denoise_task;
-  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
-  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
-
-  data.m_denoiser_runner->Infer<float>(&denoise_task);
-
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTIONS);
-  IsVectorsClose(gt_real, denoise_task.m_data.m_network_output.real, 0.000001);
-  IsVectorsClose(gt_imag, denoise_task.m_data.m_network_output.imag, 0.000001);
-  IsVectorsClose(gt_fullband_hidden, denoise_task.m_data.m_context.m_fullband_hidden, 0.000001);
-  IsVectorsClose(gt_fullband_cell_state, denoise_task.m_data.m_context.m_fullband_cell_state, 0.000001);
-  IsVectorsClose(gt_subband_hidden, denoise_task.m_data.m_context.m_subband_hidden, 0.000001);
-  IsVectorsClose(gt_subband_cell_state, denoise_task.m_data.m_context.m_subband_cell_state, 0.000001);
-}
-
-TEST_CASE("Run the best quality model 16kHz with cpu onnx runner", "[spench]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
-
-  std::valarray<float> real;
-  std::valarray<float> imag;
-  std::vector<float> gt_real;
-  std::vector<float> gt_imag;
-  std::vector<float> gt_fullband_hidden;
-  std::vector<float> gt_fullband_cell_state;
-  std::vector<float> gt_subband_hidden;
-  std::vector<float> gt_subband_cell_state;
-  data.LoadDataFromBin("1_real_wav_stft.dump", real);
-  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
-  data.LoadDataFromBin("1_real_network_output_16khz.dump", gt_real);
-  data.LoadDataFromBin("1_imag_network_output_16khz.dump", gt_imag);
-  data.LoadDataFromBin("1_predicted_full_band_hidden_state_16khz.dump", gt_fullband_hidden);
-  data.LoadDataFromBin("1_predicted_full_band_cell_state_16khz.dump", gt_fullband_cell_state);
-  data.LoadDataFromBin("1_predicted_sub_band_hidden_state_16khz.dump", gt_subband_hidden);
-  data.LoadDataFromBin("1_predicted_sub_band_cell_state_16khz.dump", gt_subband_cell_state);
-
-  spench::DenoiseTask denoise_task;
-  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
-  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
-  data.LoadDataFromBin("full_band_hidden_state_1.dump", denoise_task.m_data.m_context.m_fullband_hidden);
-  data.LoadDataFromBin("full_band_cell_state_1.dump", denoise_task.m_data.m_context.m_fullband_cell_state);
-  data.LoadDataFromBin("sub_band_hidden_state_1.dump", denoise_task.m_data.m_context.m_subband_hidden);
-  data.LoadDataFromBin("sub_band_cell_state_1.dump", denoise_task.m_data.m_context.m_subband_cell_state);
-
-  data.m_denoiser_runner->Infer<float>(&denoise_task);
-
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTIONS);
-  IsVectorsClose(gt_real, denoise_task.m_data.m_network_output.real, 0.000001);
-  IsVectorsClose(gt_imag, denoise_task.m_data.m_network_output.imag, 0.000001);
-  IsVectorsClose(gt_fullband_hidden, denoise_task.m_data.m_context.m_fullband_hidden, 0.000001);
-  IsVectorsClose(gt_fullband_cell_state, denoise_task.m_data.m_context.m_fullband_cell_state, 0.000001);
-  IsVectorsClose(gt_subband_hidden, denoise_task.m_data.m_context.m_subband_hidden, 0.000001);
-  IsVectorsClose(gt_subband_cell_state, denoise_task.m_data.m_context.m_subband_cell_state, 0.000001);
-}
-
 TEST_CASE("Run dummy multi inference for onnx model 24kHz and with one thread", "[spench]") {
   auto data = std::move(TestOnnx()
       .InitModel("quality_model_with_layerNorm_24khz.onnx"));
@@ -604,7 +499,7 @@ TEST_CASE("Run dummy multi inference for onnx model 24kHz and with eight threads
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for onnx fast model 24kHz and with one thread", "[spench]") {
+TEST_CASE("Run dummy multi inference for fast onnx model 24kHz and with one thread", "[spench]") {
   auto data = std::move(TestOnnx()
       .InitModel("fast_model_24khz.onnx"));
 
@@ -783,4 +678,130 @@ TEST_CASE("Run dummy multi inference for fast onnx model 24kHz and with eight th
                                         tot <<
                                         " | " << static_cast<double>(tot) / data.m_nattempts <<
                                         " ms per infer" << std::endl;
+}
+
+TEST_CASE("Read config for Inference Runner with incorrect model path", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_incorrect_model_path.yaml"),
+                                            "Config reading error. Model path parameter is not a single string!");
+}
+
+// TEST_CASE("Read config for Inference Runner with incorrect model type", "[spench]") {
+//   CHECK_THROWS_WITH(TestOnnxRunner()
+//       .InitRunner("test_configuration_with_incorrect_model_type.yaml"),
+//                                             "Model type must be in [\"best_quality\", \"best_speed\"]");
+// }
+
+TEST_CASE("Read config for Inference Runner with incorrect model inputs", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_incorrect_model_inputs.yaml"),
+                                            "Config reading error. Model inputs parameter is not a sequence!");
+}
+
+TEST_CASE("Read config for Inference Runner with incorrect model outputs", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_incorrect_model_outputs.yaml"),
+                                            "Config reading error. Model outputs parameter is not a sequence!");
+}
+
+TEST_CASE("Read config for Inference Runner with incorrect model context length", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_incorrect_model_ctx_len.yaml"),
+                                            "Config reading error. Model context length is not a scalar!");
+}
+
+TEST_CASE("Read config for Inference Runner with not existed model path", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("test_configuration_with_not_existed_model_path.yaml"),
+                                            "Model reading error. File does not exist!");
+}
+
+TEST_CASE("Run the best quality model with cpu onnx runner with zeroed hidden (audio 16kHz)", "[spench]") {
+  auto data = std::move(TestOnnxRunner()
+      .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
+
+  std::valarray<float> real;
+  std::valarray<float> imag;
+  std::vector<float> gt_real;
+  std::vector<float> gt_imag;
+  std::vector<float> gt_fullband_hidden;
+  std::vector<float> gt_fullband_cell_state;
+  std::vector<float> gt_subband_hidden;
+  std::vector<float> gt_subband_cell_state;
+  data.LoadDataFromBin("1_real_wav_stft.dump", real);
+  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
+  data.LoadDataFromBin("1_real_network_output_for_zeroed_hiddens_16khz.dump", gt_real);
+  data.LoadDataFromBin("1_imag_network_output_for_zeroed_hiddens_16khz.dump", gt_imag);
+  data.LoadDataFromBin("1_predicted_full_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_fullband_hidden);
+  data.LoadDataFromBin("1_predicted_full_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_fullband_cell_state);
+  data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
+  data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
+  spench::DenoiseTask denoise_task;
+  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
+
+  data.m_denoiser_runner->Infer(&denoise_task);
+
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTIONS);
+  IsVectorsClose(gt_real, denoise_task.m_data.m_network_output.real, 0.000001);
+  IsVectorsClose(gt_imag, denoise_task.m_data.m_network_output.imag, 0.000001);
+  IsVectorsClose(gt_fullband_hidden, denoise_task.m_data.m_context.m_fullband_hidden, 0.000001);
+  IsVectorsClose(gt_fullband_cell_state, denoise_task.m_data.m_context.m_fullband_cell_state, 0.000001);
+  IsVectorsClose(gt_subband_hidden, denoise_task.m_data.m_context.m_subband_hidden, 0.000001);
+  IsVectorsClose(gt_subband_cell_state, denoise_task.m_data.m_context.m_subband_cell_state, 0.000001);
+}
+
+TEST_CASE("Run the best quality model 16kHz with cpu onnx runner", "[spench]") {
+  auto data = std::move(TestOnnxRunner()
+      .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
+
+  std::valarray<float> real;
+  std::valarray<float> imag;
+  std::vector<float> gt_real;
+  std::vector<float> gt_imag;
+  std::vector<float> gt_fullband_hidden;
+  std::vector<float> gt_fullband_cell_state;
+  std::vector<float> gt_subband_hidden;
+  std::vector<float> gt_subband_cell_state;
+  data.LoadDataFromBin("1_real_wav_stft.dump", real);
+  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
+  data.LoadDataFromBin("1_real_network_output_16khz.dump", gt_real);
+  data.LoadDataFromBin("1_imag_network_output_16khz.dump", gt_imag);
+  data.LoadDataFromBin("1_predicted_full_band_hidden_state_16khz.dump", gt_fullband_hidden);
+  data.LoadDataFromBin("1_predicted_full_band_cell_state_16khz.dump", gt_fullband_cell_state);
+  data.LoadDataFromBin("1_predicted_sub_band_hidden_state_16khz.dump", gt_subband_hidden);
+  data.LoadDataFromBin("1_predicted_sub_band_cell_state_16khz.dump", gt_subband_cell_state);
+
+  spench::DenoiseTask denoise_task;
+  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
+  data.LoadDataFromBin("full_band_hidden_state_1.dump", denoise_task.m_data.m_context.m_fullband_hidden);
+  data.LoadDataFromBin("full_band_cell_state_1.dump", denoise_task.m_data.m_context.m_fullband_cell_state);
+  data.LoadDataFromBin("sub_band_hidden_state_1.dump", denoise_task.m_data.m_context.m_subband_hidden);
+  data.LoadDataFromBin("sub_band_cell_state_1.dump", denoise_task.m_data.m_context.m_subband_cell_state);
+
+  data.m_denoiser_runner->Infer(&denoise_task);
+
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTIONS);
+  IsVectorsClose(gt_real, denoise_task.m_data.m_network_output.real, 0.000001);
+  IsVectorsClose(gt_imag, denoise_task.m_data.m_network_output.imag, 0.000001);
+  IsVectorsClose(gt_fullband_hidden, denoise_task.m_data.m_context.m_fullband_hidden, 0.000001);
+  IsVectorsClose(gt_fullband_cell_state, denoise_task.m_data.m_context.m_fullband_cell_state, 0.000001);
+  IsVectorsClose(gt_subband_hidden, denoise_task.m_data.m_context.m_subband_hidden, 0.000001);
+  IsVectorsClose(gt_subband_cell_state, denoise_task.m_data.m_context.m_subband_cell_state, 0.000001);
+}
+
+TEST_CASE("Read config for the best speed model 24kHz with error in inputs", "[spench]") {
+   CHECK_THROWS_WITH(TestOnnxRunner().InitRunner("test_configuration_with_error_in_inputs.yaml"),
+                     "The model has inputs inconsisted with provided ones");
+}
+
+TEST_CASE("Read config for the best speed model 24kHz with error number of outputs", "[spench]") {
+  CHECK_THROWS_WITH(TestOnnxRunner().InitRunner("test_configuration_with_error_in_outputs.yaml"),
+                    "The model has 4 outputs, but you provided 3");
+}
+
+TEST_CASE("Read default config for the best speed model 24kHz", "[spench]") {
+  auto data = std::move(TestOnnxRunner()
+      .InitRunner("default_configuration_fast_onnx_24khz.yaml"));
 }
