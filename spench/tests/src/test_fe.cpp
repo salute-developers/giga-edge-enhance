@@ -505,7 +505,7 @@ TEST_CASE("Run 10 iSTFT calculations with real data from .bin file (audio 16kHz)
     result_signal.resize(params.NumFrameStrideSamples() * (iterations - 1));
   }
 
-  IsVectorsClose(reference_signal, result_signal, 0.05);
+  IsVectorsClose(reference_signal, result_signal, 0.0000001);
 }
 
 TEST_CASE("Run iSTFT with single real complex vector (audio 16kHz) [spench]") {
@@ -534,7 +534,7 @@ TEST_CASE("Run iSTFT with single real complex vector (audio 16kHz) [spench]") {
 
   feature_extractor.m_feature_extractor->iSTFTApply(input_complex, result_signal);
 
-  IsVectorsClose(reference_signal, result_signal, 0.05);
+  IsVectorsClose(reference_signal, result_signal, 0.0000001);
 }
 
 TEST_CASE("Run decompressCIRM with real input [spench]") {
@@ -583,17 +583,17 @@ TEST_CASE("Run calcEnhancedPartsInPlace with real input [spench]") {
   feature_extractor.LoadDataFromBin("calc_enhanced_in_real.dump", test_in_real);
   feature_extractor.LoadDataFromBin("calc_enhanced_in_imag.dump", test_in_imag);
 
-  spench::ComplexNumber<float> test_spec(test_in_real, test_in_imag);
+  const spench::ComplexNumber<float> test_spec(test_in_real, test_in_imag);
 
   std::vector<float> gt_real_mask;
   std::vector<float> gt_imag_mask;
   feature_extractor.LoadDataFromBin("calc_enhanced_gt_real.dump", gt_real_mask);
   feature_extractor.LoadDataFromBin("calc_enhanced_gt_imag.dump", gt_imag_mask);
 
-  feature_extractor.m_feature_extractor->calcEnhancedPartsInPlace(test_mask, test_spec);
+  feature_extractor.m_feature_extractor->calcEnhancedPartsInPlace(test_spec, test_mask);
 
-  IsVectorsClose(gt_real_mask, test_spec.real, 0.000001);
-  IsVectorsClose(gt_imag_mask, test_spec.imag, 0.000001);
+  IsVectorsClose(gt_real_mask, test_mask.real, 0.000001);
+  IsVectorsClose(gt_imag_mask, test_mask.imag, 0.000001);
 }
 
 TEST_CASE("Run Feature Extractor Runner for extraction denoiser input with default parameters(audio 16kHz) [spench]") {
@@ -603,7 +603,6 @@ TEST_CASE("Run Feature Extractor Runner for extraction denoiser input with defau
                                      SetWav("rec_noise_001_16k.wav"));
   constexpr size_t kIterations = 1 + 1;
 
-  // std::vector<spench::ComplexNumber<float>> result;
   std::vector<std::vector<float>> reference_mag;
   std::vector<std::valarray<float>> result_mag;
   feature_extractor.LoadSpecDataFromBin("10_mag_stft_tensors.dump", reference_mag);
@@ -659,9 +658,12 @@ TEST_CASE("Run Feature Extractor Runner for masking with default parameters(audi
   spench::ComplexNumber<float> prev_features(prev_features_real, prev_features_imag);
   spench::DenoiseTask denoise_task;
 
-  // update previous features for test
+  // remove 2 zero-filled default m_prev_features for spench::PipelineStage::NOISY_WAV
   denoise_task.m_data.m_context.m_prev_features.pop();
   denoise_task.m_data.m_context.m_prev_features.pop();
+
+  // m_prev_features is stft applied to 2 previous and 1 current frame
+  denoise_task.m_data.m_context.m_prev_features.push(prev_features);
   denoise_task.m_data.m_context.m_prev_features.push(prev_features);
   denoise_task.m_data.m_context.m_prev_features.push(prev_features);
   denoise_task.m_stage = spench::PipelineStage::PREDICTIONS;
@@ -685,7 +687,7 @@ TEST_CASE("Run Feature Extractor Runner for masking with default parameters(audi
   REQUIRE(denoise_task.m_data.m_enhanced_wav.size() == params.NumFrameStrideSamples());
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::ENHANCED_WAV);
 
-  IsVectorsClose(reference_signal, denoise_task.m_data.m_enhanced_wav, 0.001);
+  IsVectorsClose(reference_signal, denoise_task.m_data.m_enhanced_wav, 0.0000001);
 }
 
 TEST_CASE("Read config for Feature Extractor Runner with modified .yaml file and check values [spench]") {
