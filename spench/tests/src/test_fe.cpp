@@ -596,7 +596,7 @@ TEST_CASE("Run calcEnhancedPartsInPlace with real input [spench]") {
   IsVectorsClose(gt_imag_mask, test_mask.imag, 0.000001);
 }
 
-TEST_CASE("Run Feature Extractor Runner for extraction denoiser input with default parameters(audio 16kHz) [spench]") {
+TEST_CASE("Run Feature Extractor Runner for denoiser input generation with default parameters (audio 16kHz) [spench]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().
                                      InitFE(params).
@@ -611,10 +611,10 @@ TEST_CASE("Run Feature Extractor Runner for extraction denoiser input with defau
             std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
 
   REQUIRE(feature_extractor_runner_ptr->GetSamplingFreq() == 16000);
-  REQUIRE(feature_extractor_runner_ptr->GetFrameSize() == 32);
-
+  REQUIRE(feature_extractor_runner_ptr->GetFrameSizeMs() == 32);
   spench::DenoiseTask denoise_task;
-
+  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  denoise_task.m_data.m_context = ctx.get();
   denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
   std::vector<float> audio(feature_extractor.m_wav_data.begin(),
                            feature_extractor.m_wav_data.begin() + params.NumFrameStrideSamples() * kIterations);
@@ -658,30 +658,27 @@ TEST_CASE("Run Feature Extractor Runner for masking with default parameters(audi
   spench::ComplexNumber<float> prev_features(prev_features_real, prev_features_imag);
   spench::DenoiseTask denoise_task;
 
-  // remove 2 zero-filled default m_prev_features for spench::PipelineStage::NOISY_WAV
-  denoise_task.m_data.m_context.m_prev_features.pop();
-  denoise_task.m_data.m_context.m_prev_features.pop();
-
-  // m_prev_features is stft applied to 2 previous and 1 current frame
-  denoise_task.m_data.m_context.m_prev_features.push(prev_features);
-  denoise_task.m_data.m_context.m_prev_features.push(prev_features);
-  denoise_task.m_data.m_context.m_prev_features.push(prev_features);
+  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  denoise_task.m_data.m_context = ctx.get();
+  // update previous features for test
+  denoise_task.m_data.m_context->m_prev_features.push(prev_features);
+  denoise_task.m_data.m_context->m_prev_features.push(prev_features);
+  // denoise_task.m_data.m_context->m_prev_features.push(prev_features);
   denoise_task.m_stage = spench::PipelineStage::PREDICTIONS;
 
   std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
             std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
 
   REQUIRE(feature_extractor_runner_ptr->GetSamplingFreq() == 16000);
-  REQUIRE(feature_extractor_runner_ptr->GetFrameSize() == 32);
+  REQUIRE(feature_extractor_runner_ptr->GetFrameSizeMs() == 32);
 
   denoise_task.m_data.m_network_output.real = predicted_mask_real;
   denoise_task.m_data.m_network_output.imag = predicted_mask_imag;
 
-  denoise_task.m_data.m_context.m_prev_masked_spectrogram.real = prev_predicted_mask_real;
-  denoise_task.m_data.m_context.m_prev_masked_spectrogram.imag = prev_predicted_mask_imag;
+  denoise_task.m_data.m_context->m_prev_masked_spectrogram.real = prev_predicted_mask_real;
+  denoise_task.m_data.m_context->m_prev_masked_spectrogram.imag = prev_predicted_mask_imag;
 
   REQUIRE(denoise_task.m_data.m_enhanced_wav.size() == 0);
-
   feature_extractor_runner_ptr->Run(&denoise_task);
 
   REQUIRE(denoise_task.m_data.m_enhanced_wav.size() == params.NumFrameStrideSamples());
@@ -698,12 +695,12 @@ TEST_CASE("Read config for Feature Extractor Runner with modified .yaml file and
             std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
 
   REQUIRE(feature_extractor_runner_ptr->GetSamplingFreq() == 16000);
-  REQUIRE(feature_extractor_runner_ptr->GetFrameSize() == 32);
+  REQUIRE(feature_extractor_runner_ptr->GetFrameSizeMs() == 32);
 
   YAML::Node config = feature_extractor.GetYAML("test_configuration_with_no_default_values.yaml");
   feature_extractor_runner_ptr->ReadConfig(config["feature_params"]);
   REQUIRE(feature_extractor_runner_ptr->GetSamplingFreq() == 8000);
-  REQUIRE(feature_extractor_runner_ptr->GetFrameSize() == 40);
+  REQUIRE(feature_extractor_runner_ptr->GetFrameSizeMs() == 40);
 }
 
 TEST_CASE("Read config for Feature Extractor Runner with incorrect sampling frequency value [spench]") {
@@ -770,10 +767,11 @@ TEST_CASE("Run Feature Extractor Runner with configuration read from .yaml confi
   YAML::Node config = feature_extractor.GetYAML("default_configuration_best_quality_onnx_16khz.yaml");
   feature_extractor_runner_ptr->ReadConfig(config["feature_params"]);
   REQUIRE(feature_extractor_runner_ptr->GetSamplingFreq() == 16000);
-  REQUIRE(feature_extractor_runner_ptr->GetFrameSize() == 32);
+  REQUIRE(feature_extractor_runner_ptr->GetFrameSizeMs() == 32);
 
   spench::DenoiseTask denoise_task;
-
+  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  denoise_task.m_data.m_context = ctx.get();
   denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
   std::vector<float> audio(feature_extractor.m_wav_data.begin(),
                            feature_extractor.m_wav_data.begin() + params.NumFrameStrideSamples() * kIterations);
@@ -807,10 +805,11 @@ TEST_CASE("Run Feature Extractor Runner with configuration read from .yaml confi
   YAML::Node config = feature_extractor.GetYAML("default_configuration_best_quality_onnx_24khz.yaml");
   feature_extractor_runner_ptr->ReadConfig(config["feature_params"]);
   REQUIRE(feature_extractor_runner_ptr->GetSamplingFreq() == 24000);
-  REQUIRE(feature_extractor_runner_ptr->GetFrameSize() == 32);
+  REQUIRE(feature_extractor_runner_ptr->GetFrameSizeMs() == 32);
 
   spench::DenoiseTask denoise_task;
-
+  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  denoise_task.m_data.m_context = ctx.get();
   denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
   std::vector<float> audio(params.NumFrameStrideSamples() * kIterations, 0.0);
   denoise_task.m_data.m_waveform = audio;
