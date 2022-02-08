@@ -680,37 +680,52 @@ TEST_CASE("Run dummy multi inference for fast onnx model 24kHz and with eight th
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Read config for Inference Runner with incorrect model path", "[spench]") {
+TEST_CASE("FAIL Read config for Inference Runner with incorrect model path [onnx runner]") {
   CHECK_THROWS_WITH(TestOnnxRunner()
       .InitRunner("test_configuration_with_incorrect_model_path.yaml"),
                                             "Config reading error. Model path parameter is not a single string!");
 }
 
-TEST_CASE("Read config for Inference Runner with incorrect model inputs", "[spench]") {
+TEST_CASE("FAIL Read config for Inference Runner with incorrect model inputs [onnx runner]") {
   CHECK_THROWS_WITH(TestOnnxRunner()
       .InitRunner("test_configuration_with_incorrect_model_inputs.yaml"),
                                             "Config reading error. Model inputs parameter is not a sequence!");
 }
 
-TEST_CASE("Read config for Inference Runner with incorrect model outputs", "[spench]") {
+TEST_CASE("FAIL Read config for Inference Runner with incorrect model outputs [onnx runner]") {
   CHECK_THROWS_WITH(TestOnnxRunner()
       .InitRunner("test_configuration_with_incorrect_model_outputs.yaml"),
                                             "Config reading error. Model outputs parameter is not a sequence!");
 }
 
-TEST_CASE("Read config for Inference Runner with incorrect model context length", "[spench]") {
+TEST_CASE("FAIL Read config for Inference Runner with incorrect model context length [onnx runner]") {
   CHECK_THROWS_WITH(TestOnnxRunner()
       .InitRunner("test_configuration_with_incorrect_model_ctx_len.yaml"),
                                             "Config reading error. Model context length is not a scalar!");
 }
 
-TEST_CASE("Read config for Inference Runner with not existed model path", "[spench]") {
+TEST_CASE("FAIL Read config for Inference Runner with not existed model path [onnx runner]") {
   CHECK_THROWS_WITH(TestOnnxRunner()
       .InitRunner("test_configuration_with_not_existed_model_path.yaml"),
                                             "Model reading error. File does not exist!");
 }
+
+TEST_CASE("FAIL Run cpu onnx runner with null pointer task and zeroed hidden [onnx runner]") {
+  auto data = std::move(TestOnnxRunner()
+      .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
+  CHECK_THROWS_WITH(data.m_denoiser_runner->Infer(nullptr),
+                                            "Task data or context are not initialized!");
+}
+
+TEST_CASE("FAIL Run cpu onnx runner with null pointer context and zeroed hidden [onnx runner]") {
+  auto data = std::move(TestOnnxRunner()
+      .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
+  spench::DenoiseTask denoise_task;
+  CHECK_THROWS_WITH(data.m_denoiser_runner->Infer(&denoise_task),
+                                            "Task data or context are not initialized!");
+}
 /*
-TEST_CASE("Run the best quality model with cpu onnx runner with zeroed hidden (audio 16kHz)", "[spench]") {
+TEST_CASE("SUCCEED Run the best quality model with cpu onnx runner with zeroed hidden (audio 16kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
 
@@ -745,6 +760,7 @@ TEST_CASE("Run the best quality model with cpu onnx runner with zeroed hidden (a
   IsVectorsClose(gt_fullband_cell_state, denoise_task.m_data.m_context->m_fullband_cell_state, 0.000001);
   IsVectorsClose(gt_subband_hidden, denoise_task.m_data.m_context->m_subband_hidden, 0.000001);
   IsVectorsClose(gt_subband_cell_state, denoise_task.m_data.m_context->m_subband_cell_state, 0.000001);
+
 }
 */
 /*
@@ -790,17 +806,17 @@ TEST_CASE("Run the best quality model 16kHz with cpu onnx runner", "[spench]") {
   IsVectorsClose(gt_subband_cell_state, denoise_task.m_data.m_context->m_subband_cell_state, 0.000001);
 }
 */
-TEST_CASE("Read config for the best speed model 24kHz with error in inputs", "[spench]") {
+TEST_CASE("FAIL Read config for the best speed model 24kHz with error in inputs [onnx runner]") {
   CHECK_THROWS_WITH(TestOnnxRunner().InitRunner("test_configuration_with_error_in_inputs.yaml"),
                      "The model has inputs inconsisted with provided ones");
 }
 
-TEST_CASE("Read config for the best speed model 24kHz with error number of outputs", "[spench]") {
+TEST_CASE("FAIL Read config for the best speed model 24kHz with error number of outputs [onnx runner]") {
   CHECK_THROWS_WITH(TestOnnxRunner().InitRunner("test_configuration_with_error_in_outputs.yaml"),
                     "The model has 4 outputs, but you provided 3");
 }
 
-TEST_CASE("Read default config for the best speed model 24kHz", "[spench]") {
+TEST_CASE("SUCCEED Read default config for the best speed model 24kHz [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_fast_onnx_24khz.yaml"));
 }
