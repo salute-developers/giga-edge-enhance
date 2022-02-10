@@ -596,7 +596,7 @@ TEST_CASE("Run calcEnhancedPartsInPlace with real input [spench]") {
   IsVectorsClose(gt_imag_mask, test_mask.imag, 0.000001);
 }
 
-TEST_CASE("Run Feature Extractor Runner for denoiser input generation with default parameters (audio 16kHz) [spench]") {
+TEST_CASE("SUCCEED Launch runner for denoiser input generation with default parameters (audio 16kHz) [fe runner]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().
                                      InitFE(params).
@@ -633,7 +633,7 @@ TEST_CASE("Run Feature Extractor Runner for denoiser input generation with defau
   IsVectorsClose(reference_mag[0], result_mag[0], 0.0001);
 }
 
-TEST_CASE("Run Feature Extractor Runner for masking with default parameters(audio 16kHz) [spench]") {
+TEST_CASE("SUCCEED Launch runner for masking with default parameters (audio 16kHz) [fe runner]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().
                                      InitFE(params).
@@ -687,7 +687,7 @@ TEST_CASE("Run Feature Extractor Runner for masking with default parameters(audi
   IsVectorsClose(reference_signal, denoise_task.m_data.m_enhanced_wav, 0.0000001);
 }
 
-TEST_CASE("Read config for Feature Extractor Runner with modified .yaml file and check values [spench]") {
+TEST_CASE("SUCCEED Read config for runner with modified .yaml file and check values [fe runner]") {
   auto feature_extractor = std::move(TestFE().
                                      SetWav("rec_noise_001_16k.wav"));
 
@@ -703,7 +703,7 @@ TEST_CASE("Read config for Feature Extractor Runner with modified .yaml file and
   REQUIRE(feature_extractor_runner_ptr->GetFrameSizeMs() == 40);
 }
 
-TEST_CASE("Read config for Feature Extractor Runner with incorrect sampling frequency value [spench]") {
+TEST_CASE("FAIL Read config for runner with incorrect sampling frequency value [fe runner]") {
   auto feature_extractor = std::move(TestFE().
                                      SetWav("rec_noise_001_16k.wav"));
 
@@ -714,7 +714,7 @@ TEST_CASE("Read config for Feature Extractor Runner with incorrect sampling freq
   CHECK_THROWS(feature_extractor_runner_ptr->ReadConfig(config["feature_params"]));
 }
 
-TEST_CASE("Read config for Feature Extractor Runner with incorrect frame size value [spench]") {
+TEST_CASE("FAIL Read config for runner with incorrect frame size value [fe runner]") {
   auto feature_extractor = std::move(TestFE().
                                      SetWav("rec_noise_001_16k.wav"));
 
@@ -726,7 +726,7 @@ TEST_CASE("Read config for Feature Extractor Runner with incorrect frame size va
                                                 "Config reading error. Frame size is not a scalar!");
 }
 
-TEST_CASE("Read config for Feature Extractor Runner with incorrect window hop value [spench]") {
+TEST_CASE("FAIL Read config for runner with incorrect window hop value [fe runner]") {
   auto feature_extractor = std::move(TestFE().
                                      SetWav("rec_noise_001_16k.wav"));
 
@@ -738,7 +738,7 @@ TEST_CASE("Read config for Feature Extractor Runner with incorrect window hop va
                                          "Config reading error. Window hop length is not a scalar!");
 }
 
-TEST_CASE("Read config for Feature Extractor Runner with incorrect window type value [spench]") {
+TEST_CASE("FAIL Read config for runner with incorrect window type value [fe runner]") {
   auto feature_extractor = std::move(TestFE().
                                      SetWav("rec_noise_001_16k.wav"));
 
@@ -750,7 +750,7 @@ TEST_CASE("Read config for Feature Extractor Runner with incorrect window type v
                                          "Window type must be in [\"hanning\", \"hamming\"]");
 }
 
-TEST_CASE("Run Feature Extractor Runner with configuration read from .yaml config (audio 16kHz) [spench]") {
+TEST_CASE("SUCCEED Launch runner with configuration read from .yaml config (audio 16kHz) [fe runner]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().
                                      InitFE(params).
@@ -790,7 +790,71 @@ TEST_CASE("Run Feature Extractor Runner with configuration read from .yaml confi
   IsVectorsClose(reference_mag[0], result_mag[0], 0.0001);
 }
 
-TEST_CASE("Run Feature Extractor Runner with configuration read from .yaml config (audio 24kHz) [spench]") {
+TEST_CASE("SUCCEED Launch runner for iSTFT calc with skipped frame and check states (audio 16kHz) [fe runner]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
+  auto feature_extractor = std::move(TestFE().
+                                     InitFE(params).
+                                     SetWav("rec_noise_001_16k.wav"));
+
+  constexpr size_t kIterations = 1 + 1;
+  std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
+            std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
+  YAML::Node config = feature_extractor.GetYAML("default_configuration_best_quality_onnx_16khz.yaml");
+  feature_extractor_runner_ptr->ReadConfig(config["feature_params"]);
+
+  spench::DenoiseTask denoise_task;
+  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  denoise_task.m_data.m_context = ctx.get();
+  denoise_task.m_stage = spench::PipelineStage::SKIPPED_WAV;
+  std::vector<float> audio(feature_extractor.m_wav_data.begin(),
+                           feature_extractor.m_wav_data.begin() + params.NumFrameStrideSamples() * kIterations);
+  denoise_task.m_data.m_waveform = audio;
+  REQUIRE(denoise_task.m_data.m_input_spec.size() == 0);
+
+  feature_extractor_runner_ptr->Run(&denoise_task);
+
+  CHECK(denoise_task.m_stage == spench::PipelineStage::SKIPPED_WAV);
+  REQUIRE(std::vector<float>(denoise_task.m_data.m_enhanced_wav.size(), 0.0) ==
+                                                 denoise_task.m_data.m_enhanced_wav);
+  REQUIRE(denoise_task.m_data.m_input_spec.size() == 0);
+}
+
+TEST_CASE("SUCCEED Launch runner for iSTFT calc with first valid chunk and check states (audio 16kHz) [fe runner]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
+  auto feature_extractor = std::move(TestFE().
+                                     InitFE(params).
+                                     SetWav("rec_noise_001_16k.wav"));
+
+  constexpr size_t kIterations = 1 + 1;
+  std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
+            std::unique_ptr<spench::FeatureExtractorRunner>(new spench::FeatureExtractorRunner());
+  YAML::Node config = feature_extractor.GetYAML("default_configuration_best_quality_onnx_16khz.yaml");
+  feature_extractor_runner_ptr->ReadConfig(config["feature_params"]);
+
+  spench::DenoiseTask denoise_task;
+  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  denoise_task.m_data.m_context = ctx.get();
+
+  std::vector<float> audio(feature_extractor.m_wav_data.begin(),
+                           feature_extractor.m_wav_data.begin() + params.NumFrameStrideSamples() * kIterations);
+  denoise_task.m_data.m_waveform = audio;
+  for (uint16_t i = 0; i < 3; ++i) {
+    denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
+    feature_extractor_runner_ptr->Run(&denoise_task);
+    denoise_task.m_data.m_context->m_prev_features.push(denoise_task.m_data.m_input_spec[0]);
+  }
+  REQUIRE(denoise_task.m_data.m_context->m_prev_features.size() == 3);
+  REQUIRE(denoise_task.m_data.m_context->m_prev_masked_spectrogram.real.size() == 0);
+  REQUIRE(denoise_task.m_data.m_context->m_prev_masked_spectrogram.imag.size() == 0);
+
+  denoise_task.m_stage = spench::PipelineStage::PREDICTIONS;
+  feature_extractor_runner_ptr->Run(&denoise_task);
+  CHECK(denoise_task.m_stage == spench::PipelineStage::SKIPPED_WAV);
+  CHECK(denoise_task.m_data.m_context->m_prev_masked_spectrogram.real.size() == params.PowSpecFeatSz());
+  CHECK(denoise_task.m_data.m_context->m_prev_masked_spectrogram.imag.size() == params.PowSpecFeatSz());
+}
+
+TEST_CASE("SUCCEED Launch runner with configuration read from .yaml config (audio 24kHz) [fe runner]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
   auto feature_extractor = std::move(TestFE().
                                      InitFE(params));
