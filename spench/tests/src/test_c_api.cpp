@@ -23,7 +23,6 @@ struct TestCAPI {
   }
 };
 
-
 TEST_CASE("Run inference twise with const values and with reset via C API", "[spench]") {
   auto data = std::move(TestCAPI()
       .InitModel());

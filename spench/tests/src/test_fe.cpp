@@ -384,7 +384,7 @@ TEST_CASE("Run 10 STFT calculations with data from .wav file (audio 16kHz) [spen
                                      SetWav("rec_noise_001_16k.wav"));
 
   std::vector<std::vector<float>> reference_mag;
-  std::vector<std::valarray<float>> result_mag;
+  std::vector<std::vector<float>> result_mag;
   std::vector<spench::ComplexNumber<float>> result;
   size_t iterations = 11;
 
@@ -604,7 +604,7 @@ TEST_CASE("SUCCEED Launch runner for denoiser input generation with default para
   constexpr size_t kIterations = 1 + 1;
 
   std::vector<std::vector<float>> reference_mag;
-  std::vector<std::valarray<float>> result_mag;
+  std::vector<std::vector<float>> result_mag;
   feature_extractor.LoadSpecDataFromBin("10_mag_stft_tensors.dump", reference_mag);
 
   std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
@@ -759,7 +759,7 @@ TEST_CASE("SUCCEED Launch runner with configuration read from .yaml config (audi
   constexpr size_t kIterations = 1 + 1;
 
   std::vector<std::vector<float>> reference_mag;
-  std::vector<std::valarray<float>> result_mag;
+  std::vector<std::vector<float>> result_mag;
   feature_extractor.LoadSpecDataFromBin("10_mag_stft_tensors.dump", reference_mag);
 
   std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
@@ -861,7 +861,7 @@ TEST_CASE("SUCCEED Launch runner with configuration read from .yaml config (audi
   constexpr size_t kIterations = 1 + 1;
 
   std::vector<std::vector<float>> reference_mag;
-  std::vector<std::valarray<float>> result_mag;
+  std::vector<std::vector<float>> result_mag;
   reference_mag.emplace_back(std::vector<float>(params.PowSpecFeatSz(), 0.0));
 
   std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr =
