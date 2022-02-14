@@ -23,7 +23,7 @@ struct TestCAPI {
   }
 };
 
-TEST_CASE("Run inference twise with const values and with reset via C API", "[spench]") {
+TEST_CASE("SUCCEED Run inference twise with const values and with reset [spench c api]") {
   auto data = std::move(TestCAPI()
       .InitModel());
   std::vector<int16_t> predictions;
@@ -72,7 +72,7 @@ TEST_CASE("Run inference twise with const values and with reset via C API", "[sp
 }
 
 
-TEST_CASE("Run inference with invalid chunk size via C API", "[spench]") {
+TEST_CASE("SUCCEED Run inference with invalid chunk size [spench c api]") {
   auto data = std::move(TestCAPI()
       .InitModel());
   int16_t const_input1[481];
@@ -102,7 +102,7 @@ TEST_CASE("Run inference with invalid chunk size via C API", "[spench]") {
   SpenchWrapperFree(data.denoiser);
 }
 
-TEST_CASE("Run inference on wav and compare inference time with threshold", "[spench]") {
+TEST_CASE("SUCCEED Run inference on wav and compare inference time with threshold [spench c api]") {
   auto data = std::move(TestCAPI()
     .InitModel().SetWav("test1_48_noised.wav"));
 

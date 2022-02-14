@@ -84,7 +84,7 @@ struct TestFE {
   }
 };
 
-TEST_CASE("Run STFT with dummy zero vector (audio 16kHz) [spench]") {
+TEST_CASE("SUCCEED Run STFT with dummy zero vector (audio 16kHz) [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().
                                      InitFE(params));
@@ -100,7 +100,7 @@ TEST_CASE("Run STFT with dummy zero vector (audio 16kHz) [spench]") {
   IsVectorsClose(reference_imag, result[0].imag, 1.0);
 }
 
-TEST_CASE("Run 1000 STFT with dummy zero vector for speed measure (audio 16kHz) [spench]") {
+TEST_CASE("SUCCEED Run 1000 STFT with dummy zero vector for speed measure (audio 16kHz) [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().
                                      InitFE(params));
@@ -125,7 +125,7 @@ TEST_CASE("Run 1000 STFT with dummy zero vector for speed measure (audio 16kHz) 
             << std::endl;
 }
 
-TEST_CASE("Run 1000 STFT with dummy zero vector for speed measure (audio 24kHz) [spench]") {
+TEST_CASE("SUCCEED Run 1000 STFT with dummy zero vector for speed measure (audio 24kHz) [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
   auto feature_extractor = std::move(TestFE().
                                      InitFE(params));
@@ -150,7 +150,7 @@ TEST_CASE("Run 1000 STFT with dummy zero vector for speed measure (audio 24kHz) 
             << std::endl;
 }
 
-TEST_CASE("Run STFT with single real vector (audio 16kHz) [spench]") {
+TEST_CASE("SUCCEED Run STFT with single real vector (audio 16kHz) [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
 
@@ -377,7 +377,7 @@ TEST_CASE("Run STFT with single real vector (audio 16kHz) [spench]") {
   IsVectorsClose(reference_imag, result[0].imag, 0.000005);
 }
 
-TEST_CASE("Run 10 STFT calculations with data from .wav file (audio 16kHz) [spench]") {
+TEST_CASE("SUCCEED Run 10 STFT calculations with data from .wav file (audio 16kHz) [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().
                                      InitFE(params).
@@ -407,7 +407,7 @@ TEST_CASE("Run 10 STFT calculations with data from .wav file (audio 16kHz) [spen
   }
 }
 
-TEST_CASE("Run iSTFT with dummy complex zero vector (audio 16kHz) [spench]") {
+TEST_CASE("SUCCEED Run iSTFT with dummy complex zero vector (audio 16kHz) [spench]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   // To get 256 samples we need to provide more for context
@@ -421,7 +421,7 @@ TEST_CASE("Run iSTFT with dummy complex zero vector (audio 16kHz) [spench]") {
   IsVectorsClose(kReference_signal, result, 0.0001);
 }
 
-TEST_CASE("Run 1000 iSTFT with dummy zero vector for speed measure (audio 16kHz) [spench]") {
+TEST_CASE("SUCCEED Run 1000 iSTFT with dummy zero vector for speed measure (audio 16kHz) [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   // To get M reference samples we need to provide more for context
@@ -450,7 +450,7 @@ TEST_CASE("Run 1000 iSTFT with dummy zero vector for speed measure (audio 16kHz)
             << std::endl;
 }
 
-TEST_CASE("Run 1000 iSTFT with dummy zero vector for speed measure (audio 24kHz) [spench]") {
+TEST_CASE("SUCCEED Run 1000 iSTFT with dummy zero vector for speed measure (audio 24kHz) [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   // To get M reference samples we need to provide more for context
@@ -479,7 +479,7 @@ TEST_CASE("Run 1000 iSTFT with dummy zero vector for speed measure (audio 24kHz)
             << std::endl;
 }
 
-TEST_CASE("Run 10 iSTFT calculations with real data from .bin file (audio 16kHz) [spench]") {
+TEST_CASE("SUCCEED Run 10 iSTFT calculations with real data from .bin file (audio 16kHz) [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().
                                      InitFE(params).
@@ -508,7 +508,7 @@ TEST_CASE("Run 10 iSTFT calculations with real data from .bin file (audio 16kHz)
   IsVectorsClose(reference_signal, result_signal, 0.0000001);
 }
 
-TEST_CASE("Run iSTFT with single real complex vector (audio 16kHz) [spench]") {
+TEST_CASE("SUCCEED Run iSTFT with single real complex vector (audio 16kHz) [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   constexpr size_t iterations = 1 + 1;  // last one for the right context
@@ -537,7 +537,7 @@ TEST_CASE("Run iSTFT with single real complex vector (audio 16kHz) [spench]") {
   IsVectorsClose(reference_signal, result_signal, 0.0000001);
 }
 
-TEST_CASE("Run decompressCIRM with real input [spench]") {
+TEST_CASE("SUCCEED Run decompressCIRM with real input [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
 
@@ -558,7 +558,7 @@ TEST_CASE("Run decompressCIRM with real input [spench]") {
   IsVectorsClose(gt_imag_mask, test_mask.imag, 0.000001);
 }
 
-TEST_CASE("Run calcEnhancedParts with empty input [spench]") {
+TEST_CASE("SUCCEED Run calcEnhancedParts with empty input [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   spench::ComplexNumber<float> empty_mask;
@@ -568,7 +568,7 @@ TEST_CASE("Run calcEnhancedParts with empty input [spench]") {
   REQUIRE(empty_spec.imag.size() == 0);
 }
 
-TEST_CASE("Run calcEnhancedPartsInPlace with real input [spench]") {
+TEST_CASE("SUCCEED Run calcEnhancedPartsInPlace with real input [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
 

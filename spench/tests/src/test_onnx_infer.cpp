@@ -102,7 +102,7 @@ struct TestOnnxRunner {
   }
 };
 
-TEST_CASE("Run single dummy inference for onnx model", "[spench]") {
+TEST_CASE("SUCCEED Run single dummy inference [onnx]") {
   auto data = std::move(TestOnnx()
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
@@ -142,7 +142,7 @@ TEST_CASE("Run single dummy inference for onnx model", "[spench]") {
   }
 }
 
-TEST_CASE("Run dummy multi inference for onnx model 16kHz and with one thread", "[spench]") {
+TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with one thread [onnx]") {
   auto data = std::move(TestOnnx()
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
@@ -187,7 +187,7 @@ TEST_CASE("Run dummy multi inference for onnx model 16kHz and with one thread", 
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for onnx model 16kHz and with two threads", "[spench]") {
+TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with two threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(2)
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
@@ -232,7 +232,7 @@ TEST_CASE("Run dummy multi inference for onnx model 16kHz and with two threads",
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for onnx model 16kHz and with four threads", "[spench]") {
+TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with four threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(4)
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
@@ -277,7 +277,7 @@ TEST_CASE("Run dummy multi inference for onnx model 16kHz and with four threads"
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for onnx model 16kHz and with eight threads", "[spench]") {
+TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with eight threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(8)
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
@@ -322,7 +322,7 @@ TEST_CASE("Run dummy multi inference for onnx model 16kHz and with eight threads
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for onnx model 24kHz and with one thread", "[spench]") {
+TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with one thread [onnx]") {
   auto data = std::move(TestOnnx()
       .InitModel("quality_model_with_layerNorm_24khz.onnx"));
 
@@ -368,7 +368,7 @@ TEST_CASE("Run dummy multi inference for onnx model 24kHz and with one thread", 
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for onnx model 24kHz and with two threads", "[spench]") {
+TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with two threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(2)
       .InitModel("quality_model_with_layerNorm_24khz.onnx"));
 
@@ -413,7 +413,7 @@ TEST_CASE("Run dummy multi inference for onnx model 24kHz and with two threads",
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for onnx model 24kHz and with four threads", "[spench]") {
+TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with four threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(4)
       .InitModel("quality_model_with_layerNorm_24khz.onnx"));
 
@@ -458,7 +458,7 @@ TEST_CASE("Run dummy multi inference for onnx model 24kHz and with four threads"
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for onnx model 24kHz and with eight threads", "[spench]") {
+TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with eight threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(8)
       .InitModel("quality_model_with_layerNorm_24khz.onnx"));
 
@@ -503,7 +503,7 @@ TEST_CASE("Run dummy multi inference for onnx model 24kHz and with eight threads
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for fast onnx model 24kHz and with one thread", "[spench]") {
+TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with one thread [onnx]") {
   auto data = std::move(TestOnnx()
       .InitModel("fast_model_24khz.onnx"));
 
@@ -549,7 +549,7 @@ TEST_CASE("Run dummy multi inference for fast onnx model 24kHz and with one thre
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for fast onnx model 24kHz and with two threads", "[spench]") {
+TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with two threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(2)
       .InitModel("fast_model_24khz.onnx"));
 
@@ -594,7 +594,7 @@ TEST_CASE("Run dummy multi inference for fast onnx model 24kHz and with two thre
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for fast onnx model 24kHz and with four threads", "[spench]") {
+TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with four threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(4)
       .InitModel("fast_model_24khz.onnx"));
 
@@ -639,7 +639,7 @@ TEST_CASE("Run dummy multi inference for fast onnx model 24kHz and with four thr
                                         " ms per infer" << std::endl;
 }
 
-TEST_CASE("Run dummy multi inference for fast onnx model 24kHz and with eight threads", "[spench]") {
+TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with eight threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(8)
       .InitModel("fast_model_24khz.onnx"));
 
