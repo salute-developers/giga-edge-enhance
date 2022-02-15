@@ -751,7 +751,7 @@ TEST_CASE("SUCCEED Run inference via the best quality model and check network ou
   data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
 
   spench::DenoiseTask denoise_task;
-  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
   denoise_task.m_data.m_context = ctx.get();
   denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
   denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
@@ -763,10 +763,10 @@ TEST_CASE("SUCCEED Run inference via the best quality model and check network ou
   IsVectorsClose(gt_imag, denoise_task.m_data.m_network_output.imag, 0.000001);
   CHECK(std::vector<float>(denoise_task.m_data.m_enhanced_wav.size(), 0.0) ==
                                                  denoise_task.m_data.m_enhanced_wav);
-  IsVectorsClose(gt_fullband_hidden, denoise_task.m_data.m_context->m_fullband_hidden, 0.000001);
-  IsVectorsClose(gt_fullband_cell_state, denoise_task.m_data.m_context->m_fullband_cell_state, 0.000001);
-  IsVectorsClose(gt_subband_hidden, denoise_task.m_data.m_context->m_subband_hidden, 0.000001);
-  IsVectorsClose(gt_subband_cell_state, denoise_task.m_data.m_context->m_subband_cell_state, 0.000001);
+  IsVectorsClose(gt_fullband_hidden, ctx.get()->m_fullband_hidden, 0.000001);
+  IsVectorsClose(gt_fullband_cell_state, ctx.get()->m_fullband_cell_state, 0.000001);
+  IsVectorsClose(gt_subband_hidden, ctx.get()->m_subband_hidden, 0.000001);
+  IsVectorsClose(gt_subband_cell_state, ctx.get()->m_subband_cell_state, 0.000001);
 }
 
 TEST_CASE("SUCCEED Run four frames with the best quality model and check states (audio 16kHz) [onnx runner]") {
@@ -774,7 +774,7 @@ TEST_CASE("SUCCEED Run four frames with the best quality model and check states 
       .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
 
   spench::DenoiseTask denoise_task;
-  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
   denoise_task.m_data.m_context = ctx.get();
 
   std::valarray<float> real;
@@ -788,16 +788,17 @@ TEST_CASE("SUCCEED Run four frames with the best quality model and check states 
 
   data.m_denoiser_runner->Infer(&denoise_task);
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_WAV);
+
   CHECK(std::vector<float>(denoise_task.m_data.m_enhanced_wav.size(), 0.0) ==
                                                  denoise_task.m_data.m_enhanced_wav);
-  CHECK(std::vector<float>(denoise_task.m_data.m_context->m_fullband_hidden.size(), 0.0) !=
-                                                 denoise_task.m_data.m_context->m_fullband_hidden);
-  CHECK(std::vector<float>(denoise_task.m_data.m_context->m_fullband_cell_state.size(), 0.0) !=
-                                                 denoise_task.m_data.m_context->m_fullband_cell_state);
-  CHECK(std::vector<float>(denoise_task.m_data.m_context->m_subband_hidden.size(), 0.0) !=
-                                                 denoise_task.m_data.m_context->m_subband_hidden);
-  CHECK(std::vector<float>(denoise_task.m_data.m_context->m_subband_cell_state.size(), 0.0) !=
-                                                 denoise_task.m_data.m_context->m_subband_cell_state);
+  CHECK(std::vector<float>(ctx.get()->m_fullband_hidden.size(), 0.0) !=
+                                                 ctx.get()->m_fullband_hidden);
+  CHECK(std::vector<float>(ctx.get()->m_fullband_cell_state.size(), 0.0) !=
+                                                 ctx.get()->m_fullband_cell_state);
+  CHECK(std::vector<float>(ctx.get()->m_subband_hidden.size(), 0.0) !=
+                                                 ctx.get()->m_subband_hidden);
+  CHECK(std::vector<float>(ctx.get()->m_subband_cell_state.size(), 0.0) !=
+                                                 ctx.get()->m_subband_cell_state);
 
   denoise_task.m_data.m_enhanced_wav.assign(hop_size, 1.0);
   denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
@@ -849,12 +850,12 @@ TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with fast onnx mode
   data.LoadDataFromBin("1_noisy_mag_1_new.dump", noisy_mag_1_new);
   data.LoadDataFromBin("1_noisy_mag_5_new.dump", noisy_mag_5_new);
 
-  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
   spench::DenoiseContext<float>* denoise_contex = ctx.get();
-  denoise_contex->m_subband_hidden = noisy_mag_5_old;
+  ctx.get()->m_noisy_mag = noisy_mag_5_old;
   data.m_denoiser_runner->PrepareInputInPlace(noisy_mag_1_new, inputs, denoise_contex);
 
-  IsVectorsClose(denoise_contex->m_subband_hidden, noisy_mag_5_new, 0.000001);
+  IsVectorsClose(ctx.get()->m_noisy_mag, noisy_mag_5_new, 0.000001);
 }
 
 TEST_CASE("SUCCEED Run fast onnx model with real data and check first two iterations (audio 24 kHz) [onnx runner]") {
@@ -874,12 +875,12 @@ TEST_CASE("SUCCEED Run fast onnx model with real data and check first two iterat
   data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
 
   spench::DenoiseTask denoise_task;
-  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
+  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->m_noisy_mag);
+  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->m_fullband_hidden);
+  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->m_fullband_cell_state);
+  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->m_prev_fb_out);
   denoise_task.m_data.m_context = ctx.get();
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", denoise_task.m_data.m_context->m_subband_hidden);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", denoise_task.m_data.m_context->m_fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", denoise_task.m_data.m_context->m_fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", denoise_task.m_data.m_context->m_subband_cell_state);
   denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
 
   denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
@@ -889,18 +890,18 @@ TEST_CASE("SUCCEED Run fast onnx model with real data and check first two iterat
   CHECK(std::vector<float>(denoise_task.m_data.m_enhanced_wav.size(), 0.0) ==
                            denoise_task.m_data.m_enhanced_wav);
 
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", denoise_task.m_data.m_context->m_subband_hidden);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", denoise_task.m_data.m_context->m_fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", denoise_task.m_data.m_context->m_fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", denoise_task.m_data.m_context->m_subband_cell_state);
-
+  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->m_noisy_mag);
+  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->m_fullband_hidden);
+  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->m_fullband_cell_state);
+  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->m_prev_fb_out);
+  denoise_task.m_data.m_context = ctx.get();
   denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
   data.m_denoiser_runner->Infer(&denoise_task);
 
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTIONS);
-  IsVectorsClose(gt_fullband_hidden, denoise_task.m_data.m_context->m_fullband_hidden, 0.000001);
-  IsVectorsClose(gt_fullband_cell_state, denoise_task.m_data.m_context->m_fullband_cell_state, 0.000001);
-  IsVectorsClose(gt_prev_fb_out_5, denoise_task.m_data.m_context->m_subband_cell_state, 0.000001);
+  IsVectorsClose(gt_fullband_hidden, ctx.get()->m_fullband_hidden, 0.000001);
+  IsVectorsClose(gt_fullband_cell_state, ctx.get()->m_fullband_cell_state, 0.000001);
+  IsVectorsClose(gt_prev_fb_out_5, ctx.get()->m_prev_fb_out, 0.000001);
   IsVectorsClose(gt_real_output, denoise_task.m_data.m_network_output.real, 0.000001);
   IsVectorsClose(gt_imag_output, denoise_task.m_data.m_network_output.imag, 0.000001);
 }
