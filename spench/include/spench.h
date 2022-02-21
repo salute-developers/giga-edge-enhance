@@ -3,28 +3,57 @@
 #include <memory>
 #include <vector>
 #include <string>
-
-struct DenoiseState;
+#include "spench/include/errors.h"
 
 namespace spench {
-
+class DenoiseScheduler;
+template<typename T>
+class DenoiseContext;
 class AudioDenoise {
  public:
-    int16_t                         Reset();
-    void                            ProcessChunk(const std::vector<int16_t>, std::vector<int16_t>&);
-    void                            ProcessChunk(const std::vector<float>, std::vector<float>&);
-
-                                    AudioDenoise();
+    explicit                        AudioDenoise(const char* config_file);
                                     ~AudioDenoise();
                                     AudioDenoise(const AudioDenoise& copy) = delete;
     AudioDenoise&                   operator=(const AudioDenoise& copy) = delete;
+    // reread configuration form disk
+    SpenchRetCode                   ReloadConfig();
+    // modify configuration value of engine threads in memory
+    // void                            SetEngineThreads(const uint32_t num_threads);
+    uint32_t                        GetEngineThreads();
+    // start with configuration in memory (cached)
+    // int16_t                         ReloadCache();
+
+    // working with context
+    DenoiseContext<float>*          CreateContext();
+    uint64_t                        GetContextId(const DenoiseContext<float>* ctx);
+    void                            SetContextId(DenoiseContext<float>* ctx,
+                                                 uint64_t id);
+    void                            DestroyContext(DenoiseContext<float>** ctx);
+
+    // denoising
+    std::vector<float>              DownsamplePCM(const std::vector<float>& in,
+                                                  uint64_t sample_rate_in,
+                                                  uint64_t sample_rate_out);
+    std::vector<float>              UpsamplePCM(const std::vector<float>& in,
+                                                uint64_t sample_rate_in,
+                                                uint64_t sample_rate_out);
+    SpenchRetCode                   ProcessChunk(DenoiseContext<float>* ctx,
+                                                 const std::vector<float>&,
+                                                 std::vector<float>&);
+
  private:
-    DenoiseState*                   _hidden_state;
-    const uint16_t                  _frame_size = 480;
-    const std::vector<float>        _init_infer_input;
-    void                            warmUp();
+    DenoiseScheduler*               m_sheduler;
     void                            Finalize();
-    void                            convertToPCM16(const std::vector<float>& input, std::vector<int16_t>& output);
-    void                            convertToFloat32(const std::vector<int16_t>& input, std::vector<float>& output);
 };
+
+namespace tools {
+    void                            MakeFirstInputFrame(const std::vector<float>& current_chunk,
+                                                        std::vector<float>& frame);
+    std::vector<float>              DownsamplePCM(const std::vector<float>& in,
+                                                  uint64_t sample_rate_in,
+                                                  uint64_t sample_rate_out);
+    std::vector<float>              UpsamplePCM(const std::vector<float>& in,
+                                                uint64_t sample_rate_in,
+                                                uint64_t sample_rate_out);
+}  // namespace tools
 }  // namespace spench

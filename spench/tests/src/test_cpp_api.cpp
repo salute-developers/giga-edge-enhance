@@ -1,0 +1,182 @@
+#include <memory>
+#include <unordered_map>
+#include <catch.hpp>
+#include "include/spench.h"
+#include "tests/src/utils.h"
+
+
+struct TestFixture {
+  std::vector<float> m_wav_data;
+  std::unique_ptr<spench::AudioDenoise> m_denoiser;
+
+  std::string m_kBase = "data/";
+
+  TestFixture() {}
+  TestFixture& SetWav(const std::string& wav_path) {
+    std::string full_wav_path = m_kBase + "wavs/" + wav_path;
+    loadWavFx(full_wav_path.c_str(), m_wav_data, false);
+    return *this;
+  }
+
+  TestFixture& InitModel(const std::string config_name) {
+    std::string config_path = m_kBase + "config/" + config_name;
+    m_denoiser = std::unique_ptr<spench::AudioDenoise>(new spench::AudioDenoise(config_path.c_str()));
+    return *this;
+  }
+};
+
+// TEST_CASE("SUCCEED Downsample audio via API [spench api]") {
+//   auto test_data = std::move(TestFixture().
+//                         InitModel("default_configuration_best_quality_onnx_16khz.yaml").
+//                         SetWav("test1_48_noised.wav"));
+//   std::vector<float> original48 = test_data.m_wav_data;
+//   test_data.SetWav("test1_24down_noised.wav");
+//   std::vector<float> fererence_down24 = test_data.m_wav_data;
+//   std::vector<float> down24 = test_data.m_denoiser->DownsamplePCM(original48, 48000, 24000);
+//   down24.push_back(0);
+//   std::cout << fererence_down24[0] << " " << fererence_down24[1] << " " << fererence_down24[2] << std::endl;
+//   std::cout << down24[0] << " " << down24[1] << " " << down24[2] << std::endl;
+//   IsVectorsClose(fererence_down24, down24, 0.000001);
+// }
+
+TEST_CASE("SUCCEED Create frame", "[spench c++ api]") {
+  std::vector<float> input_chunk = {249.0, 250.0, 251.0, 252.0, 253.0, 254.0, 255.0};
+  std::vector<float> gt_reversed_chunk = {0,     255.0, 254.0, 253.0, 252.0,
+                                          251.0, 250.0, 249.0, 250.0,
+                                          251.0, 252.0, 253.0, 254.0, 255.0};
+  std::vector<float> reversed_chunk;
+  spench::tools::MakeFirstInputFrame(input_chunk, reversed_chunk);
+  IsVectorsClose(reversed_chunk, gt_reversed_chunk, 1.0);
+}
+
+TEST_CASE("SUCCEED Create context [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                        InitModel("default_configuration_best_quality_onnx_16khz.yaml"));
+  spench::DenoiseContext<float>* ctx = nullptr;
+  ctx = test_data.m_denoiser->CreateContext();
+  REQUIRE(ctx != nullptr);
+
+  test_data.m_denoiser->DestroyContext(&ctx);
+  REQUIRE(ctx == nullptr);
+}
+
+TEST_CASE("SUCCEED Set and retrieve a context id [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                        InitModel("default_configuration_best_quality_onnx_16khz.yaml"));
+  spench::DenoiseContext<float>* ctx = nullptr;
+  ctx = test_data.m_denoiser->CreateContext();
+
+  test_data.m_denoiser->SetContextId(ctx, 1000);
+  REQUIRE(test_data.m_denoiser->GetContextId(ctx) == 1000);
+  test_data.m_denoiser->SetContextId(ctx, 5000);
+  REQUIRE(test_data.m_denoiser->GetContextId(ctx) == 5000);
+
+  test_data.m_denoiser->DestroyContext(&ctx);
+}
+
+TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                        InitModel("default_configuration_best_quality_onnx_16khz.yaml").
+                        SetWav("rec_noise_001_16k.wav"));
+  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_stride = 16;
+  auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
+  chunks.resize(100);
+
+  for (auto& chunk : chunks) {
+    std::vector<float> ret;
+    REQUIRE(chunk.size() == 512);
+    REQUIRE_NOTHROW(test_data.m_denoiser->ProcessChunk(ctx, chunk, ret));
+  }
+
+  test_data.m_denoiser->DestroyContext(&ctx);
+  REQUIRE(ctx == nullptr);
+}
+
+TEST_CASE("SUCCEED Reload configuration from disk [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                        InitModel("default_configuration_best_quality_onnx_16khz.yaml"));
+  REQUIRE_NOTHROW(test_data.m_denoiser->ReloadConfig());
+}
+
+TEST_CASE("SUCCEED Run inference with 100 tensors and 2 contexts [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                        InitModel("default_configuration_best_quality_onnx_16khz.yaml").
+                        SetWav("rec_noise_001_16k.wav"));
+  std::vector<float> predictions1;
+  std::vector<float> predictions2;
+  spench::DenoiseContext<float>* ctx1 = test_data.m_denoiser->CreateContext();
+  spench::DenoiseContext<float>* ctx2 = test_data.m_denoiser->CreateContext();
+  CHECK(ctx1 != ctx2);
+
+  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_stride = 16;
+  auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
+  chunks.resize(100);
+
+  for (auto& chunk : chunks) {
+    std::vector<float> ret1;
+    std::vector<float> ret2;
+    test_data.m_denoiser->ProcessChunk(ctx1, chunk, ret1);
+    test_data.m_denoiser->ProcessChunk(ctx2, chunk, ret2);
+    predictions1.insert(predictions1.end(), ret1.begin(), ret1.end());
+    predictions2.insert(predictions2.end(), ret2.begin(), ret2.end());
+  }
+  IsVectorsClose(predictions1, predictions2, 0.000001);
+
+  test_data.m_denoiser->DestroyContext(&ctx1);
+  CHECK(ctx1 == nullptr);
+  test_data.m_denoiser->DestroyContext(&ctx2);
+  CHECK(ctx2 == nullptr);
+}
+
+TEST_CASE("FAIL Run inference with invalid chunk size", "[spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                        InitModel("default_configuration_best_quality_onnx_16khz.yaml").
+                        SetWav("rec_noise_001_16k.wav"));
+  std::vector<float> predictions;
+  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+
+  const uint32_t kChunk_size = 20;
+  const uint32_t kChunk_stride = 10;
+  auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
+  chunks.resize(1);
+  std::vector<float> ret;
+  SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunks[0], ret);
+  CHECK(ret_code == SpenchRetCode::ERR_INVALID_FRAME_SIZE);
+}
+
+TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav file [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                        InitModel("default_configuration_best_quality_onnx_16khz.yaml").
+                        SetWav("rec_noise_001_16k.wav"));
+  std::vector<float> prediction;
+  std::vector<float> reference_prediction;
+  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 300;
+  auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
+  loadWavFx("data/results/wavs/rec_denoised_best_quality_001_16k.wav", reference_prediction);
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    std::vector<float>  input_frame;
+    auto& chunk = chunks[i];
+    if (i == 0) {
+      spench::tools::MakeFirstInputFrame(chunk, input_frame);
+    } else {
+      auto& prev_chunk = chunks[i-1];
+      // concat two chunks
+      input_frame.assign(prev_chunk.begin(), prev_chunk.end());
+      input_frame.insert(input_frame.end(), chunk.begin(), chunk.end());
+    }
+    std::vector<float> ret;
+    test_data.m_denoiser->ProcessChunk(ctx, input_frame, ret);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+  reference_prediction.resize(prediction.size());
+  IsVectorsClose(reference_prediction, prediction, 0.0001);
+}
