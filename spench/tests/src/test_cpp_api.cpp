@@ -9,9 +9,17 @@ struct TestFixture {
   std::vector<float> m_wav_data;
   std::unique_ptr<spench::AudioDenoise> m_denoiser;
 
-  std::string m_kBase = "data/";
+  const std::string m_kBase = "data/";
 
   TestFixture() {}
+  TestFixture& operator=(const TestFixture&) = delete;
+  TestFixture(const TestFixture&) = delete;
+  TestFixture(TestFixture&& orig) :
+          m_wav_data(std::move(orig.m_wav_data)),
+          m_denoiser(std::move(orig.m_denoiser)) {
+    orig.m_wav_data.clear();
+    orig.m_denoiser = nullptr;
+  }
   TestFixture& SetWav(const std::string& wav_path) {
     std::string full_wav_path = m_kBase + "wavs/" + wav_path;
     loadWavFx(full_wav_path.c_str(), m_wav_data, false);
@@ -24,20 +32,6 @@ struct TestFixture {
     return *this;
   }
 };
-
-// TEST_CASE("SUCCEED Downsample audio via API [spench api]") {
-//   auto test_data = std::move(TestFixture().
-//                         InitModel("default_configuration_best_quality_onnx_16khz.yaml").
-//                         SetWav("test1_48_noised.wav"));
-//   std::vector<float> original48 = test_data.m_wav_data;
-//   test_data.SetWav("test1_24down_noised.wav");
-//   std::vector<float> fererence_down24 = test_data.m_wav_data;
-//   std::vector<float> down24 = test_data.m_denoiser->DownsamplePCM(original48, 48000, 24000);
-//   down24.push_back(0);
-//   std::cout << fererence_down24[0] << " " << fererence_down24[1] << " " << fererence_down24[2] << std::endl;
-//   std::cout << down24[0] << " " << down24[1] << " " << down24[2] << std::endl;
-//   IsVectorsClose(fererence_down24, down24, 0.000001);
-// }
 
 TEST_CASE("SUCCEED Create frame", "[spench c++ api]") {
   std::vector<float> input_chunk = {249.0, 250.0, 251.0, 252.0, 253.0, 254.0, 255.0};

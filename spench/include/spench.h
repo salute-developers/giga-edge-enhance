@@ -17,8 +17,6 @@ class AudioDenoise {
     AudioDenoise&                   operator=(const AudioDenoise& copy) = delete;
     // reread configuration form disk
     SpenchRetCode                   ReloadConfig();
-    // modify configuration value of engine threads in memory
-    // void                            SetEngineThreads(const uint32_t num_threads);
     uint32_t                        GetEngineThreads();
     // start with configuration in memory (cached)
     // int16_t                         ReloadCache();
@@ -31,12 +29,6 @@ class AudioDenoise {
     void                            DestroyContext(DenoiseContext<float>** ctx);
 
     // denoising
-    std::vector<float>              DownsamplePCM(const std::vector<float>& in,
-                                                  uint64_t sample_rate_in,
-                                                  uint64_t sample_rate_out);
-    std::vector<float>              UpsamplePCM(const std::vector<float>& in,
-                                                uint64_t sample_rate_in,
-                                                uint64_t sample_rate_out);
     SpenchRetCode                   ProcessChunk(DenoiseContext<float>* ctx,
                                                  const std::vector<float>&,
                                                  std::vector<float>&);
@@ -49,11 +41,5 @@ class AudioDenoise {
 namespace tools {
     void                            MakeFirstInputFrame(const std::vector<float>& current_chunk,
                                                         std::vector<float>& frame);
-    std::vector<float>              DownsamplePCM(const std::vector<float>& in,
-                                                  uint64_t sample_rate_in,
-                                                  uint64_t sample_rate_out);
-    std::vector<float>              UpsamplePCM(const std::vector<float>& in,
-                                                uint64_t sample_rate_in,
-                                                uint64_t sample_rate_out);
 }  // namespace tools
 }  // namespace spench
