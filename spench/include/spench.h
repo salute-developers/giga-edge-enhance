@@ -15,11 +15,9 @@ class AudioDenoise {
                                     ~AudioDenoise();
                                     AudioDenoise(const AudioDenoise& copy) = delete;
     AudioDenoise&                   operator=(const AudioDenoise& copy) = delete;
-    // reread configuration form disk
     SpenchRetCode                   ReloadConfig();
     uint32_t                        GetEngineThreads();
-    // start with configuration in memory (cached)
-    // int16_t                         ReloadCache();
+    uint64_t                        GetModelSampleRate();
 
     // working with context
     DenoiseContext<float>*          CreateContext();

@@ -54,6 +54,12 @@ TEST_CASE("SUCCEED Create context [spench c++ api]") {
   REQUIRE(ctx == nullptr);
 }
 
+TEST_CASE("SUCCEED Retrieve model sample rate [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                        InitModel("default_configuration_best_quality_onnx_16khz.yaml"));
+  REQUIRE(test_data.m_denoiser->GetModelSampleRate() == 16000);
+}
+
 TEST_CASE("SUCCEED Set and retrieve a context id [spench c++ api]") {
   auto test_data = std::move(TestFixture().
                         InitModel("default_configuration_best_quality_onnx_16khz.yaml"));
