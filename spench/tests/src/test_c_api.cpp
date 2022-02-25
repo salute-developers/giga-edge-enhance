@@ -60,7 +60,7 @@ TEST_CASE("FAIL Create context with nullptr model [spench c api]") {
                              InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
   SpenchCtx ctx = nullptr;
-  ret_code = SpenchModelCreateCtx(nullptr, &ctx);
+  ret_code = SpenchModelCreateContext(nullptr, &ctx);
   REQUIRE(ctx == nullptr);
   REQUIRE(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 }
@@ -72,7 +72,7 @@ TEST_CASE("SUCCEED Create and destroy context [spench c api]") {
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   SpenchCtx ctx = nullptr;
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
   REQUIRE(ctx != nullptr);
 
@@ -88,7 +88,7 @@ TEST_CASE("FAIL Get a context id with nullptr model [spench c api]") {
 
   SpenchCtx ctx = nullptr;
   uint64_t ret_id = 1;
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   ret_code = SpenchModelGetContextId(nullptr, ctx, &ret_id);
@@ -115,7 +115,7 @@ TEST_CASE("FAIL Get a context id with nullptr returning argument [spench c api]"
 
   SpenchCtx ctx = nullptr;
 
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   ret_code = SpenchModelGetContextId(test_data.m_denoiser, ctx, nullptr);
@@ -130,7 +130,7 @@ TEST_CASE("FAIL Set a context id with nullptr model [spench c api]") {
 
   SpenchCtx ctx = nullptr;
 
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   ret_code = SpenchModelSetContextId(nullptr, ctx, 1000);
@@ -159,7 +159,7 @@ TEST_CASE("SUCCEED Check that a default context id is zero [spench c api]") {
 
   SpenchCtx ctx = nullptr;
   uint64_t ret_id = 1;
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   ret_code = SpenchModelGetContextId(test_data.m_denoiser, ctx, &ret_id);
@@ -177,7 +177,7 @@ TEST_CASE("SUCCEED Set and retrieve a context id [spench c api]") {
 
   SpenchCtx ctx = nullptr;
   uint64_t ret_id = 0;
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   ret_code = SpenchModelSetContextId(test_data.m_denoiser, ctx, 1000);
@@ -230,7 +230,7 @@ TEST_CASE("FAIL Get a number of inference engine threads with nullptr model [spe
 
   SpenchCtx ctx = nullptr;
   uint64_t ret_threads_num = 0;
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   ret_code = SpenchModelGetEngineThreads(nullptr, &ret_threads_num);
@@ -246,7 +246,7 @@ TEST_CASE("FAIL Get a number of inference engine threads with nullptr returning 
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   SpenchCtx ctx = nullptr;
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   ret_code = SpenchModelGetEngineThreads(test_data.m_denoiser, nullptr);
@@ -263,7 +263,7 @@ TEST_CASE("SUCCEED Get a number of inference engine threads [spench c api]") {
 
   SpenchCtx ctx = nullptr;
   uint64_t ret_threads_num = 0;
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   ret_code = SpenchModelGetEngineThreads(test_data.m_denoiser, &ret_threads_num);
@@ -286,7 +286,7 @@ TEST_CASE("FAIL Run inference with invalid chunk size with the best quality mode
   uint64_t ret_size = 0;
   std::vector<float> predictions(256);
   SpenchCtx ctx = nullptr;
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
 
@@ -321,7 +321,7 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
   loadWavFx("data/results/wavs/rec_denoised_best_quality_001_16k.wav", reference_prediction);
   chunks.resize(kChunks_to_compare);
 
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   ret_code = SpenchModelSetContextId(test_data.m_denoiser, ctx, 1000);
@@ -378,10 +378,10 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
   std::vector<float> predictions1;
   std::vector<float> predictions2;
 
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx1);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx1);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx2);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx2);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   ret_code = SpenchModelSetContextId(test_data.m_denoiser, ctx1, 1000);
@@ -453,7 +453,7 @@ TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare t
   auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
   chunks.resize(kChunks_to_compare);
 
-  ret_code = SpenchModelCreateCtx(test_data.m_denoiser, &ctx);
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   ret_code = SpenchModelSetContextId(test_data.m_denoiser, ctx, 1000);
