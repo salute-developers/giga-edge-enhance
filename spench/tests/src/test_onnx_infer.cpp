@@ -838,6 +838,7 @@ TEST_CASE("SUCCEED Read default config for the best speed model 24kHz [onnx runn
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_fast_onnx_24khz.yaml"));
 }
+
 TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with fast onnx model (audio 24 kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_fast_onnx_24khz.yaml"));

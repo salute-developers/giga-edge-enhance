@@ -478,9 +478,9 @@ TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare t
     ret_mem = NULL;
   }
 
-  uint32_t sum = std::accumulate(stat.begin(), stat.end(), 0);
+  uint32_t sum = std::accumulate(stat.begin() + 1, stat.end(), 0);
   float avg_meausred = static_cast<float>(sum / stat.size()) / 1000000;
-  float max_meausred = static_cast<float>(*max_element(stat.begin(), stat.end())) / 1000000;
+  float max_meausred = static_cast<float>(*max_element(stat.begin() + 1, stat.end())) / 1000000;
 
   std::cout << "avg_measured: " << avg_meausred << " ms" << std::endl;
   std::cout << "max_measured: " << max_meausred << " ms" << std::endl;
@@ -489,3 +489,118 @@ TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare t
   REQUIRE(max_upperbound > max_meausred);
 }
 
+TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav file [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                             SetWav("rec_noise_001_24k.wav"));
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 300;
+  SpenchCtx ctx = nullptr;
+  std::vector<float> prediction;
+  std::vector<float> reference_prediction;
+
+  auto chunks = chunkWav<float>(test_data.m_wav_data, 24000, kChunk_size, kChunk_stride);
+  loadWavFx("data/results/wavs/rec_denoised_fast_001_24k.wav", reference_prediction);
+  chunks.resize(kChunks_to_compare);
+
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  ret_code = SpenchModelSetContextId(test_data.m_denoiser, ctx, 1000);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    unsigned char* ret_mem;
+    uint64_t ret_size = 0;
+    std::vector<float>  input_frame;
+    auto& chunk = chunks[i];
+    if (i == 0) {
+      input_frame.resize(chunk.size() * 2);
+      ctools::SpenchMakeFirstInputFrame((unsigned char*)chunk.data(),
+                                        chunk.size() * sizeof(float),
+                                        (unsigned char*)input_frame.data(),
+                                        input_frame.size() * sizeof(float));
+    } else {
+      auto& prev_chunk = chunks[i-1];
+      // concat two chunks
+      input_frame.assign(prev_chunk.begin(), prev_chunk.end());
+      input_frame.insert(input_frame.end(), chunk.begin(), chunk.end());
+    }
+    std::vector<float> ret;
+    ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
+                                       ctx,
+                                       (const unsigned char*) input_frame.data(),
+                                       input_frame.size() * sizeof(float),
+                                       &ret_mem,
+                                       &ret_size);
+    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    std::vector<float> ret_vec(ret_size / sizeof(float));
+    std::memcpy(ret_vec.data(), ret_mem, ret_size);
+    prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
+
+    std::free(ret_mem);
+    ret_mem = nullptr;
+  }
+
+  reference_prediction.resize(prediction.size());
+  IsVectorsClose(reference_prediction, prediction, 0.0001);
+}
+
+TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with threshold [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                             SetWav("rec_noise_001_24k.wav"));
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 100;
+  // average and max inference time in milli seconds for 16ms chunk
+  float avg_upperbound = 8.0f;  // ms
+  float max_upperbound = 16.0f;  // ms
+
+  SpenchCtx ctx = nullptr;
+
+  auto chunks = chunkWav<float>(test_data.m_wav_data, 24000, kChunk_size, kChunk_stride);
+  chunks.resize(kChunks_to_compare);
+
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  ret_code = SpenchModelSetContextId(test_data.m_denoiser, ctx, 1000);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  std::vector<uint32_t> stat;
+
+  for (auto& chunk : chunks) {
+    unsigned char* ret_mem;
+    uint64_t ret_size = 0;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
+                                     ctx,
+                                     (const unsigned char*) chunk.data(),
+                                     sizeof(float) * chunk.size(),
+                                     &ret_mem,
+                                     &ret_size);
+    auto end = std::chrono::high_resolution_clock::now();
+    stat.push_back((end - start).count());
+    free(ret_mem);
+    ret_mem = NULL;
+  }
+
+  uint32_t sum = std::accumulate(stat.begin() + 1, stat.end(), 0);
+  float avg_meausred = static_cast<float>(sum / stat.size()) / 1000000;
+  float max_meausred = static_cast<float>(*max_element(stat.begin() + 1, stat.end())) / 1000000;
+
+  std::cout << "avg_measured: " << avg_meausred << " ms" << std::endl;
+  std::cout << "max_measured: " << max_meausred << " ms" << std::endl;
+
+  REQUIRE(avg_upperbound > avg_meausred);
+  REQUIRE(max_upperbound > max_meausred);
+}

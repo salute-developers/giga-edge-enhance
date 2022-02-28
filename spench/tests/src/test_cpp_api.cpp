@@ -180,3 +180,39 @@ TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav f
   reference_prediction.resize(prediction.size());
   IsVectorsClose(reference_prediction, prediction, 0.0001);
 }
+
+TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav file [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                        InitModel("default_configuration_fast_onnx_24khz.yaml").
+                        SetWav("rec_noise_001_24k.wav"));
+  std::vector<float> prediction;
+  std::vector<float> reference_prediction;
+  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 300;
+  auto chunks = chunkWav<float>(test_data.m_wav_data, 24000, kChunk_size, kChunk_stride);
+  loadWavFx("data/results/wavs/rec_denoised_fast_001_24k.wav", reference_prediction);
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    std::vector<float>  input_frame;
+    auto& chunk = chunks[i];
+    if (i == 0) {
+      spench::tools::MakeFirstInputFrame(chunk, input_frame);
+    } else {
+      auto& prev_chunk = chunks[i-1];
+      // concat two chunks
+      input_frame.assign(prev_chunk.begin(), prev_chunk.end());
+      input_frame.insert(input_frame.end(), chunk.begin(), chunk.end());
+    }
+    std::vector<float> ret;
+    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, input_frame, ret);
+    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+
+  reference_prediction.resize(prediction.size());
+  IsVectorsClose(reference_prediction, prediction, 0.0001);
+}
