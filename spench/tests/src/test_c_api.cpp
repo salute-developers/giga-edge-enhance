@@ -445,8 +445,8 @@ TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare t
   const uint32_t kChunk_stride = 16;
   const uint32_t kChunks_to_compare = 100;
   // average and max inference time in milli seconds for 16ms chunk
-  float avg_upperbound = 16.0f;  // ms
-  float max_upperbound = 40.0f;  // ms
+  float avg_upperbound = 20.0f;  // ms
+  float max_upperbound = 35.0f;  // ms
 
   SpenchCtx ctx = nullptr;
 
@@ -478,9 +478,9 @@ TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare t
     ret_mem = NULL;
   }
 
-  uint32_t sum = std::accumulate(stat.begin() + 1, stat.end(), 0);
+  uint32_t sum = std::accumulate(stat.begin(), stat.end(), 0);
   float avg_meausred = static_cast<float>(sum / stat.size()) / 1000000;
-  float max_meausred = static_cast<float>(*max_element(stat.begin() + 1, stat.end())) / 1000000;
+  float max_meausred = static_cast<float>(*max_element(stat.begin(), stat.end())) / 1000000;
 
   std::cout << "avg_measured: " << avg_meausred << " ms" << std::endl;
   std::cout << "max_measured: " << max_meausred << " ms" << std::endl;
@@ -561,8 +561,8 @@ TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with
   const uint32_t kChunk_stride = 16;
   const uint32_t kChunks_to_compare = 100;
   // average and max inference time in milli seconds for 16ms chunk
-  float avg_upperbound = 8.0f;  // ms
-  float max_upperbound = 16.0f;  // ms
+  float avg_upperbound = 10.0f;  // ms
+  float max_upperbound = 12.0f;  // ms
 
   SpenchCtx ctx = nullptr;
 
@@ -594,9 +594,9 @@ TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with
     ret_mem = NULL;
   }
 
-  uint32_t sum = std::accumulate(stat.begin() + 1, stat.end(), 0);
+  uint32_t sum = std::accumulate(stat.begin(), stat.end(), 0);
   float avg_meausred = static_cast<float>(sum / stat.size()) / 1000000;
-  float max_meausred = static_cast<float>(*max_element(stat.begin() + 1, stat.end())) / 1000000;
+  float max_meausred = static_cast<float>(*max_element(stat.begin(), stat.end())) / 1000000;
 
   std::cout << "avg_measured: " << avg_meausred << " ms" << std::endl;
   std::cout << "max_measured: " << max_meausred << " ms" << std::endl;
