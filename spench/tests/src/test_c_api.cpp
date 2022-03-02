@@ -4,6 +4,7 @@
 #include "include/spench_c_wrapper.h"
 #include "tests/src/utils.h"
 #include <chrono> // NOLINT
+#include <thread> // NOLINT
 
 struct TestCAPI {
   std::vector<float> m_wav_data;
@@ -432,6 +433,144 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
   CHECK(ctx1 == nullptr);
   SpenchModelDestroyContext(test_data.m_denoiser, &ctx2);
   CHECK(ctx2 == nullptr);
+}
+
+TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 5 contexts concurently [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                             SetWav("rec_noise_001_16k.wav"));
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 100;
+  const uint16_t kNumber = 5;
+  std::vector<std::vector<float>> predictions(kNumber);
+  std::vector<std::thread> pool;
+  std::vector<SpenchCtx> contexts;
+
+  auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
+  chunks.resize(kChunks_to_compare);
+
+  auto functor =
+   [&test_data, &chunks](
+          SpenchCtx ctx,
+          std::vector<float>& predictions) ->void {
+    for (auto& chunk : chunks) {
+      SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+      unsigned char* ret_mem;
+      uint64_t ret_size = 0;
+      std::vector<float> ret;
+      ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
+                                         ctx,
+                                         (const unsigned char*) chunk.data(),
+                                         sizeof(float) * chunk.size(),
+                                         &ret_mem,
+                                         &ret_size);
+      CHECK(ret_code == SpenchRetCode::SUCCESS);
+      std::vector<float> ret_vec(ret_size / sizeof(float));
+      std::memcpy(ret_vec.data(), ret_mem, ret_size);
+      predictions.insert(predictions.end(), ret_vec.begin(), ret_vec.end());
+
+      std::free(ret_mem);
+      ret_mem = nullptr;
+    }
+  };
+
+  for (uint32_t i = 0; i < kNumber; ++i) {
+    SpenchCtx ctx = nullptr;
+    ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
+    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    ret_code = SpenchModelSetContextId(test_data.m_denoiser, ctx, i);
+    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    contexts.emplace_back(ctx);
+    pool.emplace_back(std::thread(functor, contexts.back(), std::ref(predictions.at(i))));
+  }
+
+  for (uint32_t i = 0; i < kNumber; ++i) {
+    if (pool[i].joinable()) {
+        pool[i].join();
+    }
+  }
+
+  for (uint32_t i = 0; i < kNumber - 1; ++i) {
+    REQUIRE(predictions[i] == predictions[i+1]);
+  }
+
+  for (uint32_t i = 0; i < kNumber; ++i) {
+    SpenchModelDestroyContext(test_data.m_denoiser, &(contexts[i]));
+    CHECK(contexts[i] == nullptr);
+  }
+}
+
+TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 5 contexts concurently [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                             SetWav("rec_noise_001_16k.wav"));
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 100;
+  const uint16_t kNumber = 5;
+  std::vector<std::vector<float>> predictions(kNumber);
+  std::vector<std::thread> pool;
+  std::vector<SpenchCtx> contexts;
+
+  auto chunks = chunkWav<float>(test_data.m_wav_data, 24000, kChunk_size, kChunk_stride);
+  chunks.resize(kChunks_to_compare);
+
+  auto functor =
+   [&test_data, &chunks](
+          SpenchCtx ctx,
+          std::vector<float>& predictions) ->void {
+    for (auto& chunk : chunks) {
+      SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+      unsigned char* ret_mem;
+      uint64_t ret_size = 0;
+      std::vector<float> ret;
+      ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
+                                         ctx,
+                                         (const unsigned char*) chunk.data(),
+                                         sizeof(float) * chunk.size(),
+                                         &ret_mem,
+                                         &ret_size);
+      CHECK(ret_code == SpenchRetCode::SUCCESS);
+      std::vector<float> ret_vec(ret_size / sizeof(float));
+      std::memcpy(ret_vec.data(), ret_mem, ret_size);
+      predictions.insert(predictions.end(), ret_vec.begin(), ret_vec.end());
+
+      std::free(ret_mem);
+      ret_mem = nullptr;
+    }
+  };
+
+  for (uint32_t i = 0; i < kNumber; ++i) {
+    SpenchCtx ctx = nullptr;
+    ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
+    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    ret_code = SpenchModelSetContextId(test_data.m_denoiser, ctx, i);
+    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    contexts.emplace_back(ctx);
+    pool.emplace_back(std::thread(functor, contexts.back(), std::ref(predictions.at(i))));
+  }
+
+  for (uint32_t i = 0; i < kNumber; ++i) {
+    if (pool[i].joinable()) {
+        pool[i].join();
+    }
+  }
+
+  for (uint32_t i = 0; i < kNumber - 1; ++i) {
+    REQUIRE(predictions[i] == predictions[i+1]);
+  }
+
+  for (uint32_t i = 0; i < kNumber; ++i) {
+    SpenchModelDestroyContext(test_data.m_denoiser, &(contexts[i]));
+    CHECK(contexts[i] == nullptr);
+  }
 }
 
 TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare time with threshold [spench c api]") {
