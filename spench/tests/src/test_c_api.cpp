@@ -60,7 +60,7 @@ TEST_CASE("FAIL Create context with nullptr model [spench c api]") {
   auto test_data = std::move(TestCAPI().
                              InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
   ret_code = SpenchModelCreateContext(nullptr, &ctx);
   REQUIRE(ctx == nullptr);
   REQUIRE(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
@@ -72,7 +72,7 @@ TEST_CASE("SUCCEED Create and destroy context [spench c api]") {
                              InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
   ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
   REQUIRE(ctx != nullptr);
@@ -87,7 +87,7 @@ TEST_CASE("FAIL Get a context id with nullptr model [spench c api]") {
                              InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
   uint64_t ret_id = 1;
   ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -102,7 +102,7 @@ TEST_CASE("FAIL Get a context id with nullptr context [spench c api]") {
                              InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
   uint64_t ret_id = 1;
   ret_code = SpenchModelGetContextId(test_data.m_denoiser, ctx, &ret_id);
   REQUIRE(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
@@ -114,7 +114,7 @@ TEST_CASE("FAIL Get a context id with nullptr returning argument [spench c api]"
                              InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
 
   ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -129,7 +129,7 @@ TEST_CASE("FAIL Set a context id with nullptr model [spench c api]") {
                              InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
 
   ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -146,7 +146,7 @@ TEST_CASE("FAIL Set a context id with nullptr context [spench c api]") {
                              InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
 
   ret_code = SpenchModelSetContextId(test_data.m_denoiser, ctx, 1000);
   REQUIRE(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
@@ -158,7 +158,7 @@ TEST_CASE("SUCCEED Check that a default context id is zero [spench c api]") {
                              InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
   uint64_t ret_id = 1;
   ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -176,7 +176,7 @@ TEST_CASE("SUCCEED Set and retrieve a context id [spench c api]") {
                              InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
   uint64_t ret_id = 0;
   ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -229,7 +229,7 @@ TEST_CASE("FAIL Get a number of inference engine threads with nullptr model [spe
                              InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
   uint64_t ret_threads_num = 0;
   ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -246,7 +246,7 @@ TEST_CASE("FAIL Get a number of inference engine threads with nullptr returning 
                              InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
   ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -262,7 +262,7 @@ TEST_CASE("SUCCEED Get a number of inference engine threads [spench c api]") {
                              InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
   uint64_t ret_threads_num = 0;
   ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -286,7 +286,7 @@ TEST_CASE("FAIL Run inference with invalid chunk size with the best quality mode
   unsigned char* ret;
   uint64_t ret_size = 0;
   std::vector<float> predictions(256);
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
   ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -314,7 +314,7 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kChunks_to_compare = 300;
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
   std::vector<float> prediction;
   std::vector<float> reference_prediction;
 
@@ -331,25 +331,12 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem;
     uint64_t ret_size = 0;
-    std::vector<float>  input_frame;
     auto& chunk = chunks[i];
-    if (i == 0) {
-      input_frame.resize(chunk.size() * 2);
-      ctools::SpenchMakeFirstInputFrame((unsigned char*)chunk.data(),
-                                        chunk.size() * sizeof(float),
-                                        (unsigned char*)input_frame.data(),
-                                        input_frame.size() * sizeof(float));
-    } else {
-      auto& prev_chunk = chunks[i-1];
-      // concat two chunks
-      input_frame.assign(prev_chunk.begin(), prev_chunk.end());
-      input_frame.insert(input_frame.end(), chunk.begin(), chunk.end());
-    }
     std::vector<float> ret;
     ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
                                        ctx,
-                                       (const unsigned char*) input_frame.data(),
-                                       input_frame.size() * sizeof(float),
+                                       (const unsigned char*) chunk.data(),
+                                       chunk.size() * sizeof(float),
                                        &ret_mem,
                                        &ret_size);
     CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -371,11 +358,11 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
                              SetWav("rec_noise_001_16k.wav"));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kChunks_to_compare = 100;
-  SpenchCtx ctx1 = nullptr;
-  SpenchCtx ctx2 = nullptr;
+  SpenchContext ctx1 = nullptr;
+  SpenchContext ctx2 = nullptr;
   std::vector<float> predictions1;
   std::vector<float> predictions2;
 
@@ -442,20 +429,20 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 5 contex
                              SetWav("rec_noise_001_16k.wav"));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kChunks_to_compare = 100;
   const uint16_t kNumber = 5;
   std::vector<std::vector<float>> predictions(kNumber);
   std::vector<std::thread> pool;
-  std::vector<SpenchCtx> contexts;
+  std::vector<SpenchContext> contexts;
 
   auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
   chunks.resize(kChunks_to_compare);
 
   auto functor =
    [&test_data, &chunks](
-          SpenchCtx ctx,
+          SpenchContext ctx,
           std::vector<float>& predictions) ->void {
     for (auto& chunk : chunks) {
       SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
@@ -479,7 +466,7 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 5 contex
   };
 
   for (uint32_t i = 0; i < kNumber; ++i) {
-    SpenchCtx ctx = nullptr;
+    SpenchContext ctx = nullptr;
     ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
     CHECK(ret_code == SpenchRetCode::SUCCESS);
     ret_code = SpenchModelSetContextId(test_data.m_denoiser, ctx, i);
@@ -511,20 +498,20 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 5 contexts concu
                              SetWav("rec_noise_001_16k.wav"));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kChunks_to_compare = 100;
   const uint16_t kNumber = 5;
   std::vector<std::vector<float>> predictions(kNumber);
   std::vector<std::thread> pool;
-  std::vector<SpenchCtx> contexts;
+  std::vector<SpenchContext> contexts;
 
   auto chunks = chunkWav<float>(test_data.m_wav_data, 24000, kChunk_size, kChunk_stride);
   chunks.resize(kChunks_to_compare);
 
   auto functor =
    [&test_data, &chunks](
-          SpenchCtx ctx,
+          SpenchContext ctx,
           std::vector<float>& predictions) ->void {
     for (auto& chunk : chunks) {
       SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
@@ -548,7 +535,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 5 contexts concu
   };
 
   for (uint32_t i = 0; i < kNumber; ++i) {
-    SpenchCtx ctx = nullptr;
+    SpenchContext ctx = nullptr;
     ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
     CHECK(ret_code == SpenchRetCode::SUCCESS);
     ret_code = SpenchModelSetContextId(test_data.m_denoiser, ctx, i);
@@ -580,14 +567,14 @@ TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare t
                              SetWav("rec_noise_001_16k.wav"));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kChunks_to_compare = 100;
   // average and max inference time in milli seconds for 16ms chunk
   float avg_upperbound = 20.0f;  // ms
   float max_upperbound = 35.0f;  // ms
 
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
 
   auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
   chunks.resize(kChunks_to_compare);
@@ -638,7 +625,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kChunks_to_compare = 300;
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
   std::vector<float> prediction;
   std::vector<float> reference_prediction;
 
@@ -655,25 +642,12 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem;
     uint64_t ret_size = 0;
-    std::vector<float>  input_frame;
     auto& chunk = chunks[i];
-    if (i == 0) {
-      input_frame.resize(chunk.size() * 2);
-      ctools::SpenchMakeFirstInputFrame((unsigned char*)chunk.data(),
-                                        chunk.size() * sizeof(float),
-                                        (unsigned char*)input_frame.data(),
-                                        input_frame.size() * sizeof(float));
-    } else {
-      auto& prev_chunk = chunks[i-1];
-      // concat two chunks
-      input_frame.assign(prev_chunk.begin(), prev_chunk.end());
-      input_frame.insert(input_frame.end(), chunk.begin(), chunk.end());
-    }
     std::vector<float> ret;
     ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
                                        ctx,
-                                       (const unsigned char*) input_frame.data(),
-                                       input_frame.size() * sizeof(float),
+                                       (const unsigned char*) chunk.data(),
+                                       chunk.size() * sizeof(float),
                                        &ret_mem,
                                        &ret_size);
     CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -696,14 +670,14 @@ TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with
                              SetWav("rec_noise_001_24k.wav"));
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kChunks_to_compare = 100;
   // average and max inference time in milli seconds for 16ms chunk
   float avg_upperbound = 10.0f;  // ms
   float max_upperbound = 12.0f;  // ms
 
-  SpenchCtx ctx = nullptr;
+  SpenchContext ctx = nullptr;
 
   auto chunks = chunkWav<float>(test_data.m_wav_data, 24000, kChunk_size, kChunk_stride);
   chunks.resize(kChunks_to_compare);

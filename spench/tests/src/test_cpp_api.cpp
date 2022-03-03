@@ -33,16 +33,6 @@ struct TestFixture {
   }
 };
 
-TEST_CASE("SUCCEED Create frame", "[spench c++ api]") {
-  std::vector<float> input_chunk = {249.0, 250.0, 251.0, 252.0, 253.0, 254.0, 255.0};
-  std::vector<float> gt_reversed_chunk = {0,     255.0, 254.0, 253.0, 252.0,
-                                          251.0, 250.0, 249.0, 250.0,
-                                          251.0, 252.0, 253.0, 254.0, 255.0};
-  std::vector<float> reversed_chunk;
-  spench::tools::MakeFirstInputFrame(input_chunk, reversed_chunk);
-  IsVectorsClose(reversed_chunk, gt_reversed_chunk, 1.0);
-}
-
 TEST_CASE("SUCCEED Create context [spench c++ api]") {
   auto test_data = std::move(TestFixture().
                         InitModel("default_configuration_best_quality_onnx_16khz.yaml"));
@@ -80,14 +70,14 @@ TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
                         SetWav("rec_noise_001_16k.wav"));
   spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
   const uint32_t kChunks_to_compare = 100;
-  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
   chunks.resize(kChunks_to_compare);
 
   for (auto& chunk : chunks) {
     std::vector<float> ret;
-    REQUIRE(chunk.size() == 512);
+    REQUIRE(chunk.size() == 256);
     REQUIRE_NOTHROW(test_data.m_denoiser->ProcessChunk(ctx, chunk, ret));
   }
 
@@ -111,15 +101,17 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contex
   spench::DenoiseContext<float>* ctx2 = test_data.m_denoiser->CreateContext();
   CHECK(ctx1 != ctx2);
   const uint32_t kChunks_to_compare = 100;
-  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
   chunks.resize(kChunks_to_compare);
   for (auto& chunk : chunks) {
     std::vector<float> ret1;
     std::vector<float> ret2;
-    test_data.m_denoiser->ProcessChunk(ctx1, chunk, ret1);
-    test_data.m_denoiser->ProcessChunk(ctx2, chunk, ret2);
+    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx1, chunk, ret1);
+    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    ret_code = test_data.m_denoiser->ProcessChunk(ctx2, chunk, ret2);
+    CHECK(ret_code == SpenchRetCode::SUCCESS);
     predictions1.insert(predictions1.end(), ret1.begin(), ret1.end());
     predictions2.insert(predictions2.end(), ret2.begin(), ret2.end());
   }
@@ -137,7 +129,7 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contex
                         SetWav("rec_noise_001_16k.wav"));
   const uint16_t kNumber = 2;
   const uint32_t kChunks_to_compare = 100;
-  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   std::vector<std::vector<float>> predictions(kNumber);
   std::vector<std::thread> pool;
@@ -151,7 +143,8 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contex
           std::vector<float>& predictions) ->void {
     for (auto& chunk : chunks) {
       std::vector<float> ret;
-      test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+      SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+      CHECK(ret_code == SpenchRetCode::SUCCESS);
       predictions.insert(predictions.end(), ret.begin(), ret.end());
     }
   };
@@ -183,7 +176,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 2 contexts concu
                         SetWav("rec_noise_001_16k.wav"));
   const uint16_t kNumber = 2;
   const uint32_t kChunks_to_compare = 100;
-  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   std::vector<std::vector<float>> predictions(kNumber);
   std::vector<std::thread> pool;
@@ -197,7 +190,8 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 2 contexts concu
           std::vector<float>& predictions) ->void {
     for (auto& chunk : chunks) {
       std::vector<float> ret;
-      test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+      SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+      CHECK(ret_code == SpenchRetCode::SUCCESS);
       predictions.insert(predictions.end(), ret.begin(), ret.end());
     }
   };
@@ -255,18 +249,9 @@ TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav f
   chunks.resize(kChunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
-    std::vector<float>  input_frame;
     auto& chunk = chunks[i];
-    if (i == 0) {
-      spench::tools::MakeFirstInputFrame(chunk, input_frame);
-    } else {
-      auto& prev_chunk = chunks[i-1];
-      // concat two chunks
-      input_frame.assign(prev_chunk.begin(), prev_chunk.end());
-      input_frame.insert(input_frame.end(), chunk.begin(), chunk.end());
-    }
     std::vector<float> ret;
-    test_data.m_denoiser->ProcessChunk(ctx, input_frame, ret);
+    test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
     prediction.insert(prediction.end(), ret.begin(), ret.end());
   }
   reference_prediction.resize(prediction.size());
@@ -289,18 +274,9 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   chunks.resize(kChunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
-    std::vector<float>  input_frame;
     auto& chunk = chunks[i];
-    if (i == 0) {
-      spench::tools::MakeFirstInputFrame(chunk, input_frame);
-    } else {
-      auto& prev_chunk = chunks[i-1];
-      // concat two chunks
-      input_frame.assign(prev_chunk.begin(), prev_chunk.end());
-      input_frame.insert(input_frame.end(), chunk.begin(), chunk.end());
-    }
     std::vector<float> ret;
-    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, input_frame, ret);
+    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
     CHECK(ret_code == SpenchRetCode::SUCCESS);
     prediction.insert(prediction.end(), ret.begin(), ret.end());
   }

@@ -36,8 +36,4 @@ class AudioDenoise {
     void                            Finalize();
 };
 
-namespace tools {
-    void                            MakeFirstInputFrame(const std::vector<float>& current_chunk,
-                                                        std::vector<float>& frame);
-}  // namespace tools
 }  // namespace spench
