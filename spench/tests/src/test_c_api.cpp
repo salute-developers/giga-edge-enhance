@@ -223,6 +223,38 @@ TEST_CASE("SUCCEED Get a model sample rate [spench c api]") {
   REQUIRE(sample_rate == 16000);
 }
 
+TEST_CASE("FAIL Get a model input size with nullptr model [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  uint64_t input_size = 0;
+  ret_code = SpenchModelGetInputFrameSize(nullptr, &input_size);
+  REQUIRE(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+}
+
+TEST_CASE("FAIL Get a model input size with nullptr returning argument [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  ret_code = SpenchModelGetInputFrameSize(test_data.m_denoiser, nullptr);
+  REQUIRE(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+}
+
+TEST_CASE("SUCCEED Get a model input size [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  uint64_t input_size = 0;
+
+  ret_code = SpenchModelGetInputFrameSize(test_data.m_denoiser, &input_size);
+  REQUIRE(ret_code == SpenchRetCode::SUCCESS);
+  REQUIRE(input_size == (16000 * 16) / 1000);
+}
+
 TEST_CASE("FAIL Get a number of inference engine threads with nullptr model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   auto test_data = std::move(TestCAPI().

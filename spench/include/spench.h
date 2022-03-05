@@ -18,6 +18,7 @@ class AudioDenoise {
     SpenchRetCode                   ReloadConfig();
     uint32_t                        GetEngineThreads();
     uint64_t                        GetModelSampleRate();
+    uint64_t                        GetModelInputFrameSize();
 
     // working with context
     DenoiseContext<float>*          CreateContext();

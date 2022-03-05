@@ -50,6 +50,12 @@ TEST_CASE("SUCCEED Retrieve model sample rate [spench c++ api]") {
   REQUIRE(test_data.m_denoiser->GetModelSampleRate() == 16000);
 }
 
+TEST_CASE("SUCCEED Retrieve model input frame size [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                        InitModel("default_configuration_best_quality_onnx_16khz.yaml"));
+  REQUIRE(test_data.m_denoiser->GetModelInputFrameSize() == (16000 * 16) / 1000);
+}
+
 TEST_CASE("SUCCEED Set and retrieve a context id [spench c++ api]") {
   auto test_data = std::move(TestFixture().
                         InitModel("default_configuration_best_quality_onnx_16khz.yaml"));
@@ -72,12 +78,14 @@ TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
   const uint32_t kChunks_to_compare = 100;
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
-  auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                test_data.m_denoiser->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
   chunks.resize(kChunks_to_compare);
 
   for (auto& chunk : chunks) {
     std::vector<float> ret;
-    REQUIRE(chunk.size() == 256);
+    REQUIRE(chunk.size() == test_data.m_denoiser->GetModelInputFrameSize());
     REQUIRE_NOTHROW(test_data.m_denoiser->ProcessChunk(ctx, chunk, ret));
   }
 
@@ -103,7 +111,9 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contex
   const uint32_t kChunks_to_compare = 100;
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
-  auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                test_data.m_denoiser->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
   chunks.resize(kChunks_to_compare);
   for (auto& chunk : chunks) {
     std::vector<float> ret1;
@@ -134,7 +144,9 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contex
   std::vector<std::vector<float>> predictions(kNumber);
   std::vector<std::thread> pool;
   std::vector<spench::DenoiseContext<float>*> contexts;
-  auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                test_data.m_denoiser->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
   chunks.resize(kChunks_to_compare);
 
   auto functor =
@@ -181,7 +193,9 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 2 contexts concu
   std::vector<std::vector<float>> predictions(kNumber);
   std::vector<std::thread> pool;
   std::vector<spench::DenoiseContext<float>*> contexts;
-  auto chunks = chunkWav<float>(test_data.m_wav_data, 24000, kChunk_size, kChunk_stride);
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                test_data.m_denoiser->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
   chunks.resize(kChunks_to_compare);
 
   auto functor =
@@ -226,7 +240,9 @@ TEST_CASE("FAIL Run inference with invalid chunk size", "[spench c++ api]") {
   const uint32_t kChunks_to_compare = 1;
   const uint32_t kChunk_size = 20;
   const uint32_t kChunk_stride = 10;
-  auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                test_data.m_denoiser->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
   chunks.resize(kChunks_to_compare);
   std::vector<float> ret;
   SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunks[0], ret);
@@ -244,7 +260,9 @@ TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav f
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kChunks_to_compare = 300;
-  auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                test_data.m_denoiser->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
   loadWavFx("data/results/wavs/rec_denoised_best_quality_001_16k.wav", reference_prediction);
   chunks.resize(kChunks_to_compare);
 
@@ -269,7 +287,9 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kChunks_to_compare = 300;
-  auto chunks = chunkWav<float>(test_data.m_wav_data, 24000, kChunk_size, kChunk_stride);
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                test_data.m_denoiser->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
   loadWavFx("data/results/wavs/rec_denoised_fast_001_24k.wav", reference_prediction);
   chunks.resize(kChunks_to_compare);
 
