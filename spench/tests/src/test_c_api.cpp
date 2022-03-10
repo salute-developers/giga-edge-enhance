@@ -8,6 +8,7 @@
 
 struct TestCAPI {
   std::vector<float> m_wav_data;
+  std::vector<int16_t> m_pcm_wav_data;
   SpenchModel m_denoiser = nullptr;
 
   std::string m_kBase = "data/";
@@ -17,14 +18,22 @@ struct TestCAPI {
   TestCAPI(const TestCAPI&) = delete;
   TestCAPI(TestCAPI&& orig) :
           m_wav_data(std::move(orig.m_wav_data)),
+          m_pcm_wav_data(std::move(orig.m_pcm_wav_data)),
           m_denoiser(std::move(orig.m_denoiser)) {
     orig.m_wav_data.clear();
+    orig.m_pcm_wav_data.clear();
     orig.m_denoiser = nullptr;
   }
 
   TestCAPI& SetWav(const std::string& wav_path) {
     std::string full_wav_path = m_kBase + "wavs/" + wav_path;
     loadWavFx(full_wav_path.c_str(), m_wav_data, false);
+    return *this;
+  }
+
+  TestCAPI& SetPCMWav(const std::string& wav_path) {
+    std::string full_wav_path = m_kBase + "wavs/" + wav_path;
+    loadWavFx(full_wav_path.c_str(), m_pcm_wav_data);
     return *this;
   }
 
@@ -326,12 +335,12 @@ TEST_CASE("FAIL Run inference with invalid chunk size with the best quality mode
   auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
   chunks.resize(1);
 
-  ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
-                                     ctx,
-                                     (const unsigned char*) chunks[0].data(),
-                                     sizeof(float) * chunks[0].size(),
-                                     &ret,
-                                     &ret_size);
+  ret_code = SpenchModelProcessChunkFp(test_data.m_denoiser,
+                                       ctx,
+                                       (const unsigned char*) chunks[0].data(),
+                                       sizeof(float) * chunks[0].size(),
+                                       &ret,
+                                       &ret_size);
 
   CHECK(ret_code == SpenchRetCode::ERR_INVALID_FRAME_SIZE);
 }
@@ -365,12 +374,12 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
     uint64_t ret_size = 0;
     auto& chunk = chunks[i];
     std::vector<float> ret;
-    ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
-                                       ctx,
-                                       (const unsigned char*) chunk.data(),
-                                       chunk.size() * sizeof(float),
-                                       &ret_mem,
-                                       &ret_size);
+    ret_code = SpenchModelProcessChunkFp(test_data.m_denoiser,
+                                         ctx,
+                                         (const unsigned char*) chunk.data(),
+                                         chunk.size() * sizeof(float),
+                                         &ret_mem,
+                                         &ret_size);
     CHECK(ret_code == SpenchRetCode::SUCCESS);
     std::vector<float> ret_vec(ret_size / sizeof(float));
     std::memcpy(ret_vec.data(), ret_mem, ret_size);
@@ -381,6 +390,62 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
   }
   reference_prediction.resize(prediction.size());
   IsVectorsClose(reference_prediction, prediction, 0.0001);
+}
+
+TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                             SetPCMWav("rec_noise_001_16k.wav"));
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 100;
+  SpenchContext ctx = nullptr;
+  std::vector<int16_t> prediction;
+  std::vector<float> prediction_fp;
+  std::vector<float> reference_prediction_fp;
+
+  auto chunks = chunkWav<int16_t>(test_data.m_pcm_wav_data, 16000, kChunk_size, kChunk_stride);
+  loadWavFx("data/results/wavs/rec_denoised_best_quality_001_16k.wav", reference_prediction_fp);
+  chunks.resize(kChunks_to_compare);
+
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  ret_code = SpenchModelSetContextId(test_data.m_denoiser, ctx, 1000);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    unsigned char* ret_mem;
+    uint64_t ret_size = 0;
+    auto& chunk = chunks[i];
+    std::vector<int16_t> ret;
+    ret_code = SpenchModelProcessChunkInt(test_data.m_denoiser,
+                                         ctx,
+                                         (const unsigned char*) chunk.data(),
+                                         chunk.size() * sizeof(int16_t),
+                                         &ret_mem,
+                                         &ret_size);
+    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    std::vector<int16_t> ret_vec(ret_size / sizeof(int16_t));
+    std::memcpy(ret_vec.data(), ret_mem, ret_size);
+    prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
+
+    std::free(ret_mem);
+    ret_mem = nullptr;
+  }
+  // convert from pcm16 to fp
+  for (std::vector<int16_t>::size_type i = 0; i != prediction.size(); i++) {
+    float f = prediction[i] > 0 ?
+          static_cast<float>(prediction[i]) / std::numeric_limits<int16_t>::max():
+          static_cast<float>(prediction[i]) / -std::numeric_limits<int16_t>::min();
+    prediction_fp.emplace_back(f);
+  }
+  //
+  reference_prediction_fp.resize(prediction_fp.size());
+  IsVectorsClose(reference_prediction_fp, prediction_fp, 0.0001);
 }
 
 TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare result [spench c api]") {
@@ -419,20 +484,20 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
     uint64_t ret_size1 = 0;
     unsigned char* ret_mem2;
     uint64_t ret_size2 = 0;
-    ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
-                                     ctx1,
-                                     (const unsigned char*) chunk.data(),
-                                     sizeof(float) * chunk.size(),
-                                     &ret_mem1,
-                                     &ret_size1);
+    ret_code = SpenchModelProcessChunkFp(test_data.m_denoiser,
+                                         ctx1,
+                                         (const unsigned char*) chunk.data(),
+                                         sizeof(float) * chunk.size(),
+                                         &ret_mem1,
+                                         &ret_size1);
     CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-    ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
-                                     ctx2,
-                                     (const unsigned char*) chunk.data(),
-                                     sizeof(float) * chunk.size(),
-                                     &ret_mem2,
-                                     &ret_size2);
+    ret_code = SpenchModelProcessChunkFp(test_data.m_denoiser,
+                                         ctx2,
+                                         (const unsigned char*) chunk.data(),
+                                         sizeof(float) * chunk.size(),
+                                         &ret_mem2,
+                                         &ret_size2);
     CHECK(ret_code == SpenchRetCode::SUCCESS);
 
     std::vector<float> ret_vec1(ret_size1 / sizeof(float));
@@ -481,12 +546,12 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 5 contex
       unsigned char* ret_mem;
       uint64_t ret_size = 0;
       std::vector<float> ret;
-      ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
-                                         ctx,
-                                         (const unsigned char*) chunk.data(),
-                                         sizeof(float) * chunk.size(),
-                                         &ret_mem,
-                                         &ret_size);
+      ret_code = SpenchModelProcessChunkFp(test_data.m_denoiser,
+                                           ctx,
+                                           (const unsigned char*) chunk.data(),
+                                           sizeof(float) * chunk.size(),
+                                           &ret_mem,
+                                           &ret_size);
       CHECK(ret_code == SpenchRetCode::SUCCESS);
       std::vector<float> ret_vec(ret_size / sizeof(float));
       std::memcpy(ret_vec.data(), ret_mem, ret_size);
@@ -550,12 +615,12 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 5 contexts concu
       unsigned char* ret_mem;
       uint64_t ret_size = 0;
       std::vector<float> ret;
-      ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
-                                         ctx,
-                                         (const unsigned char*) chunk.data(),
-                                         sizeof(float) * chunk.size(),
-                                         &ret_mem,
-                                         &ret_size);
+      ret_code = SpenchModelProcessChunkFp(test_data.m_denoiser,
+                                           ctx,
+                                           (const unsigned char*) chunk.data(),
+                                           sizeof(float) * chunk.size(),
+                                           &ret_mem,
+                                           &ret_size);
       CHECK(ret_code == SpenchRetCode::SUCCESS);
       std::vector<float> ret_vec(ret_size / sizeof(float));
       std::memcpy(ret_vec.data(), ret_mem, ret_size);
@@ -624,12 +689,12 @@ TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare t
     uint64_t ret_size = 0;
 
     auto start = std::chrono::high_resolution_clock::now();
-    ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
-                                     ctx,
-                                     (const unsigned char*) chunk.data(),
-                                     sizeof(float) * chunk.size(),
-                                     &ret_mem,
-                                     &ret_size);
+    ret_code = SpenchModelProcessChunkFp(test_data.m_denoiser,
+                                         ctx,
+                                         (const unsigned char*) chunk.data(),
+                                         sizeof(float) * chunk.size(),
+                                         &ret_mem,
+                                         &ret_size);
     auto end = std::chrono::high_resolution_clock::now();
     stat.push_back((end - start).count());
     free(ret_mem);
@@ -676,12 +741,12 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
     uint64_t ret_size = 0;
     auto& chunk = chunks[i];
     std::vector<float> ret;
-    ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
-                                       ctx,
-                                       (const unsigned char*) chunk.data(),
-                                       chunk.size() * sizeof(float),
-                                       &ret_mem,
-                                       &ret_size);
+    ret_code = SpenchModelProcessChunkFp(test_data.m_denoiser,
+                                         ctx,
+                                         (const unsigned char*) chunk.data(),
+                                         chunk.size() * sizeof(float),
+                                         &ret_mem,
+                                         &ret_size);
     CHECK(ret_code == SpenchRetCode::SUCCESS);
     std::vector<float> ret_vec(ret_size / sizeof(float));
     std::memcpy(ret_vec.data(), ret_mem, ret_size);
@@ -727,12 +792,12 @@ TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with
     uint64_t ret_size = 0;
 
     auto start = std::chrono::high_resolution_clock::now();
-    ret_code = SpenchModelProcessChunk(test_data.m_denoiser,
-                                     ctx,
-                                     (const unsigned char*) chunk.data(),
-                                     sizeof(float) * chunk.size(),
-                                     &ret_mem,
-                                     &ret_size);
+    ret_code = SpenchModelProcessChunkFp(test_data.m_denoiser,
+                                         ctx,
+                                         (const unsigned char*) chunk.data(),
+                                         sizeof(float) * chunk.size(),
+                                         &ret_mem,
+                                         &ret_size);
     auto end = std::chrono::high_resolution_clock::now();
     stat.push_back((end - start).count());
     free(ret_mem);
