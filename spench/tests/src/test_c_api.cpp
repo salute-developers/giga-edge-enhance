@@ -115,6 +115,7 @@ TEST_CASE("FAIL Get a context id with nullptr context [spench c api]") {
   uint64_t ret_id = 1;
   ret_code = SpenchModelGetContextId(test_data.m_denoiser, ctx, &ret_id);
   REQUIRE(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
 }
 
 TEST_CASE("FAIL Get a context id with nullptr returning argument [spench c api]") {
@@ -130,6 +131,7 @@ TEST_CASE("FAIL Get a context id with nullptr returning argument [spench c api]"
 
   ret_code = SpenchModelGetContextId(test_data.m_denoiser, ctx, nullptr);
   REQUIRE(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
 }
 
 TEST_CASE("FAIL Set a context id with nullptr model [spench c api]") {
@@ -343,6 +345,7 @@ TEST_CASE("FAIL Run inference with invalid chunk size with the best quality mode
                                        &ret_size);
 
   CHECK(ret_code == SpenchRetCode::ERR_INVALID_FRAME_SIZE);
+  SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
 }
 
 TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
@@ -390,6 +393,7 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
   }
   reference_prediction.resize(prediction.size());
   IsVectorsClose(reference_prediction, prediction, 0.0001);
+  SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
 }
 
 TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
@@ -446,6 +450,7 @@ TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
   //
   reference_prediction_fp.resize(prediction_fp.size());
   IsVectorsClose(reference_prediction_fp, prediction_fp, 0.0001);
+  SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
 }
 
 TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare result [spench c api]") {
@@ -700,7 +705,7 @@ TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare t
     free(ret_mem);
     ret_mem = NULL;
   }
-
+  SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
   uint32_t sum = std::accumulate(stat.begin(), stat.end(), 0);
   float avg_meausred = static_cast<float>(sum / stat.size()) / 1000000;
   float max_meausred = static_cast<float>(*max_element(stat.begin(), stat.end())) / 1000000;
@@ -758,6 +763,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
 
   reference_prediction.resize(prediction.size());
   IsVectorsClose(reference_prediction, prediction, 0.0001);
+  SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
 }
 
 TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with threshold [spench c api]") {
@@ -803,7 +809,7 @@ TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with
     free(ret_mem);
     ret_mem = NULL;
   }
-
+  SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
   uint32_t sum = std::accumulate(stat.begin(), stat.end(), 0);
   float avg_meausred = static_cast<float>(sum / stat.size()) / 1000000;
   float max_meausred = static_cast<float>(*max_element(stat.begin(), stat.end())) / 1000000;

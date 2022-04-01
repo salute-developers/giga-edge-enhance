@@ -11,13 +11,18 @@ struct TestFixture {
 
   const std::string m_kBase = "data/";
 
-  TestFixture() {}
+  TestFixture() :
+          m_denoiser(nullptr) {}
+  ~TestFixture() {
+    m_denoiser.release();
+  }
   TestFixture& operator=(const TestFixture&) = delete;
   TestFixture(const TestFixture&) = delete;
   TestFixture(TestFixture&& orig) :
           m_wav_data(std::move(orig.m_wav_data)),
           m_denoiser(std::move(orig.m_denoiser)) {
     orig.m_wav_data.clear();
+    orig.m_denoiser.release();
     orig.m_denoiser = nullptr;
   }
   TestFixture& SetWav(const std::string& wav_path) {
@@ -267,6 +272,7 @@ TEST_CASE("FAIL Run inference with invalid chunk size", "[spench c++ api]") {
   std::vector<float> ret;
   SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunks[0], ret);
   CHECK(ret_code == SpenchRetCode::ERR_INVALID_FRAME_SIZE);
+  test_data.m_denoiser->DestroyContext(&ctx);
 }
 
 TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav file [spench c++ api]") {
@@ -292,6 +298,7 @@ TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav f
     test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
     prediction.insert(prediction.end(), ret.begin(), ret.end());
   }
+  test_data.m_denoiser->DestroyContext(&ctx);
   reference_prediction.resize(prediction.size());
   IsVectorsClose(reference_prediction, prediction, 0.0001);
 }
@@ -320,7 +327,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
     CHECK(ret_code == SpenchRetCode::SUCCESS);
     prediction.insert(prediction.end(), ret.begin(), ret.end());
   }
-
+  test_data.m_denoiser->DestroyContext(&ctx);
   reference_prediction.resize(prediction.size());
   IsVectorsClose(reference_prediction, prediction, 0.0001);
 }
