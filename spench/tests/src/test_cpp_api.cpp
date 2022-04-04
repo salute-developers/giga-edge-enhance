@@ -14,7 +14,7 @@ struct TestFixture {
   TestFixture() :
           m_denoiser(nullptr) {}
   ~TestFixture() {
-    m_denoiser.release();
+    m_denoiser.reset();
   }
   TestFixture& operator=(const TestFixture&) = delete;
   TestFixture(const TestFixture&) = delete;
@@ -22,7 +22,7 @@ struct TestFixture {
           m_wav_data(std::move(orig.m_wav_data)),
           m_denoiser(std::move(orig.m_denoiser)) {
     orig.m_wav_data.clear();
-    orig.m_denoiser.release();
+    orig.m_denoiser.reset();
     orig.m_denoiser = nullptr;
   }
   TestFixture& SetWav(const std::string& wav_path) {

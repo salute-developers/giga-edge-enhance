@@ -103,6 +103,7 @@ TEST_CASE("FAIL Get a context id with nullptr model [spench c api]") {
 
   ret_code = SpenchModelGetContextId(nullptr, ctx, &ret_id);
   REQUIRE(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
 }
 
 TEST_CASE("FAIL Get a context id with nullptr context [spench c api]") {
@@ -798,6 +799,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 5 contexts concu
   }
 }
 
+#ifndef BUILD_WITH_ADDRESS_SANITIZER
 TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare time with threshold [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   auto test_data = std::move(TestCAPI().
@@ -852,6 +854,7 @@ TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare t
   REQUIRE(avg_upperbound > avg_meausred);
   REQUIRE(max_upperbound > max_meausred);
 }
+#endif
 
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav file [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
@@ -902,6 +905,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
 }
 
+#ifndef BUILD_WITH_ADDRESS_SANITIZER
 TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with threshold [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   auto test_data = std::move(TestCAPI().
@@ -956,3 +960,4 @@ TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with
   REQUIRE(avg_upperbound > avg_meausred);
   REQUIRE(max_upperbound > max_meausred);
 }
+#endif

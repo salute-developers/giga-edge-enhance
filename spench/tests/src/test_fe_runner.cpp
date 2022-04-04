@@ -2,7 +2,6 @@
 #include "spench/feature_extractor_runner.h"
 #include <memory>
 #include <catch.hpp>
-#include <fftw3.h>
 #include <chrono> // NOLINT
 
 #include "tests/src/utils.h"
@@ -269,6 +268,10 @@ TEST_CASE("SUCCEED Launch runner for iSTFT calc with first valid chunk and check
   spench::DenoiseTask denoise_task;
   std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
   denoise_task.m_data.m_context = ctx.get();
+  std::valarray<float> predicted_mask_real;
+  std::valarray<float> predicted_mask_imag;
+  test_data.LoadDataFromBin("1_predicted_mask_real_16khz.dump", predicted_mask_real);
+  test_data.LoadDataFromBin("1_predicted_mask_imag_16khz.dump", predicted_mask_imag);
 
   std::vector<float> audio(test_data.m_wav_data.begin(),
                            test_data.m_wav_data.begin() +
@@ -284,6 +287,10 @@ TEST_CASE("SUCCEED Launch runner for iSTFT calc with first valid chunk and check
   REQUIRE(denoise_task.m_data.m_context->m_prev_masked_spectrogram.imag.size() == 0);
 
   denoise_task.m_stage = spench::PipelineStage::PREDICTIONS;
+
+  denoise_task.m_data.m_network_output.real = predicted_mask_real;
+  denoise_task.m_data.m_network_output.imag = predicted_mask_imag;
+
   test_data.m_fe_runner_ptr.get()->Run(&denoise_task);
   CHECK(denoise_task.m_stage == spench::PipelineStage::SKIPPED_WAV);
   CHECK(denoise_task.m_data.m_context->m_prev_masked_spectrogram.real.size() ==

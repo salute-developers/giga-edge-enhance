@@ -11,16 +11,24 @@
 #include <contrib/onnxruntime/cmake/external/onnxruntime-extensions/includes/onnxruntime/onnxruntime_cxx_api.h>
 
 void CreateConstInputsWithGivenShapes(const std::vector<std::vector<int64_t> >& input_shapes,
-                                                        std::vector<Ort::Value>& tensors) {
+                                      std::vector<std::vector<float>>& const_allocated_data,
+                                      std::vector<Ort::Value>& tensors) {
   for (auto& shape : input_shapes) {
     auto length = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<int64_t>());
     const auto kMemoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
-    std::vector<float> const_value_data(length, 1.0);
+    const_allocated_data.emplace_back(std::vector<float>(length, 1.0));
     tensors.emplace_back(Ort::Value::CreateTensor<float>(kMemoryInfo,
-                                                            const_value_data.data(),
-                                                            const_value_data.size(),
+                                                            const_allocated_data.back().data(),
+                                                            const_allocated_data.back().size(),
                                                             shape.data(),
                                                             shape.size()));
+  }
+}
+
+void FreeNames(Ort::AllocatorWithDefaultOptions& allocator,
+               std::vector<char*>& tensors) {
+  for (uint16_t i = 0; i < tensors.size(); ++i) {
+    allocator.Free(tensors[i]);
   }
 }
 
@@ -107,10 +115,11 @@ TEST_CASE("SUCCEED Run single dummy inference [onnx]") {
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
   std::vector<Ort::Value> inputs;
-  std::vector<const char*> input_names;
+  std::vector<char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<const char*> output_names;
+  std::vector<char*> output_names;
   std::vector<std::vector<int64_t> > output_shapes;
+  std::vector<std::vector<float>> const_allocated_data;
 
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
@@ -125,7 +134,7 @@ TEST_CASE("SUCCEED Run single dummy inference [onnx]") {
     output_shapes.push_back(data.m_denoiser->GetOutputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   Ort::RunOptions opt;
   auto outputs = data.m_denoiser->Run(opt,
@@ -140,6 +149,9 @@ TEST_CASE("SUCCEED Run single dummy inference [onnx]") {
     auto type_info = outputs[i].GetTensorTypeAndShapeInfo();
     REQUIRE(type_info.GetShape() == output_shapes[i]);
   }
+
+  FreeNames(allocator, input_names);
+  FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with one thread [onnx]") {
@@ -147,9 +159,11 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with one thre
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
   std::vector<Ort::Value> inputs;
-  std::vector<const char*> input_names;
+  std::vector<char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<const char*> output_names;
+  std::vector<char*> output_names;
+  std::vector<std::vector<float>> const_allocated_data;
+
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
@@ -162,7 +176,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with one thre
     output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.m_nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
@@ -185,6 +199,9 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with one thre
                                       tot << " | "
                                       << static_cast<double>(tot) / data.m_nattempts <<
                                         " ms per infer" << std::endl;
+
+  FreeNames(allocator, input_names);
+  FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with two threads [onnx]") {
@@ -192,9 +209,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with two thre
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
   std::vector<Ort::Value> inputs;
-  std::vector<const char*> input_names;
+  std::vector<char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<const char*> output_names;
+  std::vector<char*> output_names;
+  std::vector<std::vector<float>> const_allocated_data;
 
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
@@ -208,7 +226,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with two thre
     output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.m_nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
@@ -230,6 +248,9 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with two thre
                                       tot << " | "
                                       << static_cast<double>(tot) / data.m_nattempts <<
                                         " ms per infer" << std::endl;
+
+  FreeNames(allocator, input_names);
+  FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with four threads [onnx]") {
@@ -237,9 +258,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with four thr
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
   std::vector<Ort::Value> inputs;
-  std::vector<const char*> input_names;
+  std::vector<char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<const char*> output_names;
+  std::vector<char*> output_names;
+  std::vector<std::vector<float>> const_allocated_data;
 
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
@@ -253,7 +275,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with four thr
     output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.m_nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
@@ -275,6 +297,9 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with four thr
                                         tot <<
                                         " | " << static_cast<double>(tot) / data.m_nattempts <<
                                         " ms per infer" << std::endl;
+
+  FreeNames(allocator, input_names);
+  FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with eight threads [onnx]") {
@@ -282,9 +307,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with eight th
       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
   std::vector<Ort::Value> inputs;
-  std::vector<const char*> input_names;
+  std::vector<char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<const char*> output_names;
+  std::vector<char*> output_names;
+  std::vector<std::vector<float>> const_allocated_data;
 
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
@@ -298,7 +324,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with eight th
     output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.m_nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
@@ -320,6 +346,9 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with eight th
                                         tot <<
                                         " | " << static_cast<double>(tot) / data.m_nattempts <<
                                         " ms per infer" << std::endl;
+
+  FreeNames(allocator, input_names);
+  FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with one thread [onnx]") {
@@ -327,9 +356,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with one thre
       .InitModel("quality_model_with_layerNorm_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
-  std::vector<const char*> input_names;
+  std::vector<char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<const char*> output_names;
+  std::vector<char*> output_names;
+  std::vector<std::vector<float>> const_allocated_data;
 
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
@@ -343,7 +373,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with one thre
     output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.m_nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
@@ -366,6 +396,9 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with one thre
                                       tot << " | "
                                       << static_cast<double>(tot) / data.m_nattempts <<
                                         " ms per infer" << std::endl;
+
+  FreeNames(allocator, input_names);
+  FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with two threads [onnx]") {
@@ -373,9 +406,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with two thre
       .InitModel("quality_model_with_layerNorm_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
-  std::vector<const char*> input_names;
+  std::vector<char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<const char*> output_names;
+  std::vector<char*> output_names;
+  std::vector<std::vector<float>> const_allocated_data;
 
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
@@ -389,7 +423,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with two thre
     output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.m_nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
@@ -411,6 +445,9 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with two thre
                                       tot << " | "
                                       << static_cast<double>(tot) / data.m_nattempts <<
                                         " ms per infer" << std::endl;
+
+  FreeNames(allocator, input_names);
+  FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with four threads [onnx]") {
@@ -418,9 +455,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with four thr
       .InitModel("quality_model_with_layerNorm_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
-  std::vector<const char*> input_names;
+  std::vector<char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<const char*> output_names;
+  std::vector<char*> output_names;
+  std::vector<std::vector<float>> const_allocated_data;
 
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
@@ -434,7 +472,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with four thr
     output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.m_nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
@@ -456,6 +494,9 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with four thr
                                         tot <<
                                         " | " << static_cast<double>(tot) / data.m_nattempts <<
                                         " ms per infer" << std::endl;
+
+  FreeNames(allocator, input_names);
+  FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with eight threads [onnx]") {
@@ -463,9 +504,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with eight th
       .InitModel("quality_model_with_layerNorm_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
-  std::vector<const char*> input_names;
+  std::vector<char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<const char*> output_names;
+  std::vector<char*> output_names;
+  std::vector<std::vector<float>> const_allocated_data;
 
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
@@ -479,7 +521,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with eight th
     output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.m_nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
@@ -501,6 +543,9 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with eight th
                                         tot <<
                                         " | " << static_cast<double>(tot) / data.m_nattempts <<
                                         " ms per infer" << std::endl;
+
+  FreeNames(allocator, input_names);
+  FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with one thread [onnx]") {
@@ -508,9 +553,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with one
       .InitModel("fast_model_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
-  std::vector<const char*> input_names;
+  std::vector<char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<const char*> output_names;
+  std::vector<char*> output_names;
+  std::vector<std::vector<float>> const_allocated_data;
 
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
@@ -524,7 +570,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with one
     output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.m_nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
@@ -547,6 +593,9 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with one
                                       tot << " | "
                                       << static_cast<double>(tot) / data.m_nattempts <<
                                         " ms per infer" << std::endl;
+
+  FreeNames(allocator, input_names);
+  FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with two threads [onnx]") {
@@ -554,9 +603,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with two
       .InitModel("fast_model_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
-  std::vector<const char*> input_names;
+  std::vector<char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<const char*> output_names;
+  std::vector<char*> output_names;
+  std::vector<std::vector<float>> const_allocated_data;
 
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
@@ -570,7 +620,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with two
     output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.m_nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
@@ -592,6 +642,9 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with two
                                       tot << " | "
                                       << static_cast<double>(tot) / data.m_nattempts <<
                                         " ms per infer" << std::endl;
+
+  FreeNames(allocator, input_names);
+  FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with four threads [onnx]") {
@@ -599,9 +652,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with fou
       .InitModel("fast_model_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
-  std::vector<const char*> input_names;
+  std::vector<char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<const char*> output_names;
+  std::vector<char*> output_names;
+  std::vector<std::vector<float>> const_allocated_data;
 
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
@@ -615,7 +669,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with fou
     output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.m_nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
@@ -637,6 +691,9 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with fou
                                         tot <<
                                         " | " << static_cast<double>(tot) / data.m_nattempts <<
                                         " ms per infer" << std::endl;
+
+  FreeNames(allocator, input_names);
+  FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with eight threads [onnx]") {
@@ -644,9 +701,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with eig
       .InitModel("fast_model_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
-  std::vector<const char*> input_names;
+  std::vector<char*> input_names;
   std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<const char*> output_names;
+  std::vector<char*> output_names;
+  std::vector<std::vector<float>> const_allocated_data;
 
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
@@ -660,7 +718,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with eig
     output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, inputs);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.m_nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
@@ -682,6 +740,9 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with eig
                                         tot <<
                                         " | " << static_cast<double>(tot) / data.m_nattempts <<
                                         " ms per infer" << std::endl;
+
+  FreeNames(allocator, input_names);
+  FreeNames(allocator, output_names);
 }
 
 TEST_CASE("FAIL Read config for Inference Runner with incorrect model path [onnx runner]") {
