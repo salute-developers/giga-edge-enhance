@@ -6,7 +6,6 @@
 #include "contrib/yaml-cpp/yaml.h"
 #include <memory>
 #include <catch.hpp>
-#include <fftw3.h>
 #include <chrono> // NOLINT
 
 #include "tests/src/utils.h"
