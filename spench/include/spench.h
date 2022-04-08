@@ -8,7 +8,7 @@
 namespace spench {
 class DenoiseScheduler;
 template<typename T>
-class DenoiseContext;
+struct DenoiseContext;
 class AudioDenoise {
  public:
   explicit                        AudioDenoise(const char* config_file);
