@@ -45,6 +45,9 @@ class BaseTfliteRunner {
                                    spench::DenoiseContext<float>* denoise_context) = 0;
   template<typename T>
   void _TestRun(std::vector<std::vector<T>*>& inputs) {Run(inputs);}
+  virtual uint32_t GetFutureContextLen() {
+    return m_model_params.m_network_input_ctx_len;
+  }
 
  protected:
   void ReadConfig(const YAML::Node& yaml_config) {
@@ -61,7 +64,7 @@ class BaseTfliteRunner {
 
   void ResizeIfNeededInPlace(std::vector<float>& to_check, int shape);
   void ResizeIfNeededInPlace(std::valarray<float>& to_check, int shape);
-  void InitOutputTensors(spench::DenoiseTaskData& data);
+  void InitOutputTensors(spench::DenoiseTaskData& data, uint32_t size);
 
   template<typename T>
   void WarmUp(std::vector<std::vector<T>*>& inputs) {
@@ -90,6 +93,23 @@ class SpenchFTfliteRunner: public BaseTfliteRunner {
   SpenchFTfliteRunner() = delete;
   virtual ~SpenchFTfliteRunner() = default;
   explicit SpenchFTfliteRunner(const YAML::Node& yaml_config,
+                               uint32_t inference_engine_threads = 1,
+                               bool on_gpu = false);
+  void Infer(spench::DenoiseTask* denoise_task);
+ protected:
+  template<typename T> void WarmUp();
+  void PrepareInputInPlace(std::vector<float>& mag,
+                           std::vector<std::vector<float>*>& inputs,
+                           spench::DenoiseContext<float>* context);
+  template<typename T>
+  void ParseResults(spench::DenoiseTaskData& data);
+};
+
+class SpenchQTfliteRunner: public BaseTfliteRunner {
+ public:
+  SpenchQTfliteRunner() = delete;
+  virtual ~SpenchQTfliteRunner() = default;
+  explicit SpenchQTfliteRunner(const YAML::Node& yaml_config,
                                uint32_t inference_engine_threads = 1,
                                bool on_gpu = false);
   void Infer(spench::DenoiseTask* denoise_task);

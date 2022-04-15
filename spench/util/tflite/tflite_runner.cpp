@@ -54,7 +54,6 @@ void BaseTfliteRunner::InitModel(std::vector<std::string>& input_names,
   if (m_signature_runner->output_names().size() != output_names.size()) {
     throw TfliteValidationException("Model and config file have different number of outputs");
   }
-
   for (auto const & name : input_names) {
     m_model_inputs.push_back(m_signature_runner->input_tensor(name.c_str()));
     uint16_t dims_num = m_model_inputs.back()->dims->size;
@@ -108,9 +107,9 @@ void BaseTfliteRunner::ResizeIfNeededInPlace(std::valarray<float>& to_check,
   }
 }
 
-void BaseTfliteRunner::InitOutputTensors(spench::DenoiseTaskData& data) {
-  ResizeIfNeededInPlace(data.m_network_output.real, m_model_output_size[3] / 2);
-  ResizeIfNeededInPlace(data.m_network_output.imag, m_model_output_size[3] / 2);
+void BaseTfliteRunner::InitOutputTensors(spench::DenoiseTaskData& data, uint32_t size) {
+  ResizeIfNeededInPlace(data.m_network_output.real, size / 2);
+  ResizeIfNeededInPlace(data.m_network_output.imag, size / 2);
 }
 
 SpenchFTfliteRunner::SpenchFTfliteRunner(const YAML::Node& yaml_config,
@@ -231,7 +230,7 @@ void SpenchFTfliteRunner::Infer(spench::DenoiseTask* denoise_task) {
     std::vector<std::vector<float>> outputs;
     std::vector<float> mag = denoise_data.m_input_spec[0].getMagnitude();
     SpenchFTfliteRunner::PrepareInputInPlace(mag, inputs, denoise_context);
-    SpenchFTfliteRunner::InitOutputTensors(denoise_data);
+    SpenchFTfliteRunner::InitOutputTensors(denoise_data, m_model_output_size[3]);
 
     Run(inputs);
     ParseResults<float>(denoise_data);
@@ -245,6 +244,136 @@ void SpenchFTfliteRunner::Infer(spench::DenoiseTask* denoise_task) {
     } else {
       denoise_task->m_stage = spench::PipelineStage::PREDICTIONS;
     }
+  } else {
+    throw("State is not appropriate");
+  }
+}
+
+SpenchQTfliteRunner::SpenchQTfliteRunner(const YAML::Node& yaml_config,
+                                     uint32_t inference_engine_threads, bool on_gpu) :
+                                     BaseTfliteRunner::BaseTfliteRunner() {
+    ReadConfig(yaml_config);
+    InitModel(m_model_params.m_model_inputs, m_model_params.m_model_outputs,
+              m_model_params.m_model_path, inference_engine_threads, on_gpu);
+    WarmUp<float>();
+}
+
+template<typename T>
+void SpenchQTfliteRunner::WarmUp() {
+  spench::DenoiseTask dummy_task;
+  std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>());
+  dummy_task.m_data.m_context = ctx.get();
+
+  std::vector<T> dummy_mag(m_model_input_size[0], 0.0);
+  std::vector<T> dummy_fb_h(m_model_input_size[1], 0.0);
+  std::vector<T> dummy_fb_c(m_model_input_size[2], 0.0);
+  std::vector<T> dummy_sb_h(m_model_input_size[3], 0.0);
+  std::vector<T> dummy_sb_c(m_model_input_size[4], 0.0);
+
+  std::vector<std::vector<T>*> inputs;
+  inputs.push_back(&dummy_mag);
+  inputs.push_back(&dummy_fb_h);
+  inputs.push_back(&dummy_fb_c);
+  inputs.push_back(&dummy_sb_h);
+  inputs.push_back(&dummy_sb_c);
+
+  BaseTfliteRunner::WarmUp<T>(inputs);
+}
+
+void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
+                                            std::vector<std::vector<float>*>& inputs,
+                                            spench::DenoiseContext<float>* context) {
+  if (context == nullptr) {
+    throw("Context is not allocated!");
+  }
+  spench::DenoiseContextQ<float>* denoise_context =
+                                     dynamic_cast<spench::DenoiseContextQ<float>*>(context);
+
+  inputs.push_back(&mag);
+  inputs.push_back(&denoise_context->m_fullband_hidden);
+  inputs.push_back(&denoise_context->m_fullband_cell_state);
+  inputs.push_back(&denoise_context->m_subband_hidden);
+  inputs.push_back(&denoise_context->m_subband_cell_state);
+}
+
+template<typename T>
+void SpenchQTfliteRunner::ParseResults(spench::DenoiseTaskData& data) {
+  if (data.m_context == nullptr) {
+    throw("Context is not allocated!");
+  }
+  spench::DenoiseContextQ<T>* context = dynamic_cast<spench::DenoiseContextQ<T>*>(data.m_context);
+
+  const T* const_output_ptr;
+  for (uint16_t output_idx = 0; output_idx < m_model_output_size.size(); output_idx++) {
+    const_output_ptr = tflite::GetTensorData<T>(m_model_outputs[output_idx]);
+    switch (output_idx) {
+      case 0:
+        context->m_fullband_hidden.assign(const_output_ptr,
+                                          const_output_ptr + context->m_fullband_hidden.size());
+        break;
+      case 1:
+        context->m_fullband_cell_state.assign(const_output_ptr,
+                                              const_output_ptr + context->m_fullband_cell_state.size());
+        break;
+      case 2:
+        context->m_subband_hidden.assign(const_output_ptr,
+                                         const_output_ptr + context->m_subband_hidden.size());
+        break;
+      case 3:
+        context->m_subband_cell_state.assign(const_output_ptr,
+                                             const_output_ptr + context->m_subband_cell_state.size());
+        break;
+      case 4:
+        for (uint64_t i = 0; i < m_model_output_size[output_idx]; i += 2) {
+          data.m_network_output.real[i / 2] = const_output_ptr[i];
+          data.m_network_output.imag[i / 2] = const_output_ptr[i + 1];
+        }
+        break;
+      default:
+        std::string err_msg = "Error in parsing results. Unknown output_idx: ";
+        err_msg += std::to_string(output_idx);
+        throw(err_msg);
+    }
+  }
+}
+
+void SpenchQTfliteRunner::Infer(spench::DenoiseTask* denoise_task) {
+  if (denoise_task == nullptr || denoise_task->m_data.m_context == nullptr) {
+    throw("Task data or context are not initialized!");
+  }
+  if (denoise_task->m_data.m_input_spec.size() == 0) {
+    throw("Input spectrogram should be calculated before this step!");
+  }
+  auto& denoise_data = denoise_task->m_data;
+  auto& denoise_context = denoise_data.m_context;
+  if (denoise_context->m_prev_features.size() > m_model_params.m_network_input_ctx_len) {
+    denoise_context->m_prev_features.pop();
+  }
+
+  if (denoise_task->m_stage == spench::PipelineStage::SPECTROGRAM) {
+    std::vector<std::vector<float>*> inputs;
+    std::vector<std::vector<float>> outputs;
+    std::vector<float> mag = denoise_data.m_input_spec[0].getMagnitude();
+    SpenchQTfliteRunner::PrepareInputInPlace(mag, inputs, denoise_context);
+    SpenchQTfliteRunner::InitOutputTensors(denoise_data, m_model_output_size[4]);
+
+    Run(inputs);
+    ParseResults<float>(denoise_data);
+
+    if (denoise_context->m_prev_features.size() < m_model_params.m_network_input_ctx_len) {
+      denoise_data.m_enhanced_wav.resize(denoise_data.m_waveform.size() / 2);
+      std::fill_n(denoise_data.m_enhanced_wav.begin(), denoise_data.m_enhanced_wav.size(), 0.0);
+      denoise_task->m_stage = spench::PipelineStage::SKIPPED_WAV;
+    } else if (denoise_context->m_prev_features.size() == m_model_params.m_network_input_ctx_len &&
+               denoise_context->m_prev_masked_spectrogram.real.size() == 0) {
+      denoise_data.m_enhanced_wav.resize(denoise_data.m_waveform.size() / 2);
+      std::fill_n(denoise_data.m_enhanced_wav.begin(), denoise_data.m_enhanced_wav.size(), 0.0);
+      denoise_task->m_stage = spench::PipelineStage::PREDICTIONS;
+    } else {
+      denoise_task->m_stage = spench::PipelineStage::PREDICTIONS;
+    }
+
+    denoise_context->m_prev_features.push(denoise_data.m_input_spec[0]);
   } else {
     throw("State is not appropriate");
   }

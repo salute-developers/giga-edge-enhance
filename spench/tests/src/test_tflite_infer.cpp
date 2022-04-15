@@ -21,17 +21,13 @@ struct TestTfliteRunner {
     // bool on_gpu = node["inference"]["gpu"].as<bool>(false);
     std::string model_type = node["inference"]["model_type"].as<std::string>("best_quality");
 
-    m_denoiser_runner = std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
+    m_denoiser_runner = (model_type == "best_quality") ?
+                    std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
+                                                new util::tf_lite::SpenchQTfliteRunner(node["model"],
+                                                                                       num_threads)):
+                    std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
                                                 new util::tf_lite::SpenchFTfliteRunner(node["model"],
                                                                                        num_threads));
-
-    // m_denoiser_runner = (model_type == "best_quality") ?
-    //                 std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
-    //                                             new util::tf_lite::SpenchQTfliteRunner(node["model"],
-    //                                                                               on_gpu)):
-    //                 std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
-    //                                             new util::tf_lite::SpenchFTfliteRunner(node["model"],
-    //                                                                               on_gpu));
     m_frame_size_ms = node["feature_params"]["frame_size_ms"].as<uint16_t>(16);
     m_sample_rate = node["feature_params"]["sampling_freq"].as<uint64_t>(16000);
     return *this;
@@ -175,6 +171,145 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
 
     auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
     std::cout << "24kHz fast model infer with " << num_threads << " threads completed: " <<
+                                          tot <<
+                                          " | " << static_cast<double>(tot) / nattempts <<
+                                          " ms per infer" << std::endl;
+
+    for (uint16_t i = 0; i < data.m_denoiser_runner->m_model_input_size.size(); i++) {
+      delete inputs[i];
+    }
+  }
+}
+
+TEST_CASE("SUCCEED Run inference via the best quality model and check network outputs (audio 16kHz) [onnx runner]") {
+  auto data = std::move(TestTfliteRunner()
+      .InitRunner("default_configuration_best_quality_tflite_16khz.yaml"));
+
+  std::valarray<float> real;
+  std::valarray<float> imag;
+  std::vector<float> gt_real;
+  std::vector<float> gt_imag;
+  std::vector<float> gt_fullband_hidden;
+  std::vector<float> gt_fullband_cell_state;
+  std::vector<float> gt_subband_hidden;
+  std::vector<float> gt_subband_cell_state;
+  data.LoadDataFromBin("1_real_wav_stft.dump", real);
+  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
+  data.LoadDataFromBin("1_real_network_output_for_zeroed_hiddens_16khz.dump", gt_real);
+  data.LoadDataFromBin("1_imag_network_output_for_zeroed_hiddens_16khz.dump", gt_imag);
+  data.LoadDataFromBin("1_predicted_full_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_fullband_hidden);
+  data.LoadDataFromBin("1_predicted_full_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_fullband_cell_state);
+  data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
+  data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
+
+  spench::DenoiseTask denoise_task;
+  std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
+  ctx.get()->m_fullband_hidden.resize(data.m_denoiser_runner->m_model_input_size[1], 0);
+  ctx.get()->m_fullband_cell_state.resize(data.m_denoiser_runner->m_model_input_size[2], 0);
+  ctx.get()->m_subband_hidden.resize(data.m_denoiser_runner->m_model_input_size[3], 0);
+  ctx.get()->m_subband_cell_state.resize(data.m_denoiser_runner->m_model_input_size[4], 0);
+
+  denoise_task.m_data.m_context = ctx.get();
+  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
+
+  data.m_denoiser_runner->Infer(&denoise_task);
+
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_WAV);
+  IsVectorsClose(gt_real, denoise_task.m_data.m_network_output.real, 0.000001);
+
+  IsVectorsClose(gt_imag, denoise_task.m_data.m_network_output.imag, 0.000001);
+  CHECK(std::vector<float>(denoise_task.m_data.m_enhanced_wav.size(), 0.0) ==
+                                                 denoise_task.m_data.m_enhanced_wav);
+  IsVectorsClose(gt_fullband_hidden, ctx.get()->m_fullband_hidden, 0.000001);
+  IsVectorsClose(gt_fullband_cell_state, ctx.get()->m_fullband_cell_state, 0.000001);
+  IsVectorsClose(gt_subband_hidden, ctx.get()->m_subband_hidden, 0.00001);
+  IsVectorsClose(gt_subband_cell_state, ctx.get()->m_subband_cell_state, 0.00001);
+}
+
+TEST_CASE("SUCCEED Run four frames with the best quality model and check states (audio 16kHz) [onnx runner]") {
+  auto data = std::move(TestTfliteRunner()
+      .InitRunner("default_configuration_best_quality_tflite_16khz.yaml"));
+
+  spench::DenoiseTask denoise_task;
+  std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
+  ctx.get()->m_fullband_hidden.resize(data.m_denoiser_runner->m_model_input_size[1], 0);
+  ctx.get()->m_fullband_cell_state.resize(data.m_denoiser_runner->m_model_input_size[2], 0);
+  ctx.get()->m_subband_hidden.resize(data.m_denoiser_runner->m_model_input_size[3], 0);
+  ctx.get()->m_subband_cell_state.resize(data.m_denoiser_runner->m_model_input_size[4], 0);
+  denoise_task.m_data.m_context = ctx.get();
+
+  std::valarray<float> real;
+  std::valarray<float> imag;
+  data.LoadDataFromBin("1_real_wav_stft.dump", real);
+  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
+  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
+  uint64_t hop_size = static_cast<uint64_t>(data.m_sample_rate * data.m_frame_size_ms / 1000);
+  denoise_task.m_data.m_enhanced_wav.assign(hop_size, 1.0);
+
+  data.m_denoiser_runner->Infer(&denoise_task);
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_WAV);
+
+  CHECK(std::vector<float>(denoise_task.m_data.m_enhanced_wav.size(), 0.0) ==
+                                                 denoise_task.m_data.m_enhanced_wav);
+  CHECK(std::vector<float>(ctx.get()->m_fullband_hidden.size(), 0.0) !=
+                                                 ctx.get()->m_fullband_hidden);
+  CHECK(std::vector<float>(ctx.get()->m_fullband_cell_state.size(), 0.0) !=
+                                                 ctx.get()->m_fullband_cell_state);
+  CHECK(std::vector<float>(ctx.get()->m_subband_hidden.size(), 0.0) !=
+                                                 ctx.get()->m_subband_hidden);
+  CHECK(std::vector<float>(ctx.get()->m_subband_cell_state.size(), 0.0) !=
+                                                 ctx.get()->m_subband_cell_state);
+
+  denoise_task.m_data.m_enhanced_wav.assign(hop_size, 1.0);
+  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
+
+  data.m_denoiser_runner->Infer(&denoise_task);
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_WAV);
+  CHECK(std::vector<float>(denoise_task.m_data.m_enhanced_wav.size(), 0.0) ==
+                                                 denoise_task.m_data.m_enhanced_wav);
+  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
+  denoise_task.m_data.m_enhanced_wav.assign(hop_size, 1.0);
+
+  data.m_denoiser_runner->Infer(&denoise_task);
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTIONS);
+  CHECK(std::vector<float>(denoise_task.m_data.m_enhanced_wav.size(), 0.0) ==
+                                                 denoise_task.m_data.m_enhanced_wav);
+
+  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
+  denoise_task.m_data.m_enhanced_wav.assign(hop_size, 1.0);
+
+  data.m_denoiser_runner->Infer(&denoise_task);
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTIONS);
+  CHECK(std::vector<float>(denoise_task.m_data.m_enhanced_wav.size(), 1.0) ==
+                                                 denoise_task.m_data.m_enhanced_wav);
+}
+
+TEST_CASE("SUCCEED Run dummy multi inference for a quality model 16kHz and with different number of threads [tflite]") {
+  const std::size_t nattempts = 50;
+
+  for (uint16_t num_threads : {1, 2, 4, 8}) {
+    auto data = std::move(TestTfliteRunner()
+      .InitRunner("default_configuration_best_quality_tflite_16khz.yaml", num_threads));
+
+    std::vector<size_t> timings(nattempts);
+    std::vector<std::vector<float>*> inputs;
+    for (auto s : data.m_denoiser_runner->m_model_input_size) {
+      inputs.push_back(new std::vector<float>(s, static_cast<float>(0.)));
+    }
+
+    auto ts_1 = std::chrono::steady_clock::now();
+    for (size_t i = 0; i < nattempts; ++i) {
+      auto start = std::chrono::steady_clock::now();
+      data.m_denoiser_runner->_TestRun<float>(inputs);
+      auto stop = std::chrono::steady_clock::now();
+      timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+    }
+    auto ts_2 = std::chrono::steady_clock::now();
+
+    auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+    std::cout << "24kHz quality model infer with " << num_threads << " threads completed: " <<
                                           tot <<
                                           " | " << static_cast<double>(tot) / nattempts <<
                                           " ms per infer" << std::endl;
