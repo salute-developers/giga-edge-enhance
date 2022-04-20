@@ -11,6 +11,7 @@
 #include <exception>
 #include <string>
 #include <memory>
+#include <mutex> // NOLINT
 
 #include "spench/task.h"
 #include "spench/denoise_context.h"
@@ -78,6 +79,7 @@ class BaseTfliteRunner {
   std::vector<uint64_t> m_model_output_size;
 
  protected:
+  std::mutex m_model_run_mutex;
   std::unique_ptr<tflite::FlatBufferModel> m_model = nullptr;
   std::unique_ptr<tflite::Interpreter> m_interpreter = nullptr;
 

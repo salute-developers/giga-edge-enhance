@@ -150,15 +150,21 @@ void SpenchFTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
   spench::DenoiseContextF<float>* denoise_context =
                                      dynamic_cast<spench::DenoiseContextF<float>*>(context);
 
-  // forget 1 frame out of num_frames (5) and move remaining to the left
   uint32_t from, to;
   uint32_t num_feats = m_model_inputs[0]->dims->data[1];
   uint32_t num_frames = m_model_inputs[0]->dims->data[2];
-  for (uint32_t frame_i = 1; frame_i < num_frames; ++frame_i) {
-    for (uint32_t feat_i = 0; feat_i < num_feats; ++feat_i) {
-      from = frame_i + feat_i * num_frames;
-      to = (frame_i - 1) + feat_i * num_frames;
-      denoise_context->m_noisy_mag[to] = denoise_context->m_noisy_mag[from];
+
+  if (denoise_context->m_noisy_mag.size() == 0) {
+    // for the first frame of wav only
+    denoise_context->m_noisy_mag.resize(m_model_input_size[0]);
+  } else {
+    // for the next frames forget 1 frame out of num_frames (5) and move remaining to the left
+    for (uint32_t frame_i = 1; frame_i < num_frames; ++frame_i) {
+      for (uint32_t feat_i = 0; feat_i < num_feats; ++feat_i) {
+        from = frame_i + feat_i * num_frames;
+        to = (frame_i - 1) + feat_i * num_frames;
+        denoise_context->m_noisy_mag[to] = denoise_context->m_noisy_mag[from];
+      }
     }
   }
 
@@ -167,6 +173,11 @@ void SpenchFTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
     to = num_frames - 1 + feat_i * num_frames;
     denoise_context->m_noisy_mag[to] = mag[feat_i];
   }
+
+  ResizeIfNeededInPlace(denoise_context->m_noisy_mag, m_model_input_size[0]);  // noisy_mag_5
+  ResizeIfNeededInPlace(denoise_context->m_fullband_hidden, m_model_input_size[1]);  // fb_h
+  ResizeIfNeededInPlace(denoise_context->m_fullband_cell_state, m_model_input_size[2]);  // fb_c
+  ResizeIfNeededInPlace(denoise_context->m_prev_fb_out, m_model_input_size[3]);  // new_fb_out_5
 
   inputs.push_back(&denoise_context->m_noisy_mag);
   inputs.push_back(&denoise_context->m_fullband_hidden);
@@ -232,8 +243,11 @@ void SpenchFTfliteRunner::Infer(spench::DenoiseTask* denoise_task) {
     SpenchFTfliteRunner::PrepareInputInPlace(mag, inputs, denoise_context);
     SpenchFTfliteRunner::InitOutputTensors(denoise_data, m_model_output_size[3]);
 
-    Run(inputs);
-    ParseResults<float>(denoise_data);
+    {
+      std::lock_guard<std::mutex> lock(m_model_run_mutex);
+      Run(inputs);
+      ParseResults<float>(denoise_data);
+    }
 
     if (denoise_context->m_prev_masked_spectrogram.real.size() == 0) {
       denoise_data.m_enhanced_wav.resize(denoise_data.m_waveform.size() / 2);
@@ -288,6 +302,11 @@ void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
   }
   spench::DenoiseContextQ<float>* denoise_context =
                                      dynamic_cast<spench::DenoiseContextQ<float>*>(context);
+
+  ResizeIfNeededInPlace(denoise_context->m_fullband_hidden, m_model_input_size[1]);  // fb_h
+  ResizeIfNeededInPlace(denoise_context->m_fullband_cell_state, m_model_input_size[2]);  // fb_c
+  ResizeIfNeededInPlace(denoise_context->m_subband_hidden, m_model_input_size[3]);  // sb_h
+  ResizeIfNeededInPlace(denoise_context->m_subband_cell_state, m_model_input_size[4]);  // sb_c
 
   inputs.push_back(&mag);
   inputs.push_back(&denoise_context->m_fullband_hidden);
@@ -357,8 +376,11 @@ void SpenchQTfliteRunner::Infer(spench::DenoiseTask* denoise_task) {
     SpenchQTfliteRunner::PrepareInputInPlace(mag, inputs, denoise_context);
     SpenchQTfliteRunner::InitOutputTensors(denoise_data, m_model_output_size[4]);
 
-    Run(inputs);
-    ParseResults<float>(denoise_data);
+    {
+      std::lock_guard<std::mutex> lock(m_model_run_mutex);
+      Run(inputs);
+      ParseResults<float>(denoise_data);
+    }
 
     if (denoise_context->m_prev_features.size() < m_model_params.m_network_input_ctx_len) {
       denoise_data.m_enhanced_wav.resize(denoise_data.m_waveform.size() / 2);

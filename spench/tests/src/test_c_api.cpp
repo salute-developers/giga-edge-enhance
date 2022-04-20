@@ -66,8 +66,14 @@ TEST_CASE("FAIL Create model with incorrect model path [spench c api]") {
 
 TEST_CASE("FAIL Create context with nullptr model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
+
   CHECK(ret_code == SpenchRetCode::SUCCESS);
   SpenchContext ctx = nullptr;
   ret_code = SpenchModelCreateContext(nullptr, &ctx);
@@ -77,8 +83,13 @@ TEST_CASE("FAIL Create context with nullptr model [spench c api]") {
 
 TEST_CASE("SUCCEED Create and destroy context [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   SpenchContext ctx = nullptr;
@@ -92,8 +103,13 @@ TEST_CASE("SUCCEED Create and destroy context [spench c api]") {
 
 TEST_CASE("FAIL Get a context id with nullptr model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   SpenchContext ctx = nullptr;
@@ -108,8 +124,13 @@ TEST_CASE("FAIL Get a context id with nullptr model [spench c api]") {
 
 TEST_CASE("FAIL Get a context id with nullptr context [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   SpenchContext ctx = nullptr;
@@ -121,8 +142,13 @@ TEST_CASE("FAIL Get a context id with nullptr context [spench c api]") {
 
 TEST_CASE("FAIL Get a context id with nullptr returning argument [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   SpenchContext ctx = nullptr;
@@ -137,8 +163,13 @@ TEST_CASE("FAIL Get a context id with nullptr returning argument [spench c api]"
 
 TEST_CASE("FAIL Set a context id with nullptr model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   SpenchContext ctx = nullptr;
@@ -154,8 +185,13 @@ TEST_CASE("FAIL Set a context id with nullptr model [spench c api]") {
 
 TEST_CASE("FAIL Set a context id with nullptr context [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   SpenchContext ctx = nullptr;
@@ -166,8 +202,13 @@ TEST_CASE("FAIL Set a context id with nullptr context [spench c api]") {
 
 TEST_CASE("SUCCEED Check that a default context id is zero [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   SpenchContext ctx = nullptr;
@@ -184,8 +225,13 @@ TEST_CASE("SUCCEED Check that a default context id is zero [spench c api]") {
 
 TEST_CASE("SUCCEED Set and retrieve a context id [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   SpenchContext ctx = nullptr;
@@ -205,8 +251,13 @@ TEST_CASE("SUCCEED Set and retrieve a context id [spench c api]") {
 
 TEST_CASE("FAIL Get a model sample rate with nullptr model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   uint64_t sample_rate = 0;
@@ -216,8 +267,13 @@ TEST_CASE("FAIL Get a model sample rate with nullptr model [spench c api]") {
 
 TEST_CASE("FAIL Get a model sample rate with nullptr returning argument [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   ret_code = SpenchModelGetSampleRate(test_data.m_denoiser, nullptr);
@@ -226,8 +282,13 @@ TEST_CASE("FAIL Get a model sample rate with nullptr returning argument [spench 
 
 TEST_CASE("SUCCEED Get a model sample rate [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   uint64_t sample_rate = 0;
 
   ret_code = SpenchModelGetSampleRate(test_data.m_denoiser, &sample_rate);
@@ -237,8 +298,13 @@ TEST_CASE("SUCCEED Get a model sample rate [spench c api]") {
 
 TEST_CASE("FAIL Get a model input size with nullptr model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   uint64_t input_size = 0;
@@ -248,8 +314,13 @@ TEST_CASE("FAIL Get a model input size with nullptr model [spench c api]") {
 
 TEST_CASE("FAIL Get a model input size with nullptr returning argument [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   ret_code = SpenchModelGetInputFrameSize(test_data.m_denoiser, nullptr);
@@ -258,8 +329,13 @@ TEST_CASE("FAIL Get a model input size with nullptr returning argument [spench c
 
 TEST_CASE("SUCCEED Get a model input size [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   uint64_t input_size = 0;
 
   ret_code = SpenchModelGetInputFrameSize(test_data.m_denoiser, &input_size);
@@ -269,8 +345,13 @@ TEST_CASE("SUCCEED Get a model input size [spench c api]") {
 
 TEST_CASE("FAIL Get a number of inference engine threads with nullptr model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   SpenchContext ctx = nullptr;
@@ -286,8 +367,13 @@ TEST_CASE("FAIL Get a number of inference engine threads with nullptr model [spe
 
 TEST_CASE("FAIL Get a number of inference engine threads with nullptr returning argument [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   SpenchContext ctx = nullptr;
@@ -302,8 +388,13 @@ TEST_CASE("FAIL Get a number of inference engine threads with nullptr returning 
 
 TEST_CASE("SUCCEED Get a number of inference engine threads [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   SpenchContext ctx = nullptr;
@@ -320,9 +411,15 @@ TEST_CASE("SUCCEED Get a number of inference engine threads [spench c api]") {
 
 TEST_CASE("FAIL Run inference with invalid chunk size with the best quality model 16kHz [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
-                             SetWav("rec_noise_001_16k.wav"));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 20;
@@ -351,9 +448,15 @@ TEST_CASE("FAIL Run inference with invalid chunk size with the best quality mode
 
 TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
-                             SetWav("rec_noise_001_16k.wav"));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
@@ -399,9 +502,15 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
 
 TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
-                             SetPCMWav("rec_noise_001_16k.wav"));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               SetPCMWav("rec_noise_001_16k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               SetPCMWav("rec_noise_001_16k.wav"));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
@@ -456,9 +565,15 @@ TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
 
 TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
-                             SetWav("rec_noise_001_16k.wav"));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
@@ -519,9 +634,15 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]")
 
 TEST_CASE("SUCCEED Get a last chunk with the best quality model and with the PCM data [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
-                             SetPCMWav("rec_noise_001_16k.wav"));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               SetPCMWav("rec_noise_001_16k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               SetPCMWav("rec_noise_001_16k.wav"));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
@@ -592,9 +713,15 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model and with the PCM
 
 TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare result [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
-                             SetWav("rec_noise_001_16k.wav"));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
@@ -663,9 +790,15 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
 
 TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 5 contexts concurently [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
-                             SetWav("rec_noise_001_16k.wav"));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
@@ -732,9 +865,15 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 5 contex
 
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 5 contexts concurently [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
-                             SetWav("rec_noise_001_16k.wav"));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               SetWav("rec_noise_001_24k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               SetWav("rec_noise_001_24k.wav"));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
@@ -802,9 +941,15 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 5 contexts concu
 #ifndef BUILD_WITH_ADDRESS_SANITIZER
 TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare time with threshold [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
-                             SetWav("rec_noise_001_16k.wav"));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
@@ -858,9 +1003,15 @@ TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare t
 
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav file [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
-                             SetWav("rec_noise_001_24k.wav"));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               SetWav("rec_noise_001_24k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               SetWav("rec_noise_001_24k.wav"));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
@@ -908,9 +1059,15 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
 #ifndef BUILD_WITH_ADDRESS_SANITIZER
 TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with threshold [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  auto test_data = std::move(TestCAPI().
-                             InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
-                             SetWav("rec_noise_001_24k.wav"));
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               SetWav("rec_noise_001_24k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               SetWav("rec_noise_001_24k.wav"));
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
