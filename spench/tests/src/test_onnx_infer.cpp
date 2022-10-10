@@ -6,7 +6,7 @@
 #include <catch.hpp>
 #include <map>
 #include <iostream>
-#include "spench/denoise_context.h"
+#include "spench/src/denoise_context.h"
 
 #include <contrib/onnxruntime/cmake/external/onnxruntime-extensions/includes/onnxruntime/onnxruntime_cxx_api.h>
 
@@ -78,7 +78,8 @@ struct TestOnnxRunner {
   uint64_t m_sample_rate = 16000;
   TestOnnxRunner() = default;
 
-  TestOnnxRunner& InitRunner(const std::string& yaml_config_name) {
+  TestOnnxRunner& InitRunner(const std::string& yaml_config_name,
+                             const std::string& password = "") {
     std::string file_path = m_kBase + "config/" + yaml_config_name;
     YAML::Node node = YAML::LoadFile(file_path);
     bool on_gpu = node["inference"]["gpu"].as<bool>(false);
@@ -87,9 +88,11 @@ struct TestOnnxRunner {
     m_denoiser_runner = (model_type == "best_quality") ?
                     std::unique_ptr<util::onnx::BaseOnnxRunner>(
                                                 new util::onnx::SpenchQOnnxRunner(node["model"],
+                                                                                  password,
                                                                                   on_gpu)):
                     std::unique_ptr<util::onnx::BaseOnnxRunner>(
                                                 new util::onnx::SpenchFOnnxRunner(node["model"],
+                                                                                  password,
                                                                                   on_gpu));
     m_frame_size_ms = node["feature_params"]["frame_size_ms"].as<uint16_t>(16);
     m_sample_rate = node["feature_params"]["sampling_freq"].as<uint64_t>(16000);
@@ -770,19 +773,23 @@ TEST_CASE("FAIL Read config for Inference Runner with incorrect model context le
 }
 
 TEST_CASE("FAIL Read config for Inference Runner with not existed model path [onnx runner]") {
+  std::string error_message = std::string("Model reading error. Detailes: Load model from ") +
+                              std::string("data/models/not_existed_model.onnx failed:Load model ") +
+                              std::string("data/models/not_existed_model.onnx failed. ") +
+                              std::string("File doesn't exist");
+
   CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("test_configuration_with_not_existed_model_path.yaml"),
-                                            "Model reading error. File does not exist!");
+      .InitRunner("test_configuration_with_not_existed_model_path.yaml"), error_message.c_str());
 }
 
-TEST_CASE("FAIL Run cpu onnx runner with null pointer task and zeroed hidden [onnx runner]") {
+TEST_CASE("FAIL Run cpu onnx runner with null pointer task and zeroed hidden layer [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
   CHECK_THROWS_WITH(data.m_denoiser_runner->Infer(nullptr),
                                             "Task data or context are not initialized!");
 }
 
-TEST_CASE("FAIL Run cpu onnx runner with null pointer context and zeroed hidden [onnx runner]") {
+TEST_CASE("FAIL Run cpu onnx runner with null pointer context and zeroed hidden layer [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
   spench::DenoiseTask denoise_task;
@@ -790,9 +797,70 @@ TEST_CASE("FAIL Run cpu onnx runner with null pointer context and zeroed hidden 
                                             "Task data or context are not initialized!");
 }
 
-TEST_CASE("SUCCEED Run inference via the best quality model and check network outputs (audio 16kHz) [onnx runner]") {
+TEST_CASE("FAIL Read config with incorrect encrypted model name [onnx runner]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("incorrect_configuration_best_quality_onnx_encrypted_16khz.yaml", "test"),
+                                            "Model reading error. Detailes: file doesn't contain header");
+}
+
+TEST_CASE("FAIL Pass incorrect password for encrypted model [onnx runner]") {
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("default_configuration_best_quality_onnx_encrypted_16khz.yaml", "test1"),
+                                            "Model reading error. Detailes: chunk is corrupted");
+}
+
+TEST_CASE("FAIL Pass no password for encrypted model [onnx runner]") {
+  std::string error_message = std::string("Model reading error. Detailes: Load model from ") +
+                              std::string("data/models/quality_model_with_layerNorm_16khz.onnx.crypt ") +
+                              std::string("failed:Protobuf parsing failed.");
+
+  CHECK_THROWS_WITH(TestOnnxRunner()
+      .InitRunner("default_configuration_best_quality_onnx_encrypted_16khz.yaml", ""), error_message.c_str());
+}
+
+TEST_CASE("SUCCEED Run the best quality model and check network outputs (audio 16kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
+
+  std::valarray<float> real;
+  std::valarray<float> imag;
+  std::vector<float> gt_real;
+  std::vector<float> gt_imag;
+  std::vector<float> gt_fullband_hidden;
+  std::vector<float> gt_fullband_cell_state;
+  std::vector<float> gt_subband_hidden;
+  std::vector<float> gt_subband_cell_state;
+  data.LoadDataFromBin("1_real_wav_stft.dump", real);
+  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
+  data.LoadDataFromBin("1_real_network_output_for_zeroed_hiddens_16khz.dump", gt_real);
+  data.LoadDataFromBin("1_imag_network_output_for_zeroed_hiddens_16khz.dump", gt_imag);
+  data.LoadDataFromBin("1_predicted_full_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_fullband_hidden);
+  data.LoadDataFromBin("1_predicted_full_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_fullband_cell_state);
+  data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
+  data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
+
+  spench::DenoiseTask denoise_task;
+  std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
+  denoise_task.m_data.m_context = ctx.get();
+  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
+
+  data.m_denoiser_runner->Infer(&denoise_task);
+
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_WAV);
+  IsVectorsClose(gt_real, denoise_task.m_data.m_network_output.real, 0.000001);
+  IsVectorsClose(gt_imag, denoise_task.m_data.m_network_output.imag, 0.000001);
+  CHECK(std::vector<float>(denoise_task.m_data.m_enhanced_wav.size(), 0.0) ==
+                                                 denoise_task.m_data.m_enhanced_wav);
+  IsVectorsClose(gt_fullband_hidden, ctx.get()->m_fullband_hidden, 0.000001);
+  IsVectorsClose(gt_fullband_cell_state, ctx.get()->m_fullband_cell_state, 0.000001);
+  IsVectorsClose(gt_subband_hidden, ctx.get()->m_subband_hidden, 0.000001);
+  IsVectorsClose(gt_subband_cell_state, ctx.get()->m_subband_cell_state, 0.000001);
+}
+
+TEST_CASE("SUCCEED Run encrypted the best quality model and check network outputs (audio 16kHz) [onnx runner]") {
+  auto data = std::move(TestOnnxRunner()
+      .InitRunner("default_configuration_best_quality_onnx_encrypted_16khz.yaml", "test"));
 
   std::valarray<float> real;
   std::valarray<float> imag;
@@ -923,6 +991,54 @@ TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with fast onnx mode
 TEST_CASE("SUCCEED Run fast onnx model with real data and check first two iterations (audio 24 kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_fast_onnx_24khz.yaml"));
+
+  std::valarray<float> real, imag;
+  std::vector<float> gt_fullband_hidden, gt_fullband_cell_state;
+  std::vector<float> gt_real_output, gt_imag_output;
+  std::vector<float> gt_prev_fb_out_5;
+  data.LoadDataFromBin("1_noisy_real_in.dump", real);
+  data.LoadDataFromBin("1_noisy_imag_in.dump", imag);
+  data.LoadDataFromBin("1_fb_h_new_fast_24kHz.dump", gt_fullband_hidden);
+  data.LoadDataFromBin("1_fb_c_new_fast_24kHz.dump", gt_fullband_cell_state);
+  data.LoadDataFromBin("1_prev_fb_out_5_new_fast_24kHz.dump", gt_prev_fb_out_5);
+  data.LoadDataFromBin("1_noisy_real_out.dump", gt_real_output);
+  data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
+
+  spench::DenoiseTask denoise_task;
+  std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
+  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->m_noisy_mag);
+  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->m_fullband_hidden);
+  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->m_fullband_cell_state);
+  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->m_prev_fb_out);
+  denoise_task.m_data.m_context = ctx.get();
+  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+
+  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
+  data.m_denoiser_runner->Infer(&denoise_task);
+
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTIONS);
+  CHECK(std::vector<float>(denoise_task.m_data.m_enhanced_wav.size(), 0.0) ==
+                           denoise_task.m_data.m_enhanced_wav);
+
+  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->m_noisy_mag);
+  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->m_fullband_hidden);
+  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->m_fullband_cell_state);
+  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->m_prev_fb_out);
+  denoise_task.m_data.m_context = ctx.get();
+  denoise_task.m_stage = spench::PipelineStage::SPECTROGRAM;
+  data.m_denoiser_runner->Infer(&denoise_task);
+
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTIONS);
+  IsVectorsClose(gt_fullband_hidden, ctx.get()->m_fullband_hidden, 0.000001);
+  IsVectorsClose(gt_fullband_cell_state, ctx.get()->m_fullband_cell_state, 0.000001);
+  IsVectorsClose(gt_prev_fb_out_5, ctx.get()->m_prev_fb_out, 0.000001);
+  IsVectorsClose(gt_real_output, denoise_task.m_data.m_network_output.real, 0.000001);
+  IsVectorsClose(gt_imag_output, denoise_task.m_data.m_network_output.imag, 0.000001);
+}
+
+TEST_CASE("SUCCEED Run encrypted onnx model and check first two iterations (audio 24 kHz) [onnx runner]") {
+  auto data = std::move(TestOnnxRunner()
+      .InitRunner("default_configuration_fast_onnx_encrypted_24khz.yaml", "test"));
 
   std::valarray<float> real, imag;
   std::vector<float> gt_fullband_hidden, gt_fullband_cell_state;

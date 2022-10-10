@@ -1,5 +1,5 @@
 #include "contrib/yaml-cpp/yaml.h"
-#include "spench/feature_extractor_runner.h"
+#include "spench/src/feature_extractor_runner.h"
 #include <memory>
 #include <catch.hpp>
 #include <chrono> // NOLINT

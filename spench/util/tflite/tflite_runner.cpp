@@ -1,9 +1,9 @@
 #include <functional>
 #include <string>
 #include <memory>
-
+#include <iostream>
 #include "spench/util/tflite/tflite_runner.h"
-
+#include "spench/submodules/modelencryption/lib/include/crypto.h"
 namespace util {
 namespace tf_lite {
 
@@ -14,31 +14,48 @@ BaseTfliteRunner::~BaseTfliteRunner() {}
 BaseTfliteRunner::BaseTfliteRunner(std::vector<std::string>& input_names,
                                    std::vector<std::string>& output_names,
                                    const std::string& model_path,
+                                   const std::string& password,
                                    const uint32_t num_threads, bool on_gpu) {
   (void)(on_gpu);
-  InitModel(input_names, output_names, model_path, num_threads, on_gpu);
+  InitModel(input_names, output_names, model_path, password, num_threads, on_gpu);
 }
 
 void BaseTfliteRunner::InitModel(std::vector<std::string>& input_names,
                                  std::vector<std::string>& output_names,
                                  const std::string& model_path,
+                                 const std::string& password,
                                  const uint32_t num_threads, bool on_gpu) {
   (void)(on_gpu);
-  m_model = tflite::FlatBufferModel::BuildFromFile(model_path.c_str());
+  if (password.empty()) {
+    m_model = tflite::FlatBufferModel::VerifyAndBuildFromFile(model_path.c_str());
+  } else {
+    modelencryption::Decryptor decryptor;
+    try {
+      std::vector<uint8_t> modelData =
+                              decryptor.DecryptFile(model_path, modelencryption::Key(password));
+      m_model_data = std::make_unique<std::vector<char>>(modelData.data(), modelData.data()+modelData.size());
+    } catch (const std::exception& ex) {
+      std::string err_message = std::string("Model reading error. Detailes: ")
+                                + ex.what();
+      throw TfliteValidationException(err_message);
+    }
+    m_model = tflite::FlatBufferModel::VerifyAndBuildFromBuffer(m_model_data->data(),
+                                                                m_model_data->size());
+  }
+
   if (m_model == nullptr) {
-    throw TfliteValidationException("Model reading error. There is problem with checkpoint file");
+    throw TfliteValidationException("Model reading error. There is problem with checkpoint file.");
   }
 
   tflite::ops::builtin::BuiltinOpResolver resolver;
   tflite::InterpreterBuilder builder(*m_model, resolver);
+
   if (builder.SetNumThreads(num_threads) != kTfLiteOk) {
     throw TfliteValidationException("Can not set number of threads");
   }
-
   if (builder(&m_interpreter) != kTfLiteOk) {
     throw TfliteValidationException("Interpreter creation error. Can not create interpreter");
   }
-
   if (m_interpreter->AllocateTensors() != kTfLiteOk) {
     throw TfliteValidationException("Interpreter tensor allocation error");
   }
@@ -113,11 +130,12 @@ void BaseTfliteRunner::InitOutputTensors(spench::DenoiseTaskData& data, uint32_t
 }
 
 SpenchFTfliteRunner::SpenchFTfliteRunner(const YAML::Node& yaml_config,
-                                     uint32_t inference_engine_threads, bool on_gpu) :
-                                     BaseTfliteRunner::BaseTfliteRunner() {
+                                         const std::string& password,
+                                         uint32_t inference_engine_threads, bool on_gpu) :
+                                         BaseTfliteRunner::BaseTfliteRunner() {
     ReadConfig(yaml_config);
     InitModel(m_model_params.m_model_inputs, m_model_params.m_model_outputs,
-              m_model_params.m_model_path, inference_engine_threads, on_gpu);
+              m_model_params.m_model_path, password, inference_engine_threads, on_gpu);
     WarmUp<float>();
 }
 
@@ -264,11 +282,13 @@ void SpenchFTfliteRunner::Infer(spench::DenoiseTask* denoise_task) {
 }
 
 SpenchQTfliteRunner::SpenchQTfliteRunner(const YAML::Node& yaml_config,
-                                     uint32_t inference_engine_threads, bool on_gpu) :
-                                     BaseTfliteRunner::BaseTfliteRunner() {
+                                         const std::string& password,
+                                         uint32_t inference_engine_threads, bool on_gpu) :
+                                         BaseTfliteRunner::BaseTfliteRunner() {
     ReadConfig(yaml_config);
     InitModel(m_model_params.m_model_inputs, m_model_params.m_model_outputs,
-              m_model_params.m_model_path, inference_engine_threads, on_gpu);
+              m_model_params.m_model_path, password, inference_engine_threads,
+              on_gpu);
     WarmUp<float>();
 }
 

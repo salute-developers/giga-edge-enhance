@@ -11,7 +11,8 @@ template<typename T>
 struct DenoiseContext;
 class AudioDenoise {
  public:
-  explicit                        AudioDenoise(const char* config_file);
+                                  AudioDenoise(const char* config_file,
+                                               const char* password = "");
                                   ~AudioDenoise();
                                   AudioDenoise(const AudioDenoise&) = delete;
   AudioDenoise&                   operator=(const AudioDenoise&) = delete;

@@ -13,8 +13,8 @@
 #include <memory>
 #include <mutex> // NOLINT
 
-#include "spench/task.h"
-#include "spench/denoise_context.h"
+#include "spench/src/task.h"
+#include "spench/src/denoise_context.h"
 
 
 namespace util {
@@ -35,6 +35,7 @@ class BaseTfliteRunner {
   BaseTfliteRunner(std::vector<std::string>& input_names,
                   std::vector<std::string>& output_names,
                   const std::string& model_path,
+                  const std::string& password,
                   const uint32_t num_threads,
                   bool on_gpu = false);
   virtual ~BaseTfliteRunner();
@@ -58,6 +59,7 @@ class BaseTfliteRunner {
   void InitModel(std::vector<std::string>& input_names,
                  std::vector<std::string>& output_names,
                  const std::string& model_path,
+                 const std::string& password,
                  const uint32_t num_threads, bool on_gpu);
 
   template<typename T>
@@ -82,7 +84,7 @@ class BaseTfliteRunner {
   std::mutex m_model_run_mutex;
   std::unique_ptr<tflite::FlatBufferModel> m_model = nullptr;
   std::unique_ptr<tflite::Interpreter> m_interpreter = nullptr;
-
+  std::unique_ptr<std::vector<char> > m_model_data = nullptr;
   std::vector<TfLiteTensor*> m_model_inputs;
   std::vector<const TfLiteTensor*> m_model_outputs;
   tflite::SignatureRunner* m_signature_runner;
@@ -95,6 +97,7 @@ class SpenchFTfliteRunner: public BaseTfliteRunner {
   SpenchFTfliteRunner() = delete;
   virtual ~SpenchFTfliteRunner() = default;
   explicit SpenchFTfliteRunner(const YAML::Node& yaml_config,
+                               const std::string& password,
                                uint32_t inference_engine_threads = 1,
                                bool on_gpu = false);
   void Infer(spench::DenoiseTask* denoise_task);
@@ -112,6 +115,7 @@ class SpenchQTfliteRunner: public BaseTfliteRunner {
   SpenchQTfliteRunner() = delete;
   virtual ~SpenchQTfliteRunner() = default;
   explicit SpenchQTfliteRunner(const YAML::Node& yaml_config,
+                               const std::string& password,
                                uint32_t inference_engine_threads = 1,
                                bool on_gpu = false);
   void Infer(spench::DenoiseTask* denoise_task);

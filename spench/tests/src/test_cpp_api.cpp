@@ -31,9 +31,11 @@ struct TestFixture {
     return *this;
   }
 
-  TestFixture& InitModel(const std::string config_name) {
+  TestFixture& InitModel(const std::string config_name,
+                         const std::string password = "") {
     std::string config_path = m_kBase + "config/" + config_name;
-    m_denoiser = std::unique_ptr<spench::AudioDenoise>(new spench::AudioDenoise(config_path.c_str()));
+    m_denoiser = std::unique_ptr<spench::AudioDenoise>(new spench::AudioDenoise(config_path.c_str(),
+                                                                                password.c_str()));
     return *this;
   }
 };
@@ -379,6 +381,42 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   #else
     auto test_data = std::move(TestFixture().
                                InitModel("default_configuration_fast_onnx_24khz.yaml").
+                               SetWav("rec_noise_001_24k.wav"));
+  #endif
+
+  std::vector<float> prediction;
+  std::vector<float> reference_prediction;
+  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 300;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                test_data.m_denoiser->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
+  loadWavFx("data/results/wavs/rec_denoised_fast_001_24k.wav", reference_prediction);
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+  test_data.m_denoiser->DestroyContext(&ctx);
+  reference_prediction.resize(prediction.size());
+  IsVectorsClose(reference_prediction, prediction, 0.0001);
+}
+
+TEST_CASE("SUCCEED Run inference with encrypted fast 24 kHz model on a part of .wav file [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_fast_tflite_encrypted_24khz.yaml", "test").
+                               SetWav("rec_noise_001_24k.wav"));
+  #else
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_fast_onnx_encrypted_24khz.yaml", "test").
                                SetWav("rec_noise_001_24k.wav"));
   #endif
 
