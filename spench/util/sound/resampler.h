@@ -1,7 +1,6 @@
 #pragma once
 
 #include <spench/util/sound/resampler_fwd.h>
-
 #include <memory>
 #include <vector>
 
