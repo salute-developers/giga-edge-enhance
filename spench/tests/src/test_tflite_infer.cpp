@@ -258,7 +258,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
   }
 }
 
-TEST_CASE("SUCCEED Run inference via the best quality model and check network outputs (audio 16kHz) [onnx runner]") {
+TEST_CASE("SUCCEED Run inference via the best quality model and check network outputs (audio 16kHz) [tflite runner]") {
   auto data = std::move(TestTfliteRunner()
       .InitRunner("default_configuration_best_quality_tflite_16khz.yaml"));
 
@@ -304,7 +304,7 @@ TEST_CASE("SUCCEED Run inference via the best quality model and check network ou
   IsVectorsClose(gt_subband_cell_state, ctx.get()->m_subband_cell_state, 0.00001);
 }
 
-TEST_CASE("SUCCEED Run four frames with the best quality model and check states (audio 16kHz) [onnx runner]") {
+TEST_CASE("SUCCEED Run four frames with the best quality model and check states (audio 16kHz) [tflite runner]") {
   auto data = std::move(TestTfliteRunner()
       .InitRunner("default_configuration_best_quality_tflite_16khz.yaml"));
 
