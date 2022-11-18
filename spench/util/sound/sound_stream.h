@@ -1,58 +1,44 @@
+#pragma once
+
 #include <spench/util/sound/resampler.h>
+#include <spench/util/sound/sound_types.h>
 
 #include <cstring>
 #include <memory>
 #include <vector>
+#include <deque>
 
 namespace util {
 namespace sound {
 
+template <typename TIN, typename TOUT>
 class ISoundStream {
  public:
-  virtual std::vector<uint8_t> ReadChunk(const std::vector<uint8_t>& in_chunk) = 0;
+  virtual std::vector<TOUT> ReadChunk(const std::vector<TIN>& in_chunk) = 0;
   virtual ~ISoundStream();
-  virtual std::vector<uint8_t> FinalizeStream() = 0;
-  // virtual void SetTempo(double tempo) = 0;
-  // virtual void SetPitch(double pitch) = 0;
-  SoundInfo in;
-  SoundInfo out;
-  ISoundStream(const SoundInfo& in_, const SoundInfo& out_)
-      : in(in_)
-      , out(out_) {}
+  virtual std::vector<TOUT> FinalizeStream() = 0;
+  SoundInfo m_in;
+  SoundInfo m_out;
+
+  ISoundStream(const SoundInfo& in, const SoundInfo& out)
+      : m_in(in)
+      , m_out(out) {}
 };
 
-
 template <typename TIN, typename TOUT>
-class SoundStream : public ISoundStream {
+class SoundStream : public ISoundStream<TIN, TOUT> {
  public:
-  SoundStream(const SoundInfo& src, const SoundInfo& dst, bool add_header, FormatScaling scaling,
-              ChannelProcess channel_process, SoundtouchSettings st_settings);
+  SoundStream(const SoundInfo& src, const SoundInfo& dst);
   virtual ~SoundStream();
-  std::vector<uint8_t> ReadChunk(const std::vector<uint8_t>& in_chunk) override;
-  std::vector<TOUT> ReadChunkToVector(const std::vector<uint8_t>& in_chunk);
-  std::vector<uint8_t> FinalizeStream() override;
-  // void SetPitch(double pitch) override;
-  // void SetTempo(double tempo) override;
+  std::vector<TOUT> ReadChunk(const std::vector<TIN>& in_chunk) override;
+  std::vector<TOUT> ReadChunkToVector(const std::vector<TIN>& in_chunk);
+  std::vector<TOUT> FinalizeStream() override;
+
 
  private:
-  void ShiftPutSamples(const std::vector<TIN>& chunk);
-  std::vector<TIN> ShiftReceiveSamples(size_t buffer_size);
-  std::vector<TIN> ShiftProcess(const std::vector<TIN>& chunk);
-  // std::vector<uint8_t> EncodeOpusChunk(const std::vector<TOUT>& chunk);
-  // std::vector<uint8_t> MakeHeader();
-  void PrepareSoundtouch();
-
-  bool first_chunk_state_;
-  std::unique_ptr<soundtouch::SoundTouch> stouch_;
-  SoundtouchSettings st_settings_;
-  SpeexResampleWrapper resampler_;
-  // double tempo_ratio_;
-  // double pitch_ratio_;
-  std::unique_ptr<OpusChunkDecoder> opus_decoder_;
-  OpusStreamWrapper opus_wfile_;
-  bool in_resample_;
-  FormatScaling in_out_format_scaling_;
-  ChannelProcess channel_process_method_;
+  std::deque<TOUT> m_output_buffer;
+  ResampleWrapper m_resampler;
+  bool m_in_resample;
 };
 
 enum TemplateType {
@@ -61,26 +47,15 @@ enum TemplateType {
 };
 
 template <typename T>
-std::unique_ptr<ISoundStream> BuildSoundStream(size_t src_rate, size_t dst_rate, int src_audio_encoding,
-                                               int dst_audio_encoding, bool add_header, TemplateType template_type,
-                                               FormatScaling scaling = FormatScaling::ENABLED,
-                                               ChannelProcess channel_process = ChannelProcess::LEAVE_FIRST,
-                                               SoundtouchSettings st_settings = {});
+std::unique_ptr<ISoundStream<T,T>> BuildSoundStream(uint32_t src_rate,
+                                                    uint32_t dst_rate,
+                                                    uint32_t frame_size,
+                                                    TemplateType template_type);
 template <typename TIN>
-std::unique_ptr<ISoundStream> BuildSoundStreamTIn(const SoundInfo& src_info, const SoundInfo& dst_info, bool add_header,
-                                                  FormatScaling scaling = FormatScaling::ENABLED,
-                                                  ChannelProcess channel_process = ChannelProcess::LEAVE_FIRST,
-                                                  SoundtouchSettings st_settings = {});
+std::unique_ptr<ISoundStream<TIN,TIN>> BuildSoundStreamTIn(const SoundInfo& src_info,
+                                                           const SoundInfo& dst_info);
 template <typename TOUT>
-std::unique_ptr<ISoundStream> BuildSoundStreamTOut(const SoundInfo& src_info, const SoundInfo& dst_info,
-                                                   bool add_header, FormatScaling scaling = FormatScaling::ENABLED,
-                                                   ChannelProcess channel_process = ChannelProcess::LEAVE_FIRST,
-                                                   SoundtouchSettings st_settings = {});
-template <typename TIN, typename TOUT>
-std::unique_ptr<ISoundStream> BuildSoundStreamWithType(const SoundInfo& src_info, const SoundInfo& dst_info,
-                                                       bool add_header, FormatScaling scaling = FormatScaling::ENABLED,
-                                                       ChannelProcess channel_process = ChannelProcess::LEAVE_FIRST,
-                                                       SoundtouchSettings st_settings = {});
-
+std::unique_ptr<ISoundStream<TOUT,TOUT>> BuildSoundStreamTOut(const SoundInfo& src_info,
+                                                              const SoundInfo& dst_info);
 }  // namespace sound
 }  // namespace util

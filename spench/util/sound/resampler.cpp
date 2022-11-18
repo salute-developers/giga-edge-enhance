@@ -31,29 +31,42 @@ ResampleWrapper BuildResampler(size_t in_rate, size_t out_rate, size_t channels)
 }
 
 template <typename T>
-std::vector<T> ResampleVec(ResampleWrapper& resampler_state,
+std::vector<T> ResampleVec(const ResampleWrapper& resampler_state,
                            const std::vector<T>& v, const size_t in_rate,
                            const size_t out_rate) {
   if (!resampler_state) {
-    throw std::runtime_error("ResampleVec: resampler is null :(");
+    throw std::runtime_error("ResampleVec: resampler is null!");
   }
   if (std::is_same<T, double>::value) {
-    throw std::runtime_error("ResampleVec: T=double is not supported :(");
+    throw std::runtime_error("ResampleVec: T=double is not supported!");
   }
   double ratio = 0;
   size_t out_len = 1;
   size_t input_len = 0;
   std::vector<T> resampled;
+  // std::cout << "input rate " << in_rate << " output rate " << out_rate << std::endl;
   if (in_rate < out_rate) {
     ratio = static_cast<double>(out_rate) / static_cast<double>(in_rate);
-    resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) * ratio) + 1);
+    if (static_cast<uint32_t>(out_rate) % static_cast<uint32_t>(in_rate) == 0) {
+      resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) * ratio));
+    } else {
+      resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) * ratio) + 1);
+    }
   } else {
     ratio = static_cast<double>(in_rate) / static_cast<double>(out_rate);
-    resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) / ratio) + 1);
+    if (static_cast<uint32_t>(in_rate) % static_cast<uint32_t>(out_rate) == 0) {
+      resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) / ratio));
+    } else {
+      resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) / ratio) + 1);
+    }
   }
   soxr_error_t err;
+  // if (v.size() != 0)
+    // std::cout << "Input for resampler " << v[0] << " " << v[1] << " " << v[2] << " " << v[3] << " " << std::endl;
   err = soxr_process(resampler_state.get(), v.data(), v.size(), &input_len,
                      resampled.data(), resampled.size(), &out_len);
+  // if (out_len != 0)
+    // std::cout << "Output for resampler " << resampled[0] << " " << resampled[1] << " " << resampled[2] << " " << resampled[3] << " " << std::endl;
   if (err) {
     throw std::runtime_error("Error during soxr process");
   }
@@ -65,12 +78,12 @@ std::vector<T> ResampleVec(ResampleWrapper& resampler_state,
 }
 
 template <typename T>
-std::vector<T> FlushVec(ResampleWrapper& resampler_state) {
+std::vector<T> FlushVec(const ResampleWrapper& resampler_state) {
   if (!resampler_state) {
-    throw std::runtime_error("ResampleVec: resampler is null :(");
+    throw std::runtime_error("ResampleVec: resampler is null!");
   }
   if (std::is_same<T, double>::value) {
-    throw std::runtime_error("ResampleVec: T=double is not supported :(");
+    throw std::runtime_error("ResampleVec: T=double is not supported!");
   }
   size_t out_len = 1;
   double delayed_samples = soxr_delay((resampler_state.get()));
@@ -79,7 +92,7 @@ std::vector<T> FlushVec(ResampleWrapper& resampler_state) {
 
   err = soxr_process(resampler_state.get(), NULL, 0, NULL, resampled.data(), resampled.size(), &out_len);
   if (err) {
-    throw std::runtime_error("ResampleVec: speex internal error occured :(");
+    throw std::runtime_error("ResampleVec: speex internal error occured!");
   }
   if (resampled.size() != static_cast<size_t>(out_len)) {
     resampled.resize(out_len);
@@ -121,9 +134,9 @@ std::vector<T> ResampleVecRT(const std::vector<T>& v, const size_t in_rate,
 }  // namespace sound
 }  // namespace util
 
-template std::vector<float> util::sound::ResampleVec(util::sound::ResampleWrapper& resampler_state,
+template std::vector<float> util::sound::ResampleVec(const util::sound::ResampleWrapper& resampler_state,
                                                            const std::vector<float>& v, const size_t in_rate,
                                                            const size_t out_rate);
 template std::vector<float> util::sound::ResampleVecRT(const std::vector<float>& v, const size_t in_rate,
                                                            const size_t out_rate);
-template std::vector<float> util::sound::FlushVec(util::sound::ResampleWrapper& resampler_state);
+template std::vector<float> util::sound::FlushVec(const util::sound::ResampleWrapper& resampler_state);
