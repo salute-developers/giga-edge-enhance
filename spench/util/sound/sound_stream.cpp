@@ -4,6 +4,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace util {
 namespace sound {
@@ -85,7 +86,6 @@ std::vector<TOUT> SoundStream<TIN, TOUT>::ReadChunk(const std::vector<TIN>& in_c
 
   std::vector<TOUT> result;
   if (m_output_buffer.size() >= threshold) {
-
     std::move(std::begin(m_output_buffer),
               std::begin(m_output_buffer) + threshold,
               std::back_inserter(result));
@@ -98,7 +98,6 @@ std::vector<TOUT> SoundStream<TIN, TOUT>::ReadChunk(const std::vector<TIN>& in_c
 
 template <typename TIN, typename TOUT>
 std::vector<TOUT> SoundStream<TIN, TOUT>::FinalizeStream() {
-
   std::vector<TOUT> result;
   std::move(std::begin(m_output_buffer),
               std::end(m_output_buffer),

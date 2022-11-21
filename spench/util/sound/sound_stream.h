@@ -47,15 +47,15 @@ enum TemplateType {
 };
 
 template <typename T>
-std::unique_ptr<ISoundStream<T,T>> BuildSoundStream(uint32_t src_rate,
+std::unique_ptr<ISoundStream<T, T>> BuildSoundStream(uint32_t src_rate,
                                                     uint32_t dst_rate,
                                                     uint32_t frame_size,
                                                     TemplateType template_type);
 template <typename TIN>
-std::unique_ptr<ISoundStream<TIN,TIN>> BuildSoundStreamTIn(const SoundInfo& src_info,
+std::unique_ptr<ISoundStream<TIN, TIN>> BuildSoundStreamTIn(const SoundInfo& src_info,
                                                            const SoundInfo& dst_info);
 template <typename TOUT>
-std::unique_ptr<ISoundStream<TOUT,TOUT>> BuildSoundStreamTOut(const SoundInfo& src_info,
+std::unique_ptr<ISoundStream<TOUT, TOUT>> BuildSoundStreamTOut(const SoundInfo& src_info,
                                                               const SoundInfo& dst_info);
 }  // namespace sound
 }  // namespace util

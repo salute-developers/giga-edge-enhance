@@ -129,7 +129,7 @@ TEST_CASE("SUCCEED Run stream audio downsampling 48kHz -> 24kHz [sound]") {
   } else {
     voice_utils.m_dst_wav_data.resize(result.size());
   }
-    // std::cout << "Original:" << result.size() << " " << voice_utils.m_dst_wav_data.size() << std::endl;
+
   IsVectorsClose(voice_utils.m_dst_wav_data, result, 0.0001);
 }
 
@@ -219,7 +219,6 @@ TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 48kH
     if (output_data.size() != 0) {
       REQUIRE(output_data.size() == 384);
     }
-    std::cout << s_chunk.size() << " -> " << output_data.size() << std::endl;
 
     if (output_data.size() > 0) {
       result.insert(end(result), begin(output_data), end(output_data));

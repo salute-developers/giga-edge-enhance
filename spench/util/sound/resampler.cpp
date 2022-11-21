@@ -44,7 +44,7 @@ std::vector<T> ResampleVec(const ResampleWrapper& resampler_state,
   size_t out_len = 1;
   size_t input_len = 0;
   std::vector<T> resampled;
-  // std::cout << "input rate " << in_rate << " output rate " << out_rate << std::endl;
+
   if (in_rate < out_rate) {
     ratio = static_cast<double>(out_rate) / static_cast<double>(in_rate);
     if (static_cast<uint32_t>(out_rate) % static_cast<uint32_t>(in_rate) == 0) {
@@ -61,12 +61,10 @@ std::vector<T> ResampleVec(const ResampleWrapper& resampler_state,
     }
   }
   soxr_error_t err;
-  // if (v.size() != 0)
-    // std::cout << "Input for resampler " << v[0] << " " << v[1] << " " << v[2] << " " << v[3] << " " << std::endl;
+
   err = soxr_process(resampler_state.get(), v.data(), v.size(), &input_len,
                      resampled.data(), resampled.size(), &out_len);
-  // if (out_len != 0)
-    // std::cout << "Output for resampler " << resampled[0] << " " << resampled[1] << " " << resampled[2] << " " << resampled[3] << " " << std::endl;
+
   if (err) {
     throw std::runtime_error("Error during soxr process");
   }

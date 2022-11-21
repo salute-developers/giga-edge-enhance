@@ -16,7 +16,8 @@ using ResampleWrapper = std::unique_ptr<soxr, ResamplerDeleter>;
 ResampleWrapper BuildResampler(size_t in_rate, size_t out_rate, size_t channels);
 
 template <typename T>
-std::vector<T> ResampleVec(const ResampleWrapper& resampler_state, const std::vector<T>& v, size_t in_rate,
+std::vector<T> ResampleVec(const ResampleWrapper& resampler_state,
+                           const std::vector<T>& v, size_t in_rate,
                            size_t out_rate);
 
 template <typename T>
