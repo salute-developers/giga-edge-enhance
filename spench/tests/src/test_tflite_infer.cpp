@@ -108,6 +108,7 @@ TEST_CASE("FAIL Read config with corrupted model [tflite runner]") {
                                             "Model reading error. There is problem with checkpoint file.");
 }
 
+#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
 TEST_CASE("FAIL Read config with incorrect encrypted model path or name [tflite runner]") {
   CHECK_THROWS_WITH(TestTfliteRunner()
       .InitRunner("incorrect_configuration_fast_tflite_encrypted_24khz.yaml", "test"),
@@ -125,6 +126,7 @@ TEST_CASE("FAIL Pass no password for encrypted model [tflite runner]") {
   CHECK_THROWS_WITH(TestTfliteRunner()
       .InitRunner("default_configuration_fast_tflite_encrypted_24khz.yaml", ""), error_message.c_str());
 }
+#endif
 
 TEST_CASE("SUCCEED Run fast tflite model with real data and check first two iterations (24 kHz) [tflite runner]") {
   auto data = std::move(TestTfliteRunner()
@@ -175,10 +177,10 @@ TEST_CASE("SUCCEED Run fast tflite model with real data and check first two iter
   IsVectorsClose(gt_imag_output, denoise_task.m_data.m_network_output.imag, 0.00001);
 }
 
+#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
 TEST_CASE("SUCCEED Run encrypted model with real data and check first two iterations (24 kHz) [tflite runner]") {
   auto data = std::move(TestTfliteRunner()
       .InitRunner("default_configuration_fast_tflite_encrypted_24khz.yaml", "test"));
-  std::cout << "Test file" << std::endl;
   std::valarray<float> real, imag;
   std::vector<float> gt_fullband_hidden, gt_fullband_cell_state;
   std::vector<float> gt_real_output, gt_imag_output;
@@ -223,6 +225,7 @@ TEST_CASE("SUCCEED Run encrypted model with real data and check first two iterat
   IsVectorsClose(gt_real_output, denoise_task.m_data.m_network_output.real, 0.00001);
   IsVectorsClose(gt_imag_output, denoise_task.m_data.m_network_output.imag, 0.00001);
 }
+#endif
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with different number of threads [tflite]") {
   const std::size_t nattempts = 50;

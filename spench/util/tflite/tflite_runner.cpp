@@ -3,7 +3,11 @@
 #include <memory>
 #include <iostream>
 #include "spench/util/tflite/tflite_runner.h"
+
+#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
 #include "spench/submodules/modelencryption/lib/include/crypto.h"
+#endif
+
 namespace util {
 namespace tf_lite {
 
@@ -29,6 +33,7 @@ void BaseTfliteRunner::InitModel(std::vector<std::string>& input_names,
   if (password.empty()) {
     m_model = tflite::FlatBufferModel::VerifyAndBuildFromFile(model_path.c_str());
   } else {
+#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
     modelencryption::Decryptor decryptor;
     try {
       std::vector<uint8_t> modelData =
@@ -41,6 +46,7 @@ void BaseTfliteRunner::InitModel(std::vector<std::string>& input_names,
     }
     m_model = tflite::FlatBufferModel::VerifyAndBuildFromBuffer(m_model_data->data(),
                                                                 m_model_data->size());
+#endif
   }
 
   if (m_model == nullptr) {

@@ -1061,6 +1061,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
 }
 
+#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
 TEST_CASE("SUCCEED Run inference with the encrypted fast 24 kHz model on a part of .wav file [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
@@ -1115,6 +1116,7 @@ TEST_CASE("SUCCEED Run inference with the encrypted fast 24 kHz model on a part 
   IsVectorsClose(reference_prediction, prediction, 0.0001);
   SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
 }
+#endif
 /*
 #ifndef BUILD_WITH_ADDRESS_SANITIZER
 TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with threshold [spench c api]") {

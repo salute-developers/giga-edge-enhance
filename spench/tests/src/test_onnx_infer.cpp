@@ -797,6 +797,7 @@ TEST_CASE("FAIL Run cpu onnx runner with null pointer context and zeroed hidden 
                                             "Task data or context are not initialized!");
 }
 
+#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
 TEST_CASE("FAIL Read config with incorrect encrypted model name [onnx runner]") {
   CHECK_THROWS_WITH(TestOnnxRunner()
       .InitRunner("incorrect_configuration_best_quality_onnx_encrypted_16khz.yaml", "test"),
@@ -817,6 +818,7 @@ TEST_CASE("FAIL Pass no password for encrypted model [onnx runner]") {
   CHECK_THROWS_WITH(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_encrypted_16khz.yaml", ""), error_message.c_str());
 }
+#endif
 
 TEST_CASE("SUCCEED Run the best quality model and check network outputs (audio 16kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
@@ -858,6 +860,7 @@ TEST_CASE("SUCCEED Run the best quality model and check network outputs (audio 1
   IsVectorsClose(gt_subband_cell_state, ctx.get()->m_subband_cell_state, 0.000001);
 }
 
+#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
 TEST_CASE("SUCCEED Run encrypted the best quality model and check network outputs (audio 16kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_encrypted_16khz.yaml", "test"));
@@ -897,6 +900,7 @@ TEST_CASE("SUCCEED Run encrypted the best quality model and check network output
   IsVectorsClose(gt_subband_hidden, ctx.get()->m_subband_hidden, 0.000001);
   IsVectorsClose(gt_subband_cell_state, ctx.get()->m_subband_cell_state, 0.000001);
 }
+#endif
 
 TEST_CASE("SUCCEED Run four frames with the best quality model and check states (audio 16kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
@@ -1036,6 +1040,7 @@ TEST_CASE("SUCCEED Run fast onnx model with real data and check first two iterat
   IsVectorsClose(gt_imag_output, denoise_task.m_data.m_network_output.imag, 0.000001);
 }
 
+#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
 TEST_CASE("SUCCEED Run encrypted onnx model and check first two iterations (audio 24 kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_fast_onnx_encrypted_24khz.yaml", "test"));
@@ -1083,3 +1088,4 @@ TEST_CASE("SUCCEED Run encrypted onnx model and check first two iterations (audi
   IsVectorsClose(gt_real_output, denoise_task.m_data.m_network_output.real, 0.000001);
   IsVectorsClose(gt_imag_output, denoise_task.m_data.m_network_output.imag, 0.000001);
 }
+#endif

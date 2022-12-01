@@ -409,6 +409,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   IsVectorsClose(reference_prediction, prediction, 0.0001);
 }
 
+#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
 TEST_CASE("SUCCEED Run inference with encrypted fast 24 kHz model on a part of .wav file [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestFixture().
@@ -444,6 +445,7 @@ TEST_CASE("SUCCEED Run inference with encrypted fast 24 kHz model on a part of .
   reference_prediction.resize(prediction.size());
   IsVectorsClose(reference_prediction, prediction, 0.0001);
 }
+#endif
 
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with the final inference chunk [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
