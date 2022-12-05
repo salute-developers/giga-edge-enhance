@@ -24,11 +24,13 @@ class AudioDenoise {
    */
                                   AudioDenoise(const char* config_file,
                                                const char* password = "");
+
   /**
    *  \brief: Destructor.
    *  \out: None
    */
                                   ~AudioDenoise();
+                                  AudioDenoise(AudioDenoise&&);
                                   AudioDenoise(const AudioDenoise&) = delete;
   AudioDenoise&                   operator=(const AudioDenoise&) = delete;
 
@@ -58,9 +60,14 @@ class AudioDenoise {
   // working with context
   /**
    *  \brief: Create a context for audio stream denoising.
+   *  \param: An input sample rate of a audio stream. Should be set if
+   *          a resampling routine is required.
+   *  \param: An output sample rate of a audio stream. Should be set if
+   *          a resampling routine is required.
    *  \out: A pointer to a context.
    */
-  DenoiseContext<float>*          CreateContext();
+  DenoiseContext<float>*          CreateContext(uint32_t in_audio_sr = 0,
+                                                uint32_t out_audio_sr = 0);
 
   /**
    *  \brief: Retrieve an id number of context.
@@ -137,7 +144,7 @@ class AudioDenoise {
                                                 std::vector<int16_t>& ret16);
 
  private:
-  DenoiseScheduler*               m_sheduler;
+  std::unique_ptr<DenoiseScheduler> m_sheduler;
 };
 
 namespace tools {

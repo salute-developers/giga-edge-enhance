@@ -56,7 +56,7 @@ void FeatureExtractorRunner::Run(spench::DenoiseTask* denoise_task) {
     denoise_task->m_stage = PipelineStage::SPECTROGRAM;
   } else if (denoise_task->m_stage == PipelineStage::PREDICTIONS) {
     m_feature_extractor_ptr->calcEnhancedPartsInPlace(denoise_context->m_prev_features.front(),
-                                               denoise_data.m_network_output);
+                                                      denoise_data.m_network_output);
 
     uint32_t feat_num = denoise_context->m_prev_masked_spectrogram.real.size();
     if (feat_num == 0) {

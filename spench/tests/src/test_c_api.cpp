@@ -491,7 +491,7 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
                                          chunk.size() * sizeof(float),
                                          &ret_mem,
                                          &ret_size);
-    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
     std::vector<float> ret_vec(ret_size / sizeof(float));
     std::memcpy(ret_vec.data(), ret_mem, ret_size);
     prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
@@ -546,7 +546,8 @@ TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
                                          chunk.size() * sizeof(int16_t),
                                          &ret_mem,
                                          &ret_size);
-    CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
     std::vector<int16_t> ret_vec(ret_size / sizeof(int16_t));
     std::memcpy(ret_vec.data(), ret_mem, ret_size);
     prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
@@ -584,12 +585,13 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]")
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kChunks_to_compare = 10;
+  const uint32_t kAudio_sample_rate = 16000;
   SpenchContext ctx = nullptr;
   std::vector<float> prediction;
-  std::vector<float> reference_prediction;
+  std::vector<float> reference;
 
-  auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/rec_denoised_best_quality_001_16k.wav", reference_prediction);
+  auto chunks = chunkWav<float>(test_data.m_wav_data, kAudio_sample_rate, kChunk_size, kChunk_stride);
+  loadWavFx("data/results/wavs/rec_denoised_best_quality_001_16k.wav", reference);
   chunks.resize(kChunks_to_compare);
 
   ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx);
@@ -609,7 +611,7 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]")
                                          chunk.size() * sizeof(float),
                                          &ret_mem,
                                          &ret_size);
-    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
     std::vector<float> ret_vec(ret_size / sizeof(float));
     std::memcpy(ret_vec.data(), ret_mem, ret_size);
     prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
@@ -617,8 +619,8 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]")
     std::free(ret_mem);
     ret_mem = nullptr;
   }
-  reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.0001);
+  reference.resize(prediction.size());
+  IsVectorsClose(reference, prediction, 0.0001);
 
   unsigned char* final_ret_mem;
   uint64_t final_ret_size = 0;
@@ -626,7 +628,7 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]")
                                         ctx,
                                         &final_ret_mem,
                                         &final_ret_size);
-  CHECK(ret_code == SpenchRetCode::SUCCESS);
+  CHECK(ret_code >= SpenchRetCode::SUCCESS);
   std::vector<float> final_vec(final_ret_size / sizeof(float));
   std::memcpy(final_vec.data(), final_ret_mem, final_ret_size);
 
@@ -679,7 +681,7 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model and with the PCM
                                          chunk.size() * sizeof(int16_t),
                                          &ret_mem,
                                          &ret_size);
-    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
     std::vector<int16_t> ret_vec(ret_size / sizeof(int16_t));
     std::memcpy(ret_vec.data(), ret_mem, ret_size);
     prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
@@ -764,7 +766,7 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
                                          sizeof(float) * chunk.size(),
                                          &ret_mem1,
                                          &ret_size1);
-    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
 
     ret_code = SpenchModelProcessChunkFp(test_data.m_denoiser,
                                          ctx2,
@@ -772,7 +774,7 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
                                          sizeof(float) * chunk.size(),
                                          &ret_mem2,
                                          &ret_size2);
-    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
 
     std::vector<float> ret_vec1(ret_size1 / sizeof(float));
     std::vector<float> ret_vec2(ret_size2 / sizeof(float));
@@ -832,7 +834,7 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 5 contex
                                            sizeof(float) * chunk.size(),
                                            &ret_mem,
                                            &ret_size);
-      CHECK(ret_code == SpenchRetCode::SUCCESS);
+      CHECK(ret_code >= SpenchRetCode::SUCCESS);
       std::vector<float> ret_vec(ret_size / sizeof(float));
       std::memcpy(ret_vec.data(), ret_mem, ret_size);
       predictions.insert(predictions.end(), ret_vec.begin(), ret_vec.end());
@@ -907,7 +909,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 5 contexts concu
                                            sizeof(float) * chunk.size(),
                                            &ret_mem,
                                            &ret_size);
-      CHECK(ret_code == SpenchRetCode::SUCCESS);
+      CHECK(ret_code >= SpenchRetCode::SUCCESS);
       std::vector<float> ret_vec(ret_size / sizeof(float));
       std::memcpy(ret_vec.data(), ret_mem, ret_size);
       predictions.insert(predictions.end(), ret_vec.begin(), ret_vec.end());
@@ -1047,7 +1049,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
                                          chunk.size() * sizeof(float),
                                          &ret_mem,
                                          &ret_size);
-    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
     std::vector<float> ret_vec(ret_size / sizeof(float));
     std::memcpy(ret_vec.data(), ret_mem, ret_size);
     prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
@@ -1103,7 +1105,7 @@ TEST_CASE("SUCCEED Run inference with the encrypted fast 24 kHz model on a part 
                                          chunk.size() * sizeof(float),
                                          &ret_mem,
                                          &ret_size);
-    CHECK(ret_code == SpenchRetCode::SUCCESS);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
     std::vector<float> ret_vec(ret_size / sizeof(float));
     std::memcpy(ret_vec.data(), ret_mem, ret_size);
     prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
