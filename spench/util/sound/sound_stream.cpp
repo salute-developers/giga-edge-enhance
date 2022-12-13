@@ -166,3 +166,8 @@ template std::unique_ptr<util::sound::ISoundStream<float, float>,
                          std::default_delete<util::sound::ISoundStream<float, float> >>
                               util::sound::BuildSoundStreamTIn<float>(util::sound::SoundInfo const&,
                                                                       util::sound::SoundInfo const&);
+
+template std::unique_ptr<util::sound::ISoundStream<float, float>,
+                         std::default_delete<util::sound::ISoundStream<float, float> >>
+                              util::sound::BuildSoundStreamTOut<float>(util::sound::SoundInfo const&,
+                                                                      util::sound::SoundInfo const&);
