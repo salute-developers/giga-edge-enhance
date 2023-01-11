@@ -140,7 +140,41 @@ TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
   for (auto& chunk : chunks) {
     std::vector<float> ret;
     REQUIRE(chunk.size() == test_data.m_denoiser->GetModelInputFrameSize());
-    REQUIRE_NOTHROW(test_data.m_denoiser->ProcessChunk(ctx, chunk, ret));
+    auto ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    REQUIRE(ret_code >= SpenchRetCode::SUCCESS);
+    REQUIRE(ret_code <= SpenchRetCode::CONTEXT_ACCUMULATION);
+  }
+
+  test_data.m_denoiser->DestroyContext(&ctx);
+  REQUIRE(ctx == nullptr);
+}
+
+TEST_CASE("SUCCEED Run inference with 100 tensors and default context argumetns [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml").
+                               SetWav("rec_noise_001_16k.wav"));
+  #else
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml").
+                               SetWav("rec_noise_001_16k.wav"));
+  #endif
+
+  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext(0, 0);
+  const uint32_t kChunks_to_compare = 100;
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                test_data.m_denoiser->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
+  chunks.resize(kChunks_to_compare);
+
+  for (auto& chunk : chunks) {
+    std::vector<float> ret;
+    REQUIRE(chunk.size() == test_data.m_denoiser->GetModelInputFrameSize());
+    auto ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    REQUIRE(ret_code >= SpenchRetCode::SUCCESS);
+    REQUIRE(ret_code <= SpenchRetCode::CONTEXT_ACCUMULATION);
   }
 
   test_data.m_denoiser->DestroyContext(&ctx);
