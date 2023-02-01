@@ -563,7 +563,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with the final infer
   test_data.m_denoiser->DestroyContext(&ctx);
 }
 
-TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with forward and backward resampling [spench c++ api]") {
+TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resampling [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestFixture().
                                InitModel("default_configuration_fast_tflite_24khz.yaml").
@@ -576,70 +576,11 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with forward and bac
 
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 100;
-  const uint32_t kAudio_src_sample_rate = 48000;
-  const uint32_t kAudio_dst_sample_rate = 48000;
-  // const uint32_t kTotal_size = kChunk_size * kChunks_to_compare
-  //                                          * kAudio_dst_sample_rate / 1000;
-  SpenchRetCode ret_code;
-  std::vector<float> prediction;
-  std::vector<float> reference;
-  spench::DenoiseContext<float>* ctx =
-                          test_data.m_denoiser->CreateContext(kAudio_src_sample_rate,
-                                                              kAudio_dst_sample_rate);
-
-  auto chunks = chunkWav<float>(test_data.m_wav_data,
-                                kAudio_src_sample_rate,
-                                kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/test1_48_enhanced_upsampled.wav", reference);
-  chunks.resize(kChunks_to_compare);
-
-  for (uint32_t i = 0; i < chunks.size(); ++i) {
-    auto& chunk = chunks[i];
-    std::vector<float> ret;
-    ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
-    if (ret_code >= SpenchRetCode::SUCCESS) {
-      prediction.insert(prediction.end(), ret.begin(), ret.end());
-    }
-  }
-  // remove context zeroes as reference does not include that
-  prediction.erase(prediction.begin(),
-                   prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
-  //
-  // std::vector<float> ret;
-  // ret_code = test_data.m_denoiser->GetFinalChunk(ctx, ret);
-
-  // CHECK(ret_code == SpenchRetCode::SUCCESS);
-  // REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
-  // std::cout << prediction.size() << std::endl;
-  // prediction.insert(prediction.end(), ret.begin(), ret.end());
-  // std::cout << prediction.size() << " and reference " << reference.size() << std::endl;
-  // reference.resize(kTotal_size);
-  // prediction.resize(kTotal_size);
-  reference.resize(prediction.size());
-  // std::cout << prediction.size() << " and reference " << reference.size() << std::endl;
-  IsVectorsClose(reference, prediction, 0.005);
-  test_data.m_denoiser->DestroyContext(&ctx);
-}
-
-TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with forward resampling [spench c++ api]") {
-  #ifdef BUILD_TFLITE_ENGINE
-    auto test_data = std::move(TestFixture().
-                               InitModel("default_configuration_fast_tflite_24khz.yaml").
-                               SetWav("test1_48_noised.wav"));
-  #else
-    auto test_data = std::move(TestFixture().
-                               InitModel("default_configuration_fast_onnx_24khz.yaml").
-                               SetWav("test1_48_noised.wav"));
-  #endif
-
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 100;
+  const uint32_t kChunks_to_compare = 200;
   const uint32_t kAudio_src_sample_rate = 48000;
   const uint32_t kAudio_dst_sample_rate = 24000;
-  // const uint32_t kTotal_size = kChunk_size * kChunks_to_compare
-  //                                          * kAudio_dst_sample_rate / 1000;
+  const uint32_t kTotal_size = kChunk_size * kChunks_to_compare
+                                           * kAudio_dst_sample_rate / 1000;
   SpenchRetCode ret_code;
   std::vector<float> prediction;
   std::vector<float> reference;
@@ -664,31 +605,21 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with forward resampl
   prediction.erase(prediction.begin(),
                    prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
   //
-  // std::vector<float> ret;
-  // ret_code = test_data.m_denoiser->GetFinalChunk(ctx, ret);
+  std::vector<float> ret;
+  ret_code = test_data.m_denoiser->GetFinalChunk(ctx, ret);
 
-  // CHECK(ret_code == SpenchRetCode::SUCCESS);
-  // REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+  REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
+  prediction.insert(prediction.end(), ret.begin(), ret.end());
 
-  // prediction.insert(prediction.end(), ret.begin(), ret.end());
-  // reference.resize(kTotal_size);
-  // prediction.resize(kTotal_size);
-  reference.resize(prediction.size());
-  IsVectorsClose(reference, prediction, 0.004);
+  reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
+  prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
 
-
-  // reference_prediction.resize(prediction.size());
-  // IsVectorsClose(reference_prediction, prediction, 0.003);
-  // std::vector<float> ret;
-  // ret_code = test_data.m_denoiser->GetFinalChunk(ctx, ret);
-
-  // CHECK(ret_code == SpenchRetCode::SUCCESS);
-  // REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
-
+  IsVectorsClose(reference, prediction, 0.005);
   test_data.m_denoiser->DestroyContext(&ctx);
 }
 
-TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with backward resampling [spench c++ api]") {
+TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with output resampling [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestFixture().
                                InitModel("default_configuration_fast_tflite_24khz.yaml").
@@ -701,9 +632,11 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with backward resamp
 
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 10;
+  const uint32_t kChunks_to_compare = 200;
   const uint32_t kAudio_src_sample_rate = 24000;
   const uint32_t kAudio_dst_sample_rate = 48000;
+  const uint32_t kTotal_size = kChunk_size * kChunks_to_compare
+                                           * kAudio_dst_sample_rate / 1000;
   SpenchRetCode ret_code;
   std::vector<float> prediction;
   std::vector<float> reference;
@@ -712,7 +645,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with backward resamp
                                                               kAudio_dst_sample_rate);
 
   auto chunks = chunkWav<float>(test_data.m_wav_data,
-                                24000,
+                                kAudio_src_sample_rate,
                                 kChunk_size, kChunk_stride);
   loadWavFx("data/results/wavs/test1_48_enhanced_upsampled.wav", reference);
   chunks.resize(kChunks_to_compare);
@@ -728,13 +661,75 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with backward resamp
   prediction.erase(prediction.begin(),
                    prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
 
-  reference.resize(prediction.size());
-  IsVectorsClose(reference, prediction, 0.003);
-  // std::vector<float> ret;
-  // ret_code = test_data.m_denoiser->GetFinalChunk(ctx, ret);
+  std::vector<float> ret;
+  ret_code = test_data.m_denoiser->GetFinalChunk(ctx, ret);
 
-  // CHECK(ret_code == SpenchRetCode::SUCCESS);
-  // REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+  REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
 
+  prediction.insert(prediction.end(), ret.begin(), ret.end());
+
+  reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
+  prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
+
+  IsVectorsClose(reference, prediction, 0.008);
+  test_data.m_denoiser->DestroyContext(&ctx);
+}
+
+TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and output resampling 48 kHz [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_fast_tflite_24khz.yaml").
+                               SetWav("test1_48_noised.wav"));
+  #else
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_fast_onnx_24khz.yaml").
+                               SetWav("test1_48_noised.wav"));
+  #endif
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 100;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kAudio_dst_sample_rate = 48000;
+  const uint32_t kTotal_size = kChunk_size * kChunks_to_compare
+                                           * kAudio_dst_sample_rate / 1000;
+  SpenchRetCode ret_code;
+  std::vector<float> prediction;
+  std::vector<float> reference;
+  spench::DenoiseContext<float>* ctx =
+                          test_data.m_denoiser->CreateContext(kAudio_src_sample_rate,
+                                                              kAudio_dst_sample_rate);
+
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  loadWavFx("data/results/wavs/test1_48_enhanced_upsampled.wav", reference);
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    if (ret_code >= SpenchRetCode::SUCCESS) {
+      prediction.insert(prediction.end(), ret.begin(), ret.end());
+    }
+  }
+  // remove context zeroes as reference does not include that
+  prediction.erase(prediction.begin(),
+                   prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
+  //
+  std::vector<float> ret;
+  ret_code = test_data.m_denoiser->GetFinalChunk(ctx, ret);
+
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+  REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
+
+  prediction.insert(prediction.end(), ret.begin(), ret.end());
+
+  reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
+  prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
+
+  IsVectorsClose(reference, prediction, 0.005);
   test_data.m_denoiser->DestroyContext(&ctx);
 }

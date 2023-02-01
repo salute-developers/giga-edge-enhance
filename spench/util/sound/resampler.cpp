@@ -47,18 +47,10 @@ std::vector<T> ResampleVec(const ResampleWrapper& resampler_state,
 
   if (in_rate < out_rate) {
     ratio = static_cast<double>(out_rate) / static_cast<double>(in_rate);
-    if (static_cast<uint32_t>(out_rate) % static_cast<uint32_t>(in_rate) == 0) {
-      resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) * ratio));
-    } else {
-      resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) * ratio) + 1);
-    }
+    resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) * ratio) + 0.5f);
   } else {
     ratio = static_cast<double>(in_rate) / static_cast<double>(out_rate);
-    if (static_cast<uint32_t>(in_rate) % static_cast<uint32_t>(out_rate) == 0) {
-      resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) / ratio));
-    } else {
-      resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) / ratio) + 1);
-    }
+    resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) / ratio) + 0.5f);
   }
   soxr_error_t err;
 
