@@ -519,6 +519,18 @@ TEST_CASE("SUCCEED Run inference with encrypted fast 24 kHz model on a part of .
   reference_prediction.resize(prediction.size());
   IsVectorsClose(reference_prediction, prediction, 0.0001);
 }
+#else
+TEST_CASE("FAIL Run with password when the framework built without encryption [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    REQUIRE_THROWS_WITH(TestFixture().
+      InitModel("default_configuration_fast_tflite_encrypted_24khz.yaml", "test"),
+      "Due to errors denoiser could not be created!");
+  #else
+    REQUIRE_THROWS_WITH(TestFixture().
+      InitModel("default_configuration_fast_onnx_encrypted_24khz.yaml", "test"),
+      "Due to errors denoiser could not be created!");
+  #endif
+}
 #endif
 
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with the final inference chunk [spench c++ api]") {

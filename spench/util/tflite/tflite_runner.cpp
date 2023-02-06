@@ -46,6 +46,8 @@ void BaseTfliteRunner::InitModel(std::vector<std::string>& input_names,
     }
     m_model = tflite::FlatBufferModel::VerifyAndBuildFromBuffer(m_model_data->data(),
                                                                 m_model_data->size());
+#else
+    throw TfliteValidationException("Password must be empty or library should be built with encryption support");
 #endif
   }
 
