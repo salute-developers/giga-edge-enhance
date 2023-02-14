@@ -1,5 +1,6 @@
 /**
- * @file
+ * \file
+ * \defgroup group_cpp C++ API
  */
 #pragma once
 
@@ -15,6 +16,7 @@ struct DenoiseContext;
 
 /**
  * \brief: The class that implement audio denoising routine.
+ * \ingroup group_cpp
 */
 class AudioDenoise {
  public:
@@ -24,6 +26,7 @@ class AudioDenoise {
    *  \param config_file: A pointer to the string with path to .yaml config file.
    *  \param password: A pointer to the string with password for the model decryption.
    *  \out: None
+   *  \ingroup group_cpp
    */
                                   AudioDenoise(const char* config_file,
                                                const char* password = "");
@@ -31,6 +34,7 @@ class AudioDenoise {
   /**
    *  \brief: Destructor.
    *  \out: None
+   *  \ingroup group_cpp
    */
                                   ~AudioDenoise();
                                   AudioDenoise(AudioDenoise&&);
@@ -39,24 +43,28 @@ class AudioDenoise {
 
   /**
    * \brief: Reload a feature extractor runner pointer and an inference runner pointer.
+   * \ingroup group_cpp
   */
   SpenchRetCode                   ReloadConfig();
 
   /**
    *  \brief: Retrieve a number of inference engine (onnx, tflite) threads number.
    *  \out: A number of threads.
+   *  \ingroup group_cpp
    */
   uint32_t                        GetEngineThreads();
 
   /**
    *  \brief: Retrieve a model sample rate value, specified in .yaml file.
    *  \out: A model sample rate value.
+   *  \ingroup group_cpp
    */
   uint64_t                        GetModelSampleRate();
 
   /**
    *  \brief: Retrieve a model input size.
    *  \out: A model input size.
+   *  \ingroup group_cpp
    */
   uint64_t                        GetModelInputFrameSize();
 
@@ -68,6 +76,7 @@ class AudioDenoise {
    *  \param: An output sample rate of a audio stream. Should be set if
    *          a resampling routine is required.
    *  \out: A pointer to a context.
+   *  \ingroup group_cpp
    */
   DenoiseContext<float>*          CreateContext(uint32_t in_audio_sr = 0,
                                                 uint32_t out_audio_sr = 0);
@@ -76,6 +85,7 @@ class AudioDenoise {
    *  \brief: Retrieve an id number of context.
    *  \param: A pointer to a context.
    *  \out: An id number.
+   *  \ingroup group_cpp
    */
   uint64_t                        GetContextId(const DenoiseContext<float>*);
 
@@ -84,6 +94,7 @@ class AudioDenoise {
    *  \param: A pointer to a context.
    *  \param: A number to be set.
    *  \out: None.
+   *  \ingroup group_cpp
    */
   void                            SetContextId(DenoiseContext<float>*,
                                                uint64_t);
@@ -91,6 +102,7 @@ class AudioDenoise {
    *  \brief: Deallocate a context memory.
    *  \param: A pointer to a pointer to a context to be destroyed.
    *  \out: None.
+   *  \ingroup group_cpp
    */
   void                            DestroyContext(DenoiseContext<float>**);
 
@@ -102,6 +114,7 @@ class AudioDenoise {
    *  \param: Memory output data will be allocated.
    *                     Should be freed after that.
    *  \out: Error code. SpenchRetCode::SUCCESS means success.
+   *  \ingroup group_cpp
    */
   SpenchRetCode                   ProcessChunk(DenoiseContext<float>*,
                                                const std::vector<float>&,
@@ -115,6 +128,7 @@ class AudioDenoise {
    *  \param: Memory output data will be allocated.
    *                     Should be freed after that.
    *  \out: Error code. SpenchRetCode::SUCCESS means success.
+   *  \ingroup group_cpp
    */
   SpenchRetCode                   ProcessChunk(DenoiseContext<float>*,
                                                const std::vector<int16_t>&,
@@ -129,6 +143,7 @@ class AudioDenoise {
    *              Should be freed after that. If threre are no data available
    *              NULL will be returned.
    *  \out: Error code. SpenchRetCode::SUCCESS means success.
+   *  \ingroup group_cpp
    */
   SpenchRetCode                   GetFinalChunk(DenoiseContext<float>* ctx,
                                                 std::vector<float>& ret);
@@ -142,6 +157,7 @@ class AudioDenoise {
    *                Should be freed after that. If threre are no data available
    *                NULL will be returned.
    *  \out: Error code. SpenchRetCode::SUCCESS means success.
+   *  \ingroup group_cpp
    */
   SpenchRetCode                   GetFinalChunk(DenoiseContext<float>* ctx,
                                                 std::vector<int16_t>& ret16);
@@ -156,6 +172,7 @@ namespace tools {
  * \param: A const vector of input float32 data.
  * \param: A vector of output PCM16 data.
  * \out: None
+ * \ingroup group_cpp
 */
 void                              convertFloat32ToPCM16(const std::vector<float>&,
                                                         std::vector<int16_t>&);
@@ -165,6 +182,7 @@ void                              convertFloat32ToPCM16(const std::vector<float>
  * \param: A const vector of input PCM16 data.
  * \param: A vector of output float32 data.
  * \out: None
+ * \ingroup group_cpp
 */
 void                              convertPCM16ToFloat32(const std::vector<int16_t>&,
                                                         std::vector<float>&);
