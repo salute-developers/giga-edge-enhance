@@ -47,10 +47,11 @@ std::vector<T> ResampleVec(const ResampleWrapper& resampler_state,
 
   if (in_rate < out_rate) {
     ratio = static_cast<double>(out_rate) / static_cast<double>(in_rate);
-    resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) * ratio) + 0.5f);
+    // a trick for accurate resampling with 44.1 sample rate case.
+    resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size() * ratio) + 0.0f));
   } else {
     ratio = static_cast<double>(in_rate) / static_cast<double>(out_rate);
-    resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) / ratio) + 0.5f);
+    resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size() / ratio) + 0.5f));
   }
   soxr_error_t err;
 

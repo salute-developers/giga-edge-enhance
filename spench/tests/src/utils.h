@@ -67,9 +67,9 @@ std::vector<std::vector<InputType>> chunkWav(const std::vector<InputType>& wav,
                                              int32_t chunk_size_ms,
                                              int32_t stride_ms) {
   std::vector<std::vector<InputType>> chunks;
-  size_t step_size_samples = std::ceil((sample_rate * chunk_size_ms) / 1000.0f);
-  size_t hop_window_samples = std::ceil((sample_rate * stride_ms) / 1000.0f);
 
+  size_t step_size_samples = std::floor((sample_rate * chunk_size_ms) / 1000.0f);
+  size_t hop_window_samples = std::floor((sample_rate * stride_ms) / 1000.0f);
   if (step_size_samples > wav.size()) {
     return {wav};
   }
