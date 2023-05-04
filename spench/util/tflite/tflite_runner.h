@@ -65,8 +65,8 @@ class BaseTfliteRunner {
   template<typename T>
   void Run(std::vector<std::vector<T>*>& inputs);
 
-  void ResizeIfNeededInPlace(std::vector<float>& to_check, int shape);
-  void ResizeIfNeededInPlace(std::valarray<float>& to_check, int shape);
+  void ResizeIfNeededInPlace(std::vector<float>& to_check, uint32_t shape);
+  void ResizeIfNeededInPlace(std::valarray<float>& to_check, uint32_t shape);
   void InitOutputTensors(spench::DenoiseTaskData& data, uint32_t size);
 
   template<typename T>

@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <iterator>
 
 namespace util {
 namespace sound {

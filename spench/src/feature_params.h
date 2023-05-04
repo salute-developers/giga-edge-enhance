@@ -98,7 +98,8 @@ class FeatureParams {
     if (frame_stride <= 0 || in_size < frame_size) {
       return 0;
     }
-    return 1 + floor(static_cast<float>(in_size - frame_size) / static_cast<float>(frame_stride));
+    return uint64_t{1} + static_cast<uint64_t>(floor(static_cast<float>(in_size - frame_size)
+    / static_cast<float>(frame_stride)));
   }
 
  private:

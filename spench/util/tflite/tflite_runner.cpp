@@ -85,7 +85,7 @@ void BaseTfliteRunner::InitModel(std::vector<std::string>& input_names,
     m_model_input_size.push_back(
       std::accumulate(&m_model_inputs.back()->dims->data[0],
                       &m_model_inputs.back()->dims->data[dims_num],
-                      1, std::multiplies<uint64_t>()));
+                      uint64_t{1}, std::multiplies<uint64_t>()));
   }
   for (auto const & name : output_names) {
     m_model_outputs.push_back(m_signature_runner->output_tensor(name.c_str()));
@@ -93,7 +93,7 @@ void BaseTfliteRunner::InitModel(std::vector<std::string>& input_names,
     m_model_output_size.push_back(
       std::accumulate(&m_model_outputs.back()->dims->data[0],
                       &m_model_outputs.back()->dims->data[dims_num],
-                      1, std::multiplies<uint64_t>()));
+                      uint64_t{1}, std::multiplies<uint64_t>()));
   }
 }
 
@@ -119,14 +119,14 @@ void BaseTfliteRunner::Run(std::vector<std::vector<T>*>& inputs) {
 }
 
 void BaseTfliteRunner::ResizeIfNeededInPlace(std::vector<float>& to_check,
-                                             int shape) {
+                                             uint32_t shape) {
   if (to_check.size() == 0) {
     to_check.resize(shape, 0.0);
   }
 }
 
 void BaseTfliteRunner::ResizeIfNeededInPlace(std::valarray<float>& to_check,
-                                             int shape) {
+                                             uint32_t shape) {
   if (to_check.size() == 0) {
     to_check.resize(shape, 0.0);
   }

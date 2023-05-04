@@ -1,6 +1,4 @@
-#define protected public
-  #include "spench/src/feature_extractor.h"
-#undef protected
+#include "spench/src/feature_extractor.h"
 
 #include "spench/src/feature_params.h"
 #include "contrib/yaml-cpp/yaml.h"
@@ -9,6 +7,20 @@
 #include <chrono> // NOLINT
 
 #include "tests/src/utils.h"
+
+namespace spench {
+namespace fe {
+template <typename T>
+class FeatureExtractorUnlocked: public FeatureExtractor<T> {
+ public:
+  explicit FeatureExtractorUnlocked(const FeatureParams& params): FeatureExtractor<T>(params) {}
+  virtual ~FeatureExtractorUnlocked() = default;
+
+  using FeatureExtractor<T>::decompressCIRMInPlace;
+};
+
+}  // namespace fe
+}  // namespace spench
 
 static spench::fe::FeatureParams DefaultSpeechFeatureParams16kHz() {
   spench::fe::FeatureParams params;
@@ -31,7 +43,7 @@ static spench::fe::FeatureParams DefaultSpeechFeatureParams24kHz() {
 }
 
 struct TestFE {
-  std::unique_ptr<spench::fe::FeatureExtractor<float>> m_feature_extractor;
+  std::unique_ptr<spench::fe::FeatureExtractorUnlocked<float>> m_feature_extractor;
   const std::size_t m_kNattempts = 1000;
   std::vector<float> m_wav_data;
   const std::string m_kBase = "data/";
@@ -80,7 +92,8 @@ struct TestFE {
 
   TestFE& InitFE(const spench::fe::FeatureParams& params) {
     m_feature_extractor =
-            std::unique_ptr<spench::fe::FeatureExtractor<float> >(new spench::fe::FeatureExtractor<float>(params));
+            std::unique_ptr<spench::fe::FeatureExtractorUnlocked<float>> (\
+            new spench::fe::FeatureExtractorUnlocked<float>(params));
     return *this;
   }
 

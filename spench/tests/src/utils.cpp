@@ -25,14 +25,15 @@ void loadWavFx(const char* path, std::vector<float>& wavData, float keepUnnorm) 
 }
 
 void loadWavFx(const char* path, std::vector<int16_t>& wavData) {
-  FILE* file = fopen(path, "r");
+  FILE* file = fopen(path, "rb");
   if (file == nullptr) {
     std::string errorMsg = "Can't open file: " + std::string(path);
     throw std::invalid_argument(errorMsg.c_str());
   }
 
   WavHeader header;
-  int bytesRead = fread(&header, 1, 44, file);
+  static_assert(sizeof(WavHeader) == 44);
+  size_t bytesRead = fread(&header, 1, 44, file);
 
   wavData.clear();
   if (bytesRead > 0) {
@@ -45,7 +46,7 @@ void loadWavFx(const char* path, std::vector<int16_t>& wavData) {
         BUFFER_SIZE / (sizeof buffer[0]),
         file);
     while (bytesRead > 0) {
-      for (int i = 0; i < bytesRead; i++) {
+      for (size_t i = 0; i < bytesRead; i++) {
         wavData.push_back(buffer[i]);
       }
       bytesRead = fread(

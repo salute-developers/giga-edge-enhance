@@ -18,7 +18,11 @@ struct DenoiseContext;
  * \brief: The class that implement audio denoising routine.
  * \ingroup group_cpp
 */
-class AudioDenoise {
+class
+#ifdef _MSC_VER
+__declspec(dllexport)
+#endif
+AudioDenoise {
  public:
   /**
    *  \brief: Constructor which loads model from configuration file.
@@ -174,6 +178,9 @@ namespace tools {
  * \return: None
  * \ingroup group_cpp
 */
+#ifdef _MSC_VER
+__declspec(dllexport)
+#endif
 void                              convertFloat32ToPCM16(const std::vector<float>&,
                                                         std::vector<int16_t>&);
 
@@ -184,6 +191,9 @@ void                              convertFloat32ToPCM16(const std::vector<float>
  * \return: None
  * \ingroup group_cpp
 */
+#ifdef _MSC_VER
+__declspec(dllexport)
+#endif
 void                              convertPCM16ToFloat32(const std::vector<int16_t>&,
                                                         std::vector<float>&);
 }  // namespace tools
