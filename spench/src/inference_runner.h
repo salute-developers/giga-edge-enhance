@@ -27,6 +27,7 @@ class InferenceRunner {
   InferenceRunner(const YAML::Node& yaml_config,
                   const std::string& model_type,
                   const std::string& password,
+                  const std::string& checksum,
                   uint32_t inference_engine_threads,
                   bool gpu);
   ~InferenceRunner();

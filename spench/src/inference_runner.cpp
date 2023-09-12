@@ -5,6 +5,7 @@ namespace spench {
 InferenceRunner::InferenceRunner(const YAML::Node& model_config,
                                 const std::string& model_type,
                                 const std::string& password,
+                                const std::string& checksum,
                                 uint32_t inference_engine_threads,
                                 bool gpu) {
   m_model_type = StringToModelTypeEnum(model_type);
@@ -14,11 +15,13 @@ InferenceRunner::InferenceRunner(const YAML::Node& model_config,
                   std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
                                   new util::tf_lite::SpenchQTfliteRunner(model_config,
                                                                          password,
+                                                                         checksum,
                                                                          inference_engine_threads,
                                                                          gpu)):
                   std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
                                   new util::tf_lite::SpenchFTfliteRunner(model_config,
                                                                          password,
+                                                                         checksum,
                                                                          inference_engine_threads,
                                                                          gpu));
 #else
@@ -27,11 +30,13 @@ InferenceRunner::InferenceRunner(const YAML::Node& model_config,
                   std::unique_ptr<util::onnx::BaseOnnxRunner>(
                                   new util::onnx::SpenchQOnnxRunner(model_config,
                                                                     password,
+                                                                    checksum,
                                                                     inference_engine_threads,
                                                                     gpu)):
                   std::unique_ptr<util::onnx::BaseOnnxRunner>(
                                   new util::onnx::SpenchFOnnxRunner(model_config,
                                                                     password,
+                                                                    checksum,
                                                                     inference_engine_threads,
                                                                     gpu));
 #endif

@@ -28,12 +28,17 @@ AudioDenoise {
    *  \brief: Constructor which loads model from configuration file.
    *          If no password provided it considers that model is not encrypted.
    *  \param config_file: A pointer to the string with path to .yaml config file.
-   *  \param password: A pointer to the string with password for the model decryption.
+   *  \param password: A pointer to string with password for a model decryption.
+   *                   Could be empty, if a model was not encrypted.
+   *  \param checksum: A pointer to string with licence checksum for a model decryption.
+   *                   Could be empty, if a model was not encrypted or was not involved
+   *                   licencing.
    *  \return: None
    *  \ingroup group_cpp
    */
                                   AudioDenoise(const char* config_file,
-                                               const char* password = "");
+                                               const char* password = "",
+                                               const char* checksum = "");
 
   /**
    *  \brief: Destructor.

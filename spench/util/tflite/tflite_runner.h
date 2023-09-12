@@ -36,6 +36,7 @@ class BaseTfliteRunner {
                   std::vector<std::string>& output_names,
                   const std::string& model_path,
                   const std::string& password,
+                  const std::string& checksum,
                   const uint32_t num_threads,
                   bool on_gpu = false);
   virtual ~BaseTfliteRunner();
@@ -60,6 +61,7 @@ class BaseTfliteRunner {
                  std::vector<std::string>& output_names,
                  const std::string& model_path,
                  const std::string& password,
+                 const std::string& checksum,
                  const uint32_t num_threads, bool on_gpu);
 
   template<typename T>
@@ -98,6 +100,7 @@ class SpenchFTfliteRunner: public BaseTfliteRunner {
   virtual ~SpenchFTfliteRunner() = default;
   explicit SpenchFTfliteRunner(const YAML::Node& yaml_config,
                                const std::string& password,
+                               const std::string& checksum,
                                uint32_t inference_engine_threads = 1,
                                bool on_gpu = false);
   void Infer(spench::DenoiseTask* denoise_task);
@@ -116,6 +119,7 @@ class SpenchQTfliteRunner: public BaseTfliteRunner {
   virtual ~SpenchQTfliteRunner() = default;
   explicit SpenchQTfliteRunner(const YAML::Node& yaml_config,
                                const std::string& password,
+                               const std::string& checksum,
                                uint32_t inference_engine_threads = 1,
                                bool on_gpu = false);
   void Infer(spench::DenoiseTask* denoise_task);
