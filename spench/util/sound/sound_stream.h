@@ -1,6 +1,8 @@
 #pragma once
 
+#ifndef BUILD_WITHOUT_SOXR
 #include <spench/util/sound/resampler.h>
+#endif
 #include <spench/util/sound/sound_types.h>
 
 #include <cstring>
@@ -37,7 +39,9 @@ class SoundStream : public ISoundStream<TIN, TOUT> {
 
  private:
   std::deque<TOUT> m_output_buffer;
+#ifndef BUILD_WITHOUT_SOXR
   ResampleWrapper m_resampler;
+#endif
   bool m_in_resample;
 };
 

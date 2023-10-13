@@ -633,6 +633,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with the final infer
   test_data.m_denoiser->DestroyContext(&ctx);
 }
 
+#ifndef BUILD_WITHOUT_SOXR
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resampling [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestFixture().
@@ -803,3 +804,61 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
   IsVectorsClose(reference, prediction, 0.005);
   test_data.m_denoiser->DestroyContext(&ctx);
 }
+#else
+TEST_CASE("FAIL Run inference with the fast 24 kHz model with input resampling [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_fast_tflite_24khz.yaml").
+                               SetWav("test1_48_noised.wav"));
+  #else
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_fast_onnx_24khz.yaml").
+                               SetWav("test1_48_noised.wav"));
+  #endif
+
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kAudio_dst_sample_rate = 24000;
+
+  REQUIRE_THROWS_WITH(test_data.m_denoiser->CreateContext(kAudio_src_sample_rate,
+                                                          kAudio_dst_sample_rate),
+                      "Due to errors a context could not be created!");
+}
+
+TEST_CASE("FAIL Run inference with the fast 24 kHz model with output resampling [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_fast_tflite_24khz.yaml").
+                               SetWav("test1_24_noised.wav"));
+  #else
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_fast_onnx_24khz.yaml").
+                               SetWav("test1_24_noised.wav"));
+  #endif
+
+  const uint32_t kAudio_src_sample_rate = 24000;
+  const uint32_t kAudio_dst_sample_rate = 48000;
+
+  REQUIRE_THROWS_WITH(test_data.m_denoiser->CreateContext(kAudio_src_sample_rate,
+                                                          kAudio_dst_sample_rate),
+                      "Due to errors a context could not be created!");
+}
+
+TEST_CASE("FAIL Run inference with the fast 24 kHz model with input and output resampling 48 kHz [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_fast_tflite_24khz.yaml").
+                               SetWav("test1_48_noised.wav"));
+  #else
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_fast_onnx_24khz.yaml").
+                               SetWav("test1_48_noised.wav"));
+  #endif
+
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kAudio_dst_sample_rate = 48000;
+
+  REQUIRE_THROWS_WITH(test_data.m_denoiser->CreateContext(kAudio_src_sample_rate,
+                                                          kAudio_dst_sample_rate),
+                      "Due to errors a context could not be created!");
+}
+#endif

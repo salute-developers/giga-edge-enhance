@@ -19,13 +19,18 @@ SoundStream<TIN, TOUT>::~SoundStream() = default;
 template <typename TIN, typename TOUT>
 SoundStream<TIN, TOUT>::SoundStream(const SoundInfo& src, const SoundInfo& dst)
     : ISoundStream<TIN, TOUT>(src, dst)
-    , m_resampler{} {
+#ifndef BUILD_WITHOUT_SOXR
+    , m_resampler {}
+#endif
+                   {
   m_in_resample = false;
   if (src.channels != dst.channels && src.channels != 1) {
     throw std::runtime_error("SoundStream::SoundStream: channel conversion from " + std::to_string(src.channels) +
                              " to " + std::to_string(dst.channels) + " is not supported!");
   }
+
   if (src.sample_rate != dst.sample_rate) {
+#ifndef BUILD_WITHOUT_SOXR
     if (std::is_same<TIN, float>::value || std::is_same<TIN, int16_t>::value || std::is_same<TIN, int32_t>::value) {
       m_in_resample = true;
       m_resampler = BuildResampler(src.sample_rate, dst.sample_rate, src.channels);
@@ -36,6 +41,10 @@ SoundStream<TIN, TOUT>::SoundStream(const SoundInfo& src, const SoundInfo& dst)
       throw std::runtime_error("SoundStream::SoundStream: when src.sample_rate != dst.sample_rate" +
                                static_cast<std::string>(" either TIN or TOUT has to be float, int16_t or int32_t :("));
     }
+#else
+    throw std::runtime_error(std::string("SoundStream::SoundStream: Library built without resampling ability. ") +
+                             std::string("Please use a sample rate that is supported by model!"));
+#endif
   }
 }
 
@@ -60,7 +69,7 @@ std::vector<TOUT> SoundStream<TIN, TOUT>::ReadChunkToVector(const std::vector<TI
       throw std::runtime_error(
           "SoundStream::ReadChunk:  in.channels != out.channels and # of channels != 1 (mono)");
   }
-
+#ifndef BUILD_WITHOUT_SOXR
   // Resample if TIN
   if (m_in_resample) {
       result = ResampleVec<TIN>(m_resampler,
@@ -68,7 +77,7 @@ std::vector<TOUT> SoundStream<TIN, TOUT>::ReadChunkToVector(const std::vector<TI
                                 ISoundStream<TIN, TOUT>::m_in.sample_rate,
                                 ISoundStream<TIN, TOUT>::m_out.sample_rate);
     }
-
+#endif
   return result;
 }
 
@@ -103,7 +112,7 @@ std::vector<TOUT> SoundStream<TIN, TOUT>::FinalizeStream() {
   std::move(std::begin(m_output_buffer),
               std::end(m_output_buffer),
               std::back_inserter(result));
-
+#ifndef BUILD_WITHOUT_SOXR
   // resample if TOUT
   if (m_in_resample) {
     if (ISoundStream<TIN, TOUT>::m_in.sample_rate != ISoundStream<TIN, TOUT>::m_out.sample_rate) {
@@ -113,7 +122,7 @@ std::vector<TOUT> SoundStream<TIN, TOUT>::FinalizeStream() {
                 std::back_inserter(result));
     }
   }
-
+#endif
   return result;
 }
 

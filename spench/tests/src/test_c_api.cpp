@@ -1126,12 +1126,12 @@ TEST_CASE("SUCCEED Run inference with the licensed encrypted fast 24 kHz model o
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
                                InitModel("default_configuration_fast_tflite_lic_encrypted_24khz.yaml",
-                                         ret_code, "test_password", "test_checksum_tflite").
+                                         ret_code, "qwerty", "Hhlr0ZEoL7KcTNoM9rbFVbpfN+k6yuamg3K2THn4K+I=").
                                SetWav("rec_noise_001_24k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
                                InitModel("default_configuration_fast_onnx_lic_encrypted_24khz.yaml",
-                                         ret_code, "test_password", "test_checksum_onnx").
+                                         ret_code, "qwerty", "gGQdBounxW0kIBEURpYXmNxSAuWprxcMIvoMVQLRmpU=").
                                SetWav("rec_noise_001_24k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1197,13 +1197,13 @@ TEST_CASE("FAIL Run with password and checksum when the framework built without 
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
                                InitModel("default_configuration_fast_tflite_encrypted_24khz.yaml",
-                                         ret_code, "test_password",
-                                         "test_checksum_tflite"));
+                                         ret_code, "qwerty",
+                                         "Hhlr0ZEoL7KcTNoM9rbFVbpfN+k6yuamg3K2THn4K+I="));
   #else
     auto test_data = std::move(TestCAPI().
                                InitModel("default_configuration_fast_onnx_encrypted_24khz.yaml",
-                                         ret_code, "test_password",
-                                         "test_checksum_onnx"));
+                                         ret_code, "qwerty",
+                                         "gGQdBounxW0kIBEURpYXmNxSAuWprxcMIvoMVQLRmpU="));
   #endif
   CHECK(ret_code == SpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM);
 }
@@ -1272,7 +1272,7 @@ TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with
 }
 #endif
 */
-
+#ifndef BUILD_WITHOUT_SOXR
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resampling [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
@@ -1526,3 +1526,77 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
   IsVectorsClose(reference, prediction, 0.005);
   SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
 }
+#else
+
+TEST_CASE("FAIL Run inference with the fast 24 kHz model with input resampling [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               SetWav("test1_48_noised.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               SetWav("test1_48_noised.wav"));
+  #endif
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kAudio_dst_sample_rate = 24000;
+
+  SpenchContext ctx = nullptr;
+
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx, kAudio_src_sample_rate, kAudio_dst_sample_rate);
+  CHECK(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+
+  SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
+}
+
+TEST_CASE("FAIL Run inference with the fast 24 kHz model with output resampling [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               SetWav("test1_24_noised.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               SetWav("test1_24_noised.wav"));
+  #endif
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  const uint32_t kAudio_src_sample_rate = 24000;
+  const uint32_t kAudio_dst_sample_rate = 48000;
+
+  SpenchContext ctx = nullptr;
+
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx, kAudio_src_sample_rate, kAudio_dst_sample_rate);
+  CHECK(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+
+  SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
+}
+
+TEST_CASE("FAIL Run inference with the fast 24 kHz model with input and output resampling 48 kHz [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               SetWav("test1_48_noised.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               SetWav("test1_48_noised.wav"));
+  #endif
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kAudio_dst_sample_rate = 48000;
+
+  SpenchContext ctx = nullptr;
+
+  ret_code = SpenchModelCreateContext(test_data.m_denoiser, &ctx, kAudio_src_sample_rate, kAudio_dst_sample_rate);
+  CHECK(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+
+  SpenchModelDestroyContext(test_data.m_denoiser, &ctx);
+}
+#endif
