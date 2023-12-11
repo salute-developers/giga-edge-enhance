@@ -64,13 +64,17 @@ void CreateDefaultSessionOptions(std::unique_ptr<Ort::SessionOptions>& options_p
     return;
   }
   options_ptr = std::make_unique<Ort::SessionOptions>();
-#ifndef EMSCRIPTEN
+#ifdef EMSCRIPTEN
+  options_ptr->SetIntraOpNumThreads(1);
+  options_ptr->SetInterOpNumThreads(1);
+  options_ptr->SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
+#else
   options_ptr->SetIntraOpNumThreads(num_threads);
   options_ptr->SetInterOpNumThreads(num_threads);
   options_ptr->SetExecutionMode(ExecutionMode::ORT_PARALLEL);
+#endif
   options_ptr->SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
   options_ptr->DisableProfiling();
-#endif
   options_ptr->DisableCpuMemArena();
   options_ptr->DisableMemPattern();
   if (gpu) {
