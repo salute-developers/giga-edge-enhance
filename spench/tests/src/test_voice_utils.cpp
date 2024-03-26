@@ -5,6 +5,7 @@
 
 #include <spench/util/sound/resampler.h>
 #include <spench/util/sound/sound_stream.h>
+#include <spench/util/sound/range_control.h>
 
 struct TestVoiceUtils {
   const std::string m_kBase = "data/";
@@ -55,6 +56,67 @@ struct TestVoiceUtils {
     return SetWav(wav_path, m_dst_wav_data);
   }
 };
+
+TEST_CASE("FAIL Create RangeControl with negative max_level [sound]") {
+  auto voice_utils = std::move(TestVoiceUtils().
+                                    Init(16, 16, 48000, 48000));
+  CHECK_THROWS_WITH(util::sound::RangeControl(8000, -16.0, 0.1),
+                    "RangeControl: `max_level` must be positive.");
+}
+
+TEST_CASE("FAIL Create RangeControl with negative step_size [sound]") {
+  auto voice_utils = std::move(TestVoiceUtils().
+                                    Init(16, 16, 48000, 48000));
+  CHECK_THROWS_WITH(util::sound::RangeControl(8000, 16.0, -70.0),
+                    "RangeControl: `step_size` must be in range (0:1).");
+}
+
+TEST_CASE("FAIL Create RangeControl with step_size > 1.0 [sound]") {
+  auto voice_utils = std::move(TestVoiceUtils().
+                                    Init(16, 16, 48000, 48000));
+  CHECK_THROWS_WITH(util::sound::RangeControl(8000, 16.0, 70.0),
+                    "RangeControl: `step_size` must be in range (0:1).");
+}
+
+TEST_CASE("SUCCEED Create RangeControl and check operator() [sound]") {
+  auto voice_utils = std::move(TestVoiceUtils().
+                                    Init(16, 16, 48000, 48000));
+
+  util::sound::RangeControl rctrl(10, 5.0, 0.5);
+
+  std::vector<float> test_input{0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 10.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0};
+
+  std::vector<float> gt_out{0.0, 0.0, 0.0, 0.0, 0.0,
+                            0.0, 0.0, 0.0, 0.0, 0.0,
+                            0.0, 0.0, 5.0, 0.0, 0.0,
+                            0.0, 0.0, 0.0, 0.0, 0.0};
+
+  auto test_out = rctrl(test_input);
+  IsVectorsClose(test_out.out, gt_out, 0.000001);
+}
+
+TEST_CASE("SUCCEED Create RangeControl and check process method [sound]") {
+  auto voice_utils = std::move(TestVoiceUtils().
+                                    Init(16, 16, 48000, 48000));
+
+  util::sound::RangeControl rctrl(10, 5.0, 0.5);
+
+  std::vector<float> test_input{0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 10.0, 0.0, 0.0,
+                                0.0, 0.0, 12.0, 0.0, 0.0};
+
+  std::vector<float> gt_out{0.0, 0.0, 0.0, 0.0, 0.0,
+                            0.0, 0.0, 0.0, 0.0, 0.0,
+                            0.0, 0.0, 5.0, 0.0, 0.0,
+                            0.0, 0.0, 5.0, 0.0, 0.0};
+
+  auto test_out = rctrl.process(test_input);
+  IsVectorsClose(test_out.out, gt_out, 0.000001);
+}
 
 #ifndef BUILD_WITHOUT_SOXR
 TEST_CASE("FAIL Create resampler with equal sample rates [sound]") {
