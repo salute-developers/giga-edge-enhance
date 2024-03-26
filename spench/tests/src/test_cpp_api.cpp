@@ -7,7 +7,7 @@
 
 struct TestFixture {
   std::vector<float> m_wav_data;
-  std::unique_ptr<spench::AudioDenoise> m_denoiser;
+  std::unique_ptr<spench::SpenchDenoise> m_denoiser;
 
   const std::string m_kBase = "data/";
 
@@ -34,7 +34,7 @@ struct TestFixture {
                          const std::string& password = "",
                          const std::string& checksum = "") {
     std::string config_path = m_kBase + "config/" + config_name;
-    m_denoiser = std::make_unique<spench::AudioDenoise>(config_path.c_str(),
+    m_denoiser = std::make_unique<spench::SpenchDenoise>(config_path.c_str(),
                                                         password.c_str(),
                                                         checksum.c_str());
     return *this;

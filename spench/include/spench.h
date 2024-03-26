@@ -22,7 +22,7 @@ class
 #ifdef _MSC_VER
 __declspec(dllexport)
 #endif
-AudioDenoise {
+SpenchDenoise {
  public:
   /**
    *  \brief: Constructor which loads model from configuration file.
@@ -36,7 +36,7 @@ AudioDenoise {
    *  \return: None
    *  \ingroup group_cpp
    */
-                                  AudioDenoise(const char* config_file,
+                                  SpenchDenoise(const char* config_file,
                                                const char* password = "",
                                                const char* checksum = "");
 
@@ -45,10 +45,10 @@ AudioDenoise {
    *  \return: None
    *  \ingroup group_cpp
    */
-                                  ~AudioDenoise();
-                                  AudioDenoise(AudioDenoise&&);
-                                  AudioDenoise(const AudioDenoise&) = delete;
-  AudioDenoise&                   operator=(const AudioDenoise&) = delete;
+                                  ~SpenchDenoise();
+                                  SpenchDenoise(SpenchDenoise&&);
+                                  SpenchDenoise(const SpenchDenoise&) = delete;
+  SpenchDenoise&                   operator=(const SpenchDenoise&) = delete;
 
   /**
    * \brief: Reload a feature extractor runner pointer and an inference runner pointer.
