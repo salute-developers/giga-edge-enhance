@@ -35,6 +35,10 @@ class FeatureExtractor {
   void calcEnhancedPartsInPlace(const ComplexNumber<T>& input_spec,
                                 ComplexNumber<T>& predicted_mask);
 
+  T calcSnrEstimation(const ComplexNumber<T>& input_spec,
+                      const ComplexNumber<T>& enhanced_spec,
+                      StreamCurrentMetrics<T>& metrics);
+
  protected:
   void STFTImpl(std::vector<T>& frames,
                 std::vector<ComplexNumber<T>>& result);
@@ -64,9 +68,10 @@ class FeatureExtractor {
   FftCalculator<T> m_fft_calculator;
   std::mutex m_ifft_mutex;
   iFftCalculator<T> m_ifft_calculator;
-  T m_cirmK = static_cast<T>(10.0);
-  T m_cirmLimit = static_cast<T>(9.9);
-  T m_eps = static_cast<T>(0.00000001);
+  const T m_cirmK = static_cast<T>(10.0);
+  const T m_cirmLimit = static_cast<T>(9.9);
+  const T m_eps = static_cast<T>(1e-8);
+  const T vad_threshold = static_cast<T>(0.1);
 };
 
 }  // namespace fe

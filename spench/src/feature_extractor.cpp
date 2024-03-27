@@ -211,11 +211,11 @@ void FeatureExtractor<T>::decompressCIRMInPlace(ComplexNumber<T>& predicted_mask
 
 template <typename T>
 void FeatureExtractor<T>::calcEnhancedPartsInPlace(const ComplexNumber<T>& input_spec,
-                                                   ComplexNumber<T>& predicted_mask) {
+                                                   ComplexNumber<T>& enhanced_spec) {
   if (input_spec.real.size() == 0 ||
       input_spec.imag.size() == 0 ||
-      predicted_mask.real.size() == 0 ||
-      predicted_mask.imag.size() == 0) {
+      enhanced_spec.real.size() == 0 ||
+      enhanced_spec.imag.size() == 0) {
     return;
   }
 
@@ -223,14 +223,32 @@ void FeatureExtractor<T>::calcEnhancedPartsInPlace(const ComplexNumber<T>& input
     return;
   }
 
-  decompressCIRMInPlace(predicted_mask);
+  decompressCIRMInPlace(enhanced_spec);
 
-  std::valarray<T> input_real(predicted_mask.real);
-  std::valarray<T> input_imag(predicted_mask.imag);
-  predicted_mask.real = input_spec.real * input_real - input_spec.imag * input_imag;
-  predicted_mask.imag = input_spec.imag * input_real + input_spec.real * input_imag;
+  std::valarray<T> input_real(enhanced_spec.real);
+  std::valarray<T> input_imag(enhanced_spec.imag);
+  enhanced_spec.real = input_spec.real * input_real - input_spec.imag * input_imag;
+  enhanced_spec.imag = input_spec.imag * input_real + input_spec.real * input_imag;
 }
 
+template <typename T>
+T FeatureExtractor<T>::calcSnrEstimation(const ComplexNumber<T>& input_spec,
+                                         const ComplexNumber<T>& enhanced_spec,
+                                         StreamCurrentMetrics<T>& metrics) {
+  T E1 = (enhanced_spec.real * enhanced_spec.real + enhanced_spec.imag * enhanced_spec.imag).sum() + this->m_eps;
+  T E2 = (input_spec.real * input_spec.real + input_spec.imag * input_spec.imag).sum();
+  metrics.m_e1_max = std::max(metrics.m_e1_max, E1);
+
+  if (E1 > metrics.m_e1_max * this->vad_threshold) {
+      metrics.m_speech_energy_avg = (metrics.m_speech_energy_avg * 0.95) + (E1 * 0.05);
+  } else {
+      metrics.m_noise_energy_avg = (metrics.m_noise_energy_avg * 0.95) + (E2 * 0.05);
+  }
+
+  T SNR_est = 10 * std::log10(metrics.m_speech_energy_avg / metrics.m_noise_energy_avg);
+
+  return SNR_est;
+}
 template class FeatureExtractor<float>;
 template class FeatureExtractor<double>;
 }  // namespace fe
