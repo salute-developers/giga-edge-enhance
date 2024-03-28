@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include "spench/include/errors.h"
+#include "spench/include/stream_stat.h"
 
 namespace spench {
 class DenoiseScheduler;
@@ -76,6 +77,14 @@ SpenchDenoise {
    *  \ingroup group_cpp
    */
   uint64_t                        GetModelInputFrameSize();
+
+  /**
+   *  \brief: Retrieve a structure with sound stream statistic.
+   *  \return: A structure with stat information.
+   *  \param: A pointer to a context.
+   *  \ingroup group_cpp
+   */
+  StreamStatStruct                GetStreamStat(const DenoiseContext<float>*);
 
   // working with context
   /**

@@ -119,6 +119,21 @@ TEST_CASE("SUCCEED Set and retrieve a context id [spench c++ api]") {
   test_data.m_denoiser->DestroyContext(&ctx);
 }
 
+TEST_CASE("SUCCEED Get empty statistic information with nullptr instead of context [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_fast_tflite_24khz.yaml").
+                               SetWav("rec_noise_001_24k.wav"));
+  #else
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_fast_onnx_24khz.yaml").
+                               SetWav("rec_noise_001_24k.wav"));
+  #endif
+
+  auto stat = test_data.m_denoiser->GetStreamStat(nullptr);
+  REQUIRE(stat.m_snr == 0.0);
+}
+
 TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestFixture().
@@ -146,6 +161,44 @@ TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
     REQUIRE(ret_code >= SpenchRetCode::SUCCESS);
     REQUIRE(ret_code <= SpenchRetCode::CONTEXT_ACCUMULATION);
   }
+
+  test_data.m_denoiser->DestroyContext(&ctx);
+  REQUIRE(ctx == nullptr);
+}
+
+TEST_CASE("SUCCEED Get statistic information [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml").
+                               SetWav("rec_noise_001_16k.wav"));
+  #else
+    auto test_data = std::move(TestFixture().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml").
+                               SetWav("rec_noise_001_16k.wav"));
+  #endif
+
+  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+  const uint32_t kChunks_to_compare = 100;
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                test_data.m_denoiser->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
+  chunks.resize(kChunks_to_compare);
+
+  for (auto& chunk : chunks) {
+    std::vector<float> ret;
+    auto ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    auto stat = test_data.m_denoiser->GetStreamStat(ctx);
+    REQUIRE(ret_code >= SpenchRetCode::SUCCESS);
+    REQUIRE(ret_code <= SpenchRetCode::CONTEXT_ACCUMULATION);
+  }
+
+  auto stat = test_data.m_denoiser->GetStreamStat(nullptr);
+  CHECK(stat.m_snr == 0.0);
+
+  stat = test_data.m_denoiser->GetStreamStat(ctx);
+  REQUIRE(stat.m_snr != 0.0);
 
   test_data.m_denoiser->DestroyContext(&ctx);
   REQUIRE(ctx == nullptr);
