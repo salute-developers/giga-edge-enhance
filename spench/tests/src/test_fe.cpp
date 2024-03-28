@@ -635,7 +635,9 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with one chunk [feature extractor]") {
   std::vector<float> gt_test_snr_result;
 
   feature_extractor.LoadDataFromBin("calc_snr_result.dump", gt_test_snr_result);
-  float test_snr_result = feature_extractor.m_feature_extractor->calcSnrEstimation(test_noisy_mag, test_enhanced_mag, metrics);
+  float test_snr_result = feature_extractor.m_feature_extractor->calcSnrEstimation(test_noisy_mag,
+                                                                                  test_enhanced_mag,
+                                                                                  metrics);
 
   IsVectorsClose(std::vector{test_snr_result}, std::vector{gt_test_snr_result[0]}, 0.001);
 }
@@ -658,10 +660,12 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with dumped recording [feature extracto
   std::vector<float> test_snr_result;
   feature_extractor.LoadDataFromBin("calc_snr_result.dump", test_snr_result);
 
-  for(uint32_t i = 0; i < test_enhanced_real.size(); ++i) {
+  for (uint32_t i = 0; i < test_enhanced_real.size(); ++i) {
     spench::ComplexNumber<float> test_noisy_mag(test_noisy_real[0], 1, test_noisy_imag[0], 1);
     spench::ComplexNumber<float> test_enhanced_mag(test_enhanced_real[0], 1, test_enhanced_imag[0], 1);
-    test_snr_result.emplace_back(feature_extractor.m_feature_extractor->calcSnrEstimation(test_noisy_mag, test_enhanced_mag, metrics));
+    test_snr_result.emplace_back(feature_extractor.m_feature_extractor->calcSnrEstimation(test_noisy_mag,
+                                                                                          test_enhanced_mag,
+                                                                                          metrics));
   }
 
   IsVectorsClose(test_snr_result, test_snr_result, 0.000001);
@@ -678,10 +682,12 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with zero recording [feature extractor]
   spench::StreamCurrentMetrics<float> metrics;
   std::vector<float> test_snr_result = {0};
 
-  for(uint32_t i = 0; i < test_enhanced_real.size(); ++i) {
+  for (uint32_t i = 0; i < test_enhanced_real.size(); ++i) {
     spench::ComplexNumber<float> test_noisy_mag(test_noisy_real[0], 1, test_noisy_imag[0], 1);
     spench::ComplexNumber<float> test_enhanced_mag(test_enhanced_real[0], 1, test_enhanced_imag[0], 1);
-    test_snr_result.emplace_back(feature_extractor.m_feature_extractor->calcSnrEstimation(test_noisy_mag, test_enhanced_mag, metrics));
+    test_snr_result.emplace_back(feature_extractor.m_feature_extractor->calcSnrEstimation(test_noisy_mag,
+                                                                                          test_enhanced_mag,
+                                                                                          metrics));
   }
 
   IsVectorsClose(test_snr_result, test_snr_result, 0.000001);
@@ -698,10 +704,12 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with empty recording [feature extractor
   spench::StreamCurrentMetrics<float> metrics;
   std::vector<float> test_snr_result = {};
 
-  for(uint32_t i = 0; i < test_enhanced_real.size(); ++i) {
+  for (uint32_t i = 0; i < test_enhanced_real.size(); ++i) {
     spench::ComplexNumber<float> test_noisy_mag(test_noisy_real[0], 1, test_noisy_imag[0], 1);
     spench::ComplexNumber<float> test_enhanced_mag(test_enhanced_real[0], 1, test_enhanced_imag[0], 1);
-    test_snr_result.emplace_back(feature_extractor.m_feature_extractor->calcSnrEstimation(test_noisy_mag, test_enhanced_mag, metrics));
+    test_snr_result.emplace_back(feature_extractor.m_feature_extractor->calcSnrEstimation(test_noisy_mag,
+                                                                                          test_enhanced_mag,
+                                                                                          metrics));
   }
 
   IsVectorsClose(test_snr_result, test_snr_result, 0.000001);

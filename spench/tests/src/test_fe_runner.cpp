@@ -138,6 +138,8 @@ TEST_CASE("SUCCEED Launch runner for masking with default parameters (audio 16kH
 
   denoise_task.m_data.m_network_output.real = predicted_mask_real;
   denoise_task.m_data.m_network_output.imag = predicted_mask_imag;
+  // add random value to avoid crashes because of empty contaner
+  denoise_task.m_data.m_input_spec.push_back(prev_features);
 
   denoise_task.m_data.m_context->m_prev_masked_spectrogram.real = prev_predicted_mask_real;
   denoise_task.m_data.m_context->m_prev_masked_spectrogram.imag = prev_predicted_mask_imag;
