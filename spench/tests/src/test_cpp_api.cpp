@@ -189,7 +189,7 @@ TEST_CASE("SUCCEED Get statistic information [spench c++ api]") {
   for (auto& chunk : chunks) {
     std::vector<float> ret;
     auto ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
-    auto stat = test_data.m_denoiser->GetStreamStat(ctx);
+    test_data.m_denoiser->GetStreamStat(ctx);
     REQUIRE(ret_code >= SpenchRetCode::SUCCESS);
     REQUIRE(ret_code <= SpenchRetCode::CONTEXT_ACCUMULATION);
   }

@@ -720,6 +720,92 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model and with the PCM
   SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 
+TEST_CASE("FAIL Get statistic information with nullptr stat structure[spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #endif
+
+  SpenchContext ctx = nullptr;
+
+  ret_code = SpenchDenoiseCreateContext(test_data.m_denoiser, &ctx, 0, 0);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  ret_code = SpenchDenoiseGetStreamStat(test_data.m_denoiser, ctx, nullptr);
+
+  REQUIRE(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+}
+
+TEST_CASE("FAIL Get statistic information with nullptr context[spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #endif
+  StreamStatStruct stream_stat;
+  ret_code = SpenchDenoiseGetStreamStat(test_data.m_denoiser, nullptr, &stream_stat);
+
+  REQUIRE(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+}
+
+TEST_CASE("SUCCEED Get statistic information [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               SetWav("rec_noise_001_16k.wav"));
+  #endif
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 100;
+  SpenchContext ctx = nullptr;
+  std::vector<float> predictions1;
+
+  auto chunks = chunkWav<float>(test_data.m_wav_data, 16000, kChunk_size, kChunk_stride);
+  chunks.resize(kChunks_to_compare);
+
+  ret_code = SpenchDenoiseCreateContext(test_data.m_denoiser, &ctx, 0, 0);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  for (auto& chunk : chunks) {
+    unsigned char* ret_mem;
+    uint64_t ret_size = 0;
+    ret_code = SpenchDenoiseProcessChunkFp(test_data.m_denoiser,
+                                         ctx,
+                                         (const unsigned char*) chunk.data(),
+                                         sizeof(float) * chunk.size(),
+                                         &ret_mem,
+                                         &ret_size);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+    StreamStatStruct stream_stat;
+    ret_code = SpenchDenoiseGetStreamStat(test_data.m_denoiser, ctx, &stream_stat);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+
+    free(ret_mem);
+    ret_mem = NULL;
+  }
+
+  SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
+  CHECK(ctx == nullptr);
+}
+
 TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare result [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE

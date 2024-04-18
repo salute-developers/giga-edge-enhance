@@ -42,9 +42,9 @@ SpenchRetCode SpenchDenoiseInit(const char* config_file, SpenchDenoise* model) {
 }
 
 SpenchRetCode SpenchEncryptedDenoiseInit(const char* config_file,
-                                       const char* password,
-                                       const char* checksum,
-                                       SpenchDenoise* model) {
+                                         const char* password,
+                                         const char* checksum,
+                                         SpenchDenoise* model) {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   if (config_file == NULL || password == NULL || model == NULL) {
     return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
@@ -66,9 +66,9 @@ void SpenchDenoiseFree(SpenchDenoise* model) {
 }
 
 SpenchRetCode SpenchDenoiseCreateContext(SpenchDenoise model,
-                                       SpenchContext* ctx,
-                                       uint32_t in_audio_sr,
-                                       uint32_t out_audio_sr) {
+                                         SpenchContext* ctx,
+                                         uint32_t in_audio_sr,
+                                         uint32_t out_audio_sr) {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   if (model == nullptr) {
     ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
@@ -83,13 +83,13 @@ SpenchRetCode SpenchDenoiseCreateContext(SpenchDenoise model,
 }
 
 void SpenchDenoiseDestroyContext(SpenchDenoise model,
-                               SpenchContext* ctx) {
+                                 SpenchContext* ctx) {
   ((spench::SpenchDenoise*)model)->DestroyContext((spench::DenoiseContext<float>**)ctx);
 }
 
 SpenchRetCode SpenchDenoiseGetContextId(SpenchDenoise model,
-                                      const SpenchContext ctx,
-                                      uint64_t* id) {
+                                        const SpenchContext ctx,
+                                        uint64_t* id) {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   if (model == nullptr || ctx == nullptr || id == nullptr) {
     ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
@@ -100,13 +100,25 @@ SpenchRetCode SpenchDenoiseGetContextId(SpenchDenoise model,
 }
 
 SpenchRetCode SpenchDenoiseSetContextId(SpenchDenoise model,
-                                      SpenchContext ctx,
-                                      uint64_t id) {
+                                        SpenchContext ctx,
+                                        uint64_t id) {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   if (model == nullptr || ctx == nullptr) {
     ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   } else {
     ((spench::SpenchDenoise*)model)->SetContextId((spench::DenoiseContext<float>*)ctx, id);
+  }
+  return ret_code;
+}
+
+SpenchRetCode SpenchDenoiseGetStreamStat(SpenchDenoise model,
+                                         const SpenchContext ctx,
+                                         StreamStatStruct* stream_stat) {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  if (model == nullptr || ctx == nullptr || stream_stat == nullptr) {
+    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  } else {
+    *stream_stat = ((spench::SpenchDenoise*)model)->GetStreamStat((const spench::DenoiseContext<float>*)ctx);
   }
   return ret_code;
 }
@@ -122,7 +134,7 @@ SpenchRetCode SpenchDenoiseGetEngineThreads(SpenchDenoise model, uint64_t* engin
 }
 
 SpenchRetCode   SpenchDenoiseGetSampleRate(const SpenchDenoise model,
-                                         u_int64_t* sample_rate) {
+                                           u_int64_t* sample_rate) {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   if (model == nullptr || sample_rate == nullptr) {
     ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
@@ -133,7 +145,7 @@ SpenchRetCode   SpenchDenoiseGetSampleRate(const SpenchDenoise model,
 }
 
 SpenchRetCode SpenchDenoiseGetInputFrameSize(const SpenchDenoise model,
-                                           u_int64_t* input_size) {
+                                             u_int64_t* input_size) {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   if (model == nullptr || input_size == nullptr) {
     ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
@@ -144,11 +156,11 @@ SpenchRetCode SpenchDenoiseGetInputFrameSize(const SpenchDenoise model,
 }
 
 SpenchRetCode SpenchDenoiseProcessChunkFp(SpenchDenoise model,
-                                       SpenchContext ctx,
-                                       const uint8_t *data,
-                                       uint64_t input_size,
-                                       uint8_t **output,
-                                       uint64_t *output_size) {
+                                          SpenchContext ctx,
+                                          const uint8_t *data,
+                                          uint64_t input_size,
+                                          uint8_t **output,
+                                          uint64_t *output_size) {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   const float* input_ptr = reinterpret_cast<const float*> (data);
   std::vector<float> res;
@@ -165,11 +177,11 @@ SpenchRetCode SpenchDenoiseProcessChunkFp(SpenchDenoise model,
 }
 
 SpenchRetCode SpenchDenoiseProcessChunkInt(SpenchDenoise model,
-                                         SpenchContext ctx,
-                                         const uint8_t *data,
-                                         uint64_t input_size,
-                                         uint8_t **output,
-                                         uint64_t *output_size) {
+                                           SpenchContext ctx,
+                                           const uint8_t *data,
+                                           uint64_t input_size,
+                                           uint8_t **output,
+                                           uint64_t *output_size) {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   const int16_t* input_ptr = reinterpret_cast<const int16_t*> (data);
   std::vector<int16_t> res;
@@ -186,9 +198,9 @@ SpenchRetCode SpenchDenoiseProcessChunkInt(SpenchDenoise model,
 }
 
 SpenchRetCode SpenchDenoiseGetFinalChunkFp(SpenchDenoise model,
-                                         SpenchContext ctx,
-                                         uint8_t** output,
-                                         u_int64_t* output_size) {
+                                           SpenchContext ctx,
+                                           uint8_t** output,
+                                           u_int64_t* output_size) {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   std::vector<float> res;
   ret_code = ((spench::SpenchDenoise*)model)->

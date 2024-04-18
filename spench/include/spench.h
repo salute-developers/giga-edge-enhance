@@ -116,6 +116,7 @@ SpenchDenoise {
    */
   void                            SetContextId(DenoiseContext<float>*,
                                                uint64_t);
+
   /**
    *  \brief: Deallocate a context memory.
    *  \param: A pointer to a pointer to a context to be destroyed.
