@@ -12,6 +12,7 @@
 
 namespace spench {
 class DenoiseScheduler;
+class AudioProcessing;
 template<typename T>
 struct DenoiseContext;
 
@@ -183,6 +184,89 @@ SpenchDenoise {
 
  private:
   std::unique_ptr<DenoiseScheduler> m_sheduler;
+};
+
+class SpenchAudioProcess {
+ public:
+  /**
+   *  \brief: Default constructor loads agc and rc.
+   *  \return: None
+   *  \ingroup group_cpp
+   */
+                                  SpenchAudioProcess();
+
+  /**
+   *  \brief: Constructor which could load agc or rc or both for audio processing.
+   *  \param agc: An auto gain controller enabling or not.
+   *  \param rc: A range controller enabling or not.
+   *  \return: None
+   *  \ingroup group_cpp
+   */
+    explicit                      SpenchAudioProcess(bool agc = true, bool rc = true);
+
+  /**
+   *  \brief: Constructor which could load agc or rc or both for audio processing.
+   *          Parameters are reading from config file.
+   *  \param config_file: A pointer to the string with path to .yaml config file.
+   *  \return: None
+   *  \ingroup group_cpp
+   */
+    explicit                      SpenchAudioProcess(const char* config_file);
+
+  /**
+   *  \brief: Destructor.
+   *  \return: None
+   *  \ingroup group_cpp
+   */
+                                  ~SpenchAudioProcess();
+                                  SpenchAudioProcess(SpenchAudioProcess&&);
+                                  SpenchAudioProcess(const SpenchAudioProcess&) = delete;
+  SpenchAudioProcess&             operator=(const SpenchAudioProcess&) = delete;
+
+  /**
+   *  \brief: Set AGC parameters. If AGC does not exist, it will be created.
+   *  \param: An audio sample rate.
+   *  \param: Desired target power level.
+   *  \param: Max power gain.
+   *  \return: None.
+   *  \ingroup group_cpp
+   */
+  SpenchRetCode                   SetAgcParameters(uint32_t audio_sample_rate,
+                                                   float target_power_level = 1.0,
+                                                   float max_power_gain = 20.0);
+  /**
+   *  \brief: Set RC parameters. If RC does not exist, it will be created.
+   *  \param: Max level in db. 0db means that range control do not provide control effect.
+   *  \param: Step size.
+   *  \return: None.
+   *  \ingroup group_cpp
+   */
+  SpenchRetCode                   SetRcParameters(uint32_t audio_sample_rate,
+                                                  float max_level_db = -3.0,
+                                                  float step_size = 1e-4);
+  /**
+   *  \brief: Process a chunk of audio with float point data.
+   *  \param: A const vector of input data.
+   *  \param: Vector for output data.
+   *  \return: None.
+   *  \ingroup group_cpp
+   */
+  void                            ProcessChunk(const std::vector<float>& in,
+                                                     std::vector<float>& out);
+  /**
+   *  \brief: Process a chunk of audio withpcm16 data. Implemented through
+   *          a call to float point data processing and requires additional
+   *          time for convertion.
+   *  \param: A const vector of input data.
+   *  \param: Vector for output data.
+   *  \return: None.
+   *  \ingroup group_cpp
+   */
+  void                            ProcessChunk(const std::vector<int16_t>& in,
+                                                     std::vector<int16_t>& out);
+
+ private:
+  std::unique_ptr<AudioProcessing> m_dsp;
 };
 
 namespace tools {
