@@ -238,3 +238,93 @@ SpenchRetCode SpenchDenoiseGetFinalChunkInt(SpenchDenoise model,
 
   return ret_code;
 }
+
+SpenchRetCode   SpenchAudioProcessInit(const char* config_file,
+                                       SpenchAudioProcess* model) {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  if (config_file == NULL || model == NULL) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  }
+  try {
+    *model = reinterpret_cast<void *>(new spench::SpenchAudioProcess(config_file));
+  } catch(...) {
+    ret_code = SpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM;
+  }
+  return ret_code;
+}
+
+void  SpenchAudioProcessFree(SpenchAudioProcess* model) {
+  spench::SpenchAudioProcess * audio_process = (spench::SpenchAudioProcess *)*model;
+  if (audio_process != nullptr) {
+    delete audio_process;
+    audio_process = nullptr;
+  }
+}
+
+SpenchRetCode   SpenchAudioProcessSetAgcParameters(SpenchAudioProcess model,
+                                                   u_int32_t audio_sample_rate,
+                                                   float target_power_level,
+                                                   float max_power_gain) {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  if (model == nullptr) {
+    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  } else {
+    ((spench::SpenchAudioProcess*)model)->SetAgcParameters(audio_sample_rate,
+                                                           target_power_level,
+                                                           max_power_gain);
+  }
+  return ret_code;
+}
+
+SpenchRetCode   SpenchAudioProcessSetRcParameters(SpenchAudioProcess model,
+                                                  u_int32_t audio_sample_rate,
+                                                  float max_level_db,
+                                                  float step_size) {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  if (model == nullptr) {
+    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  } else {
+    ((spench::SpenchAudioProcess*)model)->SetRcParameters(audio_sample_rate,
+                                                          max_level_db,
+                                                          step_size);
+  }
+  return ret_code;
+}
+
+SpenchRetCode   SpenchAudioProcessChunkFp(SpenchAudioProcess model,
+                                          const u_int8_t* memory_in,
+                                          u_int64_t in_size,
+                                          u_int8_t** memory_out,
+                                          u_int64_t* out_size) {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  const float* input_ptr = reinterpret_cast<const float*> (memory_in);
+  std::vector<float> res;
+  ((spench::SpenchAudioProcess*)model)->
+                              ProcessChunk(std::vector<float> (input_ptr, input_ptr + in_size / sizeof(float)),
+                                           res);
+  if (ret_code == SpenchRetCode::SUCCESS ||
+      ret_code == SpenchRetCode::CONTEXT_ACCUMULATION) {
+    ret_code = ctools::AllocateAndCopy<float>(res, memory_out, out_size);
+  }
+
+  return ret_code;
+}
+
+SpenchRetCode   SpenchAudioProcessChunkInt(SpenchAudioProcess model,
+                                           const u_int8_t* memory_in,
+                                           u_int64_t in_size,
+                                           u_int8_t** memory_out,
+                                           u_int64_t* out_size) {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  const int16_t* input_ptr = reinterpret_cast<const int16_t*> (memory_in);
+  std::vector<int16_t> res;
+  ((spench::SpenchAudioProcess*)model)->
+                              ProcessChunk(std::vector<int16_t> (input_ptr, input_ptr + in_size / sizeof(int16_t)),
+                                           res);
+  if (ret_code == SpenchRetCode::SUCCESS ||
+      ret_code == SpenchRetCode::CONTEXT_ACCUMULATION) {
+    ret_code = ctools::AllocateAndCopy<int16_t>(res, memory_out, out_size);
+  }
+
+  return ret_code;
+}

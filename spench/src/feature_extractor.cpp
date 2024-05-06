@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <tuple>
-
+#include <cassert>
 #include "spench/src/feature_params.h"
 #include "spench/src/denoise_context.h"
 
@@ -236,17 +236,17 @@ T FeatureExtractor<T>::calcSnrEstimation(const ComplexNumber<T>& input_spec,
                                          const ComplexNumber<T>& enhanced_spec,
                                          StreamCurrentMetrics<T>& metrics) {
   T E1 = (enhanced_spec.real * enhanced_spec.real + enhanced_spec.imag * enhanced_spec.imag).sum() + this->m_eps;
-  T E2 = (input_spec.real * input_spec.real + input_spec.imag * input_spec.imag).sum();
+  T E2 = (input_spec.real * input_spec.real + input_spec.imag * input_spec.imag).sum() + this->m_eps;
   metrics.m_e1_max = std::max(metrics.m_e1_max, E1);
-
+  assert(E1 > 0);
+  assert(E2 > 0);
   if (E1 > metrics.m_e1_max * this->vad_threshold) {
       metrics.m_speech_energy_avg = (metrics.m_speech_energy_avg * 0.95) + (E1 * 0.05);
   } else {
       metrics.m_noise_energy_avg = (metrics.m_noise_energy_avg * 0.95) + (E2 * 0.05);
   }
-
+  assert((metrics.m_speech_energy_avg / metrics.m_noise_energy_avg) > 0);
   T SNR_est = 10 * std::log10(metrics.m_speech_energy_avg / metrics.m_noise_energy_avg);
-
   return SNR_est;
 }
 template class FeatureExtractor<float>;

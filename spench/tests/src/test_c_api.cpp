@@ -10,6 +10,7 @@ struct TestCAPI {
   std::vector<float> m_wav_data;
   std::vector<int16_t> m_pcm_wav_data;
   SpenchDenoise m_denoiser = nullptr;
+  SpenchAudioProcess m_audio_proc = nullptr;
 
   std::string m_kBase = "data/";
 
@@ -19,10 +20,12 @@ struct TestCAPI {
   TestCAPI(TestCAPI&& orig) :
           m_wav_data(std::move(orig.m_wav_data)),
           m_pcm_wav_data(std::move(orig.m_pcm_wav_data)),
-          m_denoiser(std::move(orig.m_denoiser)) {
+          m_denoiser(std::move(orig.m_denoiser)),
+          m_audio_proc(std::move(orig.m_audio_proc)) {
     orig.m_wav_data.clear();
     orig.m_pcm_wav_data.clear();
     orig.m_denoiser = nullptr;
+    orig.m_audio_proc = nullptr;
   }
 
   TestCAPI& SetWav(const std::string& wav_path) {
@@ -37,7 +40,7 @@ struct TestCAPI {
     return *this;
   }
 
-  TestCAPI& InitModel(const std::string& config_name,
+  TestCAPI& InitDenoiser(const std::string& config_name,
                       SpenchRetCode& ret,
                       const std::string& password = "",
                       const std::string& checksum = "") {
@@ -49,6 +52,12 @@ struct TestCAPI {
     return *this;
   }
 
+  TestCAPI& InitAudioProcessor(const std::string& config_name,
+                               SpenchRetCode& ret) {
+    std::string config_path = m_kBase + "config/" + config_name;
+    ret = SpenchAudioProcessInit(config_path.c_str(), &m_audio_proc);
+    return *this;
+  }
   ~TestCAPI() {
     if (m_denoiser != nullptr) {
       SpenchDenoiseFree(&m_denoiser);
@@ -59,14 +68,14 @@ struct TestCAPI {
 TEST_CASE("FAIL Create model with incorrect config name [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   auto test_data = std::move(TestCAPI().
-                             InitModel("config.yaml", ret_code));
+                             InitDenoiser("config.yaml", ret_code));
   REQUIRE(ret_code == SpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM);
 }
 
 TEST_CASE("FAIL Create model with incorrect model path [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   auto test_data = std::move(TestCAPI().
-                             InitModel("test_configuration_with_incorrect_model_path.yaml", ret_code));
+                             InitDenoiser("test_configuration_with_incorrect_model_path.yaml", ret_code));
   REQUIRE(ret_code == SpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM);
 }
 
@@ -74,10 +83,10 @@ TEST_CASE("FAIL Create context with nullptr model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
 
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -91,10 +100,10 @@ TEST_CASE("SUCCEED Create and destroy context [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -111,10 +120,10 @@ TEST_CASE("FAIL Get a context id with nullptr model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -132,10 +141,10 @@ TEST_CASE("FAIL Get a context id with nullptr context [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -150,10 +159,10 @@ TEST_CASE("FAIL Get a context id with nullptr returning argument [spench c api]"
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -171,10 +180,10 @@ TEST_CASE("FAIL Set a context id with nullptr model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -193,10 +202,10 @@ TEST_CASE("FAIL Set a context id with nullptr context [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -210,10 +219,10 @@ TEST_CASE("SUCCEED Check that a default context id is zero [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -233,10 +242,10 @@ TEST_CASE("SUCCEED Set and retrieve a context id [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -259,10 +268,10 @@ TEST_CASE("FAIL Get a model sample rate with nullptr model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -275,10 +284,10 @@ TEST_CASE("FAIL Get a model sample rate with nullptr returning argument [spench 
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -290,10 +299,10 @@ TEST_CASE("SUCCEED Get a model sample rate [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   uint64_t sample_rate = 0;
 
@@ -306,10 +315,10 @@ TEST_CASE("FAIL Get a model input size with nullptr model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -322,10 +331,10 @@ TEST_CASE("FAIL Get a model input size with nullptr returning argument [spench c
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -337,10 +346,10 @@ TEST_CASE("SUCCEED Get a model input size [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   uint64_t input_size = 0;
 
@@ -353,10 +362,10 @@ TEST_CASE("FAIL Get a number of inference engine threads with nullptr model [spe
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -375,10 +384,10 @@ TEST_CASE("FAIL Get a number of inference engine threads with nullptr returning 
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -396,10 +405,10 @@ TEST_CASE("SUCCEED Get a number of inference engine threads [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -419,11 +428,11 @@ TEST_CASE("FAIL Run inference with invalid chunk size with the best quality mode
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -456,11 +465,11 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -510,11 +519,11 @@ TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_16k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_16k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -575,11 +584,11 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]")
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -645,11 +654,11 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model and with the PCM
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_16k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_16k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -724,11 +733,11 @@ TEST_CASE("FAIL Get statistic information with nullptr stat structure[spench c a
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #endif
 
@@ -746,11 +755,11 @@ TEST_CASE("FAIL Get statistic information with nullptr context[spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #endif
   StreamStatStruct stream_stat;
@@ -763,11 +772,11 @@ TEST_CASE("SUCCEED Get statistic information [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -810,11 +819,11 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -887,11 +896,11 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 5 contex
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -962,11 +971,11 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 5 contexts concu
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_tflite_24khz.yaml", ret_code).
                                SetWav("rec_noise_001_24k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_onnx_24khz.yaml", ret_code).
                                SetWav("rec_noise_001_24k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1038,11 +1047,11 @@ TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare t
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_tflite_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml", ret_code).
                                SetWav("rec_noise_001_16k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1100,11 +1109,11 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_tflite_24khz.yaml", ret_code).
                                SetWav("rec_noise_001_24k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_onnx_24khz.yaml", ret_code).
                                SetWav("rec_noise_001_24k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1156,11 +1165,11 @@ TEST_CASE("SUCCEED Run inference with the encrypted fast 24 kHz model on a part 
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_tflite_encrypted_24khz.yaml", ret_code, "test").
+                               InitDenoiser("default_configuration_fast_tflite_encrypted_24khz.yaml", ret_code, "test").
                                SetWav("rec_noise_001_24k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_onnx_encrypted_24khz.yaml", ret_code, "test").
+                               InitDenoiser("default_configuration_fast_onnx_encrypted_24khz.yaml", ret_code, "test").
                                SetWav("rec_noise_001_24k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1211,12 +1220,12 @@ TEST_CASE("SUCCEED Run inference with the licensed encrypted fast 24 kHz model o
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_tflite_lic_encrypted_24khz.yaml",
+                               InitDenoiser("default_configuration_fast_tflite_lic_encrypted_24khz.yaml",
                                          ret_code, "qwerty", "Hhlr0ZEoL7KcTNoM9rbFVbpfN+k6yuamg3K2THn4K+I=").
                                SetWav("rec_noise_001_24k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_onnx_lic_encrypted_24khz.yaml",
+                               InitDenoiser("default_configuration_fast_onnx_lic_encrypted_24khz.yaml",
                                          ret_code, "qwerty", "gGQdBounxW0kIBEURpYXmNxSAuWprxcMIvoMVQLRmpU=").
                                SetWav("rec_noise_001_24k.wav"));
   #endif
@@ -1268,11 +1277,11 @@ TEST_CASE("FAIL Run with password when the framework built without encryption [s
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_tflite_encrypted_24khz.yaml",
+                               InitDenoiser("default_configuration_fast_tflite_encrypted_24khz.yaml",
                                          ret_code, "test"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_onnx_encrypted_24khz.yaml",
+                               InitDenoiser("default_configuration_fast_onnx_encrypted_24khz.yaml",
                                          ret_code, "test"));
   #endif
   CHECK(ret_code == SpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM);
@@ -1282,12 +1291,12 @@ TEST_CASE("FAIL Run with password and checksum when the framework built without 
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_tflite_encrypted_24khz.yaml",
+                               InitDenoiser("default_configuration_fast_tflite_encrypted_24khz.yaml",
                                          ret_code, "qwerty",
                                          "Hhlr0ZEoL7KcTNoM9rbFVbpfN+k6yuamg3K2THn4K+I="));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_onnx_encrypted_24khz.yaml",
+                               InitDenoiser("default_configuration_fast_onnx_encrypted_24khz.yaml",
                                          ret_code, "qwerty",
                                          "gGQdBounxW0kIBEURpYXmNxSAuWprxcMIvoMVQLRmpU="));
   #endif
@@ -1300,11 +1309,11 @@ TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_tflite_24khz.yaml", ret_code).
                                SetWav("rec_noise_001_24k.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_onnx_24khz.yaml", ret_code).
                                SetWav("rec_noise_001_24k.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1363,11 +1372,11 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resamplin
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_tflite_24khz.yaml", ret_code).
                                SetWav("test1_48_noised.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_onnx_24khz.yaml", ret_code).
                                SetWav("test1_48_noised.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1447,11 +1456,11 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with output resampli
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_tflite_24khz.yaml", ret_code).
                                SetWav("test1_24_noised.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_onnx_24khz.yaml", ret_code).
                                SetWav("test1_24_noised.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1532,11 +1541,11 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_tflite_24khz.yaml", ret_code).
                                SetWav("test1_48_noised.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_onnx_24khz.yaml", ret_code).
                                SetWav("test1_48_noised.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1618,11 +1627,11 @@ TEST_CASE("FAIL Run inference with the fast 24 kHz model with input resampling [
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_tflite_24khz.yaml", ret_code).
                                SetWav("test1_48_noised.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_onnx_24khz.yaml", ret_code).
                                SetWav("test1_48_noised.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1642,11 +1651,11 @@ TEST_CASE("FAIL Run inference with the fast 24 kHz model with output resampling 
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_tflite_24khz.yaml", ret_code).
                                SetWav("test1_24_noised.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_onnx_24khz.yaml", ret_code).
                                SetWav("test1_24_noised.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1666,11 +1675,11 @@ TEST_CASE("FAIL Run inference with the fast 24 kHz model with input and output r
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_tflite_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_tflite_24khz.yaml", ret_code).
                                SetWav("test1_48_noised.wav"));
   #else
     auto test_data = std::move(TestCAPI().
-                               InitModel("default_configuration_fast_onnx_24khz.yaml", ret_code).
+                               InitDenoiser("default_configuration_fast_onnx_24khz.yaml", ret_code).
                                SetWav("test1_48_noised.wav"));
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1686,3 +1695,287 @@ TEST_CASE("FAIL Run inference with the fast 24 kHz model with input and output r
   SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 #endif
+
+TEST_CASE("FAIL Run AudioProcessing with incorrect config file [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitAudioProcessor("config.yaml", ret_code));
+
+  REQUIRE(ret_code == SpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM);
+}
+
+TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitAudioProcessor("default_configuration_fast_tflite_rc_enabled_24khz.yaml", ret_code).
+                             SetWav("test1_48_noised.wav"));
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kChunks_to_compare = 200;
+  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  std::vector<float> prediction;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  std::vector<float> reference(test_data.m_wav_data.begin(),
+                               test_data.m_wav_data.begin() + source_data_size);
+  std::vector<float> greater_than_0_75;
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    unsigned char* ret_mem = nullptr;
+    uint64_t ret_size = 0;
+    auto& chunk = chunks[i];
+    ret_code = SpenchAudioProcessChunkFp(test_data.m_audio_proc,
+                                         (const unsigned char*) chunk.data(),
+                                         chunk.size() * sizeof(float),
+                                         &ret_mem,
+                                         &ret_size);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+    std::vector<float> ret_vec(ret_size / sizeof(float));
+    std::memcpy(ret_vec.data(), ret_mem, ret_size);
+    prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
+    if (ret_mem != nullptr) {
+      std::free(ret_mem);
+      ret_mem = nullptr;
+    }
+  }
+  REQUIRE(source_data_size == prediction.size());
+
+  std::copy_if(std::begin(reference), std::end(reference),
+               std::back_inserter(greater_than_0_75),
+               [](float& i) { return std::fabs(i) > 0.75; });
+
+  REQUIRE(greater_than_0_75.size() != 0);
+  greater_than_0_75.resize(0);
+  REQUIRE(greater_than_0_75.size() == 0);
+  // RC leave signal as it was if signal's values are not greater 0.75
+  std::copy_if(std::begin(prediction), std::end(prediction),
+               std::back_inserter(greater_than_0_75),
+               [](float& i) { return std::fabs(i) > 0.75; });
+  REQUIRE(greater_than_0_75.size() == 0);
+}
+
+TEST_CASE("SUCCEED Run AudioProcessing for pcm16 data with reading RC parameters from config [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitAudioProcessor("default_configuration_fast_tflite_rc_enabled_24khz.yaml", ret_code).
+                             SetPCMWav("test1_48_noised.wav"));
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kChunks_to_compare = 200;
+  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  std::vector<int16_t> prediction;
+  std::vector<float> prediction_fp;
+  std::vector<float> reference_fp;
+  auto chunks = chunkWav<int16_t>(test_data.m_pcm_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  loadWavFx("data/wavs/test1_48_noised.wav", reference_fp);
+  reference_fp.resize(source_data_size);
+  std::vector<float> greater_than_0_75;
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    unsigned char* ret_mem = nullptr;
+    uint64_t ret_size = 0;
+    auto& chunk = chunks[i];
+    ret_code = SpenchAudioProcessChunkInt(test_data.m_audio_proc,
+                                         (const unsigned char*) chunk.data(),
+                                         chunk.size() * sizeof(int16_t),
+                                         &ret_mem,
+                                         &ret_size);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+    std::vector<int16_t> ret_vec(ret_size / sizeof(int16_t));
+    std::memcpy(ret_vec.data(), ret_mem, ret_size);
+    prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
+    if (ret_mem != nullptr) {
+      std::free(ret_mem);
+      ret_mem = nullptr;
+    }
+  }
+
+  // convert from pcm16 to fp
+  for (std::vector<int16_t>::size_type i = 0; i != prediction.size(); i++) {
+    float f = prediction[i] > 0 ?
+          static_cast<float>(prediction[i]) / std::numeric_limits<int16_t>::max():
+          static_cast<float>(prediction[i]) / -std::numeric_limits<int16_t>::min();
+    prediction_fp.emplace_back(f);
+  }
+
+  REQUIRE(source_data_size == prediction_fp.size());
+
+  std::copy_if(std::begin(reference_fp), std::end(reference_fp),
+               std::back_inserter(greater_than_0_75),
+               [](float& i) { return std::fabs(i) > 0.75; });
+
+  REQUIRE(greater_than_0_75.size() != 0);
+  greater_than_0_75.resize(0);
+  REQUIRE(greater_than_0_75.size() == 0);
+  // RC leave signal as it was if signal's values are not greater 0.75
+  std::copy_if(std::begin(prediction_fp), std::end(prediction_fp),
+               std::back_inserter(greater_than_0_75),
+               [](float& i) { return std::fabs(i) > 0.75; });
+  REQUIRE(greater_than_0_75.size() == 0);
+}
+
+TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [spench c api]") {
+    SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitAudioProcessor("default_configuration_fast_tflite_rc_enabled_24khz.yaml", ret_code).
+                             SetWav("test1_48_noised.wav"));
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kChunks_to_compare = 200;
+  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  std::vector<float> prediction;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  std::vector<float> reference(test_data.m_wav_data.begin(),
+                               test_data.m_wav_data.begin() + source_data_size);
+  std::vector<float> greater_than_0_8;
+  chunks.resize(kChunks_to_compare);
+  SpenchAudioProcessSetRcParameters(test_data.m_audio_proc, 48000, -2, 1e-4);
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    unsigned char* ret_mem = nullptr;
+    uint64_t ret_size = 0;
+    auto& chunk = chunks[i];
+    ret_code = SpenchAudioProcessChunkFp(test_data.m_audio_proc,
+                                         (const unsigned char*) chunk.data(),
+                                         chunk.size() * sizeof(float),
+                                         &ret_mem,
+                                         &ret_size);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+    std::vector<float> ret_vec(ret_size / sizeof(float));
+    std::memcpy(ret_vec.data(), ret_mem, ret_size);
+    prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
+    if (ret_mem != nullptr) {
+      std::free(ret_mem);
+      ret_mem = nullptr;
+    }
+  }
+  REQUIRE(source_data_size == prediction.size());
+
+  std::copy_if(std::begin(reference), std::end(reference),
+               std::back_inserter(greater_than_0_8),
+               [](float& i) { return std::fabs(i) > 0.8; });
+
+  REQUIRE(greater_than_0_8.size() != 0);
+  greater_than_0_8.resize(0);
+  REQUIRE(greater_than_0_8.size() == 0);
+  // RC leave signal as it was if signal's values are not greater 0.8
+  std::copy_if(std::begin(prediction), std::end(prediction),
+               std::back_inserter(greater_than_0_8),
+               [](float& i) { return std::fabs(i) > 0.8; });
+  REQUIRE(greater_than_0_8.size() == 0);
+}
+
+TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitAudioProcessor("default_configuration_fast_tflite_agc_enabled_24khz.yaml", ret_code).
+                             SetWav("test1_48_noised.wav"));
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kChunks_to_compare = 200;
+  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  std::vector<float> prediction;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  std::vector<float> reference(test_data.m_wav_data.begin(),
+                               test_data.m_wav_data.begin() + source_data_size);
+  std::vector<float> greater_than_1;
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    unsigned char* ret_mem = nullptr;
+    uint64_t ret_size = 0;
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    ret_code = SpenchAudioProcessChunkFp(test_data.m_audio_proc,
+                                         (const unsigned char*) chunk.data(),
+                                         chunk.size() * sizeof(float),
+                                         &ret_mem,
+                                         &ret_size);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+    std::vector<float> ret_vec(ret_size / sizeof(float));
+    std::memcpy(ret_vec.data(), ret_mem, ret_size);
+    prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
+    if (ret_mem != nullptr) {
+      std::free(ret_mem);
+      ret_mem = nullptr;
+    }
+  }
+  REQUIRE(source_data_size == prediction.size());
+
+  std::copy_if(std::begin(reference), std::end(reference), std::back_inserter(greater_than_1),
+    [](float& i) { return std::fabs(i) > 1.0; });
+
+  REQUIRE(greater_than_1.size() == 0);
+  // AGC could increase signal upto 1.0
+  std::copy_if(std::begin(prediction), std::end(prediction), std::back_inserter(greater_than_1),
+    [](float& i) { return std::fabs(i) > 1.0; });
+  REQUIRE(greater_than_1.size() != 0);
+}
+
+TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().
+                             InitAudioProcessor("default_configuration_fast_tflite_agc_enabled_24khz.yaml", ret_code).
+                             SetWav("test1_48_noised.wav"));
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kChunks_to_compare = 200;
+  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  std::vector<float> prediction;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  std::vector<float> reference(test_data.m_wav_data.begin(),
+                               test_data.m_wav_data.begin() + source_data_size);
+  chunks.resize(kChunks_to_compare);
+  SpenchAudioProcessSetAgcParameters(test_data.m_audio_proc, 48000, 0.9, 20.0);
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    unsigned char* ret_mem = nullptr;
+    uint64_t ret_size = 0;
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    ret_code = SpenchAudioProcessChunkFp(test_data.m_audio_proc,
+                                         (const unsigned char*) chunk.data(),
+                                         chunk.size() * sizeof(float),
+                                         &ret_mem,
+                                         &ret_size);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+    std::vector<float> ret_vec(ret_size / sizeof(float));
+    std::memcpy(ret_vec.data(), ret_mem, ret_size);
+    prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
+    if (ret_mem != nullptr) {
+      std::free(ret_mem);
+      ret_mem = nullptr;
+    }
+  }
+  REQUIRE(source_data_size == prediction.size());
+
+  std::vector<float> greater_than_09;
+  std::copy_if(std::begin(reference), std::end(reference), std::back_inserter(greater_than_09),
+    [](float& i) { return std::fabs(i) > 0.9; });
+
+  REQUIRE(greater_than_09.size() != 0);
+  // AGC could increase signal upto 0.8
+  std::copy_if(std::begin(prediction), std::end(prediction), std::back_inserter(greater_than_09),
+    [](float& i) { return std::fabs(i) > 0.9; });
+  REQUIRE(greater_than_09.size() != 0);
+}
+

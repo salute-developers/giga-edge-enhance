@@ -162,6 +162,34 @@ TEST_CASE("SUCCEED Create and run audio processing with AGC and RC default param
   REQUIRE(greater_than_0_75.size() == 0);
 }
 
+TEST_CASE("SUCCEED Create and run audio empty audio processing [audio procesing]") {
+  auto audio_proc_test_env = std::move(TestAudioProcessing().
+                                       InitAudioProcessing(false, false).
+                                       SetWav("test1_48_noised.wav"));
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kChunks_to_compare = 200;
+  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  std::vector<float> prediction;
+  auto chunks = chunkWav<float>(audio_proc_test_env.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  std::vector<float> reference(audio_proc_test_env.m_wav_data.begin(),
+                               audio_proc_test_env.m_wav_data.begin() + source_data_size);
+  std::vector<float> greater_than_0_75;
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    audio_proc_test_env.m_audio_proc->process(chunk, ret);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+
+  IsVectorsClose(reference, prediction, 1e-5);
+}
+
 TEST_CASE("SUCCEED Change default parameters of AGC [audio procesing]") {
   auto audio_proc_test_env = std::move(TestAudioProcessing().
                                        InitAudioProcessing(true, false).
