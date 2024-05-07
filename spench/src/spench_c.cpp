@@ -261,32 +261,52 @@ void  SpenchAudioProcessFree(SpenchAudioProcess* model) {
   }
 }
 
-SpenchRetCode   SpenchAudioProcessSetAgcParameters(SpenchAudioProcess model,
-                                                   u_int32_t audio_sample_rate,
-                                                   float target_power_level,
-                                                   float max_power_gain) {
+SpenchRetCode   SpenchAudioProcessAddAgc(SpenchAudioProcess model) {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   if (model == nullptr) {
     ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   } else {
-    ((spench::SpenchAudioProcess*)model)->SetAgcParameters(audio_sample_rate,
-                                                           target_power_level,
-                                                           max_power_gain);
+    ((spench::SpenchAudioProcess*)model)->AddAGC();
   }
   return ret_code;
 }
 
-SpenchRetCode   SpenchAudioProcessSetRcParameters(SpenchAudioProcess model,
+SpenchRetCode   SpenchAudioProcessAddAgcWithParam(SpenchAudioProcess model,
                                                   u_int32_t audio_sample_rate,
-                                                  float max_level_db,
-                                                  float step_size) {
+                                                  float target_power_level,
+                                                  float max_power_gain) {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   if (model == nullptr) {
     ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   } else {
-    ((spench::SpenchAudioProcess*)model)->SetRcParameters(audio_sample_rate,
-                                                          max_level_db,
-                                                          step_size);
+    ((spench::SpenchAudioProcess*)model)->AddAGC(audio_sample_rate,
+                                                 target_power_level,
+                                                 max_power_gain);
+  }
+  return ret_code;
+}
+
+SpenchRetCode   SpenchAudioProcessAddRc(SpenchAudioProcess model) {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  if (model == nullptr) {
+    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  } else {
+    ((spench::SpenchAudioProcess*)model)->AddRC();
+  }
+  return ret_code;
+}
+
+SpenchRetCode   SpenchAudioProcessAddRcWithParam(SpenchAudioProcess model,
+                                                 u_int32_t audio_sample_rate,
+                                                 float max_level_db,
+                                                 float step_size) {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  if (model == nullptr) {
+    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  } else {
+    ((spench::SpenchAudioProcess*)model)->AddRC(audio_sample_rate,
+                                                max_level_db,
+                                                step_size);
   }
   return ret_code;
 }

@@ -50,7 +50,7 @@ SpenchDenoise {
                                   ~SpenchDenoise();
                                   SpenchDenoise(SpenchDenoise&&);
                                   SpenchDenoise(const SpenchDenoise&) = delete;
-  SpenchDenoise&                   operator=(const SpenchDenoise&) = delete;
+  SpenchDenoise&                  operator=(const SpenchDenoise&) = delete;
 
   /**
    * \brief: Reload a feature extractor runner pointer and an inference runner pointer.
@@ -140,8 +140,8 @@ SpenchDenoise {
                                                const std::vector<float>&,
                                                std::vector<float>&);
   /**
-   *  \brief: Enhance a chunk of audio with pcm16 data. Implemented through
-   *          a call to float point data processing and requires additional
+   *  \brief: Enhance a chunk of audio with pcm16 data. Implemented as
+   *          a call of analouge for fp32 data processing and requires additional
    *          time for convertion.
    *  \param: A pointer to a context.
    *  \param: A const vector of input data.
@@ -186,32 +186,39 @@ SpenchDenoise {
   std::unique_ptr<DenoiseScheduler> m_sheduler;
 };
 
+/**
+ * \brief: The class that implement audio processing routine.
+ *         This is the sequence of objects that can be added one by one to modify
+ *         sound by dsp algorithms.
+ * \ingroup group_cpp
+*/
 class SpenchAudioProcess {
  public:
   /**
-   *  \brief: Default constructor loads agc and rc.
+   *  \brief: Default constructor.
    *  \return: None
    *  \ingroup group_cpp
    */
                                   SpenchAudioProcess();
 
   /**
-   *  \brief: Constructor which could load agc or rc or both for audio processing.
+   *  \brief: Constructor which could take parameters for dsp objects from config file.
    *  \param agc: An auto gain controller enabling or not.
    *  \param rc: A range controller enabling or not.
    *  \return: None
    *  \ingroup group_cpp
    */
-    explicit                      SpenchAudioProcess(bool agc = true, bool rc = true);
+
 
   /**
-   *  \brief: Constructor which could load agc or rc or both for audio processing.
-   *          Parameters are reading from config file.
+   *  \brief: Constructor which could take parameters for dsp objects from config file.
+   *          All parameters are reading from config file when AGC, RC, etc are being
+   *          created.
    *  \param config_file: A pointer to the string with path to .yaml config file.
    *  \return: None
    *  \ingroup group_cpp
    */
-    explicit                      SpenchAudioProcess(const char* config_file);
+  explicit                        SpenchAudioProcess(const char* config_file);
 
   /**
    *  \brief: Destructor.
@@ -219,51 +226,73 @@ class SpenchAudioProcess {
    *  \ingroup group_cpp
    */
                                   ~SpenchAudioProcess();
-                                  SpenchAudioProcess(SpenchAudioProcess&&);
+                                  SpenchAudioProcess(SpenchAudioProcess&&) = delete;
                                   SpenchAudioProcess(const SpenchAudioProcess&) = delete;
   SpenchAudioProcess&             operator=(const SpenchAudioProcess&) = delete;
 
   /**
-   *  \brief: Set AGC parameters. If AGC does not exist, it will be created.
+   *  \brief: Create and Add Automatic Gain Control object to Audio Process with default
+   *          parameters optimized for audio sample rate 48000Hz, or specified
+   *          in config file if it was provided for SpenchAudioProcess constructor.
+   *  \return: None.
+   *  \ingroup group_cpp
+   */
+  SpenchAudioProcess&             AddAGC();
+
+  /**
+   *  \brief: Create and Add Automatic Gain Control object to Audio Process with specific
+   *          parameters.
    *  \param: An audio sample rate.
    *  \param: Desired target power level.
    *  \param: Max power gain.
    *  \return: None.
    *  \ingroup group_cpp
    */
-  SpenchRetCode                   SetAgcParameters(uint32_t audio_sample_rate,
-                                                   float target_power_level = 1.0,
-                                                   float max_power_gain = 20.0);
+  SpenchAudioProcess&             AddAGC(uint32_t audio_sample_rate,
+                                         float target_power_level = 1.0,
+                                         float max_power_gain = 20.0);
+
   /**
-   *  \brief: Set RC parameters. If RC does not exist, it will be created.
+   *  \brief: Create and Add Range Control object to Audio Process with default parameters
+   *          optimized for audio sample rate 48000Hz, or specified in config file
+   *          if it was provided for SpenchAudioProcess constructor.
+   *  \return: None.
+   *  \ingroup group_cpp
+   */
+  SpenchAudioProcess&             AddRC();
+
+  /**
+   *  \brief: Create and Add Range Control object to Audio Process with specific
+   *          parameters. They will applied for an object even config file was provided.
+   *  \param: An audio sample rate.
    *  \param: Max level in db. 0db means that range control do not provide control effect.
    *  \param: Step size.
    *  \return: None.
    *  \ingroup group_cpp
    */
-  SpenchRetCode                   SetRcParameters(uint32_t audio_sample_rate,
-                                                  float max_level_db = -3.0,
-                                                  float step_size = 1e-4);
+  SpenchAudioProcess&             AddRC(uint32_t audio_sample_rate,
+                                        float max_level_db = -3.0,
+                                        float step_size = 1e-4);
+
   /**
-   *  \brief: Process a chunk of audio with float point data.
+   *  \brief: Process a chunk of audio with float point data via sequence of dsp objects.
    *  \param: A const vector of input data.
    *  \param: Vector for output data.
-   *  \return: None.
+   *  \return: Reference to out.
    *  \ingroup group_cpp
    */
-  void                            ProcessChunk(const std::vector<float>& in,
-                                                     std::vector<float>& out);
+  std::vector<float>&               ProcessChunk(const std::vector<float>& in,
+                                                       std::vector<float>& out);
   /**
-   *  \brief: Process a chunk of audio withpcm16 data. Implemented through
-   *          a call to float point data processing and requires additional
-   *          time for convertion.
+   *  \brief: Process a chunk of audio withpcm16 data via sequence of dsp objects.
+   *          Requires additional time for convertion ot fp32 and vice versa.
    *  \param: A const vector of input data.
    *  \param: Vector for output data.
-   *  \return: None.
+   *  \return: Reference to out.
    *  \ingroup group_cpp
    */
-  void                            ProcessChunk(const std::vector<int16_t>& in,
-                                                     std::vector<int16_t>& out);
+  std::vector<int16_t>&              ProcessChunk(const std::vector<int16_t>& in,
+                                                        std::vector<int16_t>& out);
 
  private:
   std::unique_ptr<AudioProcessing> m_dsp;
@@ -281,7 +310,7 @@ namespace tools {
 __declspec(dllexport)
 #endif
 void                              convertFloat32ToPCM16(const std::vector<float>&,
-                                                        std::vector<int16_t>&);
+                                                              std::vector<int16_t>&);
 
 /**
  * \brief: Convert PCM16 to float32.
@@ -294,6 +323,6 @@ void                              convertFloat32ToPCM16(const std::vector<float>
 __declspec(dllexport)
 #endif
 void                              convertPCM16ToFloat32(const std::vector<int16_t>&,
-                                                        std::vector<float>&);
+                                                              std::vector<float>&);
 }  // namespace tools
 }  // namespace spench

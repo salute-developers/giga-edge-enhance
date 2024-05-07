@@ -7,7 +7,11 @@
 #include "spench/src/audio_processing.h"
 
 struct TestAudioProcessing {
+ // private:
+ //  std::unique_ptr<spench::AudioProcessing::AudioProcessingBuilder> m_audio_proc_builder;
+ // public:
   std::unique_ptr<spench::AudioProcessing> m_audio_proc;
+
 
   const std::string m_kBase = "data/";
   std::vector<float> m_wav_data;
@@ -23,15 +27,19 @@ struct TestAudioProcessing {
     orig.m_audio_proc = nullptr;
   }
 
-  TestAudioProcessing& InitAudioProcessing(bool agc = true, bool rc = true) {
-    m_audio_proc = std::make_unique<spench::AudioProcessing>(agc, rc);
+  spench::AudioProcessing& getAudioProc() {
+    return *(m_audio_proc.get());
+  }
+
+  TestAudioProcessing& InitAudioProcessing() {
+    m_audio_proc = std::make_unique<spench::AudioProcessing>(spench::AudioProcessing());
     return *this;
   }
 
   TestAudioProcessing& InitAudioProcessing(const std::string& config_name) {
     std::string config_path = m_kBase + "config/" + config_name;
-    m_audio_proc = std::unique_ptr<spench::AudioProcessing>(
-                                                new spench::AudioProcessing(config_path));
+    m_audio_proc = std::make_unique<spench::AudioProcessing>(
+                                                spench::AudioProcessing(config_path));
     return *this;
   }
 
@@ -48,8 +56,10 @@ struct TestAudioProcessing {
 
 TEST_CASE("SUCCEED Create and run audio processing with AGC default parameters [audio procesing]") {
   auto audio_proc_test_env = std::move(TestAudioProcessing().
-                                       InitAudioProcessing(true, false).
-                                       SetWav("test1_48_noised.wav"));
+                                       InitAudioProcessing().
+                                       SetWav("test1_48_noised.wav")
+                                       );
+  audio_proc_test_env.getAudioProc().addAGC();
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -84,8 +94,9 @@ TEST_CASE("SUCCEED Create and run audio processing with AGC default parameters [
 
 TEST_CASE("SUCCEED Create and run audio processing with RC default parameters [audio procesing]") {
   auto audio_proc_test_env = std::move(TestAudioProcessing().
-                                       InitAudioProcessing(false, true).
+                                       InitAudioProcessing().
                                        SetWav("test1_48_noised.wav"));
+  audio_proc_test_env.getAudioProc().addRC();
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -124,8 +135,10 @@ TEST_CASE("SUCCEED Create and run audio processing with RC default parameters [a
 
 TEST_CASE("SUCCEED Create and run audio processing with AGC and RC default parameters [audio procesing]") {
   auto audio_proc_test_env = std::move(TestAudioProcessing().
-                                       InitAudioProcessing(true, true).
+                                       InitAudioProcessing().
                                        SetWav("test1_48_noised.wav"));
+  audio_proc_test_env.getAudioProc().addAGC().addRC();
+
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -164,7 +177,7 @@ TEST_CASE("SUCCEED Create and run audio processing with AGC and RC default param
 
 TEST_CASE("SUCCEED Create and run audio empty audio processing [audio procesing]") {
   auto audio_proc_test_env = std::move(TestAudioProcessing().
-                                       InitAudioProcessing(false, false).
+                                       InitAudioProcessing().
                                        SetWav("test1_48_noised.wav"));
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -190,9 +203,9 @@ TEST_CASE("SUCCEED Create and run audio empty audio processing [audio procesing]
   IsVectorsClose(reference, prediction, 1e-5);
 }
 
-TEST_CASE("SUCCEED Change default parameters of AGC [audio procesing]") {
+TEST_CASE("SUCCEED Create and run audio processing with AGC specific parameters [audio procesing]") {
   auto audio_proc_test_env = std::move(TestAudioProcessing().
-                                       InitAudioProcessing(true, false).
+                                       InitAudioProcessing().
                                        SetWav("test1_48_noised.wav"));
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -207,7 +220,7 @@ TEST_CASE("SUCCEED Change default parameters of AGC [audio procesing]") {
                                audio_proc_test_env.m_wav_data.begin() + source_data_size);
   chunks.resize(kChunks_to_compare);
 
-  audio_proc_test_env.m_audio_proc->SetAGCParameters({0.9, 20.0, 48000 / 4, 0.01, 0.01});
+  audio_proc_test_env.getAudioProc().addAGC({0.9, 20.0, 48000 / 4, 0.01, 0.01});
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
@@ -228,9 +241,9 @@ TEST_CASE("SUCCEED Change default parameters of AGC [audio procesing]") {
   REQUIRE(greater_than_09.size() != 0);
 }
 
-TEST_CASE("SUCCEED Change default parameters of RC [audio procesing]") {
+TEST_CASE("SUCCEED Create and run audio processing with RC specific parameters [audio procesing]") {
   auto audio_proc_test_env = std::move(TestAudioProcessing().
-                                       InitAudioProcessing(false, true).
+                                       InitAudioProcessing().
                                        SetWav("test1_48_noised.wav"));
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -246,7 +259,7 @@ TEST_CASE("SUCCEED Change default parameters of RC [audio procesing]") {
   std::vector<float> greater_than_0_8;
   chunks.resize(kChunks_to_compare);
 
-  audio_proc_test_env.m_audio_proc->SetRCParameters({48000*5, 0.8, 1e-4});
+  audio_proc_test_env.getAudioProc().addRC({48000*5, 0.8, 1e-4});
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
@@ -280,6 +293,8 @@ TEST_CASE("SUCCEED Run audio processing with reading AGC parameters from config 
   auto audio_proc_test_env = std::move(TestAudioProcessing().
                                        InitAudioProcessing("default_configuration_fast_tflite_agc_enabled_24khz.yaml").
                                        SetWav("test1_48_noised.wav"));
+  audio_proc_test_env.getAudioProc().addAGC();
+
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -316,6 +331,7 @@ TEST_CASE("SUCCEED Run audio processing with reading RC parameters from config [
   auto audio_proc_test_env = std::move(TestAudioProcessing().
                                        InitAudioProcessing("default_configuration_fast_tflite_rc_enabled_24khz.yaml").
                                        SetWav("test1_48_noised.wav"));
+  audio_proc_test_env.getAudioProc().addRC();
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -356,6 +372,7 @@ TEST_CASE("SUCCEED Run audio processing with reading AGC and RC parameters from 
   auto audio_proc_test_env = std::move(TestAudioProcessing().
                                        InitAudioProcessing("default_configuration_fast_tflite_dsp_enabled_24khz.yaml").
                                        SetWav("test1_48_noised.wav"));
+  audio_proc_test_env.getAudioProc().addAGC().addRC();
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;

@@ -1709,7 +1709,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [s
   auto test_data = std::move(TestCAPI().
                              InitAudioProcessor("default_configuration_fast_tflite_rc_enabled_24khz.yaml", ret_code).
                              SetWav("test1_48_noised.wav"));
-
+  SpenchAudioProcessAddRc(test_data.m_audio_proc);
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -1763,7 +1763,7 @@ TEST_CASE("SUCCEED Run AudioProcessing for pcm16 data with reading RC parameters
   auto test_data = std::move(TestCAPI().
                              InitAudioProcessor("default_configuration_fast_tflite_rc_enabled_24khz.yaml", ret_code).
                              SetPCMWav("test1_48_noised.wav"));
-
+  SpenchAudioProcessAddRc(test_data.m_audio_proc);
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -1842,7 +1842,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [spench c api]
                                test_data.m_wav_data.begin() + source_data_size);
   std::vector<float> greater_than_0_8;
   chunks.resize(kChunks_to_compare);
-  SpenchAudioProcessSetRcParameters(test_data.m_audio_proc, 48000, -2, 1e-4);
+  SpenchAudioProcessAddRcWithParam(test_data.m_audio_proc, 48000, -2, 1e-4);
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem = nullptr;
     uint64_t ret_size = 0;
@@ -1882,7 +1882,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [
   auto test_data = std::move(TestCAPI().
                              InitAudioProcessor("default_configuration_fast_tflite_agc_enabled_24khz.yaml", ret_code).
                              SetWav("test1_48_noised.wav"));
-
+  SpenchAudioProcessAddAgc(test_data.m_audio_proc);
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -1946,7 +1946,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [spench c api
   std::vector<float> reference(test_data.m_wav_data.begin(),
                                test_data.m_wav_data.begin() + source_data_size);
   chunks.resize(kChunks_to_compare);
-  SpenchAudioProcessSetAgcParameters(test_data.m_audio_proc, 48000, 0.9, 20.0);
+  SpenchAudioProcessAddAgcWithParam(test_data.m_audio_proc, 48000, 0.9, 20.0);
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem = nullptr;
     uint64_t ret_size = 0;

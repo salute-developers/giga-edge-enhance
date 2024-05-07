@@ -51,9 +51,8 @@ struct TestFixture {
     return *this;
   }
 
-  TestFixture& InitAudioProcessor(const bool agc = true,
-                                  const bool rc  = true) {
-    m_dsp = std::make_unique<spench::SpenchAudioProcess>(agc, rc);
+  TestFixture& InitAudioProcessor() {
+    m_dsp = std::make_unique<spench::SpenchAudioProcess>();
     return *this;
   }
 };
@@ -937,14 +936,15 @@ TEST_CASE("FAIL Run inference with the fast 24 kHz model with input and output r
 TEST_CASE("SUCCEED Run AudioProcessing with RC default parameters [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestFixture().
-                               InitAudioProcessor(false, true).
+                               InitAudioProcessor().
                                SetWav("test1_48_noised.wav"));
   #else
     auto test_data = std::move(TestFixture().
-                               InitAudioProcessor(false, true).
+                               InitAudioProcessor().
                                SetWav("test1_48_noised.wav"));
   #endif
 
+  test_data.m_dsp->AddRC();
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -984,14 +984,15 @@ TEST_CASE("SUCCEED Run AudioProcessing with RC default parameters [spench c++ ap
 TEST_CASE("SUCCEED Run AudioProcessing with AGC default parameters [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestFixture().
-                               InitAudioProcessor(true, false).
+                               InitAudioProcessor().
                                SetWav("test1_48_noised.wav"));
   #else
     auto test_data = std::move(TestFixture().
-                               InitAudioProcessor(true, false).
+                               InitAudioProcessor().
                                SetWav("test1_48_noised.wav"));
   #endif
 
+  test_data.m_dsp->AddAGC();
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -1027,14 +1028,14 @@ TEST_CASE("SUCCEED Run AudioProcessing with AGC default parameters [spench c++ a
 TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestFixture().
-                               InitAudioProcessor(true, false).
+                               InitAudioProcessor().
                                SetWav("test1_48_noised.wav"));
   #else
     auto test_data = std::move(TestFixture().
-                               InitAudioProcessor(true, false).
+                               InitAudioProcessor().
                                SetWav("test1_48_noised.wav"));
   #endif
-
+  test_data.m_dsp->AddAGC(48000, 0.9, 20.0);
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -1047,8 +1048,6 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [spench c++ a
   std::vector<float> reference(test_data.m_wav_data.begin(),
                                test_data.m_wav_data.begin() + source_data_size);
   chunks.resize(kChunks_to_compare);
-
-  test_data.m_dsp->SetAgcParameters(48000, 0.9, 20.0);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
@@ -1072,14 +1071,15 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [spench c++ a
 TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestFixture().
-                               InitAudioProcessor(false, true).
+                               InitAudioProcessor().
                                SetWav("test1_48_noised.wav"));
   #else
     auto test_data = std::move(TestFixture().
-                               InitAudioProcessor(false, true).
+                               InitAudioProcessor().
                                SetWav("test1_48_noised.wav"));
   #endif
 
+  test_data.m_dsp->AddRC(48000, -2, 1e-4);
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -1093,8 +1093,6 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [spench c++ ap
                                test_data.m_wav_data.begin() + source_data_size);
   std::vector<float> greater_than_0_8;
   chunks.resize(kChunks_to_compare);
-
-  test_data.m_dsp->SetRcParameters(48000, -2, 1e-4);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
@@ -1129,6 +1127,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [s
                              InitAudioProcessor(std::string("default_configuration_fast_tflite_rc_enabled_24khz.yaml")).
                              SetWav("test1_48_noised.wav"));
 
+  test_data.m_dsp->AddRC();
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -1171,6 +1170,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [
                           InitAudioProcessor(std::string("default_configuration_fast_tflite_agc_enabled_24khz.yaml")).
                           SetWav("test1_48_noised.wav"));
 
+  test_data.m_dsp->AddAGC();
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
