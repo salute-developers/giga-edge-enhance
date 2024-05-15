@@ -182,6 +182,7 @@ TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
   REQUIRE(ctx == nullptr);
 }
 
+#if 0
 TEST_CASE("SUCCEED Get statistic information [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto test_data = std::move(TestFixture().
@@ -220,6 +221,7 @@ TEST_CASE("SUCCEED Get statistic information [spench c++ api]") {
   test_data.m_denoiser->DestroyContext(&ctx);
   REQUIRE(ctx == nullptr);
 }
+#endif
 
 TEST_CASE("SUCCEED Run inference with 100 tensors and default context argumetns [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE

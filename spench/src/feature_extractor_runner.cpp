@@ -78,9 +78,11 @@ void FeatureExtractorRunner::Run(spench::DenoiseTask* denoise_task) {
                                 denoise_data.m_enhanced_wav);
     denoise_context->m_prev_masked_spectrogram = denoise_data.m_network_output;
     denoise_task->m_stage = PipelineStage::ENHANCED_WAV;
+    #if 0
     denoise_context->m_stat.m_snr = m_feature_extractor_ptr->calcSnrEstimation(denoise_data.m_input_spec[0],
                                                                               denoise_data.m_network_output,
                                                                               denoise_context->m_metrics);
+    #endif
   } else if (denoise_task->m_stage == PipelineStage::SKIPPED_WAV) {
     // network pass the input to output and nothing to do
     denoise_data.m_enhanced_wav.resize(m_params.NumFrameStrideSamples());

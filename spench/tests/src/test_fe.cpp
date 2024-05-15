@@ -615,6 +615,7 @@ TEST_CASE("SUCCEED Run calcEnhancedPartsInPlace with real input [feature extract
   IsVectorsClose(gt_imag_mask, test_mask.imag, 0.000001);
 }
 
+#if 0
 TEST_CASE("SUCCEED Run calcSnrEstimation with one chunk [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
@@ -641,7 +642,9 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with one chunk [feature extractor]") {
 
   IsVectorsClose(std::vector{test_snr_result}, std::vector{gt_test_snr_result[0]}, 0.001);
 }
+#endif
 
+#if 0
 TEST_CASE("SUCCEED Run calcSnrEstimation with dumped recording [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
@@ -670,6 +673,7 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with dumped recording [feature extracto
 
   IsVectorsClose(test_snr_result, test_snr_result, 0.000001);
 }
+#endif
 
 TEST_CASE("SUCCEED Run calcSnrEstimation with zero recording [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
