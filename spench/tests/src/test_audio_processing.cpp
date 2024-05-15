@@ -7,11 +7,7 @@
 #include "spench/src/audio_processing.h"
 
 struct TestAudioProcessing {
- // private:
- //  std::unique_ptr<spench::AudioProcessing::AudioProcessingBuilder> m_audio_proc_builder;
- // public:
   std::unique_ptr<spench::AudioProcessing> m_audio_proc;
-
 
   const std::string m_kBase = "data/";
   std::vector<float> m_wav_data;
@@ -57,8 +53,7 @@ struct TestAudioProcessing {
 TEST_CASE("SUCCEED Create and run audio processing with AGC default parameters [audio procesing]") {
   auto audio_proc_test_env = std::move(TestAudioProcessing().
                                        InitAudioProcessing().
-                                       SetWav("test1_48_noised.wav")
-                                       );
+                                       SetWav("test1_48_noised.wav"));
   audio_proc_test_env.getAudioProc().addAGC();
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;

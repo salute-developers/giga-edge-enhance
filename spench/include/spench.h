@@ -203,15 +203,6 @@ class SpenchAudioProcess {
 
   /**
    *  \brief: Constructor which could take parameters for dsp objects from config file.
-   *  \param agc: An auto gain controller enabling or not.
-   *  \param rc: A range controller enabling or not.
-   *  \return: None
-   *  \ingroup group_cpp
-   */
-
-
-  /**
-   *  \brief: Constructor which could take parameters for dsp objects from config file.
    *          All parameters are reading from config file when AGC, RC, etc are being
    *          created.
    *  \param config_file: A pointer to the string with path to .yaml config file.
@@ -284,7 +275,7 @@ class SpenchAudioProcess {
   std::vector<float>&               ProcessChunk(const std::vector<float>& in,
                                                        std::vector<float>& out);
   /**
-   *  \brief: Process a chunk of audio withpcm16 data via sequence of dsp objects.
+   *  \brief: Process a chunk of audio with pcm16 data via sequence of dsp objects.
    *          Requires additional time for convertion ot fp32 and vice versa.
    *  \param: A const vector of input data.
    *  \param: Vector for output data.
