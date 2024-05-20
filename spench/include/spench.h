@@ -236,12 +236,16 @@ class SpenchAudioProcess {
    *  \param: An audio sample rate.
    *  \param: Desired target power level.
    *  \param: Max power gain.
+   *  \param: Step size for gain updates in sec (rise).
+   *  \param: Step size for gain updates in sec (fall).
    *  \return: None.
    *  \ingroup group_cpp
    */
   SpenchAudioProcess&             AddAGC(uint32_t audio_sample_rate,
                                          float target_power_level = 1.0,
-                                         float max_power_gain = 20.0);
+                                         float max_power_gain = 20.0,
+                                         float time_rise = 1e-2,
+                                         float time_fall = 1e-2);
 
   /**
    *  \brief: Create and Add Range Control object to Audio Process with default parameters
@@ -257,13 +261,67 @@ class SpenchAudioProcess {
    *          parameters. They will applied for an object even config file was provided.
    *  \param: An audio sample rate.
    *  \param: Max level in db. 0db means that range control do not provide control effect.
-   *  \param: Step size.
+   *  \param: Step size in sec.
    *  \return: None.
    *  \ingroup group_cpp
    */
   SpenchAudioProcess&             AddRC(uint32_t audio_sample_rate,
                                         float max_level_db = -3.0,
                                         float step_size = 1e-4);
+
+  /**
+   *  \brief: Create and Add Noise Gate object to Audio Process with default parameters
+   *          optimized for audio sample rate 48000Hz, or specified in config file
+   *          if it was provided for SpenchAudioProcess constructor.
+   *  \return: None.
+   *  \ingroup group_cpp
+   */
+  SpenchAudioProcess&             AddNG();
+
+  /**
+   *  \brief: Create and Add Noise Gate object to Audio Process with specific
+   *          parameters. They will applied for an object even config file was provided.
+   *  \param: An audio sample rate.
+   *  \param: Threshold in db.
+   *  \param: Attack time coeff in sec.
+   *  \param: Release time coeff in sec.
+   *  \param: Hold time in sec.
+   *  \return: None.
+   *  \ingroup group_cpp
+   */
+  SpenchAudioProcess&             AddNG(uint32_t audio_sample_rate,
+                                        float threshold_db = -15.0,
+                                        float attack_time = 5e-2,
+                                        float release_time = 2e-2,
+                                        float hold_time = 5e-2);
+
+  /**
+   *  \brief: Create and Add Dynamic Range Compressor object to Audio Process with default
+   *          parameters optimized for audio sample rate 48000Hz, or specified in config file
+   *          if it was provided for SpenchAudioProcess constructor.
+   *  \return: None.
+   *  \ingroup group_cpp
+   */
+  SpenchAudioProcess&             AddDRC();
+
+  /**
+   *  \brief: Create and Add Dynamic Range Compressor object to Audio Process with specific
+   *          parameters. They will applied for an object even config file was provided.
+   *  \param: An audio sample rate.
+   *  \param: Threshold in db.
+   *  \param: Ratio. Defines the amount of gain reduction.
+   *  \param: Knee width coeff in sec.
+   *  \param: Attack time coeff in sec.
+   *  \param: Release time coeff in sec.
+   *  \return: None.
+   *  \ingroup group_cpp
+   */
+  SpenchAudioProcess&             AddDRC(uint32_t audio_sample_rate,
+                                         float threshold_db = -15.0,
+                                         uint32_t ratio = 5,
+                                         float knee_width = 0.0,
+                                         float attack_time = 1e-2,
+                                         float release_time = 2e-1);
 
   /**
    *  \brief: Process a chunk of audio with float point data via sequence of dsp objects.

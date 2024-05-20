@@ -936,15 +936,10 @@ TEST_CASE("FAIL Run inference with the fast 24 kHz model with input and output r
 #endif
 
 TEST_CASE("SUCCEED Run AudioProcessing with RC default parameters [spench c++ api]") {
-  #ifdef BUILD_TFLITE_ENGINE
-    auto test_data = std::move(TestFixture().
-                               InitAudioProcessor().
-                               SetWav("test1_48_noised.wav"));
-  #else
-    auto test_data = std::move(TestFixture().
-                               InitAudioProcessor().
-                               SetWav("test1_48_noised.wav"));
-  #endif
+  auto test_data = std::move(TestFixture().
+                             InitAudioProcessor().
+                             SetWav("test1_48_noised.wav"));
+
 
   test_data.m_dsp->AddRC();
   const uint32_t kChunk_size = 16;
@@ -984,15 +979,9 @@ TEST_CASE("SUCCEED Run AudioProcessing with RC default parameters [spench c++ ap
 }
 
 TEST_CASE("SUCCEED Run AudioProcessing with AGC default parameters [spench c++ api]") {
-  #ifdef BUILD_TFLITE_ENGINE
-    auto test_data = std::move(TestFixture().
-                               InitAudioProcessor().
-                               SetWav("test1_48_noised.wav"));
-  #else
-    auto test_data = std::move(TestFixture().
-                               InitAudioProcessor().
-                               SetWav("test1_48_noised.wav"));
-  #endif
+  auto test_data = std::move(TestFixture().
+                             InitAudioProcessor().
+                             SetWav("test1_48_noised.wav"));
 
   test_data.m_dsp->AddAGC();
   const uint32_t kChunk_size = 16;
@@ -1027,16 +1016,98 @@ TEST_CASE("SUCCEED Run AudioProcessing with AGC default parameters [spench c++ a
   REQUIRE(greater_than_1.size() != 0);
 }
 
+TEST_CASE("SUCCEED Run AudioProcessing with NG default parameters [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                             InitAudioProcessor().
+                             SetWav("test1_48_noised.wav"));
+
+  test_data.m_dsp->AddNG();
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kChunks_to_compare = 200;
+  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  std::vector<float> prediction;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  std::vector<float> reference(test_data.m_wav_data.begin(),
+                               test_data.m_wav_data.begin() + source_data_size);
+  std::vector<float> equal_0;
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    test_data.m_dsp->ProcessChunk(chunk, ret);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+  REQUIRE(source_data_size == prediction.size());
+
+  std::copy_if(std::begin(reference), std::end(reference),
+               std::back_inserter(equal_0),
+               [](float& i) { return std::fabs(i) == 0.0; });
+
+  REQUIRE(equal_0.size() != 0);
+
+  auto orig_equal_0 = equal_0.size();
+  equal_0.resize(0);
+  REQUIRE(equal_0.size() == 0);
+  // NoiseGate sets all values which less than threshold to 0.0
+  std::copy_if(std::begin(prediction), std::end(prediction),
+               std::back_inserter(equal_0),
+               [](float& i) { return std::fabs(i) == 0.0; });
+
+  REQUIRE(equal_0.size() > orig_equal_0);
+}
+
+TEST_CASE("SUCCEED Run AudioProcessing with DRC default parameters [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                             InitAudioProcessor().
+                             SetWav("test1_48_noised.wav"));
+
+  test_data.m_dsp->AddDRC();
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kChunks_to_compare = 200;
+  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  std::vector<float> prediction;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  std::vector<float> reference(test_data.m_wav_data.begin(),
+                               test_data.m_wav_data.begin() + source_data_size);
+    std::vector<float> greater_than_0_75;
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    test_data.m_dsp->ProcessChunk(chunk, ret);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+  REQUIRE(source_data_size == prediction.size());
+
+  std::copy_if(std::begin(reference), std::end(reference),
+               std::back_inserter(greater_than_0_75),
+               [](float& i) { return std::fabs(i) > 0.75; });
+
+  REQUIRE(greater_than_0_75.size() != 0);
+  greater_than_0_75.resize(0);
+  REQUIRE(greater_than_0_75.size() == 0);
+
+  std::copy_if(std::begin(prediction), std::end(prediction),
+               std::back_inserter(greater_than_0_75),
+               [](float& i) { return std::fabs(i) > 0.75; });
+  REQUIRE(greater_than_0_75.size() == 0);
+}
+
 TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [spench c++ api]") {
-  #ifdef BUILD_TFLITE_ENGINE
-    auto test_data = std::move(TestFixture().
-                               InitAudioProcessor().
-                               SetWav("test1_48_noised.wav"));
-  #else
-    auto test_data = std::move(TestFixture().
-                               InitAudioProcessor().
-                               SetWav("test1_48_noised.wav"));
-  #endif
+  auto test_data = std::move(TestFixture().
+                             InitAudioProcessor().
+                             SetWav("test1_48_noised.wav"));
+
   test_data.m_dsp->AddAGC(48000, 0.9, 20.0);
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -1071,15 +1142,9 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [spench c++ a
 }
 
 TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [spench c++ api]") {
-  #ifdef BUILD_TFLITE_ENGINE
-    auto test_data = std::move(TestFixture().
-                               InitAudioProcessor().
-                               SetWav("test1_48_noised.wav"));
-  #else
-    auto test_data = std::move(TestFixture().
-                               InitAudioProcessor().
-                               SetWav("test1_48_noised.wav"));
-  #endif
+  auto test_data = std::move(TestFixture().
+                             InitAudioProcessor().
+                             SetWav("test1_48_noised.wav"));
 
   test_data.m_dsp->AddRC(48000, -2, 1e-4);
   const uint32_t kChunk_size = 16;
@@ -1116,6 +1181,91 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [spench c++ ap
                std::back_inserter(greater_than_0_8),
                [](float& i) { return std::fabs(i) > 0.8; });
   REQUIRE(greater_than_0_8.size() == 0);
+}
+
+TEST_CASE("SUCCEED Run AudioProcessing with changed NG parameters [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                             InitAudioProcessor().
+                             SetWav("test1_48_noised.wav"));
+  test_data.m_dsp->AddNG(48000, -40, 0.05, 0.02, 0.05);
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kChunks_to_compare = 200;
+  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  std::vector<float> prediction;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  std::vector<float> reference(test_data.m_wav_data.begin(),
+                               test_data.m_wav_data.begin() + source_data_size);
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    test_data.m_dsp->ProcessChunk(chunk, ret);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+
+  std::vector<float> equal_0;
+  std::copy_if(std::begin(reference), std::end(reference),
+               std::back_inserter(equal_0),
+               [](float& i) { return std::fabs(i) == 0.0; });
+
+  REQUIRE(equal_0.size() != 0);
+
+  auto orig_equal_0 = equal_0.size();
+  equal_0.resize(0);
+  REQUIRE(equal_0.size() == 0);
+  // NoiseGate sets all values which less than threshold to 0.0
+  std::copy_if(std::begin(prediction), std::end(prediction),
+               std::back_inserter(equal_0),
+               [](float& i) { return std::fabs(i) == 0.0; });
+
+  REQUIRE(equal_0.size() == orig_equal_0);
+}
+
+TEST_CASE("SUCCEED Run AudioProcessing with changed DRC parameters [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                             InitAudioProcessor().
+                             SetWav("test1_48_noised.wav"));
+
+  test_data.m_dsp->AddDRC(48000, 0, 5, 0.0, 0.01, 0.2);
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kChunks_to_compare = 200;
+  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  std::vector<float> prediction;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  std::vector<float> reference(test_data.m_wav_data.begin(),
+                               test_data.m_wav_data.begin() + source_data_size);
+  std::vector<float> greater_than_0_75;
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    test_data.m_dsp->ProcessChunk(chunk, ret);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+  REQUIRE(source_data_size == prediction.size());
+
+  std::copy_if(std::begin(reference), std::end(reference),
+               std::back_inserter(greater_than_0_75),
+               [](float& i) { return std::fabs(i) > 0.75; });
+
+  REQUIRE(greater_than_0_75.size() != 0);
+  greater_than_0_75.resize(0);
+  REQUIRE(greater_than_0_75.size() == 0);
+
+  std::copy_if(std::begin(prediction), std::end(prediction),
+               std::back_inserter(greater_than_0_75),
+               [](float& i) { return std::fabs(i) > 0.75; });
+  REQUIRE(greater_than_0_75.size() != 0);
 }
 
 TEST_CASE("FAIL Run AudioProcessing with incorrect config file [spench c++ api]") {
@@ -1168,9 +1318,9 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [s
 
 TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [spench c++ api]") {
   auto test_data =
-                std::move(TestFixture().
-                          InitAudioProcessor(std::string("default_configuration_fast_tflite_agc_enabled_24khz.yaml")).
-                          SetWav("test1_48_noised.wav"));
+              std::move(TestFixture().
+                        InitAudioProcessor(std::string("default_configuration_fast_tflite_agc_enabled_24khz.yaml")).
+                        SetWav("test1_48_noised.wav"));
 
   test_data.m_dsp->AddAGC();
   const uint32_t kChunk_size = 16;
@@ -1203,4 +1353,92 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [
   std::copy_if(std::begin(prediction), std::end(prediction), std::back_inserter(greater_than_1),
     [](float& i) { return std::fabs(i) > 1.0; });
   REQUIRE(greater_than_1.size() != 0);
+}
+
+TEST_CASE("SUCCEED Run AudioProcessing with reading NG parameters from config [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                             InitAudioProcessor(std::string("default_configuration_fast_tflite_rc_enabled_24khz.yaml")).
+                             SetWav("test1_48_noised.wav"));
+
+  test_data.m_dsp->AddNG();
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kChunks_to_compare = 200;
+  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  std::vector<float> prediction;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  std::vector<float> reference(test_data.m_wav_data.begin(),
+                               test_data.m_wav_data.begin() + source_data_size);
+  std::vector<float> equal_0;
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    test_data.m_dsp->ProcessChunk(chunk, ret);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+  REQUIRE(source_data_size == prediction.size());
+
+  std::copy_if(std::begin(reference), std::end(reference),
+               std::back_inserter(equal_0),
+               [](float& i) { return std::fabs(i) == 0.0; });
+
+  REQUIRE(equal_0.size() != 0);
+
+  auto orig_equal_0 = equal_0.size();
+  equal_0.resize(0);
+  REQUIRE(equal_0.size() == 0);
+  // NoiseGate sets all values which less than threshold to 0.0
+  std::copy_if(std::begin(prediction), std::end(prediction),
+               std::back_inserter(equal_0),
+               [](float& i) { return std::fabs(i) == 0.0; });
+
+  REQUIRE(equal_0.size() > orig_equal_0);
+}
+
+TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [spench c++ api]") {
+  auto test_data =
+                std::move(TestFixture().
+                          InitAudioProcessor(std::string("default_configuration_fast_tflite_agc_enabled_24khz.yaml")).
+                          SetWav("test1_48_noised.wav"));
+
+  test_data.m_dsp->AddDRC();
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kChunks_to_compare = 200;
+  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  std::vector<float> prediction;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  std::vector<float> reference(test_data.m_wav_data.begin(),
+                               test_data.m_wav_data.begin() + source_data_size);
+    std::vector<float> greater_than_0_75;
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    test_data.m_dsp->ProcessChunk(chunk, ret);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+  REQUIRE(source_data_size == prediction.size());
+
+  std::copy_if(std::begin(reference), std::end(reference),
+               std::back_inserter(greater_than_0_75),
+               [](float& i) { return std::fabs(i) > 0.75; });
+
+  REQUIRE(greater_than_0_75.size() != 0);
+  greater_than_0_75.resize(0);
+  REQUIRE(greater_than_0_75.size() == 0);
+
+  std::copy_if(std::begin(prediction), std::end(prediction),
+               std::back_inserter(greater_than_0_75),
+               [](float& i) { return std::fabs(i) > 0.75; });
+  REQUIRE(greater_than_0_75.size() == 0);
 }
