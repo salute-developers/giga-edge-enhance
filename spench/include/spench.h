@@ -16,6 +16,47 @@ class AudioProcessing;
 template<typename T>
 struct DenoiseContext;
 
+class
+#ifdef _MSC_VER
+__declspec(dllexport)
+#endif
+ISpenchSequencer {
+ public:
+  ISpenchSequencer() = default;
+  ISpenchSequencer(ISpenchSequencer&) = delete;
+  ISpenchSequencer(ISpenchSequencer&&) = delete;
+  ISpenchSequencer& operator=(const ISpenchSequencer&) = delete;
+  virtual ~ISpenchSequencer() = default;
+
+  virtual SpenchRetCode ProcessChunk(const std::vector<float>& chunk,
+                                     std::vector<float>& ret,
+                                     DenoiseContext<float>* ctx = nullptr) = 0;
+
+  virtual SpenchRetCode ProcessChunk(const std::vector<int16_t>& chunk16,
+                                     std::vector<int16_t>& ret16,
+                                     DenoiseContext<float>* ctx = nullptr) = 0;
+
+  virtual std::vector<float>& operator()(const std::vector<float>& chunk,
+                                         std::vector<float>& ret,
+                                         DenoiseContext<float>* ctx = nullptr) = 0;
+
+  virtual std::vector<int16_t>& operator()(const std::vector<int16_t>& chunk16,
+                                           std::vector<int16_t>& ret16,
+                                           DenoiseContext<float>* ctx = nullptr) = 0;
+
+  virtual SpenchRetCode GetFinalChunk(std::vector<float>& ret,
+                                      DenoiseContext<float>* ctx = nullptr) = 0;
+
+  virtual SpenchRetCode GetFinalChunk(std::vector<int16_t>& ret16,
+                                      DenoiseContext<float>* ctx = nullptr) = 0;
+
+  virtual std::vector<float>& operator()(std::vector<float>& ret,
+                                         DenoiseContext<float>* ctx = nullptr) = 0;
+
+  virtual std::vector<int16_t>& operator()(std::vector<int16_t>& ret16,
+                                           DenoiseContext<float>* ctx = nullptr) = 0;
+};
+
 /**
  * \brief: The class that implement audio denoising routine.
  * \ingroup group_cpp
@@ -192,7 +233,40 @@ SpenchDenoise {
  *         sound by dsp algorithms.
  * \ingroup group_cpp
 */
-class SpenchAudioProcess {
+class
+#ifdef _MSC_VER
+__declspec(dllexport)
+#endif
+SpenchAudioProcess : public ISpenchSequencer {
+ public:
+  SpenchRetCode ProcessChunk(const std::vector<float>& chunk,
+                             std::vector<float>& ret,
+                             DenoiseContext<float>* ctx = nullptr) override;
+
+  SpenchRetCode ProcessChunk(const std::vector<int16_t>& chunk16,
+                             std::vector<int16_t>& ret16,
+                             DenoiseContext<float>* ctx = nullptr) override;
+
+  std::vector<float>& operator() (const std::vector<float>& chunk,
+                                  std::vector<float>& ret,
+                                  DenoiseContext<float>* ctx = nullptr) override;
+
+  std::vector<int16_t>& operator() (const std::vector<int16_t>& chunk16,
+                                    std::vector<int16_t>& ret16,
+                                    DenoiseContext<float>* ctx = nullptr) override;
+
+  SpenchRetCode GetFinalChunk(std::vector<float>& ret,
+                              DenoiseContext<float>* ctx = nullptr) override;
+
+  SpenchRetCode GetFinalChunk(std::vector<int16_t>& ret16,
+                              DenoiseContext<float>* ctx = nullptr) override;
+
+  std::vector<float>& operator()(std::vector<float>& ret,
+                                 DenoiseContext<float>* ctx = nullptr) override;
+
+  std::vector<int16_t>& operator() (std::vector<int16_t>& chunk16,
+                                    DenoiseContext<float>* ctx = nullptr) override;
+
  public:
   /**
    *  \brief: Default constructor.
@@ -268,7 +342,7 @@ class SpenchAudioProcess {
   SpenchAudioProcess&             AddRC(uint32_t audio_sample_rate,
                                         float max_level_db = -3.0,
                                         float step_size = 1e-4);
-
+ private:
   /**
    *  \brief: Create and Add Noise Gate object to Audio Process with default parameters
    *          optimized for audio sample rate 48000Hz, or specified in config file
@@ -330,20 +404,20 @@ class SpenchAudioProcess {
    *  \return: Reference to out.
    *  \ingroup group_cpp
    */
-  std::vector<float>&               ProcessChunk(const std::vector<float>& in,
-                                                       std::vector<float>& out);
+  std::vector<float>&              process(const std::vector<float>& in,
+                                                 std::vector<float>& out);
   /**
-   *  \brief: Process a chunk of audio with pcm16 data via sequence of dsp objects.
+   *  \brief: Process a chunk of audio withpcm16 data via sequence of dsp objects.
    *          Requires additional time for convertion ot fp32 and vice versa.
    *  \param: A const vector of input data.
    *  \param: Vector for output data.
    *  \return: Reference to out.
    *  \ingroup group_cpp
    */
-  std::vector<int16_t>&              ProcessChunk(const std::vector<int16_t>& in,
-                                                        std::vector<int16_t>& out);
+  std::vector<int16_t>&           process(const std::vector<int16_t>& in,
+                                                std::vector<int16_t>& out);
 
- private:
+
   std::unique_ptr<AudioProcessing> m_dsp;
 };
 
