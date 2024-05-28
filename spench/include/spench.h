@@ -65,7 +65,7 @@ class
 #ifdef _MSC_VER
 __declspec(dllexport)
 #endif
-SpenchDenoise {
+SpenchDenoise : public ISpenchSequencer {
  public:
   /**
    *  \brief: Constructor which loads model from configuration file.
@@ -170,58 +170,71 @@ SpenchDenoise {
   // denoising
   /**
    *  \brief: Enhance a chunk of audio with float point data.
-   *  \param: A pointer to a context.
    *  \param: A const vector of input data.
    *  \param: Memory output data will be allocated.
    *                     Should be freed after that.
+   *  \param: A pointer to a context.
    *  \return: Error code. SpenchRetCode::SUCCESS means success.
    *  \ingroup group_cpp
    */
-  SpenchRetCode                   ProcessChunk(DenoiseContext<float>*,
-                                               const std::vector<float>&,
-                                               std::vector<float>&);
+  SpenchRetCode                   ProcessChunk(const std::vector<float>&,
+                                               std::vector<float>&,
+                                               DenoiseContext<float>*) override;
   /**
    *  \brief: Enhance a chunk of audio with pcm16 data. Implemented as
    *          a call of analouge for fp32 data processing and requires additional
    *          time for convertion.
-   *  \param: A pointer to a context.
    *  \param: A const vector of input data.
    *  \param: Memory output data will be allocated.
    *                     Should be freed after that.
+   *  \param: A pointer to a context.
    *  \return: Error code. SpenchRetCode::SUCCESS means success.
    *  \ingroup group_cpp
    */
-  SpenchRetCode                   ProcessChunk(DenoiseContext<float>*,
-                                               const std::vector<int16_t>&,
-                                               std::vector<int16_t>&);
+  SpenchRetCode                   ProcessChunk(const std::vector<int16_t>&,
+                                               std::vector<int16_t>&,
+                                               DenoiseContext<float>*) override;
 
+  std::vector<float>&             operator()(const std::vector<float>& chunk,
+                                         std::vector<float>& ret,
+                                         DenoiseContext<float>* ctx) override;
+
+  std::vector<int16_t>&           operator()(const std::vector<int16_t>& chunk16,
+                                             std::vector<int16_t>& ret16,
+                                             DenoiseContext<float>* ctx) override;
   /**
    *  \brief: Retrieve final chunks with float point data. If model has a future
    *          context, the method enhances and returns remaining data from a
    *          context. In other case method returns empty memory.
-   *  \param ctx: A pointer to a context.
    *  \param ret: Memory output data will be allocated.
    *              Should be freed after that. If threre are no data available
    *              NULL will be returned.
+   *  \param ctx: A pointer to a context.
    *  \return: Error code. SpenchRetCode::SUCCESS means success.
    *  \ingroup group_cpp
    */
-  SpenchRetCode                   GetFinalChunk(DenoiseContext<float>* ctx,
-                                                std::vector<float>& ret);
+  SpenchRetCode                   GetFinalChunk(std::vector<float>& ret,
+                                                DenoiseContext<float>* ctx) override;
 
   /**
    *  \brief: Retrieve final chunks with pcm16 data. If model has a future
    *          context, the method enhances and returns remaining data from a
    *          context. In other case method returns empty memory.
-   *  \param ctx: A pointer to a context.
    *  \param ret16: Memory output data will be allocated.
    *                Should be freed after that. If threre are no data available
    *                NULL will be returned.
+   *  \param ctx: A pointer to a context.
    *  \return: Error code. SpenchRetCode::SUCCESS means success.
    *  \ingroup group_cpp
    */
-  SpenchRetCode                   GetFinalChunk(DenoiseContext<float>* ctx,
-                                                std::vector<int16_t>& ret16);
+  SpenchRetCode                   GetFinalChunk(std::vector<int16_t>& ret16,
+                                                DenoiseContext<float>* ctx) override;
+
+  std::vector<float>&             operator()(std::vector<float>& ret,
+                                             DenoiseContext<float>* ctx) override;
+
+  std::vector<int16_t>&           operator()(std::vector<int16_t>& ret16,
+                                             DenoiseContext<float>* ctx) override;
 
  private:
   std::unique_ptr<DenoiseScheduler> m_sheduler;
@@ -342,8 +355,8 @@ SpenchAudioProcess : public ISpenchSequencer {
   SpenchAudioProcess&             AddRC(uint32_t audio_sample_rate,
                                         float max_level_db = -3.0,
                                         float step_size = 1e-4);
- private:
-  /**
+  
+ /**
    *  \brief: Create and Add Noise Gate object to Audio Process with default parameters
    *          optimized for audio sample rate 48000Hz, or specified in config file
    *          if it was provided for SpenchAudioProcess constructor.
@@ -397,6 +410,7 @@ SpenchAudioProcess : public ISpenchSequencer {
                                          float attack_time = 1e-2,
                                          float release_time = 2e-1);
 
+private:
   /**
    *  \brief: Process a chunk of audio with float point data via sequence of dsp objects.
    *  \param: A const vector of input data.

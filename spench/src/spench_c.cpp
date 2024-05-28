@@ -165,9 +165,9 @@ SpenchRetCode SpenchDenoiseProcessChunkFp(SpenchDenoise model,
   const float* input_ptr = reinterpret_cast<const float*> (data);
   std::vector<float> res;
   ret_code = ((spench::SpenchDenoise*)model)->
-                              ProcessChunk((spench::DenoiseContext<float>*)ctx,
-                                           std::vector<float> (input_ptr, input_ptr + input_size / sizeof(float)),
-                                           res);
+                              ProcessChunk(std::vector<float> (input_ptr, input_ptr + input_size / sizeof(float)),
+                                           res,
+                                           (spench::DenoiseContext<float>*)ctx);
   if (ret_code == SpenchRetCode::SUCCESS ||
       ret_code == SpenchRetCode::CONTEXT_ACCUMULATION) {
     ret_code = ctools::AllocateAndCopy<float>(res, output, output_size);
@@ -186,9 +186,9 @@ SpenchRetCode SpenchDenoiseProcessChunkInt(SpenchDenoise model,
   const int16_t* input_ptr = reinterpret_cast<const int16_t*> (data);
   std::vector<int16_t> res;
   ret_code = ((spench::SpenchDenoise*)model)->
-                              ProcessChunk((spench::DenoiseContext<float>*)ctx,
-                                           std::vector<int16_t> (input_ptr, input_ptr + input_size / sizeof(int16_t)),
-                                           res);
+                              ProcessChunk(std::vector<int16_t> (input_ptr, input_ptr + input_size / sizeof(int16_t)),
+                                           res,
+                                           (spench::DenoiseContext<float>*)ctx);
   if (ret_code == SpenchRetCode::SUCCESS ||
       ret_code == SpenchRetCode::CONTEXT_ACCUMULATION) {
     ret_code = ctools::AllocateAndCopy<int16_t>(res, output, output_size);
@@ -204,8 +204,8 @@ SpenchRetCode SpenchDenoiseGetFinalChunkFp(SpenchDenoise model,
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   std::vector<float> res;
   ret_code = ((spench::SpenchDenoise*)model)->
-                              GetFinalChunk((spench::DenoiseContext<float>*)ctx,
-                                           res);
+                              GetFinalChunk(res,
+                                            (spench::DenoiseContext<float>*)ctx);
   if (ret_code == SpenchRetCode::SUCCESS) {
     if (res.size() == 0) {
       *output = NULL;
@@ -225,8 +225,8 @@ SpenchRetCode SpenchDenoiseGetFinalChunkInt(SpenchDenoise model,
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   std::vector<int16_t> res;
   ret_code = ((spench::SpenchDenoise*)model)->
-                              GetFinalChunk((spench::DenoiseContext<float>*)ctx,
-                                           res);
+                              GetFinalChunk(res,
+                                            (spench::DenoiseContext<float>*)ctx);
   if (ret_code == SpenchRetCode::SUCCESS) {
     if (res.size() == 0) {
       *output = NULL;

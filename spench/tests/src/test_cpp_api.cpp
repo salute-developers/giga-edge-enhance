@@ -173,7 +173,7 @@ TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
   for (auto& chunk : chunks) {
     std::vector<float> ret;
     REQUIRE(chunk.size() == test_data.m_denoiser->GetModelInputFrameSize());
-    auto ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    auto ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret, ctx);
     REQUIRE(ret_code >= SpenchRetCode::SUCCESS);
     REQUIRE(ret_code <= SpenchRetCode::CONTEXT_ACCUMULATION);
   }
@@ -246,7 +246,7 @@ TEST_CASE("SUCCEED Run inference with 100 tensors and default context argumetns 
   for (auto& chunk : chunks) {
     std::vector<float> ret;
     REQUIRE(chunk.size() == test_data.m_denoiser->GetModelInputFrameSize());
-    auto ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    auto ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret, ctx);
     REQUIRE(ret_code >= SpenchRetCode::SUCCESS);
     REQUIRE(ret_code <= SpenchRetCode::CONTEXT_ACCUMULATION);
   }
@@ -292,9 +292,9 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contex
   for (auto& chunk : chunks) {
     std::vector<float> ret1;
     std::vector<float> ret2;
-    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx1, chunk, ret1);
+    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret1, ctx1);
     CHECK(ret_code >= SpenchRetCode::SUCCESS);
-    ret_code = test_data.m_denoiser->ProcessChunk(ctx2, chunk, ret2);
+    ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret2, ctx2);
     CHECK(ret_code >= SpenchRetCode::SUCCESS);
     predictions1.insert(predictions1.end(), ret1.begin(), ret1.end());
     predictions2.insert(predictions2.end(), ret2.begin(), ret2.end());
@@ -333,9 +333,9 @@ TEST_CASE("SUCCEED Run inference with 16 kHz model and 2 context with default pa
   for (auto& chunk : chunks) {
     std::vector<float> ret1;
     std::vector<float> ret2;
-    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx1, chunk, ret1);
+    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret1, ctx1);
     CHECK(ret_code >= SpenchRetCode::SUCCESS);
-    ret_code = test_data.m_denoiser->ProcessChunk(ctx2, chunk, ret2);
+    ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret2, ctx2);
     CHECK(ret_code >= SpenchRetCode::SUCCESS);
     predictions1.insert(predictions1.end(), ret1.begin(), ret1.end());
     predictions2.insert(predictions2.end(), ret2.begin(), ret2.end());
@@ -377,7 +377,7 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contex
           std::vector<float>& predictions) ->void {
     for (auto& chunk : chunks) {
       std::vector<float> ret;
-      SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+      SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret, ctx);
       CHECK(ret_code >= SpenchRetCode::SUCCESS);
       predictions.insert(predictions.end(), ret.begin(), ret.end());
     }
@@ -433,7 +433,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 2 contexts concu
           std::vector<float>& predictions) ->void {
     for (auto& chunk : chunks) {
       std::vector<float> ret;
-      SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+      SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret, ctx);
       CHECK(ret_code >= SpenchRetCode::SUCCESS);
       predictions.insert(predictions.end(), ret.begin(), ret.end());
     }
@@ -481,7 +481,7 @@ TEST_CASE("FAIL Run inference with invalid chunk size [spench c++ api]") {
                                 kChunk_size, kChunk_stride);
   chunks.resize(kChunks_to_compare);
   std::vector<float> ret;
-  SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunks[0], ret);
+  SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(chunks[0], ret, ctx);
   CHECK(ret_code == SpenchRetCode::ERR_INVALID_FRAME_SIZE);
   test_data.m_denoiser->DestroyContext(&ctx);
 }
@@ -513,7 +513,7 @@ TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav f
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
     std::vector<float> ret;
-    test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    test_data.m_denoiser->ProcessChunk(chunk, ret, ctx);
     prediction.insert(prediction.end(), ret.begin(), ret.end());
   }
   test_data.m_denoiser->DestroyContext(&ctx);
@@ -548,7 +548,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
     std::vector<float> ret;
-    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret, ctx);
     CHECK(ret_code >= SpenchRetCode::SUCCESS);
     prediction.insert(prediction.end(), ret.begin(), ret.end());
   }
@@ -585,7 +585,7 @@ TEST_CASE("SUCCEED Run inference with encrypted fast 24 kHz model on a part of .
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
     std::vector<float> ret;
-    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret, ctx);
     CHECK(ret_code >= SpenchRetCode::SUCCESS);
     prediction.insert(prediction.end(), ret.begin(), ret.end());
   }
@@ -625,7 +625,7 @@ TEST_CASE("SUCCEED Run inference with licenced encrypted fast 24 kHz model on a 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
     std::vector<float> ret;
-    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    SpenchRetCode ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret, ctx);
     CHECK(ret_code >= SpenchRetCode::SUCCESS);
     prediction.insert(prediction.end(), ret.begin(), ret.end());
   }
@@ -691,13 +691,13 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with the final infer
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
     std::vector<float> ret;
-    ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret, ctx);
     prediction.insert(prediction.end(), ret.begin(), ret.end());
   }
   reference_prediction.resize(prediction.size());
   IsVectorsClose(reference_prediction, prediction, 0.0001);
   std::vector<float> ret;
-  ret_code = test_data.m_denoiser->GetFinalChunk(ctx, ret);
+  ret_code = test_data.m_denoiser->GetFinalChunk(ret, ctx);
 
   CHECK(ret_code == SpenchRetCode::SUCCESS);
   REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
@@ -739,7 +739,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resamplin
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
     std::vector<float> ret;
-    ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret, ctx);
     if (ret_code >= SpenchRetCode::SUCCESS) {
       prediction.insert(prediction.end(), ret.begin(), ret.end());
     }
@@ -749,7 +749,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resamplin
                    prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
   //
   std::vector<float> ret;
-  ret_code = test_data.m_denoiser->GetFinalChunk(ctx, ret);
+  ret_code = test_data.m_denoiser->GetFinalChunk(ret, ctx);
 
   CHECK(ret_code == SpenchRetCode::SUCCESS);
   REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
@@ -795,7 +795,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with output resampli
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
     std::vector<float> ret;
-    ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret, ctx);
     if (ret_code >= SpenchRetCode::SUCCESS) {
       prediction.insert(prediction.end(), ret.begin(), ret.end());
     }
@@ -805,7 +805,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with output resampli
                    prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
 
   std::vector<float> ret;
-  ret_code = test_data.m_denoiser->GetFinalChunk(ctx, ret);
+  ret_code = test_data.m_denoiser->GetFinalChunk(ret, ctx);
 
   CHECK(ret_code == SpenchRetCode::SUCCESS);
   REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
@@ -853,7 +853,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
     std::vector<float> ret;
-    ret_code = test_data.m_denoiser->ProcessChunk(ctx, chunk, ret);
+    ret_code = test_data.m_denoiser->ProcessChunk(chunk, ret, ctx);
     if (ret_code >= SpenchRetCode::SUCCESS) {
       prediction.insert(prediction.end(), ret.begin(), ret.end());
     }
@@ -863,7 +863,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
                    prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
   //
   std::vector<float> ret;
-  ret_code = test_data.m_denoiser->GetFinalChunk(ctx, ret);
+  ret_code = test_data.m_denoiser->GetFinalChunk(ret, ctx);
 
   CHECK(ret_code == SpenchRetCode::SUCCESS);
   REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
