@@ -312,7 +312,7 @@ SpenchAudioProcess : public ISpenchSequencer {
    *  \brief: Create and Add Automatic Gain Control object to Audio Process with default
    *          parameters optimized for audio sample rate 48000Hz, or specified
    *          in config file if it was provided for SpenchAudioProcess constructor.
-   *  \return: None.
+   *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
   SpenchAudioProcess&             AddAGC();
@@ -325,7 +325,7 @@ SpenchAudioProcess : public ISpenchSequencer {
    *  \param: Max power gain.
    *  \param: Step size for gain updates in sec (rise).
    *  \param: Step size for gain updates in sec (fall).
-   *  \return: None.
+   *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
   SpenchAudioProcess&             AddAGC(uint32_t audio_sample_rate,
@@ -338,7 +338,7 @@ SpenchAudioProcess : public ISpenchSequencer {
    *  \brief: Create and Add Range Control object to Audio Process with default parameters
    *          optimized for audio sample rate 48000Hz, or specified in config file
    *          if it was provided for SpenchAudioProcess constructor.
-   *  \return: None.
+   *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
   SpenchAudioProcess&             AddRC();
@@ -346,21 +346,28 @@ SpenchAudioProcess : public ISpenchSequencer {
   /**
    *  \brief: Create and Add Range Control object to Audio Process with specific
    *          parameters. They will applied for an object even config file was provided.
-   *  \param: An audio sample rate.
-   *  \param: Max level in db. 0db means that range control do not provide control effect.
-   *  \param: Step size in sec.
-   *  \return: None.
+   *  \param: An audio sample rate (Hz).
+   *  \param: An target peak value (db).
+   *  \param: A max output signal value (db). 0db means that range control do not provide control effect.
+   *  \param: An attack time for peak value estimation (sec)
+   *  \param: A release time for peak value estimation (sec)
+   *  \param: A hold time for peak value estimation (sec)
+   *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
+
   SpenchAudioProcess&             AddRC(uint32_t audio_sample_rate,
-                                        float max_level_db = -3.0,
-                                        float step_size = 1e-4);
-  
- /**
+                                        float target_level_db = -3,
+                                        float max_gain_db = 10,
+                                        float attack_time = 1e-5,
+                                        float release_time = 300,
+                                        float hold_time = 5);
+
+  /**
    *  \brief: Create and Add Noise Gate object to Audio Process with default parameters
    *          optimized for audio sample rate 48000Hz, or specified in config file
    *          if it was provided for SpenchAudioProcess constructor.
-   *  \return: None.
+   *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
   SpenchAudioProcess&             AddNG();
@@ -368,12 +375,12 @@ SpenchAudioProcess : public ISpenchSequencer {
   /**
    *  \brief: Create and Add Noise Gate object to Audio Process with specific
    *          parameters. They will applied for an object even config file was provided.
-   *  \param: An audio sample rate.
-   *  \param: Threshold in db.
-   *  \param: Attack time coeff in sec.
-   *  \param: Release time coeff in sec.
-   *  \param: Hold time in sec.
-   *  \return: None.
+   *  \param: An audio sample rate (Hz).
+   *  \param: Threshold (db).
+   *  \param: Attack time coeff (sec).
+   *  \param: Release time coeff (sec).
+   *  \param: Hold time (sec).
+   *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
   SpenchAudioProcess&             AddNG(uint32_t audio_sample_rate,
@@ -386,7 +393,7 @@ SpenchAudioProcess : public ISpenchSequencer {
    *  \brief: Create and Add Dynamic Range Compressor object to Audio Process with default
    *          parameters optimized for audio sample rate 48000Hz, or specified in config file
    *          if it was provided for SpenchAudioProcess constructor.
-   *  \return: None.
+   *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
   SpenchAudioProcess&             AddDRC();
@@ -394,13 +401,13 @@ SpenchAudioProcess : public ISpenchSequencer {
   /**
    *  \brief: Create and Add Dynamic Range Compressor object to Audio Process with specific
    *          parameters. They will applied for an object even config file was provided.
-   *  \param: An audio sample rate.
-   *  \param: Threshold in db.
+   *  \param: An audio sample rate (Hz).
+   *  \param: Threshold (db).
    *  \param: Ratio. Defines the amount of gain reduction.
-   *  \param: Knee width coeff in sec.
-   *  \param: Attack time coeff in sec.
-   *  \param: Release time coeff in sec.
-   *  \return: None.
+   *  \param: Knee width coeff (sec).
+   *  \param: Attack time coeff (sec).
+   *  \param: Release time coeff (sec).
+   *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
   SpenchAudioProcess&             AddDRC(uint32_t audio_sample_rate,

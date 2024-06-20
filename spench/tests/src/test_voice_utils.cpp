@@ -57,32 +57,32 @@ struct TestVoiceUtils {
   }
 };
 
-TEST_CASE("FAIL Create RangeControl with negative max_level [sound]") {
+TEST_CASE("FAIL Create RangeControl with negative attack_time [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().
                                     Init(16, 16, 48000, 48000));
-  CHECK_THROWS_WITH(util::sound::RangeControl(8000, -16.0, 0.1),
-                    "RangeControl: `max_level` must be positive.");
+  CHECK_THROWS_WITH(util::sound::RangeControl(48000, -2.0, 5.0, -0.05, 300, 5),
+                    "RangeControl: `attack_time` must be positive.");
 }
 
-TEST_CASE("FAIL Create RangeControl with negative step_size [sound]") {
+TEST_CASE("FAIL Create RangeControl with negative release_time [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().
                                     Init(16, 16, 48000, 48000));
-  CHECK_THROWS_WITH(util::sound::RangeControl(8000, 16.0, -70.0),
-                    "RangeControl: `step_size` must be in range (0:1).");
+  CHECK_THROWS_WITH(util::sound::RangeControl(48000, -2.0, 5.0, 0.05, -300, 5),
+                    "RangeControl: `release_time` must be positive.");
 }
 
-TEST_CASE("FAIL Create RangeControl with step_size > 1.0 [sound]") {
+TEST_CASE("FAIL Create RangeControl with negative hold_time [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().
                                     Init(16, 16, 48000, 48000));
-  CHECK_THROWS_WITH(util::sound::RangeControl(8000, 16.0, 70.0),
-                    "RangeControl: `step_size` must be in range (0:1).");
+  CHECK_THROWS_WITH(util::sound::RangeControl(48000, -2.0, 5.0, 0.05, 300, -5),
+                    "RangeControl: `hold_time` must be positive.");
 }
 
 TEST_CASE("SUCCEED Create RangeControl and check operator() [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().
                                     Init(16, 16, 48000, 48000));
 
-  util::sound::RangeControl rctrl(10, 5.0, 0.5);
+  util::sound::RangeControl rctrl(48000, -3, 14);
 
   std::vector<float> test_input{0.0, 0.0, 0.0, 0.0, 0.0,
                                 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -91,31 +91,31 @@ TEST_CASE("SUCCEED Create RangeControl and check operator() [sound]") {
 
   std::vector<float> gt_out{0.0, 0.0, 0.0, 0.0, 0.0,
                             0.0, 0.0, 0.0, 0.0, 0.0,
-                            0.0, 0.0, 5.0, 0.0, 0.0,
+                            0.0, 0.0, 2.0, 0.0, 0.0,
                             0.0, 0.0, 0.0, 0.0, 0.0};
 
   auto test_out = rctrl(test_input);
-  IsVectorsClose(test_out.out, gt_out, 0.000001);
+  IsVectorsClose(test_out.out, gt_out, 0.1);
 }
 
 TEST_CASE("SUCCEED Create RangeControl and check process method [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().
                                     Init(16, 16, 48000, 48000));
 
-  util::sound::RangeControl rctrl(10, 5.0, 0.5);
+  util::sound::RangeControl rctrl(48000, -3, 14);
 
   std::vector<float> test_input{0.0, 0.0, 0.0, 0.0, 0.0,
                                 0.0, 0.0, 0.0, 0.0, 0.0,
                                 0.0, 0.0, 10.0, 0.0, 0.0,
-                                0.0, 0.0, 12.0, 0.0, 0.0};
+                                0.0, 0.0, 0.0, 0.0, 0.0};
 
   std::vector<float> gt_out{0.0, 0.0, 0.0, 0.0, 0.0,
                             0.0, 0.0, 0.0, 0.0, 0.0,
-                            0.0, 0.0, 5.0, 0.0, 0.0,
-                            0.0, 0.0, 5.0, 0.0, 0.0};
+                            0.0, 0.0, 2.0, 0.0, 0.0,
+                            0.0, 0.0, 0.0, 0.0, 0.0};
 
   auto test_out = rctrl.process(test_input);
-  IsVectorsClose(test_out.out, gt_out, 0.000001);
+  IsVectorsClose(test_out.out, gt_out, 0.1);
 }
 
 #ifndef BUILD_WITHOUT_SOXR

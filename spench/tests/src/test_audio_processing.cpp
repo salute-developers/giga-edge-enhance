@@ -103,7 +103,7 @@ TEST_CASE("SUCCEED Create and run audio processing with RC default parameters [a
                                 kChunk_size, kChunk_stride);
   std::vector<float> reference(audio_proc_test_env.m_wav_data.begin(),
                                audio_proc_test_env.m_wav_data.begin() + source_data_size);
-  std::vector<float> greater_than_0_75;
+  std::vector<float> greater_than_0_9;
   chunks.resize(kChunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
@@ -115,24 +115,24 @@ TEST_CASE("SUCCEED Create and run audio processing with RC default parameters [a
   REQUIRE(source_data_size == prediction.size());
 
   std::copy_if(std::begin(reference), std::end(reference),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
 
-  REQUIRE(greater_than_0_75.size() != 0);
-  greater_than_0_75.resize(0);
-  REQUIRE(greater_than_0_75.size() == 0);
-  // RC leave signal as it was if signal's values are not greater 0.75
+  REQUIRE(greater_than_0_9.size() != 0);
+  greater_than_0_9.resize(0);
+  REQUIRE(greater_than_0_9.size() == 0);
+  // RC leave signal as it was if signal's values are not greater 0.9
   std::copy_if(std::begin(prediction), std::end(prediction),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
-  REQUIRE(greater_than_0_75.size() == 0);
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
+  REQUIRE(greater_than_0_9.size() == 0);
 }
 
-TEST_CASE("SUCCEED Create and run audio processing with AGC and RC default parameters [audio processing]") {
+TEST_CASE("SUCCEED Create and run audio processing with RC and NG [audio processing]") {
   auto audio_proc_test_env = std::move(TestAudioProcessing().
                                        InitAudioProcessing().
                                        SetWav("test1_48_noised.wav"));
-  audio_proc_test_env.getAudioProc().addAGC().addRC();
+  audio_proc_test_env.getAudioProc().addRC().addNoiseGate({48000, -20, 0.05, 0.02, 0.05});
 
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -145,7 +145,8 @@ TEST_CASE("SUCCEED Create and run audio processing with AGC and RC default param
                                 kChunk_size, kChunk_stride);
   std::vector<float> reference(audio_proc_test_env.m_wav_data.begin(),
                                audio_proc_test_env.m_wav_data.begin() + source_data_size);
-  std::vector<float> greater_than_0_75;
+  std::vector<float> greater_than_0_9;
+  std::vector<float> equal_0;
   chunks.resize(kChunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
@@ -157,17 +158,29 @@ TEST_CASE("SUCCEED Create and run audio processing with AGC and RC default param
 
   REQUIRE(source_data_size == prediction.size());
   std::copy_if(std::begin(reference), std::end(reference),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
 
-  REQUIRE(greater_than_0_75.size() != 0);
-  greater_than_0_75.resize(0);
-  REQUIRE(greater_than_0_75.size() == 0);
-  // RC leave signal as it was if signal's values are not greater 0.75
+  REQUIRE(greater_than_0_9.size() != 0);
+  greater_than_0_9.resize(0);
+
+  std::copy_if(std::begin(reference), std::end(reference),
+               std::back_inserter(equal_0),
+               [](float& i) { return std::fabs(i) == 0.0; });
+  REQUIRE(equal_0.size() != 0);
+
+  auto orig_equal_0_size = equal_0.size();
+  equal_0.resize(0);
+
   std::copy_if(std::begin(prediction), std::end(prediction),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
-  REQUIRE(greater_than_0_75.size() == 0);
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
+  REQUIRE(greater_than_0_9.size() == 0);
+
+  std::copy_if(std::begin(prediction), std::end(prediction),
+               std::back_inserter(equal_0),
+               [](float& i) { return std::fabs(i) == 0.0; });
+  REQUIRE(equal_0.size() > orig_equal_0_size);
 }
 
 TEST_CASE("SUCCEED Create and run audio empty audio processing [audio processing]") {
@@ -254,7 +267,7 @@ TEST_CASE("SUCCEED Create and run audio processing with RC specific parameters [
   std::vector<float> greater_than_0_8;
   chunks.resize(kChunks_to_compare);
 
-  audio_proc_test_env.getAudioProc().addRC({48000*5, 0.8, 1e-4});
+  audio_proc_test_env.getAudioProc().addRC({48000, -4, 10, 0.05, 300, 5});
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
@@ -338,7 +351,7 @@ TEST_CASE("SUCCEED Run audio processing with reading RC parameters from config [
                                 kChunk_size, kChunk_stride);
   std::vector<float> reference(audio_proc_test_env.m_wav_data.begin(),
                                audio_proc_test_env.m_wav_data.begin() + source_data_size);
-  std::vector<float> greater_than_0_75;
+  std::vector<float> greater_than_0_9;
   chunks.resize(kChunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
@@ -350,24 +363,24 @@ TEST_CASE("SUCCEED Run audio processing with reading RC parameters from config [
   REQUIRE(source_data_size == prediction.size());
 
   std::copy_if(std::begin(reference), std::end(reference),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
 
-  REQUIRE(greater_than_0_75.size() != 0);
-  greater_than_0_75.resize(0);
-  REQUIRE(greater_than_0_75.size() == 0);
-  // RC leave signal as it was if signal's values are not greater 0.75
+  REQUIRE(greater_than_0_9.size() != 0);
+  greater_than_0_9.resize(0);
+  REQUIRE(greater_than_0_9.size() == 0);
+  // RC leave signal as it was if signal's values are not greater 0.9
   std::copy_if(std::begin(prediction), std::end(prediction),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
-  REQUIRE(greater_than_0_75.size() == 0);
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
+  REQUIRE(greater_than_0_9.size() == 0);
 }
 
-TEST_CASE("SUCCEED Run audio processing with reading AGC and RC parameters from config [audio processing]") {
+TEST_CASE("SUCCEED Run audio processing with reading RC and NG parameters from config [audio processing]") {
   auto audio_proc_test_env = std::move(TestAudioProcessing().
                                        InitAudioProcessing("default_configuration_fast_tflite_dsp_enabled_24khz.yaml").
                                        SetWav("test1_48_noised.wav"));
-  audio_proc_test_env.getAudioProc().addAGC().addRC();
+  audio_proc_test_env.getAudioProc().addRC().addNoiseGate();
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -379,7 +392,8 @@ TEST_CASE("SUCCEED Run audio processing with reading AGC and RC parameters from 
                                 kChunk_size, kChunk_stride);
   std::vector<float> reference(audio_proc_test_env.m_wav_data.begin(),
                                audio_proc_test_env.m_wav_data.begin() + source_data_size);
-  std::vector<float> greater_than_0_75;
+  std::vector<float> greater_than_0_9;
+  std::vector<float> equal_0;
   chunks.resize(kChunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
@@ -391,17 +405,29 @@ TEST_CASE("SUCCEED Run audio processing with reading AGC and RC parameters from 
 
   REQUIRE(source_data_size == prediction.size());
   std::copy_if(std::begin(reference), std::end(reference),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
 
-  REQUIRE(greater_than_0_75.size() != 0);
-  greater_than_0_75.resize(0);
-  REQUIRE(greater_than_0_75.size() == 0);
-  // RC leave signal as it was if signal's values are not greater 0.75
+  REQUIRE(greater_than_0_9.size() != 0);
+  greater_than_0_9.resize(0);
+
+  std::copy_if(std::begin(reference), std::end(reference),
+               std::back_inserter(equal_0),
+               [](float& i) { return std::fabs(i) == 0.0; });
+  REQUIRE(equal_0.size() != 0);
+
+  auto orig_equal_0_size = equal_0.size();
+  equal_0.resize(0);
+
   std::copy_if(std::begin(prediction), std::end(prediction),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
-  REQUIRE(greater_than_0_75.size() == 0);
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
+  REQUIRE(greater_than_0_9.size() == 0);
+
+  std::copy_if(std::begin(prediction), std::end(prediction),
+               std::back_inserter(equal_0),
+               [](float& i) { return std::fabs(i) == 0.0; });
+  REQUIRE(equal_0.size() > orig_equal_0_size);
 }
 
 TEST_CASE("SUCCEED Create and run audio processing with NG default parameters [audio processing]") {

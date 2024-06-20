@@ -940,7 +940,6 @@ TEST_CASE("SUCCEED Run AudioProcessing with RC default parameters [spench c++ ap
                              InitAudioProcessor().
                              SetWav("test1_48_noised.wav"));
 
-
   test_data.m_dsp->AddRC();
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -953,7 +952,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with RC default parameters [spench c++ ap
                                 kChunk_size, kChunk_stride);
   std::vector<float> reference(test_data.m_wav_data.begin(),
                                test_data.m_wav_data.begin() + source_data_size);
-  std::vector<float> greater_than_0_75;
+  std::vector<float> greater_than_0_9;
   chunks.resize(kChunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
@@ -965,17 +964,17 @@ TEST_CASE("SUCCEED Run AudioProcessing with RC default parameters [spench c++ ap
   REQUIRE(source_data_size == prediction.size());
 
   std::copy_if(std::begin(reference), std::end(reference),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
 
-  REQUIRE(greater_than_0_75.size() != 0);
-  greater_than_0_75.resize(0);
-  REQUIRE(greater_than_0_75.size() == 0);
-  // RC leave signal as it was if signal's values are not greater 0.75
+  REQUIRE(greater_than_0_9.size() != 0);
+  greater_than_0_9.resize(0);
+  REQUIRE(greater_than_0_9.size() == 0);
+  // RC leave signal as it was if signal's values are not greater 0.9
   std::copy_if(std::begin(prediction), std::end(prediction),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
-  REQUIRE(greater_than_0_75.size() == 0);
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
+  REQUIRE(greater_than_0_9.size() == 0);
 }
 
 TEST_CASE("SUCCEED Run AudioProcessing with AGC default parameters [spench c++ api]") {
@@ -1146,7 +1145,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [spench c++ ap
                              InitAudioProcessor().
                              SetWav("test1_48_noised.wav"));
 
-  test_data.m_dsp->AddRC(48000, -2, 1e-4);
+  test_data.m_dsp->AddRC(48000, -4);
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -1291,7 +1290,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [s
                                 kChunk_size, kChunk_stride);
   std::vector<float> reference(test_data.m_wav_data.begin(),
                                test_data.m_wav_data.begin() + source_data_size);
-  std::vector<float> greater_than_0_75;
+  std::vector<float> greater_than_0_9;
   chunks.resize(kChunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
@@ -1303,17 +1302,17 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [s
   REQUIRE(source_data_size == prediction.size());
 
   std::copy_if(std::begin(reference), std::end(reference),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
 
-  REQUIRE(greater_than_0_75.size() != 0);
-  greater_than_0_75.resize(0);
-  REQUIRE(greater_than_0_75.size() == 0);
-  // RC leave signal as it was if signal's values are not greater 0.75
+  REQUIRE(greater_than_0_9.size() != 0);
+  greater_than_0_9.resize(0);
+  REQUIRE(greater_than_0_9.size() == 0);
+  // RC leave signal as it was if signal's values are not greater 0.9
   std::copy_if(std::begin(prediction), std::end(prediction),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
-  REQUIRE(greater_than_0_75.size() == 0);
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
+  REQUIRE(greater_than_0_9.size() == 0);
 }
 
 TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [spench c++ api]") {

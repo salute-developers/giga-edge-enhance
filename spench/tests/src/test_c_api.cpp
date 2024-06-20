@@ -1721,7 +1721,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [s
                                 kChunk_size, kChunk_stride);
   std::vector<float> reference(test_data.m_wav_data.begin(),
                                test_data.m_wav_data.begin() + source_data_size);
-  std::vector<float> greater_than_0_75;
+  std::vector<float> greater_than_0_9;
   chunks.resize(kChunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
@@ -1745,17 +1745,17 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [s
   REQUIRE(source_data_size == prediction.size());
 
   std::copy_if(std::begin(reference), std::end(reference),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
 
-  REQUIRE(greater_than_0_75.size() != 0);
-  greater_than_0_75.resize(0);
-  REQUIRE(greater_than_0_75.size() == 0);
-  // RC leave signal as it was if signal's values are not greater 0.75
+  REQUIRE(greater_than_0_9.size() != 0);
+  greater_than_0_9.resize(0);
+  REQUIRE(greater_than_0_9.size() == 0);
+  // RC leave signal as it was if signal's values are not greater 0.9
   std::copy_if(std::begin(prediction), std::end(prediction),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
-  REQUIRE(greater_than_0_75.size() == 0);
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
+  REQUIRE(greater_than_0_9.size() == 0);
 }
 
 TEST_CASE("SUCCEED Run AudioProcessing for pcm16 data with reading RC parameters from config [spench c api]") {
@@ -1777,7 +1777,7 @@ TEST_CASE("SUCCEED Run AudioProcessing for pcm16 data with reading RC parameters
                                 kChunk_size, kChunk_stride);
   loadWavFx("data/wavs/test1_48_noised.wav", reference_fp);
   reference_fp.resize(source_data_size);
-  std::vector<float> greater_than_0_75;
+  std::vector<float> greater_than_0_9;
   chunks.resize(kChunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
@@ -1810,17 +1810,17 @@ TEST_CASE("SUCCEED Run AudioProcessing for pcm16 data with reading RC parameters
   REQUIRE(source_data_size == prediction_fp.size());
 
   std::copy_if(std::begin(reference_fp), std::end(reference_fp),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
 
-  REQUIRE(greater_than_0_75.size() != 0);
-  greater_than_0_75.resize(0);
-  REQUIRE(greater_than_0_75.size() == 0);
-  // RC leave signal as it was if signal's values are not greater 0.75
+  REQUIRE(greater_than_0_9.size() != 0);
+  greater_than_0_9.resize(0);
+  REQUIRE(greater_than_0_9.size() == 0);
+  // RC leave signal as it was if signal's values are not greater 0.9
   std::copy_if(std::begin(prediction_fp), std::end(prediction_fp),
-               std::back_inserter(greater_than_0_75),
-               [](float& i) { return std::fabs(i) > 0.75; });
-  REQUIRE(greater_than_0_75.size() == 0);
+               std::back_inserter(greater_than_0_9),
+               [](float& i) { return std::fabs(i) > 0.9; });
+  REQUIRE(greater_than_0_9.size() == 0);
 }
 
 TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [spench c api]") {
@@ -1842,7 +1842,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [spench c api]
                                test_data.m_wav_data.begin() + source_data_size);
   std::vector<float> greater_than_0_8;
   chunks.resize(kChunks_to_compare);
-  SpenchAudioProcessAddRcWithParam(test_data.m_audio_proc, 48000, -2, 1e-4);
+  SpenchAudioProcessAddRcWithParam(test_data.m_audio_proc, 48000, -4, 10, 0.05, 300, 5);
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem = nullptr;
     uint64_t ret_size = 0;

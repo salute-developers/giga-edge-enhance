@@ -1,5 +1,9 @@
 #pragma once
 
+#include <dsplib/math.h>
+
+#include <type_traits>
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -9,8 +13,6 @@ namespace sound {
 // ----------------------------------------------------------------------
 // Sliding peak detector
 // Memory size "in samples" defined as `frame_size * frame_count`
-// Memory экономия по памяти в `frame_size` за счет сокращения точности во времени
-// по сути это эквивалент линии задержки в `frame_size * frame_count` с оценкой максиума каждые `frame_size` отсчетов
 template<typename T>
 class PeakDetector {
  private:
@@ -41,24 +43,32 @@ class PeakDetector {
 };
 
 //----------------------------------------------------------------------
-// smooth signal dynamic squeezing up to `max_level`
 class RangeControl {
  private:
   PeakDetector<float> m_detector;
-  float m_max_level{0.75};
-  float m_step_size{1e-3};
-  float m_peak{1e-5};
-  float eps{1e-5};
-
+  float m_eps{1e-5};
+  const float m_target{-3};
+  const float m_max_gain{0};
+  float m_peak{-3};
+  float m_wa;
+  float m_wr;
  public:
  /**
  * @brief RangeControl constructor
  *
- * @param average_len Window size to store last peak estimations
- * @param max_level Maximum level of output signal
- * @param step_size Constant required for peak estimation update (for decreasing only)
+ * @param sample_rate An audio sample rate (Hz)
+ * @param target_db A target peak value (db)
+ * @param max_gain A max output signal value (db)
+ * @param attack_time An attack time for peak value estimation (sec)
+ * @param release_time A release time for peak value estimation (sec)
+ * @param hold_time A hold time for peak value estimation (sec)
  */
-  explicit RangeControl(uint32_t average_len, float max_level = 0.75, float step_size = 1e-3);
+  RangeControl(uint32_t sample_rate = 48000,
+               float target_db = -3,
+               float max_gain_db = 10,
+               float attack_time = 1e-5,
+               float release_time = 300,
+               float hold_time = 5);
   RangeControl() = delete;
   RangeControl& operator=(const RangeControl&) = delete;
 

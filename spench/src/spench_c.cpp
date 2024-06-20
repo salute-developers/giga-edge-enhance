@@ -298,15 +298,21 @@ SpenchRetCode   SpenchAudioProcessAddRc(SpenchAudioProcess model) {
 
 SpenchRetCode   SpenchAudioProcessAddRcWithParam(SpenchAudioProcess model,
                                                  u_int32_t audio_sample_rate,
-                                                 float max_level_db,
-                                                 float step_size) {
+                                                 float target_level_db,
+                                                 float max_gain_db,
+                                                 float attack_time,
+                                                 float release_time,
+                                                 float hold_time) {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   if (model == nullptr) {
     ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   } else {
     ((spench::SpenchAudioProcess*)model)->AddRC(audio_sample_rate,
-                                                max_level_db,
-                                                step_size);
+                                                target_level_db,
+                                                max_gain_db,
+                                                attack_time,
+                                                release_time,
+                                                hold_time);
   }
   return ret_code;
 }
