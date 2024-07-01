@@ -1,7 +1,7 @@
 #pragma once
 
 #include <mutex>  // NOLINT
-#include <contrib/onnxruntime/cmake/external/onnxruntime-extensions/includes/onnxruntime/onnxruntime_cxx_api.h>
+#include <contrib/onnxruntime/include/onnxruntime/core/session/onnxruntime_cxx_api.h>
 
 namespace util {
 

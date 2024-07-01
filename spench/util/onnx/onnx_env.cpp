@@ -81,7 +81,7 @@ void CreateDefaultSessionOptions(std::unique_ptr<Ort::SessionOptions>& options_p
     // Only single gpu currently working
     OrtCUDAProviderOptions cuda_options;
     cuda_options.device_id = 0;
-    cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearch::DEFAULT;
+    cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearch::OrtCudnnConvAlgoSearchDefault;
     options_ptr->AppendExecutionProvider_CUDA(cuda_options);
   }
 }

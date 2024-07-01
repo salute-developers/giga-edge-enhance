@@ -8,7 +8,7 @@
 #include <iostream>
 #include "spench/src/denoise_context.h"
 
-#include <contrib/onnxruntime/cmake/external/onnxruntime-extensions/includes/onnxruntime/onnxruntime_cxx_api.h>
+#include <contrib/onnxruntime/include/onnxruntime/core/session/onnxruntime_cxx_api.h>
 
 void CreateConstInputsWithGivenShapes(const std::vector<std::vector<int64_t> >& input_shapes,
                                       std::vector<std::vector<float>>& const_allocated_data,
@@ -130,13 +130,13 @@ TEST_CASE("SUCCEED Run single dummy inference [onnx]") {
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
-    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_names.push_back(data.m_denoiser->GetInputNameAllocated(i, allocator).release());
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
     // print output node names
-    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+    output_names.push_back(data.m_denoiser->GetOutputNameAllocated(i, allocator).release());
     output_shapes.push_back(data.m_denoiser->GetOutputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
@@ -173,13 +173,13 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with one thre
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
-    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_names.push_back(data.m_denoiser->GetInputNameAllocated(i, allocator).release());
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
     // print output node names
-    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+    output_names.push_back(data.m_denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
@@ -223,13 +223,13 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with two thre
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
-    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_names.push_back(data.m_denoiser->GetInputNameAllocated(i, allocator).release());
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
     // print output node names
-    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+    output_names.push_back(data.m_denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
@@ -272,13 +272,13 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with four thr
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
-    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_names.push_back(data.m_denoiser->GetInputNameAllocated(i, allocator).release());
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
     // print output node names
-    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+    output_names.push_back(data.m_denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
@@ -321,13 +321,13 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with eight th
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
-    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_names.push_back(data.m_denoiser->GetInputNameAllocated(i, allocator).release());
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
     // print output node names
-    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+    output_names.push_back(data.m_denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
@@ -370,13 +370,13 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with one thre
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
-    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_names.push_back(data.m_denoiser->GetInputNameAllocated(i, allocator).release());
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
     // print output node names
-    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+    output_names.push_back(data.m_denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
@@ -420,13 +420,13 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with two thre
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
-    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_names.push_back(data.m_denoiser->GetInputNameAllocated(i, allocator).release());
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
     // print output node names
-    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+    output_names.push_back(data.m_denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
@@ -469,13 +469,13 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with four thr
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
-    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_names.push_back(data.m_denoiser->GetInputNameAllocated(i, allocator).release());
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
     // print output node names
-    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+    output_names.push_back(data.m_denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
@@ -518,13 +518,13 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with eight th
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
-    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_names.push_back(data.m_denoiser->GetInputNameAllocated(i, allocator).release());
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
     // print output node names
-    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+    output_names.push_back(data.m_denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
@@ -567,13 +567,13 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with one
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
-    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_names.push_back(data.m_denoiser->GetInputNameAllocated(i, allocator).release());
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
     // print output node names
-    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+    output_names.push_back(data.m_denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
@@ -617,13 +617,13 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with two
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
-    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_names.push_back(data.m_denoiser->GetInputNameAllocated(i, allocator).release());
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
     // print output node names
-    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+    output_names.push_back(data.m_denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
@@ -666,13 +666,13 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with fou
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
-    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_names.push_back(data.m_denoiser->GetInputNameAllocated(i, allocator).release());
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
     // print output node names
-    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+    output_names.push_back(data.m_denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
@@ -715,13 +715,13 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with eig
   Ort::AllocatorWithDefaultOptions allocator;
   for (size_t i = 0; i < data.m_denoiser->GetInputCount(); ++i) {
     // print input node names
-    input_names.push_back(data.m_denoiser->GetInputName(i, allocator));
+    input_names.push_back(data.m_denoiser->GetInputNameAllocated(i, allocator).release());
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
     // print output node names
-    output_names.push_back(data.m_denoiser->GetOutputName(i, allocator));
+    output_names.push_back(data.m_denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
