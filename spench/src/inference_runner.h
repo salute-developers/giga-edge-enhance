@@ -3,7 +3,7 @@
 #ifdef BUILD_TFLITE_ENGINE
 #include "spench/util/tflite/tflite_runner.h"
 #else
-#include "spench/util/onnx/onnx_runner.h"
+#include "spench/util/onnx/denoise_onnx_runner.h"
 #endif
 #include <vector>
 #include <string>
