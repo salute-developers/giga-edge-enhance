@@ -63,21 +63,21 @@ class BaseOnnxRunner {
 
   template<typename T>
   void Run(const std::vector<std::vector<T>*>& inputs,
-                 std::vector<Ort::Value>& outputs) {
+           std::vector<Ort::Value>& outputs) {
+
     if (inputs.size() != m_model_input_shapes.size()) {
       throw("Provided inputs do not match model inputs!");
     }
     std::vector<Ort::Value> ort_inputs;
     for (size_t i = 0; i < inputs.size(); ++i) {
       ort_inputs.emplace_back(
-        Ort::Value::CreateTensor<T>(*m_memory_info_ptr,
-                                    const_cast<T*>(inputs[i]->data()), inputs[i]->size(),
-                                    m_model_input_shapes[i].data(), m_model_input_shapes[i].size()));
+          Ort::Value::CreateTensor<T>(*m_memory_info_ptr,
+                                      const_cast<T*>(inputs[i]->data()), inputs[i]->size(),
+                                      m_model_input_shapes[i].data(), m_model_input_shapes[i].size()));
     }
 
-    outputs = m_session_ptr->Run(*m_run_options_ptr, m_model_input_names.data(),
-                                  ort_inputs.data(), ort_inputs.size(),
-                                  m_model_output_names.data(), m_model_output_names.size());
+    outputs = m_session_ptr->Run(*m_run_options_ptr, m_model_input_names.data(), ort_inputs.data(), ort_inputs.size(),
+                                 m_model_output_names.data(), m_model_output_names.size());
   }
 
   template<typename T>
