@@ -52,6 +52,7 @@ class RangeControl {
   float m_peak{-3};
   float m_wa;
   float m_wr;
+
  public:
  /**
  * @brief RangeControl constructor

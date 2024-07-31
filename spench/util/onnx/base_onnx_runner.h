@@ -64,7 +64,6 @@ class BaseOnnxRunner {
   template<typename T>
   void Run(const std::vector<std::vector<T>*>& inputs,
            std::vector<Ort::Value>& outputs) {
-
     if (inputs.size() != m_model_input_shapes.size()) {
       throw("Provided inputs do not match model inputs!");
     }

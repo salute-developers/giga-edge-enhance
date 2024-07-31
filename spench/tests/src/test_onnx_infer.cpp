@@ -1138,7 +1138,6 @@ TEST_CASE("SUCCEED Run the best quality model and check network outputs (audio 1
 TEST_CASE("SUCCEED Run the dereverb model and check network outputs (audio 48kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_dereverberation_onnx_48khz.yaml"));
-
 }
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION

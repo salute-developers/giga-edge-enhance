@@ -63,10 +63,10 @@ RangeControl::Result RangeControl::process(const std::vector<float>& x) noexcept
     const auto peak = m_detector(x[i]);
     const auto peakdb = dsplib::mag2db(peak + m_eps);
     if (m_peak < peakdb) {
-      //attack
+      // attack
       m_peak = (m_peak * m_wa) + (1 - m_wa) * peakdb;
     } else {
-      //release
+      // release
       m_peak = (m_peak * m_wr) + (1 - m_wr) * peakdb;
     }
 
