@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include "spench/src/denoise_context.h"
+#include "spench/src/spench_context.h"
 
 namespace spench {
 namespace fe {

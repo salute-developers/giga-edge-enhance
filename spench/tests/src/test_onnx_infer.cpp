@@ -7,7 +7,7 @@
 #include <catch.hpp>
 #include <map>
 #include <iostream>
-#include "spench/src/denoise_context.h"
+#include "spench/src/spench_context.h"
 
 #include <contrib/onnxruntime/include/onnxruntime/core/session/onnxruntime_cxx_api.h>
 
@@ -1053,7 +1053,7 @@ TEST_CASE("FAIL Run cpu onnx runner with null pointer task and zeroed hidden lay
 TEST_CASE("FAIL Run cpu onnx runner with null pointer context and zeroed hidden layer [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   CHECK_THROWS_WITH(data.m_denoiser_runner->Infer(&denoise_task),
                                             "Task data or context are not initialized!");
 }
@@ -1116,7 +1116,7 @@ TEST_CASE("SUCCEED Run the best quality model and check network outputs (audio 1
   data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
   data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
 
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
   denoise_task.m_data.m_context = ctx.get();
   denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
@@ -1163,7 +1163,7 @@ TEST_CASE("SUCCEED Run encrypted the best quality model and check network output
   data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
   data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
 
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
   denoise_task.m_data.m_context = ctx.get();
   denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
@@ -1187,7 +1187,7 @@ TEST_CASE("SUCCEED Run four frames with the best quality model and check states 
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
 
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
   denoise_task.m_data.m_context = ctx.get();
 
@@ -1266,7 +1266,7 @@ TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with fast onnx mode
   data.LoadDataFromBin("1_noisy_mag_5_new.dump", noisy_mag_5_new);
 
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
-  spench::DenoiseContext<float>* denoise_contex = ctx.get();
+  spench::SpenchContext<float>* denoise_contex = ctx.get();
   ctx.get()->m_noisy_mag = noisy_mag_5_old;
   data.m_denoiser_runner->PrepareInputInPlace(noisy_mag_1_new, inputs, denoise_contex);
 
@@ -1289,7 +1289,7 @@ TEST_CASE("SUCCEED Run fast onnx model with real data and check first two iterat
   data.LoadDataFromBin("1_noisy_real_out.dump", gt_real_output);
   data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
 
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->m_noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->m_fullband_hidden);
@@ -1338,7 +1338,7 @@ TEST_CASE("SUCCEED Run encrypted onnx model and check first two iterations (audi
   data.LoadDataFromBin("1_noisy_real_out.dump", gt_real_output);
   data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
 
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->m_noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->m_fullband_hidden);
@@ -1387,7 +1387,7 @@ TEST_CASE("SUCCEED Run licensed encrypted model and check first two iterations (
   data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
   data.LoadDataFromBin("1_noisy_mag_5_new.dump", gt_noisy_mag_5_new);
 
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->m_noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->m_fullband_hidden);
@@ -1436,7 +1436,7 @@ TEST_CASE("SUCCEED Run licensed encrypted model w/o lic check (24 kHz) [onnx run
   data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
   data.LoadDataFromBin("1_noisy_mag_5_new.dump", gt_noisy_mag_5_new);
 
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->m_noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->m_fullband_hidden);

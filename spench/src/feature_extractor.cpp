@@ -10,7 +10,7 @@
 #include <tuple>
 #include <cassert>
 #include "spench/src/feature_params.h"
-#include "spench/src/denoise_context.h"
+#include "spench/src/spench_context.h"
 
 namespace spench {
 namespace fe {

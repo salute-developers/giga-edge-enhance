@@ -7,8 +7,8 @@
 #include <numeric>
 #include <functional>
 #include "spench/util/onnx/onnx_env.h"
-#include "spench/src/task.h"
-#include "spench/src/denoise_context.h"
+#include "spench/src/spench_task.h"
+#include "spench/src/spench_context.h"
 
 namespace util {
 namespace onnx {
@@ -34,11 +34,11 @@ class BaseOnnxRunner {
                  bool gpu);
   virtual ~BaseOnnxRunner();
 
-  virtual void Infer(spench::DenoiseTask* denoise_task) = 0;
+  virtual void Infer(spench::SpenchTask* denoise_task) = 0;
   // change two last arguments
   virtual void PrepareInputInPlace(std::vector<float>& mag,
                                    std::vector<std::vector<float>*>& inputs,
-                                   spench::DenoiseContext<float>* denoise_context) = 0;
+                                   spench::SpenchContext<float>* denoise_context) = 0;
 
   virtual uint32_t GetFutureContextLen() {
     return m_model_params.m_network_input_ctx_len;

@@ -5,7 +5,7 @@
 #include "contrib/ctpl/ctpl_stl.h"
 #include "contrib/yaml-cpp/yaml.h"
 #include "spench/src/feature_params.h"
-#include "spench/src/task.h"
+#include "spench/src/spench_task.h"
 #include "spench/src/feature_extractor.h"
 
 namespace spench {
@@ -26,7 +26,7 @@ class FeatureExtractorRunner /*: public ASRDAGRunner*/ {
 
   ~FeatureExtractorRunner() /*override*/ = default;
 
-  void Run(spench::DenoiseTask* denoise_task) /*override*/;
+  void Run(spench::SpenchTask* denoise_task) /*override*/;
   void WarmUp();
 
   [[nodiscard]] uint64_t GetFrameSizeMs() const;

@@ -81,8 +81,8 @@ TEST_CASE("SUCCEED Launch runner for denoiser input generation with default para
 
   REQUIRE(test_data.m_fe_runner_ptr.get()->GetSamplingFreq() == 16000);
   REQUIRE(test_data.m_fe_runner_ptr.get()->GetFrameSizeMs() == 32);
-  spench::DenoiseTask denoise_task;
-  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  spench::SpenchTask denoise_task;
+  std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
   denoise_task.m_data.m_context = ctx.get();
   denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
   std::vector<float> audio(test_data.m_wav_data.begin(),
@@ -124,9 +124,9 @@ TEST_CASE("SUCCEED Launch runner for masking with default parameters (audio 16kH
   test_data.LoadDataFromBin("1_previous_features_imag_16khz.dump", prev_features_imag);
 
   spench::ComplexNumber<float> prev_features(prev_features_real, prev_features_imag);
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
 
-  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
   denoise_task.m_data.m_context = ctx.get();
   // update previous features for test
   denoise_task.m_data.m_context->m_prev_features.push(prev_features);
@@ -215,8 +215,8 @@ TEST_CASE("SUCCEED Launch runner with configuration read from .yaml config (audi
   REQUIRE(test_data.m_fe_runner_ptr.get()->GetSamplingFreq() == 16000);
   REQUIRE(test_data.m_fe_runner_ptr.get()->GetFrameSizeMs() == 32);
 
-  spench::DenoiseTask denoise_task;
-  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  spench::SpenchTask denoise_task;
+  std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
   denoise_task.m_data.m_context = ctx.get();
   denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
   std::vector<float> audio(test_data.m_wav_data.begin(),
@@ -243,8 +243,8 @@ TEST_CASE("SUCCEED Launch runner for iSTFT calc with skipped frame and check sta
                                      SetWav("rec_noise_001_16k.wav"));
   constexpr size_t kIterations = 1 + 1;
 
-  spench::DenoiseTask denoise_task;
-  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  spench::SpenchTask denoise_task;
+  std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
   denoise_task.m_data.m_context = ctx.get();
   denoise_task.m_stage = spench::PipelineStage::SKIPPED_WAV;
   std::vector<float> audio(test_data.m_wav_data.begin(),
@@ -267,8 +267,8 @@ TEST_CASE("SUCCEED Launch runner for iSTFT calc with first valid chunk and check
                                      SetWav("rec_noise_001_16k.wav"));
   constexpr size_t kIterations = 1 + 1;
 
-  spench::DenoiseTask denoise_task;
-  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  spench::SpenchTask denoise_task;
+  std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
   denoise_task.m_data.m_context = ctx.get();
   std::valarray<float> predicted_mask_real;
   std::valarray<float> predicted_mask_imag;
@@ -313,8 +313,8 @@ TEST_CASE("SUCCEED Launch runner with configuration read from .yaml config (audi
   REQUIRE(test_data.m_fe_runner_ptr.get()->GetSamplingFreq() == 24000);
   REQUIRE(test_data.m_fe_runner_ptr.get()->GetFrameSizeMs() == 32);
 
-  spench::DenoiseTask denoise_task;
-  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  spench::SpenchTask denoise_task;
+  std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
   denoise_task.m_data.m_context = ctx.get();
   denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
   std::vector<float> audio(test_data.m_fe_runner_ptr.get()->GetFrameHopSizeSamples() * kIterations, 0.0);

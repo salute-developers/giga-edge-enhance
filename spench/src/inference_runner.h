@@ -9,8 +9,8 @@
 #include <string>
 #include <memory>
 
-#include "spench/src/task.h"
-#include "spench/src/denoise_context.h"
+#include "spench/src/spench_task.h"
+#include "spench/src/spench_context.h"
 
 namespace spench {
 
@@ -32,7 +32,7 @@ class InferenceRunner {
                   bool gpu);
   ~InferenceRunner();
 
-  void Infer(spench::DenoiseTask* denoise_task);
+  void Infer(spench::SpenchTask* denoise_task);
 
   const ModelType GetModelType() {return m_model_type;}
   uint32_t GetModelFutureContextLen() {

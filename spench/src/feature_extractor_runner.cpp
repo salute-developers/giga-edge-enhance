@@ -35,7 +35,7 @@ void FeatureExtractorRunner::ReadConfig(const YAML::Node& yaml_config) {
   m_params.ReadFeatureParamsNode(yaml_config);
 }
 
-void FeatureExtractorRunner::Run(spench::DenoiseTask* denoise_task) {
+void FeatureExtractorRunner::Run(spench::SpenchTask* denoise_task) {
   auto& denoise_data = denoise_task->m_data;
   auto& denoise_context = denoise_data.m_context;
 
@@ -92,8 +92,8 @@ void FeatureExtractorRunner::Run(spench::DenoiseTask* denoise_task) {
 }
 
 void FeatureExtractorRunner::WarmUp() {
-  spench::DenoiseTask denoise_task;
-  std::unique_ptr<spench::DenoiseContext<float>> ctx(new spench::DenoiseContext<float>);
+  spench::SpenchTask denoise_task;
+  std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
   denoise_task.m_data.m_context = ctx.get();
   denoise_task.m_data.m_waveform.resize(GetFrameSizeSamples(), 0.0);
   Run(&denoise_task);

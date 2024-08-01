@@ -97,7 +97,7 @@ TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with fast onnx mode
   data.LoadDataFromBin("1_noisy_mag_5_new.dump", noisy_mag_5_new);
 
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
-  spench::DenoiseContext<float>* denoise_contex = ctx.get();
+  spench::SpenchContext<float>* denoise_contex = ctx.get();
   ctx.get()->m_noisy_mag = noisy_mag_5_old;
   IsVectorsClose(ctx.get()->m_noisy_mag, noisy_mag_5_old, 0.000001);
   data.m_denoiser_runner->PrepareInputInPlace(noisy_mag_1_new, inputs, denoise_contex);
@@ -163,7 +163,7 @@ TEST_CASE("SUCCEED Run fast tflite model with real data and check first two iter
   data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
   data.LoadDataFromBin("1_noisy_mag_5_new.dump", gt_noisy_mag_5_new);
 
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->m_noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->m_fullband_hidden);
@@ -212,7 +212,7 @@ TEST_CASE("SUCCEED Run encrypted model with real data and check first two iterat
   data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
   data.LoadDataFromBin("1_noisy_mag_5_new.dump", gt_noisy_mag_5_new);
 
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->m_noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->m_fullband_hidden);
@@ -261,7 +261,7 @@ TEST_CASE("SUCCEED Run licensed encrypted model and check first two iterations (
   data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
   data.LoadDataFromBin("1_noisy_mag_5_new.dump", gt_noisy_mag_5_new);
 
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->m_noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->m_fullband_hidden);
@@ -310,7 +310,7 @@ TEST_CASE("SUCCEED Run licensed encrypted model w/o lic check (24 kHz) [tflite r
   data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
   data.LoadDataFromBin("1_noisy_mag_5_new.dump", gt_noisy_mag_5_new);
 
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->m_noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->m_fullband_hidden);
@@ -398,7 +398,7 @@ TEST_CASE("SUCCEED Run inference via the best quality model and check network ou
   data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
   data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
 
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
   ctx.get()->m_fullband_hidden.resize(data.m_denoiser_runner->m_model_input_size[1], 0);
   ctx.get()->m_fullband_cell_state.resize(data.m_denoiser_runner->m_model_input_size[2], 0);
@@ -427,7 +427,7 @@ TEST_CASE("SUCCEED Run four frames with the best quality model and check states 
   auto data = std::move(TestTfliteRunner()
       .InitRunner("default_configuration_best_quality_tflite_16khz.yaml"));
 
-  spench::DenoiseTask denoise_task;
+  spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
   ctx.get()->m_fullband_hidden.resize(data.m_denoiser_runner->m_model_input_size[1], 0);
   ctx.get()->m_fullband_cell_state.resize(data.m_denoiser_runner->m_model_input_size[2], 0);

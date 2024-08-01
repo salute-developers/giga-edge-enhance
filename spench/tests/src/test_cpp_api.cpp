@@ -85,7 +85,7 @@ TEST_CASE("SUCCEED Create context [spench c++ api]") {
   auto test_data = std::move(TestFixture().
                         InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml"));
 #endif
-  spench::DenoiseContext<float>* ctx = nullptr;
+  spench::SpenchContext<float>* ctx = nullptr;
   ctx = test_data.m_denoiser->CreateContext();
   REQUIRE(ctx != nullptr);
 
@@ -124,7 +124,7 @@ TEST_CASE("SUCCEED Set and retrieve a context id [spench c++ api]") {
                         InitDenoiser("default_configuration_best_quality_onnx_16khz.yaml"));
 #endif
 
-  spench::DenoiseContext<float>* ctx = nullptr;
+  spench::SpenchContext<float>* ctx = nullptr;
   ctx = test_data.m_denoiser->CreateContext();
 
   test_data.m_denoiser->SetContextId(ctx, 1000);
@@ -161,7 +161,7 @@ TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
                                SetWav("rec_noise_001_16k.wav"));
   #endif
 
-  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+  spench::SpenchContext<float>* ctx = test_data.m_denoiser->CreateContext();
   const uint32_t kChunks_to_compare = 100;
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -194,7 +194,7 @@ TEST_CASE("SUCCEED Get statistic information [spench c++ api]") {
                                SetWav("rec_noise_001_16k.wav"));
   #endif
 
-  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+  spench::SpenchContext<float>* ctx = test_data.m_denoiser->CreateContext();
   const uint32_t kChunks_to_compare = 100;
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -234,7 +234,7 @@ TEST_CASE("SUCCEED Run inference with 100 tensors and default context argumetns 
                                SetWav("rec_noise_001_16k.wav"));
   #endif
 
-  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext(0, 0);
+  spench::SpenchContext<float>* ctx = test_data.m_denoiser->CreateContext(0, 0);
   const uint32_t kChunks_to_compare = 100;
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -279,8 +279,8 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contex
 
   std::vector<float> predictions1;
   std::vector<float> predictions2;
-  spench::DenoiseContext<float>* ctx1 = test_data.m_denoiser->CreateContext();
-  spench::DenoiseContext<float>* ctx2 = test_data.m_denoiser->CreateContext();
+  spench::SpenchContext<float>* ctx1 = test_data.m_denoiser->CreateContext();
+  spench::SpenchContext<float>* ctx2 = test_data.m_denoiser->CreateContext();
   CHECK(ctx1 != ctx2);
   const uint32_t kChunks_to_compare = 100;
   const uint32_t kChunk_size = 16;
@@ -320,8 +320,8 @@ TEST_CASE("SUCCEED Run inference with 16 kHz model and 2 context with default pa
 
   std::vector<float> predictions1;
   std::vector<float> predictions2;
-  spench::DenoiseContext<float>* ctx1 = test_data.m_denoiser->CreateContext();
-  spench::DenoiseContext<float>* ctx2 = test_data.m_denoiser->CreateContext(0, 0);
+  spench::SpenchContext<float>* ctx1 = test_data.m_denoiser->CreateContext();
+  spench::SpenchContext<float>* ctx2 = test_data.m_denoiser->CreateContext(0, 0);
   CHECK(ctx1 != ctx2);
   const uint32_t kChunks_to_compare = 100;
   const uint32_t kChunk_size = 16;
@@ -365,7 +365,7 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contex
   const uint32_t kChunk_stride = 16;
   std::vector<std::vector<float>> predictions(kNumber);
   std::vector<std::thread> pool;
-  std::vector<spench::DenoiseContext<float>*> contexts;
+  std::vector<spench::SpenchContext<float>*> contexts;
   auto chunks = chunkWav<float>(test_data.m_wav_data,
                                 test_data.m_denoiser->GetModelSampleRate(),
                                 kChunk_size, kChunk_stride);
@@ -373,7 +373,7 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contex
 
   auto functor =
    [&test_data, &chunks](
-          spench::DenoiseContext<float>* ctx,
+          spench::SpenchContext<float>* ctx,
           std::vector<float>& predictions) ->void {
     for (auto& chunk : chunks) {
       std::vector<float> ret;
@@ -384,7 +384,7 @@ TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contex
   };
 
   for (uint32_t i = 0; i < kNumber; ++i) {
-    spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+    spench::SpenchContext<float>* ctx = test_data.m_denoiser->CreateContext();
     test_data.m_denoiser->SetContextId(ctx, i);
     contexts.emplace_back(ctx);
     pool.emplace_back(std::thread(functor, contexts.back(), std::ref(predictions.at(i))));
@@ -421,7 +421,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 2 contexts concu
   const uint32_t kChunk_stride = 16;
   std::vector<std::vector<float>> predictions(kNumber);
   std::vector<std::thread> pool;
-  std::vector<spench::DenoiseContext<float>*> contexts;
+  std::vector<spench::SpenchContext<float>*> contexts;
   auto chunks = chunkWav<float>(test_data.m_wav_data,
                                 test_data.m_denoiser->GetModelSampleRate(),
                                 kChunk_size, kChunk_stride);
@@ -429,7 +429,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 2 contexts concu
 
   auto functor =
    [&test_data, &chunks](
-          spench::DenoiseContext<float>* ctx,
+          spench::SpenchContext<float>* ctx,
           std::vector<float>& predictions) ->void {
     for (auto& chunk : chunks) {
       std::vector<float> ret;
@@ -440,7 +440,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 2 contexts concu
   };
 
   for (uint32_t i = 0; i < kNumber; ++i) {
-    spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+    spench::SpenchContext<float>* ctx = test_data.m_denoiser->CreateContext();
     test_data.m_denoiser->SetContextId(ctx, i);
     contexts.emplace_back(ctx);
     pool.emplace_back(std::thread(functor, contexts.back(), std::ref(predictions.at(i))));
@@ -472,7 +472,7 @@ TEST_CASE("FAIL Run inference with invalid chunk size [spench c++ api]") {
   #endif
 
   std::vector<float> predictions;
-  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext(16000, 16000);
+  spench::SpenchContext<float>* ctx = test_data.m_denoiser->CreateContext(16000, 16000);
   const uint32_t kChunk_size = 20;
   const uint32_t kChunk_stride = 10;
   const uint32_t kChunks_to_compare = 5;
@@ -499,7 +499,7 @@ TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav f
 
   std::vector<float> prediction;
   std::vector<float> reference_prediction;
-  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+  spench::SpenchContext<float>* ctx = test_data.m_denoiser->CreateContext();
 
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -534,7 +534,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
 
   std::vector<float> prediction;
   std::vector<float> reference_prediction;
-  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+  spench::SpenchContext<float>* ctx = test_data.m_denoiser->CreateContext();
 
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -571,7 +571,7 @@ TEST_CASE("SUCCEED Run inference with encrypted fast 24 kHz model on a part of .
 
   std::vector<float> prediction;
   std::vector<float> reference_prediction;
-  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+  spench::SpenchContext<float>* ctx = test_data.m_denoiser->CreateContext();
 
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -611,7 +611,7 @@ TEST_CASE("SUCCEED Run inference with licenced encrypted fast 24 kHz model on a 
 
   std::vector<float> prediction;
   std::vector<float> reference_prediction;
-  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+  spench::SpenchContext<float>* ctx = test_data.m_denoiser->CreateContext();
 
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -677,7 +677,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with the final infer
   SpenchRetCode ret_code;
   std::vector<float> prediction;
   std::vector<float> reference_prediction;
-  spench::DenoiseContext<float>* ctx = test_data.m_denoiser->CreateContext();
+  spench::SpenchContext<float>* ctx = test_data.m_denoiser->CreateContext();
 
   const uint32_t kChunk_size = 16;
   const uint32_t kChunk_stride = 16;
@@ -727,7 +727,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resamplin
   SpenchRetCode ret_code;
   std::vector<float> prediction;
   std::vector<float> reference;
-  spench::DenoiseContext<float>* ctx =
+  spench::SpenchContext<float>* ctx =
                           test_data.m_denoiser->CreateContext(kAudio_src_sample_rate,
                                                               kAudio_dst_sample_rate);
 
@@ -783,7 +783,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with output resampli
   SpenchRetCode ret_code;
   std::vector<float> prediction;
   std::vector<float> reference;
-  spench::DenoiseContext<float>* ctx =
+  spench::SpenchContext<float>* ctx =
                           test_data.m_denoiser->CreateContext(kAudio_src_sample_rate,
                                                               kAudio_dst_sample_rate);
 
@@ -840,7 +840,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
   SpenchRetCode ret_code;
   std::vector<float> prediction;
   std::vector<float> reference;
-  spench::DenoiseContext<float>* ctx =
+  spench::SpenchContext<float>* ctx =
                           test_data.m_denoiser->CreateContext(kAudio_src_sample_rate,
                                                               kAudio_dst_sample_rate);
 

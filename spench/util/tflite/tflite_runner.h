@@ -13,8 +13,8 @@
 #include <memory>
 #include <mutex> // NOLINT
 
-#include "spench/src/task.h"
-#include "spench/src/denoise_context.h"
+#include "spench/src/spench_task.h"
+#include "spench/src/spench_context.h"
 
 
 namespace util {
@@ -41,11 +41,11 @@ class BaseTfliteRunner {
                   bool on_gpu = false);
   virtual ~BaseTfliteRunner();
 
-  virtual void Infer(spench::DenoiseTask* denoise_task) = 0;
+  virtual void Infer(spench::SpenchTask* denoise_task) = 0;
   // change two last arguments
   virtual void PrepareInputInPlace(std::vector<float>& mag,
                                    std::vector<std::vector<float>*>& inputs,
-                                   spench::DenoiseContext<float>* denoise_context) = 0;
+                                   spench::SpenchContext<float>* denoise_context) = 0;
   template<typename T>
   void _TestRun(std::vector<std::vector<T>*>& inputs) {Run(inputs);}
   virtual uint32_t GetFutureContextLen() {
@@ -69,7 +69,7 @@ class BaseTfliteRunner {
 
   void ResizeIfNeededInPlace(std::vector<float>& to_check, uint32_t shape);
   void ResizeIfNeededInPlace(std::valarray<float>& to_check, uint32_t shape);
-  void InitOutputTensors(spench::DenoiseTaskData& data, uint32_t size);
+  void InitOutputTensors(spench::SpenchTaskData& data, uint32_t size);
 
   template<typename T>
   void WarmUp(std::vector<std::vector<T>*>& inputs) {
@@ -103,14 +103,14 @@ class SpenchFTfliteRunner: public BaseTfliteRunner {
                                const std::string& checksum,
                                uint32_t inference_engine_threads = 1,
                                bool on_gpu = false);
-  void Infer(spench::DenoiseTask* denoise_task);
+  void Infer(spench::SpenchTask* denoise_task);
  protected:
   template<typename T> void WarmUp();
   void PrepareInputInPlace(std::vector<float>& mag,
                            std::vector<std::vector<float>*>& inputs,
-                           spench::DenoiseContext<float>* context);
+                           spench::SpenchContext<float>* context);
   template<typename T>
-  void ParseResults(spench::DenoiseTaskData& data);
+  void ParseResults(spench::SpenchTaskData& data);
 };
 
 class SpenchQTfliteRunner: public BaseTfliteRunner {
@@ -122,14 +122,14 @@ class SpenchQTfliteRunner: public BaseTfliteRunner {
                                const std::string& checksum,
                                uint32_t inference_engine_threads = 1,
                                bool on_gpu = false);
-  void Infer(spench::DenoiseTask* denoise_task);
+  void Infer(spench::SpenchTask* denoise_task);
  protected:
   template<typename T> void WarmUp();
   void PrepareInputInPlace(std::vector<float>& mag,
                            std::vector<std::vector<float>*>& inputs,
-                           spench::DenoiseContext<float>* context);
+                           spench::SpenchContext<float>* context);
   template<typename T>
-  void ParseResults(spench::DenoiseTaskData& data);
+  void ParseResults(spench::SpenchTaskData& data);
 };
 
 }  // namespace tf_lite

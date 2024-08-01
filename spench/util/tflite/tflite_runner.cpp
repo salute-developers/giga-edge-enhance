@@ -142,7 +142,7 @@ void BaseTfliteRunner::ResizeIfNeededInPlace(std::valarray<float>& to_check,
   }
 }
 
-void BaseTfliteRunner::InitOutputTensors(spench::DenoiseTaskData& data, uint32_t size) {
+void BaseTfliteRunner::InitOutputTensors(spench::SpenchTaskData& data, uint32_t size) {
   ResizeIfNeededInPlace(data.m_network_output.real, size / 2);
   ResizeIfNeededInPlace(data.m_network_output.imag, size / 2);
 }
@@ -161,7 +161,7 @@ SpenchFTfliteRunner::SpenchFTfliteRunner(const YAML::Node& yaml_config,
 
 template<typename T>
 void SpenchFTfliteRunner::WarmUp() {
-  spench::DenoiseTask dummy_task;
+  spench::SpenchTask dummy_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>());
   dummy_task.m_data.m_context = ctx.get();
 
@@ -181,7 +181,7 @@ void SpenchFTfliteRunner::WarmUp() {
 
 void SpenchFTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
                                             std::vector<std::vector<float>*>& inputs,
-                                            spench::DenoiseContext<float>* context) {
+                                            spench::SpenchContext<float>* context) {
   if (context == nullptr) {
     throw("Context is not allocated!");
   }
@@ -224,7 +224,7 @@ void SpenchFTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
 }
 
 template<typename T>
-void SpenchFTfliteRunner::ParseResults(spench::DenoiseTaskData& data) {
+void SpenchFTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
   if (data.m_context == nullptr) {
     throw("Context is not allocated!");
   }
@@ -260,7 +260,7 @@ void SpenchFTfliteRunner::ParseResults(spench::DenoiseTaskData& data) {
   }
 }
 
-void SpenchFTfliteRunner::Infer(spench::DenoiseTask* denoise_task) {
+void SpenchFTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_task == nullptr || denoise_task->m_data.m_context == nullptr) {
     throw("Task data or context are not initialized!");
   }
@@ -315,7 +315,7 @@ SpenchQTfliteRunner::SpenchQTfliteRunner(const YAML::Node& yaml_config,
 
 template<typename T>
 void SpenchQTfliteRunner::WarmUp() {
-  spench::DenoiseTask dummy_task;
+  spench::SpenchTask dummy_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>());
   dummy_task.m_data.m_context = ctx.get();
 
@@ -337,7 +337,7 @@ void SpenchQTfliteRunner::WarmUp() {
 
 void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
                                             std::vector<std::vector<float>*>& inputs,
-                                            spench::DenoiseContext<float>* context) {
+                                            spench::SpenchContext<float>* context) {
   if (context == nullptr) {
     throw("Context is not allocated!");
   }
@@ -357,7 +357,7 @@ void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
 }
 
 template<typename T>
-void SpenchQTfliteRunner::ParseResults(spench::DenoiseTaskData& data) {
+void SpenchQTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
   if (data.m_context == nullptr) {
     throw("Context is not allocated!");
   }
@@ -397,7 +397,7 @@ void SpenchQTfliteRunner::ParseResults(spench::DenoiseTaskData& data) {
   }
 }
 
-void SpenchQTfliteRunner::Infer(spench::DenoiseTask* denoise_task) {
+void SpenchQTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_task == nullptr || denoise_task->m_data.m_context == nullptr) {
     throw("Task data or context are not initialized!");
   }

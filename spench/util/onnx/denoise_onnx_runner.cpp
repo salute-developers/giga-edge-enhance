@@ -21,7 +21,7 @@ SpenchQOnnxRunner::SpenchQOnnxRunner(const YAML::Node& yaml_config,
 
 void SpenchQOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
                                             std::vector<std::vector<float>*>& inputs,
-                                            spench::DenoiseContext<float>* context) {
+                                            spench::SpenchContext<float>* context) {
   if (context == nullptr) {
     throw("Context is not allocated!");
   }
@@ -39,12 +39,12 @@ void SpenchQOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
   inputs.push_back(&denoise_context->m_subband_cell_state);
 }
 
-void SpenchQOnnxRunner::InitOutputTensors(spench::DenoiseTaskData& data) {
+void SpenchQOnnxRunner::InitOutputTensors(spench::SpenchTaskData& data) {
   ResizeIfNeededInPlace(data.m_network_output.real, m_model_output_shapes[4], 2);
   ResizeIfNeededInPlace(data.m_network_output.imag, m_model_output_shapes[4], 2);
 }
 
-void SpenchQOnnxRunner::Infer(spench::DenoiseTask* denoise_task) {
+void SpenchQOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_task == nullptr || denoise_task->m_data.m_context == nullptr) {
     throw("Task data or context are not initialized!");
   }
@@ -98,7 +98,7 @@ SpenchFOnnxRunner::SpenchFOnnxRunner(const YAML::Node& yaml_config,
     WarmUp<float>();
 }
 
-void SpenchFOnnxRunner::InitOutputTensors(spench::DenoiseTaskData& data) {
+void SpenchFOnnxRunner::InitOutputTensors(spench::SpenchTaskData& data) {
   // other outputs were resized in PrepareInputInPlace
   ResizeIfNeededInPlace(data.m_network_output.real, m_model_output_shapes[3], 2);
   ResizeIfNeededInPlace(data.m_network_output.imag, m_model_output_shapes[3], 2);
@@ -106,7 +106,7 @@ void SpenchFOnnxRunner::InitOutputTensors(spench::DenoiseTaskData& data) {
 
 void SpenchFOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
                                             std::vector<std::vector<float>*>& inputs,
-                                            spench::DenoiseContext<float>* context) {
+                                            spench::SpenchContext<float>* context) {
   if (context == nullptr) {
     throw("Context is not allocated!");
   }
@@ -141,7 +141,7 @@ void SpenchFOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
   inputs.push_back(&denoise_context->m_prev_fb_out);
 }
 
-void SpenchFOnnxRunner::Infer(spench::DenoiseTask* denoise_task) {
+void SpenchFOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_task == nullptr || denoise_task->m_data.m_context == nullptr) {
     throw("Task data or context are not initialized!");
   }

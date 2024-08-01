@@ -1,6 +1,6 @@
 #include "include/spench_c.h"
 #include "include/spench.h"
-#include "spench/src/task.h"
+#include "spench/src/spench_task.h"
 #include <iostream>
 #include <cstring>
 
@@ -84,7 +84,7 @@ SpenchRetCode SpenchDenoiseCreateContext(SpenchDenoise model,
 
 void SpenchDenoiseDestroyContext(SpenchDenoise model,
                                  SpenchContext* ctx) {
-  ((spench::SpenchDenoise*)model)->DestroyContext((spench::DenoiseContext<float>**)ctx);
+  ((spench::SpenchDenoise*)model)->DestroyContext((spench::SpenchContext<float>**)ctx);
 }
 
 SpenchRetCode SpenchDenoiseGetContextId(SpenchDenoise model,
@@ -94,7 +94,7 @@ SpenchRetCode SpenchDenoiseGetContextId(SpenchDenoise model,
   if (model == nullptr || ctx == nullptr || id == nullptr) {
     ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   } else {
-    *id = ((spench::SpenchDenoise*)model)->GetContextId((const spench::DenoiseContext<float>*)ctx);
+    *id = ((spench::SpenchDenoise*)model)->GetContextId((const spench::SpenchContext<float>*)ctx);
   }
   return ret_code;
 }
@@ -106,7 +106,7 @@ SpenchRetCode SpenchDenoiseSetContextId(SpenchDenoise model,
   if (model == nullptr || ctx == nullptr) {
     ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   } else {
-    ((spench::SpenchDenoise*)model)->SetContextId((spench::DenoiseContext<float>*)ctx, id);
+    ((spench::SpenchDenoise*)model)->SetContextId((spench::SpenchContext<float>*)ctx, id);
   }
   return ret_code;
 }
@@ -118,7 +118,7 @@ SpenchRetCode SpenchDenoiseGetStreamStat(SpenchDenoise model,
   if (model == nullptr || ctx == nullptr || stream_stat == nullptr) {
     ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   } else {
-    *stream_stat = ((spench::SpenchDenoise*)model)->GetStreamStat((const spench::DenoiseContext<float>*)ctx);
+    *stream_stat = ((spench::SpenchDenoise*)model)->GetStreamStat((const spench::SpenchContext<float>*)ctx);
   }
   return ret_code;
 }
@@ -167,7 +167,7 @@ SpenchRetCode SpenchDenoiseProcessChunkFp(SpenchDenoise model,
   ret_code = ((spench::SpenchDenoise*)model)->
                               ProcessChunk(std::vector<float> (input_ptr, input_ptr + input_size / sizeof(float)),
                                            res,
-                                           (spench::DenoiseContext<float>*)ctx);
+                                           (spench::SpenchContext<float>*)ctx);
   if (ret_code == SpenchRetCode::SUCCESS ||
       ret_code == SpenchRetCode::CONTEXT_ACCUMULATION) {
     ret_code = ctools::AllocateAndCopy<float>(res, output, output_size);
@@ -188,7 +188,7 @@ SpenchRetCode SpenchDenoiseProcessChunkInt(SpenchDenoise model,
   ret_code = ((spench::SpenchDenoise*)model)->
                               ProcessChunk(std::vector<int16_t> (input_ptr, input_ptr + input_size / sizeof(int16_t)),
                                            res,
-                                           (spench::DenoiseContext<float>*)ctx);
+                                           (spench::SpenchContext<float>*)ctx);
   if (ret_code == SpenchRetCode::SUCCESS ||
       ret_code == SpenchRetCode::CONTEXT_ACCUMULATION) {
     ret_code = ctools::AllocateAndCopy<int16_t>(res, output, output_size);
@@ -205,7 +205,7 @@ SpenchRetCode SpenchDenoiseGetFinalChunkFp(SpenchDenoise model,
   std::vector<float> res;
   ret_code = ((spench::SpenchDenoise*)model)->
                               GetFinalChunk(res,
-                                            (spench::DenoiseContext<float>*)ctx);
+                                            (spench::SpenchContext<float>*)ctx);
   if (ret_code == SpenchRetCode::SUCCESS) {
     if (res.size() == 0) {
       *output = NULL;
@@ -226,7 +226,7 @@ SpenchRetCode SpenchDenoiseGetFinalChunkInt(SpenchDenoise model,
   std::vector<int16_t> res;
   ret_code = ((spench::SpenchDenoise*)model)->
                               GetFinalChunk(res,
-                                            (spench::DenoiseContext<float>*)ctx);
+                                            (spench::SpenchContext<float>*)ctx);
   if (ret_code == SpenchRetCode::SUCCESS) {
     if (res.size() == 0) {
       *output = NULL;

@@ -14,7 +14,7 @@ namespace spench {
 class DenoiseScheduler;
 class AudioProcessing;
 template<typename T>
-struct DenoiseContext;
+struct SpenchContext;
 
 class
 #ifdef _MSC_VER
@@ -30,31 +30,31 @@ ISpenchSequencer {
 
   virtual SpenchRetCode ProcessChunk(const std::vector<float>& chunk,
                                      std::vector<float>& ret,
-                                     DenoiseContext<float>* ctx = nullptr) = 0;
+                                     SpenchContext<float>* ctx = nullptr) = 0;
 
   virtual SpenchRetCode ProcessChunk(const std::vector<int16_t>& chunk16,
                                      std::vector<int16_t>& ret16,
-                                     DenoiseContext<float>* ctx = nullptr) = 0;
+                                     SpenchContext<float>* ctx = nullptr) = 0;
 
   virtual std::vector<float>& operator()(const std::vector<float>& chunk,
                                          std::vector<float>& ret,
-                                         DenoiseContext<float>* ctx = nullptr) = 0;
+                                         SpenchContext<float>* ctx = nullptr) = 0;
 
   virtual std::vector<int16_t>& operator()(const std::vector<int16_t>& chunk16,
                                            std::vector<int16_t>& ret16,
-                                           DenoiseContext<float>* ctx = nullptr) = 0;
+                                           SpenchContext<float>* ctx = nullptr) = 0;
 
   virtual SpenchRetCode GetFinalChunk(std::vector<float>& ret,
-                                      DenoiseContext<float>* ctx = nullptr) = 0;
+                                      SpenchContext<float>* ctx = nullptr) = 0;
 
   virtual SpenchRetCode GetFinalChunk(std::vector<int16_t>& ret16,
-                                      DenoiseContext<float>* ctx = nullptr) = 0;
+                                      SpenchContext<float>* ctx = nullptr) = 0;
 
   virtual std::vector<float>& operator()(std::vector<float>& ret,
-                                         DenoiseContext<float>* ctx = nullptr) = 0;
+                                         SpenchContext<float>* ctx = nullptr) = 0;
 
   virtual std::vector<int16_t>& operator()(std::vector<int16_t>& ret16,
-                                           DenoiseContext<float>* ctx = nullptr) = 0;
+                                           SpenchContext<float>* ctx = nullptr) = 0;
 };
 
 /**
@@ -126,7 +126,7 @@ SpenchDenoise : public ISpenchSequencer {
    *  \param: A pointer to a context.
    *  \ingroup group_cpp
    */
-  StreamStatStruct                GetStreamStat(const DenoiseContext<float>*);
+  StreamStatStruct                GetStreamStat(const SpenchContext<float>*);
 
   // working with context
   /**
@@ -138,7 +138,7 @@ SpenchDenoise : public ISpenchSequencer {
    *  \return: A pointer to a context.
    *  \ingroup group_cpp
    */
-  DenoiseContext<float>*          CreateContext(uint32_t in_audio_sr = 0,
+  SpenchContext<float>*          CreateContext(uint32_t in_audio_sr = 0,
                                                 uint32_t out_audio_sr = 0);
 
   /**
@@ -147,7 +147,7 @@ SpenchDenoise : public ISpenchSequencer {
    *  \return: An id number.
    *  \ingroup group_cpp
    */
-  uint64_t                        GetContextId(const DenoiseContext<float>*);
+  uint64_t                        GetContextId(const SpenchContext<float>*);
 
   /**
    *  \brief: Set an id number for a context.
@@ -156,7 +156,7 @@ SpenchDenoise : public ISpenchSequencer {
    *  \return: None.
    *  \ingroup group_cpp
    */
-  void                            SetContextId(DenoiseContext<float>*,
+  void                            SetContextId(SpenchContext<float>*,
                                                uint64_t);
 
   /**
@@ -165,7 +165,7 @@ SpenchDenoise : public ISpenchSequencer {
    *  \return: None.
    *  \ingroup group_cpp
    */
-  void                            DestroyContext(DenoiseContext<float>**);
+  void                            DestroyContext(SpenchContext<float>**);
 
   // denoising
   /**
@@ -179,7 +179,7 @@ SpenchDenoise : public ISpenchSequencer {
    */
   SpenchRetCode                   ProcessChunk(const std::vector<float>&,
                                                std::vector<float>&,
-                                               DenoiseContext<float>*) override;
+                                               SpenchContext<float>*) override;
   /**
    *  \brief: Enhance a chunk of audio with pcm16 data. Implemented as
    *          a call of analouge for fp32 data processing and requires additional
@@ -193,15 +193,15 @@ SpenchDenoise : public ISpenchSequencer {
    */
   SpenchRetCode                   ProcessChunk(const std::vector<int16_t>&,
                                                std::vector<int16_t>&,
-                                               DenoiseContext<float>*) override;
+                                               SpenchContext<float>*) override;
 
   std::vector<float>&             operator()(const std::vector<float>& chunk,
                                          std::vector<float>& ret,
-                                         DenoiseContext<float>* ctx) override;
+                                         SpenchContext<float>* ctx) override;
 
   std::vector<int16_t>&           operator()(const std::vector<int16_t>& chunk16,
                                              std::vector<int16_t>& ret16,
-                                             DenoiseContext<float>* ctx) override;
+                                             SpenchContext<float>* ctx) override;
   /**
    *  \brief: Retrieve final chunks with float point data. If model has a future
    *          context, the method enhances and returns remaining data from a
@@ -214,7 +214,7 @@ SpenchDenoise : public ISpenchSequencer {
    *  \ingroup group_cpp
    */
   SpenchRetCode                   GetFinalChunk(std::vector<float>& ret,
-                                                DenoiseContext<float>* ctx) override;
+                                                SpenchContext<float>* ctx) override;
 
   /**
    *  \brief: Retrieve final chunks with pcm16 data. If model has a future
@@ -228,13 +228,13 @@ SpenchDenoise : public ISpenchSequencer {
    *  \ingroup group_cpp
    */
   SpenchRetCode                   GetFinalChunk(std::vector<int16_t>& ret16,
-                                                DenoiseContext<float>* ctx) override;
+                                                SpenchContext<float>* ctx) override;
 
   std::vector<float>&             operator()(std::vector<float>& ret,
-                                             DenoiseContext<float>* ctx) override;
+                                             SpenchContext<float>* ctx) override;
 
   std::vector<int16_t>&           operator()(std::vector<int16_t>& ret16,
-                                             DenoiseContext<float>* ctx) override;
+                                             SpenchContext<float>* ctx) override;
 
  private:
   std::unique_ptr<DenoiseScheduler> m_sheduler;
@@ -254,31 +254,31 @@ SpenchAudioProcess : public ISpenchSequencer {
  public:
   SpenchRetCode ProcessChunk(const std::vector<float>& chunk,
                              std::vector<float>& ret,
-                             DenoiseContext<float>* ctx = nullptr) override;
+                             SpenchContext<float>* ctx = nullptr) override;
 
   SpenchRetCode ProcessChunk(const std::vector<int16_t>& chunk16,
                              std::vector<int16_t>& ret16,
-                             DenoiseContext<float>* ctx = nullptr) override;
+                             SpenchContext<float>* ctx = nullptr) override;
 
   std::vector<float>& operator() (const std::vector<float>& chunk,
                                   std::vector<float>& ret,
-                                  DenoiseContext<float>* ctx = nullptr) override;
+                                  SpenchContext<float>* ctx = nullptr) override;
 
   std::vector<int16_t>& operator() (const std::vector<int16_t>& chunk16,
                                     std::vector<int16_t>& ret16,
-                                    DenoiseContext<float>* ctx = nullptr) override;
+                                    SpenchContext<float>* ctx = nullptr) override;
 
   SpenchRetCode GetFinalChunk(std::vector<float>& ret,
-                              DenoiseContext<float>* ctx = nullptr) override;
+                              SpenchContext<float>* ctx = nullptr) override;
 
   SpenchRetCode GetFinalChunk(std::vector<int16_t>& ret16,
-                              DenoiseContext<float>* ctx = nullptr) override;
+                              SpenchContext<float>* ctx = nullptr) override;
 
   std::vector<float>& operator()(std::vector<float>& ret,
-                                 DenoiseContext<float>* ctx = nullptr) override;
+                                 SpenchContext<float>* ctx = nullptr) override;
 
   std::vector<int16_t>& operator() (std::vector<int16_t>& chunk16,
-                                    DenoiseContext<float>* ctx = nullptr) override;
+                                    SpenchContext<float>* ctx = nullptr) override;
 
  public:
   /**

@@ -47,7 +47,7 @@ InferenceRunner::~InferenceRunner() {
 }
 
 
-void InferenceRunner::Infer(spench::DenoiseTask* denoise_task) {
+void InferenceRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_task) {
     m_engine_runner_ptr->Infer(denoise_task);
   } else {

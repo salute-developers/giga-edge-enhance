@@ -8,16 +8,16 @@
 #include <functional>
 #include "spench/util/onnx/base_onnx_runner.h"
 #include "spench/util/onnx/onnx_env.h"
-#include "spench/src/task.h"
-#include "spench/src/denoise_context.h"
+#include "spench/src/spench_task.h"
+#include "spench/src/spench_context.h"
 
 namespace util {
 namespace onnx {
 class SpenchQOnnxRunner: public BaseOnnxRunner {
-  void InitOutputTensors(spench::DenoiseTaskData& data);
+  void InitOutputTensors(spench::SpenchTaskData& data);
 
   template<typename T>
-  void ParseResults(std::vector<Ort::Value>& network_output, spench::DenoiseTaskData& data) {
+  void ParseResults(std::vector<Ort::Value>& network_output, spench::SpenchTaskData& data) {
     if (m_model_params.m_model_outputs.size() != network_output.size()) {
       throw("Model output error");
     }
@@ -56,11 +56,11 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
                              bool on_gpu = false);
   void PrepareInputInPlace(std::vector<float>& mag,
                            std::vector<std::vector<float>*>& inputs,
-                           spench::DenoiseContext<float>* denoise_context) override;
+                           spench::SpenchContext<float>* denoise_context) override;
 
   template<typename T>
   void WarmUp() {
-    spench::DenoiseTask dummy_task;
+    spench::SpenchTask dummy_task;
     std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>());
     dummy_task.m_data.m_context = ctx.get();
     std::vector<std::vector<T>*> inputs;
@@ -76,14 +76,14 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
     BaseOnnxRunner::WarmUp<T>(inputs);
   }
 
-  void Infer(spench::DenoiseTask* denoise_task) override;
+  void Infer(spench::SpenchTask* denoise_task) override;
 };
 
 class SpenchFOnnxRunner: public BaseOnnxRunner {
-  void InitOutputTensors(spench::DenoiseTaskData& data);
+  void InitOutputTensors(spench::SpenchTaskData& data);
 
   template<typename T>
-  void ParseResults(std::vector<Ort::Value>& network_output, spench::DenoiseTaskData& data) {
+  void ParseResults(std::vector<Ort::Value>& network_output, spench::SpenchTaskData& data) {
     if (m_model_params.m_model_outputs.size() != network_output.size()) {
       throw("Model output error");
     }
@@ -127,12 +127,12 @@ class SpenchFOnnxRunner: public BaseOnnxRunner {
   // change two last arguments
   void PrepareInputInPlace(std::vector<float>& mag,
                            std::vector<std::vector<float>*>& inputs,
-                           spench::DenoiseContext<float>* denoise_context) override;
-  void Infer(spench::DenoiseTask* denoise_task) override;
+                           spench::SpenchContext<float>* denoise_context) override;
+  void Infer(spench::SpenchTask* denoise_task) override;
 
   template<typename T>
   void WarmUp() {
-    spench::DenoiseTask dummy_task;
+    spench::SpenchTask dummy_task;
     std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>());
     dummy_task.m_data.m_context = ctx.get();
 

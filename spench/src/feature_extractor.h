@@ -8,7 +8,7 @@
 #include "spench/src/windowing.h"
 #include "spench/src/fft_calculator.h"
 #include "spench/src/ifft_calculator.h"
-#include "spench/src/denoise_context.h"
+#include "spench/src/spench_context.h"
 
 namespace spench {
 namespace fe {
