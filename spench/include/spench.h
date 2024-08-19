@@ -11,7 +11,7 @@
 #include "spench/include/stream_stat.h"
 
 namespace spench {
-class DenoiseScheduler;
+class DenoiserAudioHandler;
 class AudioProcessing;
 template<typename T>
 struct SpenchContext;
@@ -237,7 +237,7 @@ SpenchDenoise : public ISpenchSequencer {
                                              SpenchContext<float>* ctx) override;
 
  private:
-  std::unique_ptr<DenoiseScheduler> m_sheduler;
+  std::unique_ptr<DenoiserAudioHandler> m_handler;
 };
 
 /**
