@@ -1,5 +1,5 @@
-#include "spench/src/base_audio_handler.h"
 #include "spench/src/denoiser_audio_handler.h"
+#include "spench/src/dereverberator_audio_handler.h"
 #include <catch.hpp>
 #include <iostream>
 #include "tests/src/utils.h"
@@ -22,12 +22,20 @@ struct TestHandler {
     orig.m_handler = nullptr;
   }
 
-  TestHandler& InitScheduler(const std::string& config_path) {
+  TestHandler& InitDenoserHandler(const std::string& config_path) {
     std::string config = m_kBase + "config/" + config_path;
     m_handler = std::unique_ptr<spench::BaseAudioHandler>(
                                                 new spench::DenoiserAudioHandler(config));
     return *this;
   }
+
+  TestHandler& InitDereverberatorHandler(const std::string& config_path) {
+    std::string config = m_kBase + "config/" + config_path;
+    m_handler = std::unique_ptr<spench::BaseAudioHandler>(
+                                                new spench::DereverberatorAudioHandler(config));
+    return *this;
+  }
+
   TestHandler& SetWav(const std::string& wav_path) {
     std::string full_wav_path = m_kBase + "wavs/" + wav_path;
     loadWavFx(full_wav_path.c_str(), m_wav_data);
@@ -35,30 +43,41 @@ struct TestHandler {
   }
 };
 
-TEST_CASE("FAIL Run scheduler with exception from fe runner [scheduler]") {
+TEST_CASE("FAIL Run denoiser handler with exception from fe runner [denoiser handler]") {
   REQUIRE_THROWS_WITH(TestHandler()
-      .InitScheduler("test_configuration_with_incorrect_sampling_freq.yaml"),
+      .InitDenoserHandler("test_configuration_with_incorrect_sampling_freq.yaml"),
       "Config reading error. Sampling frequency is not a scalar!");
 }
 
-TEST_CASE("FAIL Run scheduler with exception from inference runner [scheduler]") {
+TEST_CASE("FAIL Run denoiser handler with exception from inference runner [denoiser handler]") {
   REQUIRE_THROWS_WITH(TestHandler()
-      .InitScheduler("test_configuration_with_incorrect_model_path.yaml"),
+      .InitDenoserHandler("test_configuration_with_incorrect_model_path.yaml"),
       "Config reading error. Model path parameter is not a single string!");
 }
 
-TEST_CASE("FAIL Run scheduler with exception for incorrect config path [scheduler]") {
+TEST_CASE("FAIL Run denoiser handler with exception for incorrect config path [denoiser handler]") {
   REQUIRE_THROWS_WITH(TestHandler()
-      .InitScheduler("config.json"), "Due to errors denoiser could not be created! ret_code: -10");
+      .InitDenoserHandler("config.json"), "Due to errors denoiser could not be created! ret_code: -10");
 }
 
-// TEST_CASE("FAIL Run scheduler with exception for incorrect model type [scheduler]") {
-//   CHECK_THROWS_WITH(TestHandler()
-//       .InitScheduler("test_configuration_with_incorrect_model_type.yaml"),
-//                                             "Model type must be in [\"best_quality\", \"best_speed\"]");
-// }
+TEST_CASE("FAIL Run dereverberator handler with exception from fe runner [dereverberator handler]") {
+  REQUIRE_THROWS_WITH(TestHandler()
+      .InitDereverberatorHandler("test_configuration_with_incorrect_sampling_freq.yaml"),
+      "Config reading error. Sampling frequency is not a scalar!");
+}
 
-TEST_CASE("SUCCEED Create frame [scheduler]") {
+TEST_CASE("FAIL Run dereverberator handler with exception from inference runner [dereverberator handler]") {
+  REQUIRE_THROWS_WITH(TestHandler()
+      .InitDereverberatorHandler("test_configuration_with_incorrect_model_path.yaml"),
+      "Config reading error. Model path parameter is not a single string!");
+}
+
+TEST_CASE("FAIL Run dereverberator handler with exception for incorrect config path [dereverberator handler]") {
+  REQUIRE_THROWS_WITH(TestHandler()
+      .InitDereverberatorHandler("config.json"), "Due to errors denoiser could not be created! ret_code: -10");
+}
+
+TEST_CASE("SUCCEED Create frame [denoiser handler]") {
   std::vector<float> input_chunk = {249.0, 250.0, 251.0, 252.0, 253.0, 254.0, 255.0};
   std::vector<float> gt_reversed_chunk = {0,     255.0, 254.0, 253.0, 252.0,
                                           251.0, 250.0, 249.0, 250.0,
@@ -68,13 +87,13 @@ TEST_CASE("SUCCEED Create frame [scheduler]") {
   IsVectorsClose(reversed_chunk, gt_reversed_chunk, 1.0);
 }
 
-TEST_CASE("FAIL Run scheduler with error for incorrect input lengh [scheduler]") {
+TEST_CASE("FAIL Run denoiser handler with error for incorrect input lengh [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_best_quality_tflite_16khz.yaml"));
+                          InitDenoserHandler("default_configuration_best_quality_tflite_16khz.yaml"));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_best_quality_onnx_16khz.yaml"));
+                          InitDenoserHandler("default_configuration_best_quality_onnx_16khz.yaml"));
   #endif
 
   spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
@@ -87,13 +106,13 @@ TEST_CASE("FAIL Run scheduler with error for incorrect input lengh [scheduler]")
   sheduler_test_env.m_handler->DestroyContext(&ctx);
 }
 
-TEST_CASE("SUCCEED Change number of engine threads [scheduler]") {
+TEST_CASE("SUCCEED Change number of engine threads [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_best_quality_tflite_16khz.yaml"));
+                          InitDenoserHandler("default_configuration_best_quality_tflite_16khz.yaml"));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_best_quality_onnx_16khz.yaml"));
+                          InitDenoserHandler("default_configuration_best_quality_onnx_16khz.yaml"));
   #endif
 
   const uint32_t kDefaultThreadsNum = 4;
@@ -101,13 +120,27 @@ TEST_CASE("SUCCEED Change number of engine threads [scheduler]") {
   REQUIRE_NOTHROW(sheduler_test_env.m_handler->ReloadConfig());
 }
 
-TEST_CASE("SUCCEED Run denoise and check zero outputs with the best quality model [scheduler]") {
+TEST_CASE("SUCCEED Change number of engine threads [dereverberator handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_best_quality_tflite_16khz.yaml"));
+                          InitDereverberatorHandler("default_configuration_best_quality_tflite_16khz.yaml"));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_best_quality_onnx_16khz.yaml"));
+                          InitDereverberatorHandler("default_configuration_best_quality_onnx_16khz.yaml"));
+  #endif
+
+  const uint32_t kDefaultThreadsNum = 4;
+  CHECK(kDefaultThreadsNum == sheduler_test_env.m_handler->GetEngineThreadsNum());
+  REQUIRE_NOTHROW(sheduler_test_env.m_handler->ReloadConfig());
+}
+
+TEST_CASE("SUCCEED Run denoise and check zero outputs with the best quality model [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_best_quality_tflite_16khz.yaml"));
+  #else
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_best_quality_onnx_16khz.yaml"));
   #endif
 
   spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
@@ -147,13 +180,13 @@ TEST_CASE("SUCCEED Run denoise and check zero outputs with the best quality mode
   sheduler_test_env.m_handler->DestroyContext(&ctx);
 }
 
-TEST_CASE("SUCCEED Run denoise and check first non-zero output with the best quality model [scheduler]") {
+TEST_CASE("SUCCEED Run denoise and check first non-zero output with the best quality model [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_best_quality_tflite_16khz.yaml"));
+                          InitDenoserHandler("default_configuration_best_quality_tflite_16khz.yaml"));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_best_quality_onnx_16khz.yaml"));
+                          InitDenoserHandler("default_configuration_best_quality_onnx_16khz.yaml"));
   #endif
 
   spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
@@ -180,13 +213,13 @@ TEST_CASE("SUCCEED Run denoise and check first non-zero output with the best qua
   sheduler_test_env.m_handler->DestroyContext(&ctx);
 }
 
-TEST_CASE("SUCCEED Check finalize chunk for the best quality model [scheduler]") {
+TEST_CASE("SUCCEED Check finalize chunk for the best quality model [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_best_quality_tflite_16khz.yaml"));
+                          InitDenoserHandler("default_configuration_best_quality_tflite_16khz.yaml"));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_best_quality_onnx_16khz.yaml"));
+                          InitDenoserHandler("default_configuration_best_quality_onnx_16khz.yaml"));
   #endif
 
   spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
@@ -203,13 +236,13 @@ TEST_CASE("SUCCEED Check finalize chunk for the best quality model [scheduler]")
   sheduler_test_env.m_handler->DestroyContext(&ctx);
 }
 
-TEST_CASE("SUCCEED Run denoise and check finalize chunk for the best quality model [scheduler]") {
+TEST_CASE("SUCCEED Run denoise and check finalize chunk for the best quality model [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_best_quality_tflite_16khz.yaml"));
+                          InitDenoserHandler("default_configuration_best_quality_tflite_16khz.yaml"));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_best_quality_onnx_16khz.yaml"));
+                          InitDenoserHandler("default_configuration_best_quality_onnx_16khz.yaml"));
   #endif
 
   spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
@@ -243,13 +276,13 @@ TEST_CASE("SUCCEED Run denoise and check finalize chunk for the best quality mod
   sheduler_test_env.m_handler->DestroyContext(&ctx);
 }
 
-TEST_CASE("SUCCEED Run denoise and check finalize chunk for the fast model [scheduler]") {
+TEST_CASE("SUCCEED Run denoise and check finalize chunk for the fast model [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_fast_tflite_24khz.yaml"));
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitScheduler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
   #endif
 
   spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
