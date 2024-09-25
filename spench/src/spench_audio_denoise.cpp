@@ -11,9 +11,10 @@ SpenchDenoise::SpenchDenoise(const char* config_file,
                            const char* password,
                            const char* checksum) {
   m_handler =
-     std::make_unique<spench::DenoiserAudioHandler>(std::string(config_file),
-                                                    std::string(password),
-                                                    std::string(checksum));
+     std::make_unique<spench::DenoiserAudioHandler>(
+                                                std::string(config_file),
+                                                std::string(password),
+                                                std::string(checksum));
 }
 
 SpenchDenoise::SpenchDenoise(SpenchDenoise&& orig):
