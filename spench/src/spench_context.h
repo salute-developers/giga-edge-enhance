@@ -7,6 +7,7 @@
 #include <set>
 #include <tuple>
 #include <memory>
+#include <utility>
 #include "spench/util/sound/sound_stream.h"
 #include "spench/include/stream_stat.h"
 
@@ -40,6 +41,17 @@ struct ComplexNumber {
     std::valarray<T> valarray_mag = std::sqrt(std::pow(real, exp) + std::pow(imag, exp));
     std::vector<T> vector_mag(std::begin(valarray_mag), std::end(valarray_mag));
     return vector_mag;
+  }
+  std::vector<T> getSpec() {
+    std::vector<float> result;
+    result.reserve(real.size() + imag.size());
+
+    // Copy real part
+    result.insert(result.end(), std::begin(real), std::end(real));
+    // Copy imag part
+    result.insert(result.end(), std::begin(imag), std::end(imag));
+
+    return std::move(result);
   }
 };
 
@@ -81,8 +93,6 @@ struct DenoiseContextF: public SpenchContext<T> {
 
 template <typename T>
 struct DereverbContext: public SpenchContext<T> {
-  std::vector<T> m_lstm_hidden;
-  std::vector<T> m_lstm_cell_state;
   std::vector<T> m_noisy_spec;
   std::vector<T> m_prev_out;
 };
