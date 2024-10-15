@@ -1306,6 +1306,35 @@ TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with fast onnx mode
 TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with dereverb onnx model (audio 48 kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_dereverberation_onnx_48khz.yaml"));
+  std::vector<float> noisy_spec_5_old_real;
+  std::vector<float> noisy_spec_5_old_imag;
+  std::vector<float> noisy_frame_new_real;
+  std::vector<float> noisy_frame_new_imag;
+  std::vector<float> noisy_spec_for_model_input_5_new;
+  std::vector<std::vector<float>*> inputs;
+
+  data.LoadDataFromBin("1_noisy_spec_5_old_real.dump", noisy_spec_5_old_real);
+  data.LoadDataFromBin("1_noisy_spec_5_old_imag.dump", noisy_spec_5_old_imag);
+  data.LoadDataFromBin("1_noisy_spec_1_new_real.dump", noisy_frame_new_real);
+  data.LoadDataFromBin("1_noisy_spec_1_new_imag.dump", noisy_frame_new_imag);
+  data.LoadDataFromBin("1_noisy_spec_5_new.dump", noisy_spec_for_model_input_5_new);
+
+  std::unique_ptr<spench::DereverbContext<float>> ctx(new spench::DereverbContext<float>);
+  spench::SpenchContext<float>* spench_contex = ctx.get();
+  // concat real and imag for previous spec
+  std::vector<float> spec = noisy_spec_5_old_real;
+  spec.insert(std::end(spec), std::begin(noisy_spec_5_old_imag), std::end(noisy_spec_5_old_imag));
+  // pass resulted spec
+  ctx.get()->m_noisy_spec = spec;
+
+  // concat real and imag parts for input frame
+  std::vector<float> frame = noisy_frame_new_real;
+  frame.insert(std::end(frame), std::begin(noisy_frame_new_imag), std::end(noisy_frame_new_imag));
+
+  // pass all inputs
+  data.m_spench_model_runner->PrepareInputInPlace(frame, inputs, spench_contex);
+
+  IsVectorsClose(ctx.get()->m_noisy_spec, noisy_spec_for_model_input_5_new, 0.000001);
 }
 
 TEST_CASE("SUCCEED Run fast onnx model with real data and check first two iterations (audio 24 kHz) [onnx runner]") {
