@@ -214,7 +214,6 @@ TEST_CASE("SUCCEED Run single dummy inference for dereverb model [onnx]") {
     std::cout << tmp_name << std::endl;
     input_shapes.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
     input_types.push_back(data.m_denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetElementType());
-    std::cout << "Input " << input_shapes[0][2] << std::endl;
   }
 
   for (size_t i = 0; i < data.m_denoiser->GetOutputCount(); ++i) {
@@ -1169,6 +1168,41 @@ TEST_CASE("SUCCEED Run the best quality model and check network outputs (audio 1
 TEST_CASE("SUCCEED Run the dereverb model and check network outputs (audio 48kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_dereverberation_onnx_48khz.yaml"));
+  std::valarray<float> real;
+  std::valarray<float> imag;
+  std::vector<float> noisy_spec_5_old_real;
+  std::vector<float> noisy_spec_5_old_imag;
+  std::vector<float> noisy_spec_for_model_input_5_new;
+  std::vector<float> gt_model_output_real;
+  std::vector<float> gt_model_output_imag;
+
+  data.LoadDataFromBin("1_noisy_spec_5_old_real.dump", noisy_spec_5_old_real);
+  data.LoadDataFromBin("1_noisy_spec_5_old_imag.dump", noisy_spec_5_old_imag);
+  data.LoadDataFromBin("1_noisy_spec_1_new_real.dump", real);
+  data.LoadDataFromBin("1_noisy_spec_1_new_imag.dump", imag);
+  data.LoadDataFromBin("1_noisy_spec_5_new.dump", noisy_spec_for_model_input_5_new);
+  data.LoadDataFromBin("1_enhanced_frame_real.dump", gt_model_output_real);
+  data.LoadDataFromBin("1_enhanced_frame_imag.dump", gt_model_output_imag);
+
+  std::vector<float> spec = noisy_spec_5_old_real;
+  spec.insert(std::end(spec), std::begin(noisy_spec_5_old_imag), std::end(noisy_spec_5_old_imag));
+
+
+  spench::SpenchTask dereverb_task;
+  std::unique_ptr<spench::DereverbContext<float>> ctx(new spench::DereverbContext<float>);
+  dereverb_task.m_data.m_context = ctx.get();
+  // pass resulted spec
+  ctx.get()->m_noisy_spec = spec;
+  dereverb_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  dereverb_task.m_stage = spench::PipelineStage::SPECTROGRAM;
+
+  data.m_spench_model_runner->Infer(&dereverb_task);
+
+  IsVectorsClose(ctx.get()->m_noisy_spec, noisy_spec_for_model_input_5_new, 0.000001);
+
+  IsVectorsClose(gt_model_output_real, dereverb_task.m_data.m_network_output.real, 1.00001);
+  IsVectorsClose(gt_model_output_imag, dereverb_task.m_data.m_network_output.imag, 1.00001);
+  REQUIRE(dereverb_task.m_stage == spench::PipelineStage::SKIPPED_WAV);
 }
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION

@@ -51,7 +51,7 @@ struct ComplexNumber {
     // Copy imag part
     result.insert(result.end(), std::begin(imag), std::end(imag));
 
-    return std::move(result);
+    return result;
   }
 };
 
