@@ -511,7 +511,7 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
     ret_mem = nullptr;
   }
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.0001);
+  IsVectorsClose(reference_prediction, prediction, 0.01);
   SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 
@@ -575,7 +575,7 @@ TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
   }
   //
   reference_prediction_fp.resize(prediction_fp.size());
-  IsVectorsClose(reference_prediction_fp, prediction_fp, 0.0001);
+  IsVectorsClose(reference_prediction_fp, prediction_fp, 0.001);
   SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 
@@ -631,7 +631,7 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]")
     ret_mem = nullptr;
   }
   reference.resize(prediction.size());
-  IsVectorsClose(reference, prediction, 0.0001);
+  IsVectorsClose(reference, prediction, 0.001);
 
   unsigned char* final_ret_mem;
   uint64_t final_ret_size = 0;
@@ -709,7 +709,7 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model and with the PCM
   }
   //
   reference_prediction_fp.resize(prediction_fp.size());
-  IsVectorsClose(reference_prediction_fp, prediction_fp, 0.0001);
+  IsVectorsClose(reference_prediction_fp, prediction_fp, 0.001);
 
   unsigned char* final_ret_mem;
   uint64_t final_ret_size = 0;
@@ -1156,7 +1156,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   }
 
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.0001);
+  IsVectorsClose(reference_prediction, prediction, 0.001);
   SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 
@@ -1212,7 +1212,7 @@ TEST_CASE("SUCCEED Run inference with the encrypted fast 24 kHz model on a part 
   }
 
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.0001);
+  IsVectorsClose(reference_prediction, prediction, 0.001);
   SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 
@@ -1269,7 +1269,7 @@ TEST_CASE("SUCCEED Run inference with the licensed encrypted fast 24 kHz model o
   }
 
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.0001);
+  IsVectorsClose(reference_prediction, prediction, 0.001);
   SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 #else

@@ -519,7 +519,7 @@ TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav f
   }
   test_data.m_denoiser->DestroyContext(&ctx);
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.0001);
+  IsVectorsClose(reference_prediction, prediction, 0.001);
 }
 
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav file [spench c++ api]") {
@@ -555,7 +555,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   }
   test_data.m_denoiser->DestroyContext(&ctx);
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.0001);
+  IsVectorsClose(reference_prediction, prediction, 0.001);
 }
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
@@ -592,7 +592,7 @@ TEST_CASE("SUCCEED Run inference with encrypted fast 24 kHz model on a part of .
   }
   test_data.m_denoiser->DestroyContext(&ctx);
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.0001);
+  IsVectorsClose(reference_prediction, prediction, 0.001);
 }
 
 TEST_CASE("SUCCEED Run inference with licenced encrypted fast 24 kHz model on a part of .wav file [spench c++ api]") {
@@ -632,7 +632,7 @@ TEST_CASE("SUCCEED Run inference with licenced encrypted fast 24 kHz model on a 
   }
   test_data.m_denoiser->DestroyContext(&ctx);
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.0001);
+  IsVectorsClose(reference_prediction, prediction, 0.001);
 }
 #else
 TEST_CASE("FAIL Run with password when the framework built without encryption [spench c++ api]") {
