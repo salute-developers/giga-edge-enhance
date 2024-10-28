@@ -1,26 +1,9 @@
-export type Logger = {
-    debug: (...data: unknown[]) => void;
-    error: (...data: unknown[]) => void;
-};
+export interface TypedMessageEvent<DType> extends MessageEvent {
+    data: DType;
+}
 
-export type WebDenoiserPerformanceMonitor = {
-    chunkProcessTimeHistogram: {
-        addValue: (value: number) => void;
-    };
-    meanChunkCountPerSecond: {
-        tick: () => void;
-        start: () => void;
-        stop: () => void;
-    };
-};
-
-export type FeatureMetrics = {
-    reportDenoiserWasmDownloadTime: (elapsedMs: number) => void;
-    reportDenoiserWasmDataDownloadTime: (elapsedMs: number) => void;
-    reportDenoiserRuntimeInitTime: (elapsedMs: number) => void;
-};
-
-export async function downloadFileAsBuffer(url: string): Promise<[ArrayBuffer, number]> {
+// TODO retries (use ky), abort on
+export async function downloadFileAsBuffer(url: URL): Promise<[ArrayBuffer, number]> {
     const start = performance.now();
 
     const response = await fetch(url);

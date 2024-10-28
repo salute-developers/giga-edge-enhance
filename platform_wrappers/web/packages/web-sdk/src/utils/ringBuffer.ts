@@ -1,73 +1,55 @@
 class RingBuffer {
-    capacity: number;
+    readonly #capacity: number;
 
-    size: number;
+    readonly #buffer: Float32Array;
 
-    _buffer: Float32Array;
+    #size = 0;
 
-    _write_index: number;
+    #writeIndex = 0;
 
-    _read_index: number;
+    #readIndex = 0;
 
     constructor(capacity: number) {
-        // assert(capacity % 384 == 0);
-
-        this.capacity = capacity;
-        this.size = 0;
-
-        this._buffer = new Float32Array(capacity);
-        this._write_index = 0;
-        this._read_index = 0;
+        this.#capacity = capacity;
+        this.#buffer = new Float32Array(capacity);
     }
 
-    push_128(input: Float32Array): boolean {
-        return this._push(input, 128);
+    get size(): number {
+        return this.#size;
     }
 
-    push_384(input: Float32Array): boolean {
-        return this._push(input, 384);
+    clear(): void {
+        this.#size = 0;
+        this.#readIndex = 0;
+        this.#writeIndex = 0;
     }
 
-    pull_128(output: Float32Array, startIndex = 0): boolean {
-        return this._pull(output, startIndex, 128);
-    }
-
-    pull_384(output: Float32Array, startIndex = 0): boolean {
-        return this._pull(output, startIndex, 384);
-    }
-
-    _push(input: Float32Array, size: number): boolean {
-        this._buffer.set(input, this._write_index);
-        this._write_index = (this._write_index + size) % this.capacity;
+    push(input: Float32Array, size: number = input.length): boolean {
+        this.#buffer.set(input, this.#writeIndex);
+        this.#writeIndex = (this.#writeIndex + size) % this.#capacity;
 
         let overflow = false;
 
-        if (this.size + size > this.capacity) {
+        if (this.#size + size > this.#capacity) {
             overflow = true;
-            this._read_index = (this._read_index + size) % this.capacity;
+            this.#readIndex = (this.#readIndex + size) % this.#capacity;
         } else {
-            this.size += size;
+            this.#size += size;
         }
 
         return overflow;
     }
 
-    _pull(output: Float32Array, startIndex: number, size: number): boolean {
-        if (this.size >= size) {
-            this.size -= size;
-            output.set(this._buffer.subarray(this._read_index, this._read_index + size), startIndex);
-            this._read_index = (this._read_index + size) % this.capacity;
+    pull(output: Float32Array, startIndex: number, size: number): boolean {
+        if (this.#size >= size) {
+            this.#size -= size;
+            output.set(this.#buffer.subarray(this.#readIndex, this.#readIndex + size), startIndex);
+            this.#readIndex = (this.#readIndex + size) % this.#capacity;
 
             return true;
         }
 
         return false;
-    }
-
-    clear(): void {
-        this.size = 0;
-        this._read_index = 0;
-        this._write_index = 0;
     }
 }
 

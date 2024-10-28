@@ -1,87 +1,108 @@
 const path = require('node:path');
 
-const baseConfig = {
-    mode: process.env.NODE_ENV || 'development',
-    devtool: 'source-map',
-    resolve: {
-        extensions: ['.ts', '.js'],
-        alias: {
-            'wasm-wrapper': path.resolve(__dirname, 'lib/Spench'),
-        },
-        fallback: {
-            crypto: false,
-        },
-    },
-    module: {
-        rules: [
-            {
-                loader: require.resolve('babel-loader'),
-                test: /\.(js|ts)$/,
-                exclude: /node_modules/,
-                options: {
-                    presets: [
-                        [
-                            '@babel/preset-env',
-                            {
-                                useBuiltIns: 'entry',
-                                corejs: 3,
-                                exclude: ['transform-typeof-symbol'],
-                                // Minimum targets for AudioWorklet
-                                targets: {
-                                    chrome: '66',
-                                    edge: '79',
-                                    safari: '14.1',
-                                    firefox: '76',
-                                    opera: '53',
-                                    android: '128',
-                                    ios: '14.5',
-                                    samsung: '9.2',
-                                },
-                            },
-                        ],
-                        '@babel/preset-typescript',
-                    ],
-                },
+const baseConfigFactory = (mode = 'development') => {
+    return {
+        mode,
+        devtool: mode === 'production' ? 'source-map' : 'eval-source-map',
+        resolve: {
+            extensions: ['.ts', '.js'],
+            alias: {
+                'wasm-wrapper': path.resolve(__dirname, 'lib/Spench'),
             },
-        ],
-    },
-    output: {
-        path: path.resolve(__dirname, 'dist/workers'),
-        filename: '[name].min.js',
-    },
+            fallback: {
+                crypto: false,
+            },
+        },
+        module: {
+            rules: [
+                {
+                    loader: require.resolve('babel-loader'),
+                    test: /\.(js|ts)$/,
+                    exclude: /node_modules/,
+                    options: {
+                        presets: [
+                            [
+                                '@babel/preset-env',
+                                {
+                                    useBuiltIns: 'entry',
+                                    corejs: 3,
+                                    exclude: ['transform-typeof-symbol'],
+                                    /**
+                                     *  TODO Maybe change to:
+                                     *  fully supports audio-api and fully supports wasm and fully supports webworkers
+                                     **/
+                                    targets: {
+                                        chrome: '66',
+                                        edge: '79',
+                                        safari: '14.1',
+                                        firefox: '76',
+                                        opera: '53',
+                                        android: '128',
+                                        ios: '14.5',
+                                        samsung: '9.2',
+                                    },
+                                },
+                            ],
+                            '@babel/preset-typescript',
+                        ],
+                    },
+                },
+            ],
+        },
+        output: {
+            path: path.resolve(__dirname, 'dist/workers'),
+            filename: '[name].min.js',
+        },
+    };
 };
 
-const spenchWorkerConfig = {
-    ...baseConfig,
-    entry: {
-        'spench-worker': './src/workers/worker/index.ts',
-    },
-    output: {
-        ...baseConfig.output,
-        globalObject: 'this',
-    },
+const spenchWorkerConfigFactory = (mode) => {
+    const baseConfig = baseConfigFactory(mode);
+
+    return {
+        ...baseConfig,
+        entry: {
+            'spench-worker': './src/workers/worker/index.ts',
+        },
+        output: {
+            ...baseConfig.output,
+            globalObject: 'this',
+        },
+    };
 };
 
-const spenchWorkletConfig = {
-    ...baseConfig,
-    entry: {
-        'spench-worklet': './src/workers/worklet/index.ts',
-    },
-    output: {
-        ...baseConfig.output,
-        globalObject: 'AudioWorkletGlobalScope',
-    },
+const spenchWorkletConfigFactory = (mode) => {
+    const baseConfig = baseConfigFactory(mode);
+
+    return {
+        ...baseConfig,
+        entry: {
+            'spench-worklet': './src/workers/worklet/index.ts',
+        },
+        output: {
+            ...baseConfig.output,
+            globalObject: 'AudioWorkletGlobalScope',
+        },
+    };
 };
 
-const normalizerConfig = {
-    ...baseConfig,
-    entry: {
-        'normalizer-worklet': './src/workers/normalizer/index.ts',
-    },
-    output: {
-        ...baseConfig.output,
-        globalObject: 'AudioWorkletGlobalScope',
-    },
+const normalizerConfigFactory = (mode) => {
+    const baseConfig = baseConfigFactory(mode);
+
+    return {
+        ...baseConfig,
+        entry: {
+            'normalizer-worklet': './src/workers/normalizer/index.ts',
+        },
+        output: {
+            ...baseConfig.output,
+            globalObject: 'AudioWorkletGlobalScope',
+        },
+    };
 };
 
-module.exports = [spenchWorkletConfig, spenchWorkerConfig, normalizerConfig];
+module.exports = (env, argv) => {
+    const { mode } = argv;
+
+    return [spenchWorkletConfigFactory(mode), spenchWorkerConfigFactory(mode), normalizerConfigFactory(mode)];
+};
