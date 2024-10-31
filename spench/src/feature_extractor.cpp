@@ -225,10 +225,13 @@ void FeatureExtractor<T>::calcEnhancedPartsInPlace(const ComplexNumber<T>& input
 
   decompressCIRMInPlace(enhanced_spec);
 
-  std::valarray<T> input_real(enhanced_spec.real);
-  std::valarray<T> input_imag(enhanced_spec.imag);
-  enhanced_spec.real = input_spec.real * input_real - input_spec.imag * input_imag;
-  enhanced_spec.imag = input_spec.imag * input_real + input_spec.real * input_imag;
+  // Use only the module of the complex mask.
+  // This will help prevent anomalies at the frame boundaries caused by the influence of the phase.
+  const auto abs_mask = enhanced_spec.getMagnitude();
+  for (uint32_t i = 0; i < abs_mask.size(); ++i) {
+    enhanced_spec.real[i] = input_spec.real[i] * abs_mask[i];
+    enhanced_spec.imag[i] = input_spec.imag[i] * abs_mask[i];
+  }
 }
 
 template <typename T>

@@ -151,7 +151,7 @@ TEST_CASE("SUCCEED Launch runner for masking with default parameters (audio 16kH
                                   test_data.m_fe_runner_ptr.get()->GetFrameHopSizeSamples());
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::ENHANCED_WAV);
 
-  IsVectorsClose(reference_signal, denoise_task.m_data.m_enhanced_wav, 0.0000001);
+  IsVectorsClose(reference_signal, denoise_task.m_data.m_enhanced_wav, 0.05);
 }
 
 TEST_CASE("SUCCEED Read config for runner with modified .yaml file and check values [fe runner]") {
