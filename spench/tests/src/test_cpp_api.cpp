@@ -9,12 +9,14 @@
 struct TestFixture {
   std::vector<float> m_wav_data;
   std::unique_ptr<spench::SpenchDenoise> m_denoiser;
+  std::unique_ptr<spench::SpenchAudioDereverb> m_dereverb;
   std::unique_ptr<spench::SpenchAudioProcess> m_dsp;
 
   const std::string m_kBase = "data/";
 
   TestFixture() :
           m_denoiser(nullptr),
+          m_dereverb(nullptr),
           m_dsp(nullptr) {}
   ~TestFixture() {
     m_denoiser.reset();
@@ -25,9 +27,11 @@ struct TestFixture {
   TestFixture(TestFixture&& orig) :
           m_wav_data(std::move(orig.m_wav_data)),
           m_denoiser(std::move(orig.m_denoiser)),
+          m_dereverb(std::move(orig.m_dereverb)),
           m_dsp(std::move(orig.m_dsp)) {
     orig.m_wav_data.clear();
     orig.m_denoiser = nullptr;
+    orig.m_dereverb = nullptr;
     orig.m_dsp = nullptr;
   }
   TestFixture& SetWav(const std::string& wav_path) {
@@ -46,6 +50,15 @@ struct TestFixture {
     return *this;
   }
 
+  TestFixture& InitDereverberator(const std::string& config_name,
+                            const std::string& password = "",
+                            const std::string& checksum = "") {
+    std::string config_path = m_kBase + "config/" + config_name;
+    m_dereverb = std::make_unique<spench::SpenchAudioDereverb>(config_path.c_str(),
+                                                               password.c_str(),
+                                                               checksum.c_str());
+    return *this;
+  }
   TestFixture& InitAudioProcessor(const std::string& config_name) {
     std::string config_path = m_kBase + "config/" + config_name;
     m_dsp = std::make_unique<spench::SpenchAudioProcess>(config_path.c_str());
@@ -1441,4 +1454,47 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [
                std::back_inserter(greater_than_0_75),
                [](float& i) { return std::fabs(i) > 0.75; });
   REQUIRE(greater_than_0_75.size() == 0);
+}
+
+TEST_CASE("SUCCEED Run inference with the dereverb 48 kHz model on a part of .wav file [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    // auto test_data = std::move(TestFixture().
+    //                            InitDereverberator("default_configuration_dereverberation_tflite_48khz.yaml").
+    //                            SetWav("reverb_with_noise_48khz.wav"));
+  #else
+    auto test_data = std::move(TestFixture().
+                               InitDereverberator("default_configuration_dereverberation_onnx_48khz.yaml").
+                               SetWav("reverb_with_noise_48khz.wav"));
+
+
+  std::vector<float> prediction;
+  std::vector<float> reference_prediction;
+  spench::SpenchContext<float>* ctx = test_data.m_dereverb->CreateContext();
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 300;
+  const uint32_t kAudio_dst_sample_rate = 48000;
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                test_data.m_dereverb->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
+  loadWavFx("data/results/wavs/dereverb_with_noise_48khz.wav", reference_prediction);
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    SpenchRetCode ret_code = test_data.m_dereverb->ProcessChunk(chunk, ret, ctx);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+  // remove context zeroes as reference does not include that
+  prediction.erase(prediction.begin(),
+                   prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
+  //
+  test_data.m_dereverb->DestroyContext(&ctx);
+  reference_prediction.resize(prediction.size());
+
+  IsVectorsClose(reference_prediction, prediction, 0.01);
+  #endif
 }
