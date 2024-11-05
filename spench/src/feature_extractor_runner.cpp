@@ -35,57 +35,79 @@ void FeatureExtractorRunner::ReadConfig(const YAML::Node& yaml_config) {
   m_params.ReadFeatureParamsNode(yaml_config);
 }
 
-void FeatureExtractorRunner::Run(spench::SpenchTask* denoise_task) {
-  auto& denoise_data = denoise_task->m_data;
-  auto& denoise_context = denoise_data.m_context;
+void FeatureExtractorRunner::Run(spench::SpenchTask* spench_task) {
+  auto& spench_data = spench_task->m_data;
+  auto& spench_context = spench_data.m_context;
 
-  if (denoise_task->m_stage == PipelineStage::NOISY_WAV) {
-    if (denoise_data.m_waveform.size() == 0) {
+  if (spench_task->m_stage == PipelineStage::ORIG_CHUNK) {
+    if (spench_data.m_waveform.size() == 0) {
       // error
       throw("Input signal is empty!");
     }
 
-    m_feature_extractor_ptr->STFTApply(denoise_data.m_waveform,
-                                denoise_data.m_input_spec);
+    m_feature_extractor_ptr->STFTApply(spench_data.m_waveform,
+                                spench_data.m_input_spec);
 
-    if (denoise_data.m_input_spec.size() < 1) {
+    if (spench_data.m_input_spec.size() < 1) {
       // error
       throw("Spectrogram is calculated incorectly! Something with input data!");
     }
 
-    denoise_task->m_stage = PipelineStage::SPECTROGRAM;
-  } else if (denoise_task->m_stage == PipelineStage::PREDICTIONS) {
-    m_feature_extractor_ptr->calcEnhancedPartsInPlace(denoise_context->m_prev_features.front(),
-                                                      denoise_data.m_network_output);
+    spench_task->m_stage = PipelineStage::FOURIER_TRANSFORMED_SPEC;
+  } else if (spench_task->m_stage == PipelineStage::PREDICTED_MASK) {
+    m_feature_extractor_ptr->calcEnhancedPartsInPlace(spench_context->m_prev_features.front(),
+                                                      spench_data.m_new_spec);
 
-    uint32_t feat_num = denoise_context->m_prev_masked_spectrogram.real.size();
+    uint32_t feat_num = spench_context->m_prev_spectrogram.real.size();
     if (feat_num == 0) {
-       denoise_context->m_prev_masked_spectrogram = denoise_data.m_network_output;
-       denoise_task->m_stage = PipelineStage::SKIPPED_WAV;
-       return;
+      spench_context->m_prev_spectrogram = spench_data.m_new_spec;
+      spench_task->m_stage = PipelineStage::SKIPPED_CHUNK;
+      return;
     }
     ComplexNumber<float> concatenatedSpec(feat_num * 2, feat_num * 2);
 
     auto previous_frame = std::slice(0, feat_num, 1);
-    concatenatedSpec.real[previous_frame] = denoise_context->m_prev_masked_spectrogram.real;
-    concatenatedSpec.imag[previous_frame] = denoise_context->m_prev_masked_spectrogram.imag;
+    concatenatedSpec.real[previous_frame] = spench_context->m_prev_spectrogram.real;
+    concatenatedSpec.imag[previous_frame] = spench_context->m_prev_spectrogram.imag;
 
     auto current_frame = std::slice(feat_num, feat_num, 1);
-    concatenatedSpec.real[current_frame] = denoise_data.m_network_output.real;
-    concatenatedSpec.imag[current_frame] = denoise_data.m_network_output.imag;
+    concatenatedSpec.real[current_frame] = spench_data.m_new_spec.real;
+    concatenatedSpec.imag[current_frame] = spench_data.m_new_spec.imag;
 
     m_feature_extractor_ptr->iSTFTApply(concatenatedSpec,
-                                denoise_data.m_enhanced_wav);
-    denoise_context->m_prev_masked_spectrogram = denoise_data.m_network_output;
-    denoise_task->m_stage = PipelineStage::ENHANCED_WAV;
+                                spench_data.m_enhanced_wav);
+    spench_context->m_prev_spectrogram = spench_data.m_new_spec;
+    spench_task->m_stage = PipelineStage::ENHANCED_CHUNK;
     #if 0
-    denoise_context->m_stat.m_snr = m_feature_extractor_ptr->calcSnrEstimation(denoise_data.m_input_spec[0],
-                                                                              denoise_data.m_network_output,
-                                                                              denoise_context->m_metrics);
+    spench_context->m_stat.m_snr = m_feature_extractor_ptr->calcSnrEstimation(spench_data.m_input_spec[0],
+                                                                              spench_data.m_new_spec,
+                                                                              spench_context->m_metrics);
     #endif
-  } else if (denoise_task->m_stage == PipelineStage::SKIPPED_WAV) {
+  } else if (spench_task->m_stage == PipelineStage::PREDICTED_SPEC) {
+    uint32_t feat_num = spench_context->m_prev_spectrogram.real.size();
+    if (feat_num == 0) {
+      spench_context->m_prev_spectrogram = spench_data.m_new_spec;
+      spench_task->m_stage = PipelineStage::SKIPPED_CHUNK;
+      return;
+    }
+
+    ComplexNumber<float> concatenatedSpec(feat_num * 2, feat_num * 2);
+
+    auto previous_frame = std::slice(0, feat_num, 1);
+    concatenatedSpec.real[previous_frame] = spench_context->m_prev_spectrogram.real;
+    concatenatedSpec.imag[previous_frame] = spench_context->m_prev_spectrogram.imag;
+
+    auto current_frame = std::slice(feat_num, feat_num, 1);
+    concatenatedSpec.real[current_frame] = spench_data.m_new_spec.real;
+    concatenatedSpec.imag[current_frame] = spench_data.m_new_spec.imag;
+
+    m_feature_extractor_ptr->iSTFTApply(concatenatedSpec,
+                                spench_data.m_enhanced_wav);
+    spench_context->m_prev_spectrogram = spench_data.m_new_spec;
+    spench_task->m_stage = PipelineStage::ENHANCED_CHUNK;
+  } else if (spench_task->m_stage == PipelineStage::SKIPPED_CHUNK) {
     // network pass the input to output and nothing to do
-    denoise_data.m_enhanced_wav.resize(m_params.NumFrameStrideSamples());
+    spench_data.m_enhanced_wav.resize(m_params.NumFrameStrideSamples());
   } else {
     throw("State is incorrect!");
   }

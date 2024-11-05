@@ -69,7 +69,7 @@ struct SpenchContext {
   StatInfo m_stat;
   std::vector<T> m_prev_input_chunk;
   std::queue<ComplexNumber<T>> m_prev_features;  // params.real_buf and params.imag_buf in python
-  ComplexNumber<T> m_prev_masked_spectrogram;  // params.prev_out in python
+  ComplexNumber<T> m_prev_spectrogram;  // params.prev_out in python
   std::unique_ptr<util::sound::ISoundStream<float, float>> m_input_sound_stream_ptr;
   std::unique_ptr<util::sound::ISoundStream<float, float>> m_output_sound_stream_ptr;
   virtual ~SpenchContext() = default;

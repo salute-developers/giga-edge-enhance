@@ -15,18 +15,19 @@ class SpenchTask;
 using TaskPtr = std::shared_ptr<spench::SpenchTask>;
 
 enum PipelineStage {
-  NOISY_WAV = 0,
-  SPECTROGRAM = 1,
-  PREDICTIONS = 2,
-  ENHANCED_WAV = 3,
-  SKIPPED_WAV = 4
+  ORIG_CHUNK = 0,
+  FOURIER_TRANSFORMED_SPEC = 1,
+  PREDICTED_MASK = 2,
+  PREDICTED_SPEC = 3,
+  ENHANCED_CHUNK = 4,
+  SKIPPED_CHUNK = 5
 };
 
 struct SpenchTaskData {
   SpenchTaskData() : m_context(nullptr) {}
   SpenchContext<float>*             m_context;
   std::vector<ComplexNumber<float>> m_input_spec;
-  ComplexNumber<float>              m_network_output;
+  ComplexNumber<float>              m_new_spec;
   std::vector<float>                m_waveform;
   std::vector<float>                m_enhanced_wav;
   // std::string                               m_error_text;
@@ -82,7 +83,7 @@ class SpenchTask {
   std::string       m_session_id;
   std::string       m_message_id;
   PipelineStage     m_stage;
-  SpenchTask(): m_stage(NOISY_WAV) {}
+  SpenchTask(): m_stage(ORIG_CHUNK) {}
 };
 
 // float Frame2Seconds(int frames, const SpenchTaskParams& params);

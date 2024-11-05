@@ -84,7 +84,7 @@ TEST_CASE("SUCCEED Launch runner for denoiser input generation with default para
   spench::SpenchTask denoise_task;
   std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
   denoise_task.m_data.m_context = ctx.get();
-  denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
+  denoise_task.m_stage = spench::PipelineStage::ORIG_CHUNK;
   std::vector<float> audio(test_data.m_wav_data.begin(),
                            test_data.m_wav_data.begin() +
                            test_data.m_fe_runner_ptr.get()->GetFrameHopSizeSamples() * kIterations);
@@ -93,7 +93,7 @@ TEST_CASE("SUCCEED Launch runner for denoiser input generation with default para
 
   test_data.m_fe_runner_ptr.get()->Run(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SPECTROGRAM);
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC);
   REQUIRE(denoise_task.m_data.m_input_spec.size() == 1);
 
   for (size_t i = 0; i < kIterations - 1 ; ++i) {
@@ -131,25 +131,25 @@ TEST_CASE("SUCCEED Launch runner for masking with default parameters (audio 16kH
   // update previous features for test
   denoise_task.m_data.m_context->m_prev_features.push(prev_features);
   denoise_task.m_data.m_context->m_prev_features.push(prev_features);
-  denoise_task.m_stage = spench::PipelineStage::PREDICTIONS;
+  denoise_task.m_stage = spench::PipelineStage::PREDICTED_MASK;
 
   REQUIRE(test_data.m_fe_runner_ptr.get()->GetSamplingFreq() == 16000);
   REQUIRE(test_data.m_fe_runner_ptr.get()->GetFrameSizeMs() == 32);
 
-  denoise_task.m_data.m_network_output.real = predicted_mask_real;
-  denoise_task.m_data.m_network_output.imag = predicted_mask_imag;
+  denoise_task.m_data.m_new_spec.real = predicted_mask_real;
+  denoise_task.m_data.m_new_spec.imag = predicted_mask_imag;
   // add random value to avoid crashes because of empty contaner
   denoise_task.m_data.m_input_spec.push_back(prev_features);
 
-  denoise_task.m_data.m_context->m_prev_masked_spectrogram.real = prev_predicted_mask_real;
-  denoise_task.m_data.m_context->m_prev_masked_spectrogram.imag = prev_predicted_mask_imag;
+  denoise_task.m_data.m_context->m_prev_spectrogram.real = prev_predicted_mask_real;
+  denoise_task.m_data.m_context->m_prev_spectrogram.imag = prev_predicted_mask_imag;
 
   REQUIRE(denoise_task.m_data.m_enhanced_wav.size() == 0);
   test_data.m_fe_runner_ptr.get()->Run(&denoise_task);
 
   REQUIRE(denoise_task.m_data.m_enhanced_wav.size() ==
                                   test_data.m_fe_runner_ptr.get()->GetFrameHopSizeSamples());
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::ENHANCED_WAV);
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::ENHANCED_CHUNK);
 
   IsVectorsClose(reference_signal, denoise_task.m_data.m_enhanced_wav, 0.05);
 }
@@ -218,7 +218,7 @@ TEST_CASE("SUCCEED Launch runner with configuration read from .yaml config (audi
   spench::SpenchTask denoise_task;
   std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
   denoise_task.m_data.m_context = ctx.get();
-  denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
+  denoise_task.m_stage = spench::PipelineStage::ORIG_CHUNK;
   std::vector<float> audio(test_data.m_wav_data.begin(),
                            test_data.m_wav_data.begin() +
                            test_data.m_fe_runner_ptr.get()->GetFrameHopSizeSamples() * kIterations);
@@ -227,7 +227,7 @@ TEST_CASE("SUCCEED Launch runner with configuration read from .yaml config (audi
 
   test_data.m_fe_runner_ptr.get()->Run(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SPECTROGRAM);
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC);
   REQUIRE(denoise_task.m_data.m_input_spec.size() == 1);
 
   for (size_t i = 0; i < kIterations - 1 ; ++i) {
@@ -246,7 +246,7 @@ TEST_CASE("SUCCEED Launch runner for iSTFT calc with skipped frame and check sta
   spench::SpenchTask denoise_task;
   std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
   denoise_task.m_data.m_context = ctx.get();
-  denoise_task.m_stage = spench::PipelineStage::SKIPPED_WAV;
+  denoise_task.m_stage = spench::PipelineStage::SKIPPED_CHUNK;
   std::vector<float> audio(test_data.m_wav_data.begin(),
                            test_data.m_wav_data.begin() +
                            test_data.m_fe_runner_ptr.get()->GetFrameHopSizeSamples() * kIterations);
@@ -255,7 +255,7 @@ TEST_CASE("SUCCEED Launch runner for iSTFT calc with skipped frame and check sta
 
   test_data.m_fe_runner_ptr.get()->Run(&denoise_task);
 
-  CHECK(denoise_task.m_stage == spench::PipelineStage::SKIPPED_WAV);
+  CHECK(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
   REQUIRE(std::vector<float>(denoise_task.m_data.m_enhanced_wav.size(), 0.0) ==
                                                  denoise_task.m_data.m_enhanced_wav);
   REQUIRE(denoise_task.m_data.m_input_spec.size() == 0);
@@ -280,24 +280,24 @@ TEST_CASE("SUCCEED Launch runner for iSTFT calc with first valid chunk and check
                            test_data.m_fe_runner_ptr.get()->GetFrameHopSizeSamples() * kIterations);
   denoise_task.m_data.m_waveform = audio;
   for (uint16_t i = 0; i < 3; ++i) {
-    denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
+    denoise_task.m_stage = spench::PipelineStage::ORIG_CHUNK;
     test_data.m_fe_runner_ptr.get()->Run(&denoise_task);
     denoise_task.m_data.m_context->m_prev_features.push(denoise_task.m_data.m_input_spec[0]);
   }
   REQUIRE(denoise_task.m_data.m_context->m_prev_features.size() == 3);
-  REQUIRE(denoise_task.m_data.m_context->m_prev_masked_spectrogram.real.size() == 0);
-  REQUIRE(denoise_task.m_data.m_context->m_prev_masked_spectrogram.imag.size() == 0);
+  REQUIRE(denoise_task.m_data.m_context->m_prev_spectrogram.real.size() == 0);
+  REQUIRE(denoise_task.m_data.m_context->m_prev_spectrogram.imag.size() == 0);
 
-  denoise_task.m_stage = spench::PipelineStage::PREDICTIONS;
+  denoise_task.m_stage = spench::PipelineStage::PREDICTED_MASK;
 
-  denoise_task.m_data.m_network_output.real = predicted_mask_real;
-  denoise_task.m_data.m_network_output.imag = predicted_mask_imag;
+  denoise_task.m_data.m_new_spec.real = predicted_mask_real;
+  denoise_task.m_data.m_new_spec.imag = predicted_mask_imag;
 
   test_data.m_fe_runner_ptr.get()->Run(&denoise_task);
-  CHECK(denoise_task.m_stage == spench::PipelineStage::SKIPPED_WAV);
-  CHECK(denoise_task.m_data.m_context->m_prev_masked_spectrogram.real.size() ==
+  CHECK(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
+  CHECK(denoise_task.m_data.m_context->m_prev_spectrogram.real.size() ==
                                                     test_data.m_fe_runner_ptr.get()->GetPowSpecFeatSizeSamples());
-  CHECK(denoise_task.m_data.m_context->m_prev_masked_spectrogram.imag.size() ==
+  CHECK(denoise_task.m_data.m_context->m_prev_spectrogram.imag.size() ==
                                                     test_data.m_fe_runner_ptr.get()->GetPowSpecFeatSizeSamples());
 }
 
@@ -316,14 +316,14 @@ TEST_CASE("SUCCEED Launch runner with configuration read from .yaml config (audi
   spench::SpenchTask denoise_task;
   std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
   denoise_task.m_data.m_context = ctx.get();
-  denoise_task.m_stage = spench::PipelineStage::NOISY_WAV;
+  denoise_task.m_stage = spench::PipelineStage::ORIG_CHUNK;
   std::vector<float> audio(test_data.m_fe_runner_ptr.get()->GetFrameHopSizeSamples() * kIterations, 0.0);
   denoise_task.m_data.m_waveform = audio;
   REQUIRE(denoise_task.m_data.m_input_spec.size() == 0);
 
   test_data.m_fe_runner_ptr.get()->Run(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SPECTROGRAM);
+  REQUIRE(denoise_task.m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC);
   REQUIRE(denoise_task.m_data.m_input_spec.size() == 1);
 
   for (size_t i = 0; i < kIterations - 1 ; ++i) {

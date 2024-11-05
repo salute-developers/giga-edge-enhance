@@ -143,8 +143,8 @@ void BaseTfliteRunner::ResizeIfNeededInPlace(std::valarray<float>& to_check,
 }
 
 void BaseTfliteRunner::InitOutputTensors(spench::SpenchTaskData& data, uint32_t size) {
-  ResizeIfNeededInPlace(data.m_network_output.real, size / 2);
-  ResizeIfNeededInPlace(data.m_network_output.imag, size / 2);
+  ResizeIfNeededInPlace(data.m_new_spec.real, size / 2);
+  ResizeIfNeededInPlace(data.m_new_spec.imag, size / 2);
 }
 
 SpenchFTfliteRunner::SpenchFTfliteRunner(const YAML::Node& yaml_config,
@@ -248,8 +248,8 @@ void SpenchFTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
         break;
       case 3:
         for (uint64_t i = 0; i < m_model_output_size[3]; i += 2) {
-          data.m_network_output.real[i / 2] = const_output_ptr[i];
-          data.m_network_output.imag[i / 2] = const_output_ptr[i + 1];
+          data.m_new_spec.real[i / 2] = const_output_ptr[i];
+          data.m_new_spec.imag[i / 2] = const_output_ptr[i + 1];
         }
         break;
       default:
@@ -274,7 +274,7 @@ void SpenchFTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
   }
   denoise_context->m_prev_features.push(denoise_data.m_input_spec[0]);
 
-  if (denoise_task->m_stage == spench::PipelineStage::SPECTROGRAM) {
+  if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
     std::vector<std::vector<float>*> inputs;
     std::vector<std::vector<float>> outputs;
     std::vector<float> mag = denoise_data.m_input_spec[0].getMagnitude();
@@ -287,14 +287,14 @@ void SpenchFTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
       ParseResults<float>(denoise_data);
     }
 
-    if (denoise_context->m_prev_masked_spectrogram.real.size() == 0) {
+    if (denoise_context->m_prev_spectrogram.real.size() == 0) {
       denoise_data.m_enhanced_wav.resize(denoise_data.m_waveform.size() / 2);
       std::fill_n(denoise_data.m_enhanced_wav.begin(), denoise_data.m_enhanced_wav.size(), 0.0);
-      denoise_task->m_stage = spench::PipelineStage::PREDICTIONS;
+      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
     } else if (denoise_context->m_prev_features.size() > m_model_params.m_network_input_ctx_len + 1) {
       throw("Incorrect number of previous states!");
     } else {
-      denoise_task->m_stage = spench::PipelineStage::PREDICTIONS;
+      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
     }
   } else {
     throw("State is not appropriate");
@@ -385,8 +385,8 @@ void SpenchQTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
         break;
       case 4:
         for (uint64_t i = 0; i < m_model_output_size[output_idx]; i += 2) {
-          data.m_network_output.real[i / 2] = const_output_ptr[i];
-          data.m_network_output.imag[i / 2] = const_output_ptr[i + 1];
+          data.m_new_spec.real[i / 2] = const_output_ptr[i];
+          data.m_new_spec.imag[i / 2] = const_output_ptr[i + 1];
         }
         break;
       default:
@@ -410,7 +410,7 @@ void SpenchQTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
     denoise_context->m_prev_features.pop();
   }
 
-  if (denoise_task->m_stage == spench::PipelineStage::SPECTROGRAM) {
+  if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
     std::vector<std::vector<float>*> inputs;
     std::vector<std::vector<float>> outputs;
     std::vector<float> mag = denoise_data.m_input_spec[0].getMagnitude();
@@ -426,14 +426,14 @@ void SpenchQTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
     if (denoise_context->m_prev_features.size() < m_model_params.m_network_input_ctx_len) {
       denoise_data.m_enhanced_wav.resize(denoise_data.m_waveform.size() / 2);
       std::fill_n(denoise_data.m_enhanced_wav.begin(), denoise_data.m_enhanced_wav.size(), 0.0);
-      denoise_task->m_stage = spench::PipelineStage::SKIPPED_WAV;
+      denoise_task->m_stage = spench::PipelineStage::SKIPPED_CHUNK;
     } else if (denoise_context->m_prev_features.size() == m_model_params.m_network_input_ctx_len &&
-               denoise_context->m_prev_masked_spectrogram.real.size() == 0) {
+               denoise_context->m_prev_spectrogram.real.size() == 0) {
       denoise_data.m_enhanced_wav.resize(denoise_data.m_waveform.size() / 2);
       std::fill_n(denoise_data.m_enhanced_wav.begin(), denoise_data.m_enhanced_wav.size(), 0.0);
-      denoise_task->m_stage = spench::PipelineStage::PREDICTIONS;
+      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
     } else {
-      denoise_task->m_stage = spench::PipelineStage::PREDICTIONS;
+      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
     }
 
     denoise_context->m_prev_features.push(denoise_data.m_input_spec[0]);
