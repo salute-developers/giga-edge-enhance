@@ -26,8 +26,8 @@ enum PipelineStage {
 struct SpenchTaskData {
   SpenchTaskData() : m_context(nullptr) {}
   SpenchContext<float>*             m_context;
-  std::vector<ComplexNumber<float>> m_input_spec;
-  ComplexNumber<float>              m_new_spec;
+  std::vector<ComplexNumber<float>> m_input_spectrogram;
+  ComplexNumber<float>              m_new_spectrogram;
   std::vector<float>                m_waveform;
   std::vector<float>                m_enhanced_wav;
   // std::string                               m_error_text;

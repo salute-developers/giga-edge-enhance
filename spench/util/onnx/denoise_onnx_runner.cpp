@@ -40,15 +40,15 @@ void SpenchQOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
 }
 
 void SpenchQOnnxRunner::InitOutputTensors(spench::SpenchTaskData& data) {
-  ResizeIfNeededInPlace(data.m_network_output.real, m_model_output_shapes[4], 2);
-  ResizeIfNeededInPlace(data.m_network_output.imag, m_model_output_shapes[4], 2);
+  ResizeIfNeededInPlace(data.m_new_spectrogram.real, m_model_output_shapes[4], 2);
+  ResizeIfNeededInPlace(data.m_new_spectrogram.imag, m_model_output_shapes[4], 2);
 }
 
 void SpenchQOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_task == nullptr || denoise_task->m_data.m_context == nullptr) {
     throw("Task data or context are not initialized!");
   }
-  if (denoise_task->m_data.m_input_spec.size() == 0) {
+  if (denoise_task->m_data.m_input_spectrogram.size() == 0) {
     throw("Input spectrogram should be calculated before this step!");
   }
   auto& denoise_data = denoise_task->m_data;
@@ -57,9 +57,9 @@ void SpenchQOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
     denoise_context->m_prev_features.pop();
   }
 
-  if (denoise_task->m_stage == spench::PipelineStage::SPECTROGRAM) {
+  if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
     std::vector<std::vector<float>*> inputs;
-    std::vector<float> mag = denoise_data.m_input_spec[0].getMagnitude();
+    std::vector<float> mag = denoise_data.m_input_spectrogram[0].getMagnitude();
     PrepareInputInPlace(mag, inputs, denoise_context);
     InitOutputTensors(denoise_data);
     std::vector<Ort::Value> outputs;
@@ -70,17 +70,17 @@ void SpenchQOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
     if (denoise_context->m_prev_features.size() < m_model_params.m_network_input_ctx_len) {
       denoise_data.m_enhanced_wav.resize(denoise_data.m_waveform.size() / 2);
       std::fill_n(denoise_data.m_enhanced_wav.begin(), denoise_data.m_enhanced_wav.size(), 0.0);
-      denoise_task->m_stage = spench::PipelineStage::SKIPPED_WAV;
+      denoise_task->m_stage = spench::PipelineStage::SKIPPED_CHUNK;
     } else if (denoise_context->m_prev_features.size() == m_model_params.m_network_input_ctx_len &&
-               denoise_context->m_prev_masked_spectrogram.real.size() == 0) {
+               denoise_context->m_prev_spectrogram.real.size() == 0) {
       denoise_data.m_enhanced_wav.resize(denoise_data.m_waveform.size() / 2);
       std::fill_n(denoise_data.m_enhanced_wav.begin(), denoise_data.m_enhanced_wav.size(), 0.0);
-      denoise_task->m_stage = spench::PipelineStage::PREDICTIONS;
+      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
     } else {
-      denoise_task->m_stage = spench::PipelineStage::PREDICTIONS;
+      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
     }
 
-    denoise_context->m_prev_features.push(denoise_data.m_input_spec[0]);
+    denoise_context->m_prev_features.push(denoise_data.m_input_spectrogram[0]);
 
   } else {
     throw("State is not appropriate");
@@ -100,8 +100,8 @@ SpenchFOnnxRunner::SpenchFOnnxRunner(const YAML::Node& yaml_config,
 
 void SpenchFOnnxRunner::InitOutputTensors(spench::SpenchTaskData& data) {
   // other outputs were resized in PrepareInputInPlace
-  ResizeIfNeededInPlace(data.m_network_output.real, m_model_output_shapes[3], 2);
-  ResizeIfNeededInPlace(data.m_network_output.imag, m_model_output_shapes[3], 2);
+  ResizeIfNeededInPlace(data.m_new_spectrogram.real, m_model_output_shapes[3], 2);
+  ResizeIfNeededInPlace(data.m_new_spectrogram.imag, m_model_output_shapes[3], 2);
 }
 
 void SpenchFOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
@@ -145,7 +145,7 @@ void SpenchFOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_task == nullptr || denoise_task->m_data.m_context == nullptr) {
     throw("Task data or context are not initialized!");
   }
-  if (denoise_task->m_data.m_input_spec.size() == 0) {
+  if (denoise_task->m_data.m_input_spectrogram.size() == 0) {
     throw("Input spectrogram should be calculated before this step!");
   }
   auto& denoise_data = denoise_task->m_data;
@@ -153,11 +153,11 @@ void SpenchFOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_context->m_prev_features.size() > m_model_params.m_network_input_ctx_len) {
     denoise_context->m_prev_features.pop();
   }
-  denoise_context->m_prev_features.push(denoise_data.m_input_spec[0]);
+  denoise_context->m_prev_features.push(denoise_data.m_input_spectrogram[0]);
 
-  if (denoise_task->m_stage == spench::PipelineStage::SPECTROGRAM) {
+  if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
     std::vector<std::vector<float>*> inputs;
-    std::vector<float> mag = denoise_data.m_input_spec[0].getMagnitude();
+    std::vector<float> mag = denoise_data.m_input_spectrogram[0].getMagnitude();
     SpenchFOnnxRunner::PrepareInputInPlace(mag, inputs, denoise_context);
     InitOutputTensors(denoise_data);
     std::vector<Ort::Value> outputs;
@@ -165,14 +165,14 @@ void SpenchFOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
     Run(inputs, outputs);
     ParseResults<float>(outputs, denoise_data);
 
-    if (denoise_context->m_prev_masked_spectrogram.real.size() == 0) {
+    if (denoise_context->m_prev_spectrogram.real.size() == 0) {
       denoise_data.m_enhanced_wav.resize(denoise_data.m_waveform.size() / 2);
       std::fill_n(denoise_data.m_enhanced_wav.begin(), denoise_data.m_enhanced_wav.size(), 0.0);
-      denoise_task->m_stage = spench::PipelineStage::PREDICTIONS;
+      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
     } else if (denoise_context->m_prev_features.size() > m_model_params.m_network_input_ctx_len + 1) {
       throw("Incorrect number of previous states!");
     } else {
-      denoise_task->m_stage = spench::PipelineStage::PREDICTIONS;
+      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
     }
   } else {
     throw("State is not appropriate");

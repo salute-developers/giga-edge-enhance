@@ -170,7 +170,7 @@ TEST_CASE("SUCCEED Run fast tflite model with real data and check first two iter
   data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->m_fullband_cell_state);
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->m_prev_fb_out);
   denoise_task.m_data.m_context = ctx.get();
-  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.m_data.m_input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
 
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
   data.m_denoiser_runner->Infer(&denoise_task);
@@ -191,8 +191,8 @@ TEST_CASE("SUCCEED Run fast tflite model with real data and check first two iter
   IsVectorsClose(gt_fullband_hidden, ctx.get()->m_fullband_hidden, 0.00001);
   IsVectorsClose(gt_fullband_cell_state, ctx.get()->m_fullband_cell_state, 0.00001);
   IsVectorsClose(gt_prev_fb_out_5, ctx.get()->m_prev_fb_out, 0.00001);
-  IsVectorsClose(gt_real_output, denoise_task.m_data.m_new_spec.real, 0.00001);
-  IsVectorsClose(gt_imag_output, denoise_task.m_data.m_new_spec.imag, 0.00001);
+  IsVectorsClose(gt_real_output, denoise_task.m_data.m_new_spectrogram.real, 0.00001);
+  IsVectorsClose(gt_imag_output, denoise_task.m_data.m_new_spectrogram.imag, 0.00001);
 }
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
@@ -219,7 +219,7 @@ TEST_CASE("SUCCEED Run encrypted model with real data and check first two iterat
   data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->m_fullband_cell_state);
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->m_prev_fb_out);
   denoise_task.m_data.m_context = ctx.get();
-  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.m_data.m_input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
 
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
   data.m_denoiser_runner->Infer(&denoise_task);
@@ -240,8 +240,8 @@ TEST_CASE("SUCCEED Run encrypted model with real data and check first two iterat
   IsVectorsClose(gt_fullband_hidden, ctx.get()->m_fullband_hidden, 0.00001);
   IsVectorsClose(gt_fullband_cell_state, ctx.get()->m_fullband_cell_state, 0.00001);
   IsVectorsClose(gt_prev_fb_out_5, ctx.get()->m_prev_fb_out, 0.00001);
-  IsVectorsClose(gt_real_output, denoise_task.m_data.m_new_spec.real, 0.00001);
-  IsVectorsClose(gt_imag_output, denoise_task.m_data.m_new_spec.imag, 0.00001);
+  IsVectorsClose(gt_real_output, denoise_task.m_data.m_new_spectrogram.real, 0.00001);
+  IsVectorsClose(gt_imag_output, denoise_task.m_data.m_new_spectrogram.imag, 0.00001);
 }
 
 TEST_CASE("SUCCEED Run licensed encrypted model and check first two iterations (24 kHz) [tflite runner]") {
@@ -268,7 +268,7 @@ TEST_CASE("SUCCEED Run licensed encrypted model and check first two iterations (
   data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->m_fullband_cell_state);
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->m_prev_fb_out);
   denoise_task.m_data.m_context = ctx.get();
-  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.m_data.m_input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
 
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
   data.m_denoiser_runner->Infer(&denoise_task);
@@ -289,8 +289,8 @@ TEST_CASE("SUCCEED Run licensed encrypted model and check first two iterations (
   IsVectorsClose(gt_fullband_hidden, ctx.get()->m_fullband_hidden, 0.00001);
   IsVectorsClose(gt_fullband_cell_state, ctx.get()->m_fullband_cell_state, 0.00001);
   IsVectorsClose(gt_prev_fb_out_5, ctx.get()->m_prev_fb_out, 0.00001);
-  IsVectorsClose(gt_real_output, denoise_task.m_data.m_new_spec.real, 0.00001);
-  IsVectorsClose(gt_imag_output, denoise_task.m_data.m_new_spec.imag, 0.00001);
+  IsVectorsClose(gt_real_output, denoise_task.m_data.m_new_spectrogram.real, 0.00001);
+  IsVectorsClose(gt_imag_output, denoise_task.m_data.m_new_spectrogram.imag, 0.00001);
 }
 
 TEST_CASE("SUCCEED Run licensed encrypted model w/o lic check (24 kHz) [tflite runner]") {
@@ -317,7 +317,7 @@ TEST_CASE("SUCCEED Run licensed encrypted model w/o lic check (24 kHz) [tflite r
   data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->m_fullband_cell_state);
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->m_prev_fb_out);
   denoise_task.m_data.m_context = ctx.get();
-  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.m_data.m_input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
 
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
   data.m_denoiser_runner->Infer(&denoise_task);
@@ -338,8 +338,8 @@ TEST_CASE("SUCCEED Run licensed encrypted model w/o lic check (24 kHz) [tflite r
   IsVectorsClose(gt_fullband_hidden, ctx.get()->m_fullband_hidden, 0.00001);
   IsVectorsClose(gt_fullband_cell_state, ctx.get()->m_fullband_cell_state, 0.00001);
   IsVectorsClose(gt_prev_fb_out_5, ctx.get()->m_prev_fb_out, 0.00001);
-  IsVectorsClose(gt_real_output, denoise_task.m_data.m_new_spec.real, 0.00001);
-  IsVectorsClose(gt_imag_output, denoise_task.m_data.m_new_spec.imag, 0.00001);
+  IsVectorsClose(gt_real_output, denoise_task.m_data.m_new_spectrogram.real, 0.00001);
+  IsVectorsClose(gt_imag_output, denoise_task.m_data.m_new_spectrogram.imag, 0.00001);
 }
 #endif
 
@@ -406,15 +406,15 @@ TEST_CASE("SUCCEED Run inference via the best quality model and check network ou
   ctx.get()->m_subband_cell_state.resize(data.m_denoiser_runner->m_model_input_size[4], 0);
 
   denoise_task.m_data.m_context = ctx.get();
-  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.m_data.m_input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 
   data.m_denoiser_runner->Infer(&denoise_task);
 
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
-  IsVectorsClose(gt_real, denoise_task.m_data.m_new_spec.real, 0.000001);
+  IsVectorsClose(gt_real, denoise_task.m_data.m_new_spectrogram.real, 0.000001);
 
-  IsVectorsClose(gt_imag, denoise_task.m_data.m_new_spec.imag, 0.000001);
+  IsVectorsClose(gt_imag, denoise_task.m_data.m_new_spectrogram.imag, 0.000001);
   CHECK(std::vector<float>(denoise_task.m_data.m_enhanced_wav.size(), 0.0) ==
                                                  denoise_task.m_data.m_enhanced_wav);
   IsVectorsClose(gt_fullband_hidden, ctx.get()->m_fullband_hidden, 0.000001);
@@ -439,7 +439,7 @@ TEST_CASE("SUCCEED Run four frames with the best quality model and check states 
   std::valarray<float> imag;
   data.LoadDataFromBin("1_real_wav_stft.dump", real);
   data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
-  denoise_task.m_data.m_input_spec.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.m_data.m_input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
   uint64_t hop_size = static_cast<uint64_t>(data.m_sample_rate * data.m_frame_size_ms / 1000);
   denoise_task.m_data.m_enhanced_wav.assign(hop_size, 1.0);

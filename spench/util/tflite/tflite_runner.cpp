@@ -143,8 +143,8 @@ void BaseTfliteRunner::ResizeIfNeededInPlace(std::valarray<float>& to_check,
 }
 
 void BaseTfliteRunner::InitOutputTensors(spench::SpenchTaskData& data, uint32_t size) {
-  ResizeIfNeededInPlace(data.m_new_spec.real, size / 2);
-  ResizeIfNeededInPlace(data.m_new_spec.imag, size / 2);
+  ResizeIfNeededInPlace(data.m_new_spectrogram.real, size / 2);
+  ResizeIfNeededInPlace(data.m_new_spectrogram.imag, size / 2);
 }
 
 SpenchFTfliteRunner::SpenchFTfliteRunner(const YAML::Node& yaml_config,
@@ -248,8 +248,8 @@ void SpenchFTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
         break;
       case 3:
         for (uint64_t i = 0; i < m_model_output_size[3]; i += 2) {
-          data.m_new_spec.real[i / 2] = const_output_ptr[i];
-          data.m_new_spec.imag[i / 2] = const_output_ptr[i + 1];
+          data.m_new_spectrogram.real[i / 2] = const_output_ptr[i];
+          data.m_new_spectrogram.imag[i / 2] = const_output_ptr[i + 1];
         }
         break;
       default:
@@ -264,7 +264,7 @@ void SpenchFTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_task == nullptr || denoise_task->m_data.m_context == nullptr) {
     throw("Task data or context are not initialized!");
   }
-  if (denoise_task->m_data.m_input_spec.size() == 0) {
+  if (denoise_task->m_data.m_input_spectrogram.size() == 0) {
     throw("Input spectrogram should be calculated before this step!");
   }
   auto& denoise_data = denoise_task->m_data;
@@ -272,12 +272,12 @@ void SpenchFTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_context->m_prev_features.size() > m_model_params.m_network_input_ctx_len) {
     denoise_context->m_prev_features.pop();
   }
-  denoise_context->m_prev_features.push(denoise_data.m_input_spec[0]);
+  denoise_context->m_prev_features.push(denoise_data.m_input_spectrogram[0]);
 
   if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
     std::vector<std::vector<float>*> inputs;
     std::vector<std::vector<float>> outputs;
-    std::vector<float> mag = denoise_data.m_input_spec[0].getMagnitude();
+    std::vector<float> mag = denoise_data.m_input_spectrogram[0].getMagnitude();
     SpenchFTfliteRunner::PrepareInputInPlace(mag, inputs, denoise_context);
     SpenchFTfliteRunner::InitOutputTensors(denoise_data, m_model_output_size[3]);
 
@@ -385,8 +385,8 @@ void SpenchQTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
         break;
       case 4:
         for (uint64_t i = 0; i < m_model_output_size[output_idx]; i += 2) {
-          data.m_new_spec.real[i / 2] = const_output_ptr[i];
-          data.m_new_spec.imag[i / 2] = const_output_ptr[i + 1];
+          data.m_new_spectrogram.real[i / 2] = const_output_ptr[i];
+          data.m_new_spectrogram.imag[i / 2] = const_output_ptr[i + 1];
         }
         break;
       default:
@@ -401,7 +401,7 @@ void SpenchQTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_task == nullptr || denoise_task->m_data.m_context == nullptr) {
     throw("Task data or context are not initialized!");
   }
-  if (denoise_task->m_data.m_input_spec.size() == 0) {
+  if (denoise_task->m_data.m_input_spectrogram.size() == 0) {
     throw("Input spectrogram should be calculated before this step!");
   }
   auto& denoise_data = denoise_task->m_data;
@@ -413,7 +413,7 @@ void SpenchQTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
     std::vector<std::vector<float>*> inputs;
     std::vector<std::vector<float>> outputs;
-    std::vector<float> mag = denoise_data.m_input_spec[0].getMagnitude();
+    std::vector<float> mag = denoise_data.m_input_spectrogram[0].getMagnitude();
     SpenchQTfliteRunner::PrepareInputInPlace(mag, inputs, denoise_context);
     SpenchQTfliteRunner::InitOutputTensors(denoise_data, m_model_output_size[4]);
 
@@ -436,7 +436,7 @@ void SpenchQTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
       denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
     }
 
-    denoise_context->m_prev_features.push(denoise_data.m_input_spec[0]);
+    denoise_context->m_prev_features.push(denoise_data.m_input_spectrogram[0]);
   } else {
     throw("State is not appropriate");
   }

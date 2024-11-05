@@ -40,9 +40,9 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
                                                       probabilities + context->m_subband_cell_state.size());
     probabilities = network_output[4].GetTensorMutableData<T>();
 
-    for (uint64_t i = 0; i < 2 * data.m_network_output.real.size(); i += 2) {
-      data.m_network_output.real[i / 2] = probabilities[i];
-      data.m_network_output.imag[i / 2] = probabilities[i + 1];
+    for (uint64_t i = 0; i < 2 * data.m_new_spectrogram.real.size(); i += 2) {
+      data.m_new_spectrogram.real[i / 2] = probabilities[i];
+      data.m_new_spectrogram.imag[i / 2] = probabilities[i + 1];
     }
   }
 
@@ -109,9 +109,9 @@ class SpenchFOnnxRunner: public BaseOnnxRunner {
 
     // network_output
     probabilities = network_output[3].GetTensorMutableData<T>();
-    for (uint64_t i = 0; i < 2 * data.m_network_output.real.size(); i += 2) {
-      data.m_network_output.real[i / 2] = probabilities[i];
-      data.m_network_output.imag[i / 2] = probabilities[i + 1];
+    for (uint64_t i = 0; i < 2 * data.m_new_spectrogram.real.size(); i += 2) {
+      data.m_new_spectrogram.real[i / 2] = probabilities[i];
+      data.m_new_spectrogram.imag[i / 2] = probabilities[i + 1];
     }
   }
 
