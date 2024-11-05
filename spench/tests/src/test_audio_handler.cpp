@@ -83,7 +83,7 @@ TEST_CASE("SUCCEED Create frame [denoiser handler]") {
                                           251.0, 250.0, 249.0, 250.0,
                                           251.0, 252.0, 253.0, 254.0, 255.0};
   std::vector<float> reversed_chunk;
-  spench::tools::MakeFirstInputFrame(input_chunk, reversed_chunk);
+  spench::tools::PrepareFirstInputFrame(input_chunk, reversed_chunk);
   IsVectorsClose(reversed_chunk, gt_reversed_chunk, 1.0);
 }
 
@@ -178,6 +178,48 @@ TEST_CASE("SUCCEED Run denoise and check zero outputs with the best quality mode
   REQUIRE(ctx_q->m_prev_features.size() == 3);
   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) == output);
   sheduler_test_env.m_handler->DestroyContext(&ctx);
+}
+
+TEST_CASE("SUCCEED Run dereverb and check zero outputs with the model 48kHz [dereverberator handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    // auto handler_test_env = std::move(TestHandler().
+    //                       InitDereverberatorHandler("default_configuration_dereverberation_tflite_48khz.yaml"));
+  #else
+    auto handler_test_env = std::move(TestHandler().
+                          InitDereverberatorHandler("default_configuration_dereverberation_onnx_48khz.yaml"));
+
+
+  spench::SpenchContext<float>* ctx_ptr = handler_test_env.m_handler->CreateContext();
+  spench::DereverbContext<float>* dereverb_ctx_ptr = dynamic_cast<spench::DereverbContext<float>*>(ctx_ptr);
+  const uint16_t kInput_frame_size = 768;
+  // const uint16_t kSpec_size = 385;
+  const std::vector<float> input1(kInput_frame_size, 0.5);
+
+  std::vector<float> output;
+
+  SpenchRetCode ret_code = handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+  CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
+
+  ret_code = handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  // non-zero tensor now. just check size
+  CHECK(output.size() == kInput_frame_size);
+  REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
+
+  ret_code = handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  CHECK(output.size() == kInput_frame_size);
+  REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
+
+  ret_code = handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  CHECK(output.size() == kInput_frame_size);
+  REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
+  handler_test_env.m_handler->DestroyContext(&ctx_ptr);
+  #endif
 }
 
 TEST_CASE("SUCCEED Run denoise and check first non-zero output with the best quality model [denoiser handler]") {
