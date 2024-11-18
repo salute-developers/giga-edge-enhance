@@ -134,6 +134,28 @@ TEST_CASE("SUCCEED Change number of engine threads [dereverberator handler]") {
   REQUIRE_NOTHROW(sheduler_test_env.m_handler->ReloadConfig());
 }
 
+TEST_CASE("SUCCEED Run denoise with empty chunk with the model 24kHz [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto handler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+  #else
+    auto handler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+  #endif
+
+  spench::SpenchContext<float>* ctx_ptr = handler_test_env.m_handler->CreateContext();
+  spench::DenoiseContextF<float>* denoise_ctx_ptr = dynamic_cast<spench::DenoiseContextF<float>*>(ctx_ptr);
+  const std::vector<float> input1;
+
+  std::vector<float> output(5, 0);
+  REQUIRE(output.size() != 0);
+
+  SpenchRetCode ret_code = handler_test_env.m_handler->ProcessFrame(denoise_ctx_ptr, input1, output);
+  REQUIRE(ret_code == SpenchRetCode::SUCCESS);
+
+  REQUIRE(output.size() == 0);
+}
+
 TEST_CASE("SUCCEED Run denoise and check zero outputs with the best quality model [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
@@ -180,6 +202,28 @@ TEST_CASE("SUCCEED Run denoise and check zero outputs with the best quality mode
   sheduler_test_env.m_handler->DestroyContext(&ctx);
 }
 
+TEST_CASE("SUCCEED Run dereverb with empty chunk with the model 48kHz [dereverberator handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    // auto handler_test_env = std::move(TestHandler().
+    //                       InitDereverberatorHandler("default_configuration_dereverberation_tflite_48khz.yaml"));
+  #else
+    auto handler_test_env = std::move(TestHandler().
+                          InitDereverberatorHandler("default_configuration_dereverberation_onnx_48khz.yaml"));
+
+  spench::SpenchContext<float>* ctx_ptr = handler_test_env.m_handler->CreateContext();
+  spench::DereverbContext<float>* dereverb_ctx_ptr = dynamic_cast<spench::DereverbContext<float>*>(ctx_ptr);
+  const std::vector<float> input1;
+
+  std::vector<float> output(5, 0);
+  REQUIRE(output.size() != 0);
+
+  SpenchRetCode ret_code = handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+  REQUIRE(ret_code == SpenchRetCode::SUCCESS);
+
+  REQUIRE(output.size() == 0);
+  #endif
+}
+
 TEST_CASE("SUCCEED Run dereverb and check zero outputs with the model 48kHz [dereverberator handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     // auto handler_test_env = std::move(TestHandler().
@@ -192,7 +236,6 @@ TEST_CASE("SUCCEED Run dereverb and check zero outputs with the model 48kHz [der
   spench::SpenchContext<float>* ctx_ptr = handler_test_env.m_handler->CreateContext();
   spench::DereverbContext<float>* dereverb_ctx_ptr = dynamic_cast<spench::DereverbContext<float>*>(ctx_ptr);
   const uint16_t kInput_frame_size = 768;
-  // const uint16_t kSpec_size = 385;
   const std::vector<float> input1(kInput_frame_size, 0.5);
 
   std::vector<float> output;
