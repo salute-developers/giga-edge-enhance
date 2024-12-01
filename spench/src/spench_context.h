@@ -95,5 +95,6 @@ template <typename T>
 struct DereverbContext: public SpenchContext<T> {
   std::vector<T> m_noisy_spec;
   std::vector<T> m_prev_out;
+  std::vector<T> phase;
 };
 }  // namespace spench

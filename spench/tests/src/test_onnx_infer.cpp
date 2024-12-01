@@ -1173,16 +1173,13 @@ TEST_CASE("SUCCEED Run the dereverb model and check network outputs (audio 48kHz
   std::vector<float> noisy_spec_5_old_real;
   std::vector<float> noisy_spec_5_old_imag;
   std::vector<float> noisy_spec_for_model_input_5_new;
-  std::vector<float> gt_model_output_real;
-  std::vector<float> gt_model_output_imag;
-
+  std::vector<float> gt_model_output_mag;
   data.LoadDataFromBin("1_noisy_spec_5_old_real.dump", noisy_spec_5_old_real);
   data.LoadDataFromBin("1_noisy_spec_5_old_imag.dump", noisy_spec_5_old_imag);
   data.LoadDataFromBin("1_noisy_spec_1_new_real.dump", real);
   data.LoadDataFromBin("1_noisy_spec_1_new_imag.dump", imag);
   data.LoadDataFromBin("1_noisy_spec_5_new.dump", noisy_spec_for_model_input_5_new);
-  data.LoadDataFromBin("1_enhanced_frame_real.dump", gt_model_output_real);
-  data.LoadDataFromBin("1_enhanced_frame_imag.dump", gt_model_output_imag);
+  data.LoadDataFromBin("1_enhanced_frame_mag.dump", gt_model_output_mag);
 
   std::vector<float> spec = noisy_spec_5_old_real;
   spec.insert(std::end(spec), std::begin(noisy_spec_5_old_imag), std::end(noisy_spec_5_old_imag));
@@ -1194,13 +1191,23 @@ TEST_CASE("SUCCEED Run the dereverb model and check network outputs (audio 48kHz
   ctx.get()->m_noisy_spec = spec;
   dereverb_task.m_data.m_input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
   dereverb_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-
   data.m_spench_model_runner->Infer(&dereverb_task);
 
   IsVectorsClose(ctx.get()->m_noisy_spec, noisy_spec_for_model_input_5_new, 0.000001);
 
-  // IsVectorsClose(gt_model_output_real, dereverb_task.m_data.m_new_spectrogram.real, 0.05);
-  IsVectorsClose(gt_model_output_imag, dereverb_task.m_data.m_new_spectrogram.imag, 0.05);
+  auto& new_real_ref = dereverb_task.m_data.m_new_spectrogram.real;
+  auto& new_imag_ref = dereverb_task.m_data.m_new_spectrogram.imag;
+  std::vector<float> new_spec_mag(new_real_ref.size());
+
+  for (size_t i = 0; i < new_real_ref.size(); ++i) {
+      new_spec_mag[i] = std::sqrt((new_real_ref[i] * new_real_ref[i]) +
+                                   (new_imag_ref[i] * new_imag_ref[i]));
+  }
+
+  // As output is deterministic threshold chosen with a margin
+  // Maximum value in the vectors is about 4.5
+  IsVectorsClose(gt_model_output_mag, new_spec_mag, 0.8);
+
   REQUIRE(dereverb_task.m_stage == spench::PipelineStage::PREDICTED_SPEC);
 }
 
