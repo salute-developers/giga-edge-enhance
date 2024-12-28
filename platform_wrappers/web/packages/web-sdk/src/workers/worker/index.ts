@@ -11,9 +11,10 @@ import {
 import { assert } from '../../utils/error';
 import SpenchWrapper from '../../utils/wrapper';
 import { getWorkerLogger } from '../../utils/logger';
-import RingBuffer from '../../utils/ringBuffer';
 import { getWorkerTelemetry } from '../../utils/telemetry';
-import { TypedMessageEvent } from '../../utils/common';
+import { Features, TypedMessageEvent } from '../../utils/common';
+import { SPENCH_FRAME_SIZE_SECONDS, WARMUP_STEP_COUNT, WASM_PATH } from '../../utils/constants';
+import RingBuffer from '../../utils/ringBuffer';
 
 interface SpenchWorkerGlobalScope extends DedicatedWorkerGlobalScope {
     onmessage: ((this: SpenchWorkerGlobalScope, event: TypedMessageEvent<ControllerToWorkerMessage>) => void) | null;
@@ -36,24 +37,21 @@ const telemetry = getWorkerTelemetry(global);
 class SpenchWorker {
     readonly instance: SpenchWrapper;
 
-    readonly workletPort: WorkletPort;
+    readonly buffer: RingBuffer;
 
-    readonly inputBuffer: RingBuffer;
-
-    warmupComplete = false;
-
-    constructor(wasm: ArrayBuffer, data: ArrayBuffer, workletPort: MessagePort, sampleRate: number) {
-        this.workletPort = workletPort;
-
+    constructor(
+        wasm: ArrayBuffer,
+        data: ArrayBuffer,
+        readonly workletPort: WorkletPort,
+        readonly sampleRate: number,
+        features: Features,
+    ) {
         SpenchWrapper.createBridge(wasm, data);
-        this.instance = new SpenchWrapper('denoiser', sampleRate);
-        this.inputBuffer = new RingBuffer(2 * this.instance.frameSize);
-
-        logger.debug('ready');
+        this.instance = new SpenchWrapper(sampleRate, logger);
+        this.buffer = new RingBuffer(2 * SPENCH_FRAME_SIZE_SECONDS * sampleRate);
         this.workletPort.onmessage = this.handleWorkletMessage;
-        this.workletPort.postMessage({
-            type: WORKLET_MESSAGES.WORKER_READY,
-        });
+
+        this.setFeatures(features);
     }
 
     destroy() {
@@ -62,19 +60,59 @@ class SpenchWorker {
         this.workletPort.close();
     }
 
+    setFeatures(features: Features): void {
+        logger.debug(`setting features: ${JSON.stringify(features)}`);
+        this.instance.clear();
+
+        if (features.echoCancellation) {
+            const model = features.echoCancellation === true ? 'full48k' : features.echoCancellation;
+            this.instance.addDevererberator(WASM_PATH.dereverb[model]);
+        }
+
+        if (features.noiseCancellation) {
+            const model = features.noiseCancellation === true ? 'full24k' : features.noiseCancellation;
+            this.instance.addDenoiser(WASM_PATH.denoiser[model]);
+        }
+
+        if (features.normalization) {
+            // TODO separate config for norm
+            this.instance.addNormalizer(WASM_PATH.denoiser.full24k);
+        }
+
+        this.warmup();
+        this.instance.resetContext();
+
+        this.workletPort.postMessage({
+            type: WORKLET_MESSAGES.WORKER_READY,
+        });
+        logger.debug('ready');
+    }
+
+    warmup() {
+        for (let stepsCount = 0; stepsCount < WARMUP_STEP_COUNT; ++stepsCount) {
+            this.instance.process(new Float32Array(SPENCH_FRAME_SIZE_SECONDS * this.sampleRate));
+        }
+    }
+
     handleWorkletMessage: WorkletPort['onmessage'] = (event) => {
         switch (event.data.type) {
             case WORKER_MESSAGES.INPUT:
                 const { input } = event.data;
+                const frameSize = Math.ceil(SPENCH_FRAME_SIZE_SECONDS * this.sampleRate);
 
-                this.inputBuffer.push(input);
+                this.buffer.push(input);
 
-                while (this.inputBuffer.size >= this.instance.frameSize) {
+                while (this.buffer.size >= frameSize) {
+                    const frame = new Float32Array(frameSize);
+                    this.buffer.pull(frame, 0, frameSize);
+
                     const startTime = performance.now();
-                    const output = new Float32Array(this.instance.frameSize);
-                    this.inputBuffer.pull(output, 0, this.instance.frameSize);
-                    this.instance.process(output);
+                    const output = this.instance.process(frame);
                     const endTime = performance.now();
+
+                    if (!output.length) {
+                        return;
+                    }
 
                     this.workletPort.postMessage(
                         {
@@ -91,12 +129,7 @@ class SpenchWorker {
             case WORKER_MESSAGES.RESET:
                 this.instance.resetContext();
                 logger.debug('context reset');
-
-                if (this.warmupComplete) {
-                    telemetry.flush();
-                } else {
-                    this.warmupComplete = true;
-                }
+                telemetry.flush();
 
                 return;
             default:
@@ -113,8 +146,8 @@ const handleControllerMessage: SpenchWorkerGlobalScope['onmessage'] = (event) =>
         case WORKER_MESSAGES.INIT:
             logger.debug('init data received');
 
-            const { wasm, data, workletPort, sampleRate } = event.data;
-            runtime = new SpenchWorker(wasm, data, workletPort, sampleRate);
+            const { wasm, data, workletPort, sampleRate, features } = event.data;
+            runtime = new SpenchWorker(wasm, data, workletPort, sampleRate, features);
 
             return;
         case WORKER_MESSAGES.DESTROY:
@@ -125,6 +158,10 @@ const handleControllerMessage: SpenchWorkerGlobalScope['onmessage'] = (event) =>
 
             global.onmessage = null;
             global.close();
+
+            return;
+        case WORKER_MESSAGES.SET_FEATURES:
+            runtime?.setFeatures(event.data.features);
 
             return;
         default:

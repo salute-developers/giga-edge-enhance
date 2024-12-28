@@ -1,24 +1,15 @@
 import SpenchError from './utils/error';
 import { SpenchAudioNode, SpenchAudioNodeImpl } from './audioNode';
-import { downloadFileAsBuffer } from './utils/common';
+import { downloadFileAsBuffer, Features } from './utils/common';
 import createLogger, { ExternalLogger, Logger } from './utils/logger';
 import { createAudioNodeTelemetry, LoaderTelemetry, SendMetricFunction } from './utils/telemetry';
 
 class CreateAudioNodeError extends SpenchError {}
 class LoadError extends SpenchError {}
 
-// Currently supported noiseCanceller + normalizer or normalizer
-// TODO fallback to norm
-type Features = {
-    noiseCancellation?: boolean; // turned off & switched in runtime
-    normalizer?: boolean; // turned off in runtime
-};
-
-// TODO separate models, preload runtime only
 type CreateSpenchParams = {
     logger?: ExternalLogger;
     sendMetric?: SendMetricFunction;
-    models?: never;
     preloadFeatures?: Features;
     isDebug?: boolean;
 };
@@ -79,9 +70,7 @@ class SpenchSDK {
 
         // Load normalizer worklet
         // TODO unify
-        if (features.normalizer && !features.noiseCancellation) {
-            const kind = 'normalizer';
-
+        if (features.normalization && !features.noiseCancellation && !features.noiseCancellation) {
             const [wasm, normalizerWorkletResult] = await Promise.all([
                 wasmPromise,
                 Promise.resolve(this.#normalizerWorkletLoadPromise).then((res) =>
@@ -98,7 +87,8 @@ class SpenchSDK {
             this.#wasmLoadPromise = undefined;
 
             return new SpenchAudioNodeImpl({
-                kind,
+                kind: 'normalizer',
+                features: { normalization: true },
                 ctx: this.#ctx,
                 wasm,
                 logger: this.#logger,
@@ -106,10 +96,8 @@ class SpenchSDK {
             });
         }
 
-        const kind = 'processor';
         const worker = this.#preloadedWorker || this.#createWorker();
 
-        // TODO Metrics for loading wasm, data, init time
         const [wasm, data, workletResult] = await Promise.all([
             wasmPromise,
             Promise.resolve(this.#dataLoadPromise).then((res) =>
@@ -128,7 +116,8 @@ class SpenchSDK {
         this.#dataLoadPromise = undefined;
 
         return new SpenchAudioNodeImpl({
-            kind,
+            kind: 'processor',
+            features,
             ctx: this.#ctx,
             wasm,
             data,
@@ -142,13 +131,15 @@ class SpenchSDK {
     #preloadFeatures(features: Features): void {
         this.#wasmLoadPromise = this.#loadWasm();
 
-        if (features.noiseCancellation) {
+        if (features.noiseCancellation || features.echoCancellation) {
             this.#dataLoadPromise = this.#loadModelsData();
             this.#preloadedWorker = this.#createWorker();
             this.#workletLoadPromise = this.#loadSpenchWorklet();
+
+            return;
         }
 
-        if (features.normalizer) {
+        if (features.normalization) {
             this.#normalizerWorkletLoadPromise = this.#loadNormalizerWorklet();
         }
     }

@@ -1,7 +1,5 @@
 import {
     OVERFLOW_COUNTER_WINDOW_SECONDS,
-    SPENCH_FRAME_SIZE_SECONDS,
-    WARMUP_STEP_COUNT,
     WORKLET_OUTPUT_BUFFER_SECONDS,
     WORKLET_OUTPUT_BUFFER_THRESHOLD,
 } from '../../utils/constants';
@@ -39,7 +37,7 @@ interface WorkerPort extends MessagePort {
 class SpenchWorkletProcessor extends AudioWorkletProcessor {
     workerPort: WorkerPort | undefined;
 
-    readonly logger: Logger;
+    readonly logger: Logger = getWorkerLogger(this.controllerPort, '[worklet]');
 
     readonly outputBuffer = new RingBuffer(Math.trunc(WORKLET_OUTPUT_BUFFER_SECONDS * sampleRate));
 
@@ -50,10 +48,7 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
 
     destroyed = false;
 
-    // Warmup
     initialized = false;
-
-    warmupCallback = this.warmupAssert;
 
     // Overflow
     previouslyRendered = false;
@@ -65,7 +60,6 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     constructor() {
         super();
 
-        this.logger = getWorkerLogger(this.controllerPort, '[worklet]');
         this.controllerPort.onmessage = this.handleControllerMessage;
     }
 
@@ -79,35 +73,31 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         }
 
         // Skip processing if not connected
-        if (!inputs[0]?.[0]?.length) {
+        if (!inputs[0]?.[0]?.length || !outputs[0]?.[0]?.length) {
             return true;
         }
 
-        // Currently serves first channel of the first input only.
-        // TODO unify with norm processor, use all available inputs & channels (why?)
-        const [input] = inputs;
-        const [output] = outputs;
-
-        const [inputChannel] = input;
-
-        if (!(this.enabled && this.initialized)) {
-            for (const outputChannel of output) {
-                outputChannel.set(inputChannel);
-            }
+        if (!this.enabled || !this.initialized) {
+            this.pass(inputs, outputs);
 
             return true;
         }
 
-        this.processInput(inputChannel);
-        this.processOutput(output);
+        this.processInput(inputs);
+        this.processOutput(outputs);
 
         this.timerTick();
 
         return true;
     }
 
-    processInput(input: Float32Array): void {
+    processInput(inputs: Float32Array[][]): void {
         assert(this.workerPort, 'Worker must be ready to accept input');
+
+        // Currently serves first channel of the first input only.
+        // TODO unify with norm processor, use all available inputs & channels (why?)
+        const [firstInput] = inputs;
+        const [input] = firstInput;
 
         this.workerPort.postMessage(
             {
@@ -118,7 +108,8 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         );
     }
 
-    processOutput(output: Float32Array[]): void {
+    processOutput(outputs: Float32Array[][]): void {
+        const [output] = outputs;
         const [outputChannel] = output;
         const isBufferSufficientlyFilled = this.outputBuffer.size >= WORKLET_OUTPUT_BUFFER_THRESHOLD * sampleRate;
         const shouldRenderAnyway = this.outputBuffer.size >= outputChannel.length && this.previouslyRendered;
@@ -134,6 +125,18 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
             }
         } else {
             this.handleOverflow();
+        }
+    }
+
+    pass(inputs: Float32Array[][], outputs: Float32Array[][]) {
+        // Currently serves first channel of the first input only.
+        // TODO unify with norm processor, use all available inputs & channels (why?)
+        const [input] = inputs;
+        const [output] = outputs;
+        const [inputChannel] = input;
+
+        for (const outputChannel of output) {
+            outputChannel.set(inputChannel);
         }
     }
 
@@ -189,6 +192,10 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
                 this.destroy();
 
                 return;
+            case WORKLET_MESSAGES.WORKER_EJECTED:
+                this.initialized = false;
+
+                return;
             default:
         }
 
@@ -198,19 +205,15 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     handleWorkerMessage: WorkerPort['onmessage'] = (event) => {
         switch (event.data.type) {
             case WORKLET_MESSAGES.OUTPUT:
-                this.outputBuffer.push(event.data.output);
-
-                if (!this.initialized) {
-                    this.warmupCallback();
-
-                    return;
+                if (this.initialized) {
+                    this.outputBuffer.push(event.data.output);
+                    this.telemetry.frameReceived();
                 }
-
-                this.telemetry.frameReceived();
 
                 return;
             case WORKLET_MESSAGES.WORKER_READY:
-                this.warmup();
+                this.initialized = true;
+                this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.SYSTEM_READY });
 
                 return;
             default:
@@ -219,57 +222,18 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         assert(false, 'Unknown message type from Worker');
     };
 
-    async warmup() {
-        if (this.initialized) {
-            assert(false, 'Warmup already complete');
-        }
-
-        this.logger.debug('starting warmup');
-        const times = []; // TODO startup metric
-        const inputFrameSize = SPENCH_FRAME_SIZE_SECONDS * sampleRate;
-        let stepsCount = 0;
-        let startTime: number;
-        this.previouslyRendered = true;
-
-        this.warmupCallback = () => {
-            if (stepsCount > 0) {
-                this.processOutput([new Float32Array(inputFrameSize)]);
-                times.push(currentTime - startTime);
-            }
-
-            if (stepsCount++ < WARMUP_STEP_COUNT) {
-                startTime = currentTime;
-                this.processInput(new Float32Array(inputFrameSize));
-
-                return;
-            }
-
-            assert(this.outputBuffer.size === 0, 'Output buffer must be empty after warmup');
-
-            // avoid duplicate logic
-            this.enabled = true;
-            this.disable();
-
-            this.initialized = true;
-            this.warmupCallback = this.warmupAssert;
-
-            this.logger.debug('warmup finished');
-            this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.SYSTEM_READY });
-        };
-
-        this.warmupCallback();
-    }
-
-    warmupAssert() {
-        assert(false, 'Unexpected warmup callback');
-    }
-
     enable() {
         if (this.enabled) return;
 
         this.enabled = true;
+
+        this.previouslyRendered = false;
+        this.overflowCounter = 0;
+        this.overflowWindowStartTime = undefined;
+
         this.outputBuffer.clear();
         this.telemetry.start(currentTime);
+        this.resetContext();
         this.logger.debug('enabled');
     }
 
@@ -277,22 +241,13 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         if (!this.enabled) return;
 
         this.enabled = false;
-        this.previouslyRendered = false;
 
-        this.outputBuffer.clear();
         this.telemetry.stop(currentTime);
-
-        this.overflowCounter = 0;
-        this.overflowWindowStartTime = undefined;
-
-        this.resetContext();
         this.logger.debug('disabled');
     }
 
     resetContext() {
-        this.workerPort?.postMessage({
-            type: WORKER_MESSAGES.RESET,
-        });
+        this.workerPort?.postMessage({ type: WORKER_MESSAGES.RESET });
     }
 
     destroy() {

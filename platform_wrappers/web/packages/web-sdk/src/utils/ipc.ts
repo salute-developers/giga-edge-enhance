@@ -1,9 +1,11 @@
 import { MetricNameToPayloadMap } from './telemetry';
+import { Features } from './common';
 
 export const WORKER_MESSAGES = {
     // workletPort, wasm, data, sampleRate, options
     INIT: 'init',
     DESTROY: 'destroy',
+    SET_FEATURES: 'set_features',
 
     // from worklet
     RESET: 'reset',
@@ -18,6 +20,7 @@ export const WORKLET_MESSAGES = {
     INIT_NORM: 'init_norm',
     ENABLE: 'enable',
     DISABLE: 'disable',
+    WORKER_EJECTED: 'worker_ejected',
     DESTROY: 'destroy',
 
     // From worker
@@ -45,7 +48,11 @@ export type ControllerToWorkletMessage =
           workerPort: MessagePort;
       }
     | {
-          type: typeof WORKLET_MESSAGES.ENABLE | typeof WORKLET_MESSAGES.DISABLE | typeof WORKLET_MESSAGES.DESTROY;
+          type:
+              | typeof WORKLET_MESSAGES.ENABLE
+              | typeof WORKLET_MESSAGES.DISABLE
+              | typeof WORKLET_MESSAGES.DESTROY
+              | typeof WORKLET_MESSAGES.WORKER_EJECTED;
       };
 
 export type ControllerToWorkerMessage =
@@ -53,10 +60,15 @@ export type ControllerToWorkerMessage =
           type: typeof WORKER_MESSAGES.INIT;
           wasm: ArrayBuffer;
           data: ArrayBuffer;
+          features: Features;
           sampleRate: number;
           workletPort: MessagePort;
       }
-    | { type: typeof WORKER_MESSAGES.DESTROY };
+    | { type: typeof WORKER_MESSAGES.DESTROY }
+    | {
+          type: typeof WORKER_MESSAGES.SET_FEATURES;
+          features: Features;
+      };
 
 export type CommonToControllerMessage<T extends keyof MetricNameToPayloadMap = keyof MetricNameToPayloadMap> =
     | {

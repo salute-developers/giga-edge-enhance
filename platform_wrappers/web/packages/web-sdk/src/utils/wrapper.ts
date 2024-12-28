@@ -1,50 +1,37 @@
-import Spench, { AudioProcessPipeline, DenoisePipeline, SpenchWasm } from 'wasm-wrapper';
+import Spench, { PipelineElement, SpenchWasm } from 'wasm-wrapper';
 
 import { assert } from './error';
-import { SPENCH_FRAME_SIZE_SECONDS, SPENCH_NORM_FRAME_SIZE } from './constants';
+import { FEATURE_SWITCH_CACHE_MILLISECONDS } from './constants';
+import { Logger } from './logger';
 
-type InstanceType = 'denoiser' | 'normalizer';
-
-// TODO serialize model and load from the SDK
-const WASM_VIRTUALFS_MODEL_PATH = 'data/config/mobile_group8_hybrid_loss_fp32.yaml';
+type Element = [cacheKey: string, PipelineElement];
 
 class SpenchWrapper {
     static #bridge: SpenchWasm | undefined;
 
-    readonly frameSize: number;
+    readonly #pipeline: Element[] = [];
 
-    readonly #instance: DenoisePipeline | AudioProcessPipeline;
+    #dataPtr = 0;
 
-    readonly #heap: Float32Array;
+    #heapSize = 0;
 
-    readonly #inputPtr: number;
+    #processingSamplesCount = 0;
 
-    readonly #outputPtr: number;
+    readonly #cache: Map<string, [() => void, PipelineElement]> = new Map();
 
-    constructor(type: InstanceType, sampleRate: number) {
+    constructor(
+        private readonly sampleRate: number,
+        private readonly logger: Logger,
+    ) {
         assert(SpenchWrapper.#bridge, 'Bridge should be created');
-
-        if (type === 'denoiser') {
-            this.#instance = new SpenchWrapper.#bridge.DenoisePipeline(sampleRate, WASM_VIRTUALFS_MODEL_PATH);
-            this.frameSize = Math.round(SPENCH_FRAME_SIZE_SECONDS * sampleRate);
-        } else if (type === 'normalizer') {
-            this.#instance = new SpenchWrapper.#bridge.AudioProcessPipeline(sampleRate);
-            this.frameSize = SPENCH_NORM_FRAME_SIZE;
-        } else {
-            assert(false, 'Unknown instance type');
-        }
-
-        this.#heap = SpenchWrapper.#bridge.HEAPF32;
-        this.#inputPtr = SpenchWrapper.#bridge._malloc(this.frameSize * Float32Array.BYTES_PER_ELEMENT);
-        this.#outputPtr = SpenchWrapper.#bridge._malloc(this.frameSize * Float32Array.BYTES_PER_ELEMENT);
     }
 
-    get #inputStartIndex() {
-        return this.#inputPtr / Float32Array.BYTES_PER_ELEMENT;
+    get #dataStartIndex() {
+        return this.#dataPtr / Float32Array.BYTES_PER_ELEMENT;
     }
 
-    get #outputStartIndex() {
-        return this.#outputPtr / Float32Array.BYTES_PER_ELEMENT;
+    get #heap(): Float32Array {
+        return SpenchWrapper.#bridge!.HEAPF32;
     }
 
     static createBridge(wasm: ArrayBuffer, data?: ArrayBuffer): void {
@@ -63,27 +50,110 @@ class SpenchWrapper {
         });
     }
 
-    process(frame: Float32Array, output?: Float32Array): void {
-        assert(frame.length === this.frameSize, 'Frame size and input buffer length must match');
-        this.#heap.set(frame, this.#inputStartIndex);
-        this.#instance.process(this.#inputPtr, this.#outputPtr, this.frameSize);
+    addNormalizer(configPath: string): void {
+        const key = `normalizer-${configPath}`;
+        const cached = this.#tryGetFromCache(key);
 
-        const out = output || frame;
-        out.set(this.#heap.subarray(this.#outputStartIndex, this.#outputStartIndex + this.frameSize));
+        this.logger.debug('add norm', configPath);
+        this.#pipeline.push([
+            key,
+            cached || new SpenchWrapper.#bridge!.AudioProcessPipelineElement(this.sampleRate, configPath),
+        ]);
+    }
+
+    addDenoiser(configPath: string): void {
+        const key = `denoiser-${configPath}`;
+        const cached = this.#tryGetFromCache(key);
+
+        this.logger.debug('add denoiser', configPath);
+        this.#pipeline.push([
+            key,
+            cached || new SpenchWrapper.#bridge!.DenoisePipelineElement(this.sampleRate, configPath),
+        ]);
+    }
+
+    addDevererberator(configPath: string): void {
+        const key = `dereverb-${configPath}`;
+        const cached = this.#tryGetFromCache(key);
+
+        this.logger.debug('add dereverb', configPath);
+        this.#pipeline.push([
+            key,
+            cached || new SpenchWrapper.#bridge!.DereverbPipelineElement(this.sampleRate, configPath),
+        ]);
+    }
+
+    pop() {
+        const elem = this.#pipeline.pop();
+
+        if (!elem) return false;
+
+        const [key, element] = elem;
+        const timeout = setTimeout(() => this.#cache.delete(key), FEATURE_SWITCH_CACHE_MILLISECONDS);
+        this.#cache.set(key, [() => clearTimeout(timeout), element]);
+
+        return true;
+    }
+
+    clear() {
+        while (this.pop());
+    }
+
+    process(frame: Float32Array): Float32Array {
+        if (!this.#pipeline.length) {
+            return new Float32Array(frame.subarray());
+        }
+
+        this.#ensureMemory(frame.length);
+        this.#heap.set(frame, this.#dataStartIndex);
+        let samplesProcessed = frame.length;
+
+        for (const [, el] of this.#pipeline) {
+            samplesProcessed = el.process(this.#dataPtr, samplesProcessed);
+
+            if (!samplesProcessed) break;
+        }
+
+        this.#ensureMemory(-samplesProcessed);
+
+        return new Float32Array(this.#heap.subarray(this.#dataStartIndex, this.#dataStartIndex + samplesProcessed));
     }
 
     resetContext() {
-        assert(
-            this.#instance instanceof SpenchWrapper.#bridge!.DenoisePipeline,
-            'Only denoiser has resettable context',
-        );
+        for (const [, el] of this.#pipeline) {
+            el.resetContext();
+        }
 
-        this.#instance.resetContext();
+        this.#processingSamplesCount = 0;
     }
 
     destroy() {
-        SpenchWrapper.#bridge?._free(this.#inputPtr);
-        SpenchWrapper.#bridge?._free(this.#outputPtr);
+        SpenchWrapper.#bridge?._free(this.#dataPtr);
+    }
+
+    #tryGetFromCache(key: string): PipelineElement | undefined {
+        const res = this.#cache.get(key);
+
+        if (!res) return;
+        this.#cache.delete(key);
+        const [clear, element] = res;
+        clear();
+
+        return element;
+    }
+
+    #ensureMemory(count: number): void {
+        this.#processingSamplesCount += count;
+
+        if (this.#heapSize < this.#processingSamplesCount) {
+            if (this.#dataPtr) {
+                SpenchWrapper.#bridge!._free(this.#dataPtr);
+            }
+
+            this.#heapSize = Math.max(this.#heapSize * 2, this.#processingSamplesCount);
+            this.logger.debug('set memory', this.#heapSize);
+            this.#dataPtr = SpenchWrapper.#bridge!._malloc(this.#heapSize * Float32Array.BYTES_PER_ELEMENT);
+        }
     }
 }
 
