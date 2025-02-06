@@ -1475,6 +1475,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [
 //   const uint32_t kChunk_stride = 16;
 //   const uint32_t kChunks_to_compare = 300;
 //   const uint32_t kAudio_dst_sample_rate = 48000;
+//   // test_data.m_wav_data.erase(test_data.m_wav_data.begin(), test_data.m_wav_data.begin() + 17);
 //   auto chunks = chunkWav<float>(test_data.m_wav_data,
 //                                 test_data.m_dereverb->GetModelSampleRate(),
 //                                 kChunk_size, kChunk_stride);
@@ -1495,6 +1496,6 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [
 //   test_data.m_dereverb->DestroyContext(&ctx);
 //   reference_prediction.resize(prediction.size());
 
-//   IsVectorsClose(reference_prediction, prediction, 0.01);
+//   IsVectorsClose(reference_prediction, prediction, 0.1);
 //   #endif
 // }
