@@ -86,23 +86,8 @@ const spenchWorkletConfigFactory = (mode) => {
     };
 };
 
-const normalizerConfigFactory = (mode) => {
-    const baseConfig = baseConfigFactory(mode);
-
-    return {
-        ...baseConfig,
-        entry: {
-            'normalizer-worklet': './src/workers/normalizer/index.ts',
-        },
-        output: {
-            ...baseConfig.output,
-            globalObject: 'AudioWorkletGlobalScope',
-        },
-    };
-};
-
 module.exports = (env, argv) => {
     const { mode } = argv;
 
-    return [spenchWorkletConfigFactory(mode), spenchWorkerConfigFactory(mode), normalizerConfigFactory(mode)];
+    return [spenchWorkletConfigFactory(mode), spenchWorkerConfigFactory(mode)];
 };

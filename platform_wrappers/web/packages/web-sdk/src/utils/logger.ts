@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 
-import { CommonControllerPort, CONTROLLER_MESSAGES } from './ipc';
+import { CONTROLLER_MESSAGES, ControllerMessage, CustomPort } from './ipc';
 
 type LoggingFunc = (...data: unknown[]) => void;
 
@@ -36,7 +36,7 @@ function createLogger(isDebug: boolean, externalLogger: ExternalLogger = {}): Lo
     };
 }
 
-export function getWorkerLogger(port: CommonControllerPort, prefix = ''): Logger {
+export function getWorkerLogger(port: Pick<CustomPort<any, ControllerMessage>, 'postMessage'>, prefix = ''): Logger {
     const factory =
         (level: keyof Logger): LoggingFunc =>
         (...data) => {

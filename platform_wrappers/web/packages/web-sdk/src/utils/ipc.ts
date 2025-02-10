@@ -1,8 +1,11 @@
 import { MetricNameToPayloadMap } from './telemetry';
 import { Features } from './common';
 
+export type Message<N, D = unknown> = D & {
+    type: N;
+};
+
 export const WORKER_MESSAGES = {
-    // workletPort, wasm, data, sampleRate, options
     INIT: 'init',
     DESTROY: 'destroy',
     SET_FEATURES: 'set_features',
@@ -13,11 +16,7 @@ export const WORKER_MESSAGES = {
 } as const;
 
 export const WORKLET_MESSAGES = {
-    // TODO unify
-    // main worklet
     INIT: 'init',
-    // normalizer worklet
-    INIT_NORM: 'init_norm',
     ENABLE: 'enable',
     DISABLE: 'disable',
     WORKER_EJECTED: 'worker_ejected',
@@ -35,72 +34,66 @@ export const CONTROLLER_MESSAGES = {
     SYSTEM_READY: 'sys_ready',
 } as const;
 
-export type ControllerToWorkletMessage =
-    // TODO unify
-    // Normalizer worklet
-    | {
-          type: typeof WORKLET_MESSAGES.INIT_NORM;
-          wasm: ArrayBuffer;
-      }
-    // Spench worklet
-    | {
-          type: typeof WORKLET_MESSAGES.INIT;
-          workerPort: MessagePort;
-      }
-    | {
-          type:
-              | typeof WORKLET_MESSAGES.ENABLE
-              | typeof WORKLET_MESSAGES.DISABLE
-              | typeof WORKLET_MESSAGES.DESTROY
-              | typeof WORKLET_MESSAGES.WORKER_EJECTED;
-      };
+export const SELF_WORKER_MESSAGES = {
+    INIT: 'init',
+    NEW_CLIENT: 'new_client',
+    DESTROY: 'destroy',
+} as const;
 
-export type ControllerToWorkerMessage =
-    | {
-          type: typeof WORKER_MESSAGES.INIT;
-          wasm: ArrayBuffer;
-          data: ArrayBuffer;
-          features: Features;
-          sampleRate: number;
-          workletPort: MessagePort;
-      }
-    | { type: typeof WORKER_MESSAGES.DESTROY }
-    | {
-          type: typeof WORKER_MESSAGES.SET_FEATURES;
-          features: Features;
-      };
+export type SelfWorkerMessage =
+    | Message<typeof SELF_WORKER_MESSAGES.INIT, { wasm: ArrayBuffer; data: ArrayBuffer }>
+    | Message<typeof SELF_WORKER_MESSAGES.NEW_CLIENT, { port: CustomPort<WorkerMessage, ControllerMessage> }>
+    | Message<typeof SELF_WORKER_MESSAGES.DESTROY>;
 
-export type CommonToControllerMessage<T extends keyof MetricNameToPayloadMap = keyof MetricNameToPayloadMap> =
-    | {
-          type: typeof CONTROLLER_MESSAGES.LOG;
-          level: 'debug' | 'error' | 'warn';
-          data: unknown[];
-      }
-    | {
-          type: typeof CONTROLLER_MESSAGES.TELEMETRY;
-          metricName: T;
-          value: MetricNameToPayloadMap[T];
-      };
+export type WorkerControllerMessage = LogMessage;
 
-export type WorkerToControllerMessage = CommonToControllerMessage;
+export type WorkletMessage =
+    | Message<typeof WORKLET_MESSAGES.INIT, { workerPort: MessagePort }>
+    | Message<typeof WORKLET_MESSAGES.OUTPUT, { output: Float32Array }>
+    | Message<typeof WORKLET_MESSAGES.ENABLE>
+    | Message<typeof WORKLET_MESSAGES.DISABLE>
+    | Message<typeof WORKLET_MESSAGES.DESTROY>
+    | Message<typeof WORKLET_MESSAGES.WORKER_EJECTED>
+    | Message<typeof WORKLET_MESSAGES.WORKER_READY>;
 
-export type WorkerToWorkletMessage =
-    | { type: typeof WORKLET_MESSAGES.WORKER_READY }
-    | { type: typeof WORKLET_MESSAGES.OUTPUT; output: Float32Array };
+export type WorkerMessage =
+    | Message<
+          typeof WORKER_MESSAGES.INIT,
+          {
+              features: Features;
+              sampleRate: number;
+              workletPort: MessagePort;
+          }
+      >
+    | Message<typeof WORKER_MESSAGES.SET_FEATURES, { features: Features }>
+    | Message<typeof WORKER_MESSAGES.INPUT, { input: Float32Array }>
+    | Message<typeof WORKER_MESSAGES.DESTROY>
+    | Message<typeof WORKER_MESSAGES.RESET>;
 
-export type WorkletToControllerMessage =
-    | CommonToControllerMessage
-    | { type: typeof CONTROLLER_MESSAGES.SYSTEM_READY }
-    | {
-          type: typeof CONTROLLER_MESSAGES.OVERFLOW;
-          overflowCount: number;
-      };
+export type LogMessage = Message<
+    typeof CONTROLLER_MESSAGES.LOG,
+    { level: 'debug' | 'error' | 'warn'; data: unknown[] }
+>;
 
-export type WorkletToWorkerMessage =
-    | { type: typeof WORKER_MESSAGES.RESET }
-    | { type: typeof WORKER_MESSAGES.INPUT; input: Float32Array };
+export type ControllerMessage<T extends keyof MetricNameToPayloadMap = keyof MetricNameToPayloadMap> =
+    | LogMessage
+    | Message<typeof CONTROLLER_MESSAGES.SYSTEM_READY>
+    | Message<typeof CONTROLLER_MESSAGES.TELEMETRY, { metricName: T; value: MetricNameToPayloadMap[T] }>
+    | Message<typeof CONTROLLER_MESSAGES.OVERFLOW, { overflowCount: number }>;
 
-export interface CommonControllerPort {
-    postMessage(message: CommonToControllerMessage, transfer: Transferable[]): void;
-    postMessage(message: CommonToControllerMessage, options?: StructuredSerializeOptions): void;
+export interface CustomPort<I extends Message<string>, O extends Message<string>> extends MessagePort {
+    onmessage: ((this: CustomPort<I, O>, event: MessageEvent<I>) => void) | null;
+    addEventListener<M extends { message: MessageEvent<I>; messageerror: MessageEvent }, K extends keyof M>(
+        type: K,
+        listener: (this: CustomPort<I, O>, ev: M[K]) => any,
+        options?: boolean | AddEventListenerOptions,
+    ): void;
+    removeEventListener<M extends { message: MessageEvent<I>; messageerror: MessageEvent }, K extends keyof M>(
+        type: K,
+        listener: (this: CustomPort<I, O>, ev: M[K]) => any,
+        options?: boolean | EventListenerOptions,
+    ): void;
+
+    postMessage(message: O, transfer: Transferable[]): void;
+    postMessage(message: O, options?: StructuredSerializeOptions): void;
 }

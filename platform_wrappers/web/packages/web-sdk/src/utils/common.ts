@@ -1,7 +1,3 @@
-export interface TypedMessageEvent<DType> extends MessageEvent {
-    data: DType;
-}
-
 type ModelOrigin = string;
 
 export type Models = {
@@ -14,6 +10,8 @@ export type Features = Partial<{
     echoCancellation: boolean | keyof Models['echoCancellation'];
     normalization: boolean;
 }>;
+
+export type SharedFeatures = Pick<Features, 'normalization'>;
 
 // TODO retries (use ky), abort on
 export async function downloadFileAsBuffer(url: URL): Promise<[ArrayBuffer, number]> {

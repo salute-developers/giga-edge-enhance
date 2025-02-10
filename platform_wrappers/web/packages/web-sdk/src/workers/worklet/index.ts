@@ -1,5 +1,6 @@
 import {
     OVERFLOW_COUNTER_WINDOW_SECONDS,
+    SPENCH_WORKLET_NAME,
     WORKLET_OUTPUT_BUFFER_SECONDS,
     WORKLET_OUTPUT_BUFFER_THRESHOLD,
 } from '../../utils/constants';
@@ -7,33 +8,20 @@ import RingBuffer from '../../utils/ringBuffer';
 import { assert } from '../../utils/error';
 import {
     CONTROLLER_MESSAGES,
-    ControllerToWorkletMessage,
+    ControllerMessage,
+    CustomPort,
     WORKER_MESSAGES,
-    WorkerToWorkletMessage,
+    WorkerMessage,
     WORKLET_MESSAGES,
-    WorkletToControllerMessage,
-    WorkletToWorkerMessage,
+    WorkletMessage,
 } from '../../utils/ipc';
 import { getWorkerLogger, Logger } from '../../utils/logger';
 import { getWorkletTelemetry } from '../../utils/telemetry';
-import { TypedMessageEvent } from '../../utils/common';
 
-interface ControllerPort extends MessagePort {
-    onmessage: ((this: ControllerPort, event: TypedMessageEvent<ControllerToWorkletMessage>) => void) | null;
-
-    postMessage(message: WorkletToControllerMessage, transfer: Transferable[]): void;
-    postMessage(message: WorkletToControllerMessage, options?: StructuredSerializeOptions): void;
-}
-
-interface WorkerPort extends MessagePort {
-    onmessage: ((this: WorkerPort, event: TypedMessageEvent<WorkerToWorkletMessage>) => void) | null;
-
-    postMessage(message: WorkletToWorkerMessage, transfer: Transferable[]): void;
-    postMessage(message: WorkletToWorkerMessage, options?: StructuredSerializeOptions): void;
-}
+type ControllerPort = CustomPort<WorkletMessage, ControllerMessage>;
+type WorkerPort = CustomPort<WorkletMessage, WorkerMessage>;
 
 // TODO shared array buffer
-// TODO unify with spench processor
 class SpenchWorkletProcessor extends AudioWorkletProcessor {
     workerPort: WorkerPort | undefined;
 
@@ -94,8 +82,6 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     processInput(inputs: Float32Array[][]): void {
         assert(this.workerPort, 'Worker must be ready to accept input');
 
-        // Currently serves first channel of the first input only.
-        // TODO unify with norm processor, use all available inputs & channels (why?)
         const [firstInput] = inputs;
         const [input] = firstInput;
 
@@ -129,8 +115,6 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     }
 
     pass(inputs: Float32Array[][], outputs: Float32Array[][]) {
-        // Currently serves first channel of the first input only.
-        // TODO unify with norm processor, use all available inputs & channels (why?)
         const [input] = inputs;
         const [output] = outputs;
         const [inputChannel] = input;
@@ -266,4 +250,4 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     }
 }
 
-registerProcessor('spench-processor', SpenchWorkletProcessor);
+registerProcessor(SPENCH_WORKLET_NAME, SpenchWorkletProcessor);

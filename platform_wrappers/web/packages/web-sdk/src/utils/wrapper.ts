@@ -1,7 +1,7 @@
 import Spench, { PipelineElement, SpenchWasm } from 'wasm-wrapper';
 
 import { assert } from './error';
-import { FEATURE_SWITCH_CACHE_MILLISECONDS } from './constants';
+import { FEATURE_SWITCH_CACHE_MILLISECONDS, HEAP_SIZE } from './constants';
 import { Logger } from './logger';
 
 type Element = [cacheKey: string, PipelineElement];
@@ -13,10 +13,6 @@ class SpenchWrapper {
 
     #dataPtr = 0;
 
-    #heapSize = 0;
-
-    #processingSamplesCount = 0;
-
     readonly #cache: Map<string, [() => void, PipelineElement]> = new Map();
 
     constructor(
@@ -24,6 +20,8 @@ class SpenchWrapper {
         private readonly logger: Logger,
     ) {
         assert(SpenchWrapper.#bridge, 'Bridge should be created');
+
+        this.#dataPtr = SpenchWrapper.#bridge!._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
     }
 
     get #dataStartIndex() {
@@ -104,7 +102,6 @@ class SpenchWrapper {
             return new Float32Array(frame.subarray());
         }
 
-        this.#ensureMemory(frame.length);
         this.#heap.set(frame, this.#dataStartIndex);
         let samplesProcessed = frame.length;
 
@@ -114,8 +111,6 @@ class SpenchWrapper {
             if (!samplesProcessed) break;
         }
 
-        this.#ensureMemory(-samplesProcessed);
-
         return new Float32Array(this.#heap.subarray(this.#dataStartIndex, this.#dataStartIndex + samplesProcessed));
     }
 
@@ -123,8 +118,6 @@ class SpenchWrapper {
         for (const [, el] of this.#pipeline) {
             el.resetContext();
         }
-
-        this.#processingSamplesCount = 0;
     }
 
     destroy() {
@@ -140,20 +133,6 @@ class SpenchWrapper {
         clear();
 
         return element;
-    }
-
-    #ensureMemory(count: number): void {
-        this.#processingSamplesCount += count;
-
-        if (this.#heapSize < this.#processingSamplesCount) {
-            if (this.#dataPtr) {
-                SpenchWrapper.#bridge!._free(this.#dataPtr);
-            }
-
-            this.#heapSize = Math.max(this.#heapSize * 2, this.#processingSamplesCount);
-            this.logger.debug('set memory', this.#heapSize);
-            this.#dataPtr = SpenchWrapper.#bridge!._malloc(this.#heapSize * Float32Array.BYTES_PER_ELEMENT);
-        }
     }
 }
 

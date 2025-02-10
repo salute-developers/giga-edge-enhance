@@ -1,5 +1,5 @@
 import { Logger } from './logger';
-import { CommonControllerPort, CONTROLLER_MESSAGES } from './ipc';
+import { CONTROLLER_MESSAGES, ControllerMessage, CustomPort } from './ipc';
 import { TELEMETRY_FRAME_TIME_MAX_COUNT } from './constants';
 
 export interface MetricNameToPayloadMap {
@@ -34,7 +34,8 @@ export type LoaderTelemetry = AudioNodeTelemetry;
 export const createLoaderTelemetry: (logger: Logger, sendMetric?: SendMetricFunction) => LoaderTelemetry =
     createAudioNodeTelemetry;
 
-type WorkerTelemetry = {
+export type WorkerTelemetry = {
+    enabled: boolean;
     recordFrameProcessTime(time: number): void;
     flush(): void;
 };
@@ -46,11 +47,14 @@ type WorkletTelemetry = {
     stop(time: number): void;
 };
 
-export function getWorkerTelemetry(port: CommonControllerPort): WorkerTelemetry {
+export function getWorkerTelemetry(port: CustomPort<any, ControllerMessage>): WorkerTelemetry {
     let times = [] as number[];
 
     return {
+        enabled: true,
         recordFrameProcessTime(time: number) {
+            if (!this.enabled) return;
+
             times.push(time);
 
             if (times.length > TELEMETRY_FRAME_TIME_MAX_COUNT) {
@@ -72,7 +76,7 @@ export function getWorkerTelemetry(port: CommonControllerPort): WorkerTelemetry 
     };
 }
 
-export function getWorkletTelemetry(port: CommonControllerPort): WorkletTelemetry {
+export function getWorkletTelemetry(port: CustomPort<any, ControllerMessage>): WorkletTelemetry {
     let started = false;
     let startTime = 0;
     let chunkCount = 0;

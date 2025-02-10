@@ -1,7 +1,7 @@
 class SpenchError extends Error {
     cause: Error | undefined;
 
-    constructor(error: Error);
+    constructor(error: unknown);
 
     constructor(message?: string);
 

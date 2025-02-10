@@ -2,20 +2,17 @@ import { Logger } from './utils/logger';
 import { AudioNodeTelemetry } from './utils/telemetry';
 import SpenchError, { assert } from './utils/error';
 import {
-    CommonToControllerMessage,
     CONTROLLER_MESSAGES,
-    ControllerToWorkerMessage,
-    ControllerToWorkletMessage,
+    ControllerMessage,
+    CustomPort,
     WORKER_MESSAGES,
-    WorkerToControllerMessage,
+    WorkerMessage,
     WORKLET_MESSAGES,
-    WorkletToControllerMessage,
+    WorkletMessage,
 } from './utils/ipc';
-import { Features, TypedMessageEvent } from './utils/common';
-
-// Normalizer — deprecated
-// TODO unify
-type ProcessorKind = 'processor' | 'normalizer';
+import { Features } from './utils/common';
+import { SPENCH_WORKLET_NAME } from './utils/constants';
+import SpenchWorker from './worker';
 
 type OverflowEventCtorParams = {
     overflowCount: number;
@@ -38,20 +35,8 @@ interface SpenchAudioNodeEventMap {
     destroyed: Event;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface SpenchWorker extends Worker {
-    onmessage: ((this: SpenchWorker, event: TypedMessageEvent<WorkerToControllerMessage>) => void) | null;
-
-    postMessage(message: ControllerToWorkerMessage, transfer: Transferable[]): void;
-    postMessage(message: ControllerToWorkerMessage, options?: StructuredSerializeOptions): void;
-}
-
-interface WorkletPort extends MessagePort {
-    onmessage: ((this: WorkletPort, event: TypedMessageEvent<WorkletToControllerMessage>) => void) | null;
-
-    postMessage(message: ControllerToWorkletMessage, transfer: Transferable[]): void;
-    postMessage(message: ControllerToWorkletMessage, options?: StructuredSerializeOptions): void;
-}
+type WorkletPort = CustomPort<ControllerMessage, WorkletMessage>;
+type WorkerPort = CustomPort<ControllerMessage, WorkerMessage>;
 
 export interface SpenchAudioNode extends AudioWorkletNode {
     enable(): void;
@@ -72,40 +57,23 @@ export interface SpenchAudioNode extends AudioWorkletNode {
     ): void;
 }
 
-interface SpenchAudioNodeBaseCtorParams {
-    kind: ProcessorKind;
+interface SpenchAudioNodeCtorParams {
     features: Features;
     ctx: AudioContext;
     logger: Logger;
     telemetry: AudioNodeTelemetry;
-
-    wasm: ArrayBuffer;
+    worker: SpenchWorker;
 }
-
-interface SpenchAudioNodeNormCtorParams extends SpenchAudioNodeBaseCtorParams {
-    kind: 'normalizer';
-    features: { normalization: true };
-}
-
-interface SpenchAudioNodeMainCtorParams extends SpenchAudioNodeBaseCtorParams {
-    kind: 'processor';
-    features: Features;
-
-    data: ArrayBuffer;
-    worker: Worker;
-}
-
-type SpenchAudioNodeCtorParams = SpenchAudioNodeNormCtorParams | SpenchAudioNodeMainCtorParams;
 
 export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudioNode {
-    readonly #kind: ProcessorKind;
-
     readonly #logger: Logger;
 
     #features: Features;
 
     // TODO SharedArrayBuffer
-    #worker: SpenchWorker | undefined;
+    #worker: SpenchWorker;
+
+    #workerPort: WorkerPort;
 
     #initialized = false;
 
@@ -113,18 +81,17 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
 
     #telemetry: AudioNodeTelemetry;
 
-    constructor({ kind, features, ctx, wasm, logger, telemetry, ...params }: SpenchAudioNodeCtorParams) {
-        const processorName = `spench-${kind}`;
-        super(ctx, processorName);
+    constructor({ features, ctx, logger, telemetry, worker }: SpenchAudioNodeCtorParams) {
+        super(ctx, SPENCH_WORKLET_NAME);
 
-        this.#kind = kind;
         this.#features = features;
         this.#logger = logger;
         this.#telemetry = telemetry;
-        this.#worker = 'worker' in params ? params.worker : undefined;
+        this.#worker = worker;
+        this.#workerPort = this.#worker.createPort();
 
         this.#attachListeners();
-        this.#init(wasm, 'data' in params ? params.data : undefined);
+        this.#init();
     }
 
     get #port(): WorkletPort {
@@ -150,15 +117,8 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
     destroy(): void {
         this.#logger.debug('Destroying Spench AudioNode');
 
-        if (this.#worker) {
-            this.#logger.debug('Destroying Spench Worker');
-
-            this.#worker.postMessage({ type: WORKER_MESSAGES.DESTROY });
-            this.#worker.onmessage = null;
-            this.#worker.onerror = null;
-            this.#worker.onmessageerror = null;
-            this.#worker = undefined;
-        }
+        this.#workerPort.close();
+        this.#worker.onerror = null;
 
         this.#port.postMessage({ type: WORKLET_MESSAGES.DESTROY });
         this.#port.onmessage = null;
@@ -172,11 +132,6 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
     }
 
     #setFeatures(features: Features, _manual = false): void {
-        if (this.#kind !== 'processor') {
-            return;
-        }
-        assert(this.#worker, 'Worker should be present');
-
         const isChanged = [
             typeof features.normalization !== 'undefined' && this.#features.normalization !== features.normalization,
             typeof features.noiseCancellation !== 'undefined' &&
@@ -192,16 +147,12 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
             };
 
             this.port.postMessage({ type: WORKLET_MESSAGES.WORKER_EJECTED });
-            this.#worker.postMessage({ type: WORKER_MESSAGES.SET_FEATURES, features });
+            this.#workerPort.postMessage({ type: WORKER_MESSAGES.SET_FEATURES, features });
         }
     }
 
-    #handleCommonMessage(event: TypedMessageEvent<CommonToControllerMessage>): boolean {
+    #handleCommonMessage(event: MessageEvent<ControllerMessage>): boolean {
         switch (event.data.type) {
-            case CONTROLLER_MESSAGES.LOG:
-                this.#logger[event.data.level](...event.data.data);
-
-                return true;
             case CONTROLLER_MESSAGES.TELEMETRY:
                 this.#telemetry.sendMetric(event.data.metricName, event.data.value);
 
@@ -213,11 +164,15 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
     }
 
     #handleWorkletMessage: WorkletPort['onmessage'] = (event): void => {
-        if (this.#handleCommonMessage(event as TypedMessageEvent<CommonToControllerMessage>)) {
+        if (this.#handleCommonMessage(event)) {
             return;
         }
 
         switch (event.data.type) {
+            case CONTROLLER_MESSAGES.LOG:
+                this.#logger[event.data.level](...event.data.data);
+
+                return;
             case CONTROLLER_MESSAGES.OVERFLOW:
                 if (!super.dispatchEvent(new OverflowEvent({ overflowCount: event.data.overflowCount }))) {
                     this.#handleOverflow(event.data.overflowCount);
@@ -238,7 +193,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         assert(false, 'Unknown message type from AudioWorkletProcessor');
     };
 
-    #handleWorkerMessage: SpenchWorker['onmessage'] = (event): void => {
+    #handleWorkerMessage: WorkerPort['onmessage'] = (event): void => {
         if (this.#handleCommonMessage(event)) {
             return;
         }
@@ -265,38 +220,27 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         }
     };
 
-    #init(wasm: ArrayBuffer, data?: ArrayBuffer): void {
+    #init(): void {
         const { sampleRate } = super.context;
 
-        if (this.#kind === 'processor') {
-            const workerWorkletChannel = new MessageChannel();
+        const workerWorkletChannel = new MessageChannel();
 
-            assert(this.#worker, 'Worker should be present');
-            assert(data, 'Model Data should be present');
-
-            this.#worker.postMessage(
-                {
-                    type: WORKER_MESSAGES.INIT,
-                    workletPort: workerWorkletChannel.port1,
-                    features: this.#features,
-                    wasm,
-                    data,
-                    sampleRate,
-                },
-                [workerWorkletChannel.port1, wasm, data],
-            );
-            this.#port.postMessage(
-                {
-                    type: WORKLET_MESSAGES.INIT,
-                    workerPort: workerWorkletChannel.port2,
-                },
-                [workerWorkletChannel.port2],
-            );
-        } else if (this.#kind === 'normalizer') {
-            this.#port.postMessage({ type: WORKLET_MESSAGES.INIT_NORM, wasm }, [wasm]);
-        } else {
-            assert(false, 'Unknown AudioWorkletProcessor kind');
-        }
+        this.#workerPort.postMessage(
+            {
+                type: WORKER_MESSAGES.INIT,
+                workletPort: workerWorkletChannel.port1,
+                features: this.#features,
+                sampleRate,
+            },
+            [workerWorkletChannel.port1],
+        );
+        this.#port.postMessage(
+            {
+                type: WORKLET_MESSAGES.INIT,
+                workerPort: workerWorkletChannel.port2,
+            },
+            [workerWorkletChannel.port2],
+        );
     }
 
     #attachListeners(): void {
@@ -307,11 +251,8 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         this.#port.onmessageerror = () =>
             this.#handleError(new SpenchError('Error serializing AudioWorkletProcessor message'));
 
-        if (this.#worker) {
-            this.#worker.onmessage = this.#handleWorkerMessage;
-            this.#worker.onerror = (event) =>
-                this.#handleError(new SpenchError(event.error || event.message), event.message);
-            this.#worker.onmessageerror = () => this.#handleError(new SpenchError('Error serializing Worker message'));
-        }
+        this.#workerPort.onmessage = this.#handleWorkerMessage;
+        this.#worker.onerror = (event) =>
+            this.#handleError(new SpenchError(event.error || event.message), event.message);
     }
 }
