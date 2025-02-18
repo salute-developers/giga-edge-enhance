@@ -24,12 +24,12 @@ SpenchAudioProcess::~SpenchAudioProcess() {
   m_dsp.reset();
 }
 
-std::vector<float>& SpenchAudioProcess::process(const std::vector<float>& chunk,
+std::vector<float>  SpenchAudioProcess::process(const std::vector<float>& chunk,
                                                       std::vector<float>& ret) {
   return m_dsp->process(chunk, ret);
 }
 
-std::vector<int16_t>& SpenchAudioProcess::process(const std::vector<int16_t>& chunk16,
+std::vector<int16_t>  SpenchAudioProcess::process(const std::vector<int16_t>& chunk16,
                                                         std::vector<int16_t>& ret16) {
   std::vector<float> input;
   std::vector<float> output;
@@ -56,14 +56,14 @@ SpenchRetCode SpenchAudioProcess::ProcessChunk(const std::vector<int16_t>& chunk
   return SpenchRetCode::SUCCESS;
 }
 
-std::vector<float>& SpenchAudioProcess::operator()(const std::vector<float>& chunk,
+std::vector<float>  SpenchAudioProcess::operator()(const std::vector<float>& chunk,
                                                    std::vector<float>& ret,
                                                    SpenchContext<float>* ctx) {
   (void)ctx;
   return this->process(chunk, ret);
 }
 
-std::vector<int16_t>& SpenchAudioProcess::operator()(const std::vector<int16_t>& chunk16,
+std::vector<int16_t>  SpenchAudioProcess::operator()(const std::vector<int16_t>& chunk16,
                                                      std::vector<int16_t>& ret16,
                                                      SpenchContext<float>* ctx) {
   (void)ctx;
@@ -82,19 +82,19 @@ SpenchRetCode SpenchAudioProcess::GetFinalChunk(std::vector<int16_t>& in16,
   return SpenchRetCode::SUCCESS;
 }
 
-std::vector<float>& SpenchAudioProcess::operator()(std::vector<float>& in,
+std::vector<float>  SpenchAudioProcess::operator()(std::vector<float>& in,
                                                    SpenchContext<float>* ctx) {
   std::vector<float> ret;
   this->ProcessChunk(in, ret);
-  std::swap(in, ret);
+  std::copy(ret.begin(), ret.end(), in.begin());
   return in;
 }
 
-std::vector<int16_t>& SpenchAudioProcess::operator()(std::vector<int16_t>& in16,
+std::vector<int16_t>  SpenchAudioProcess::operator()(std::vector<int16_t>& in16,
                                                      SpenchContext<float>* ctx) {
   std::vector<int16_t> ret16;
   this->ProcessChunk(in16, ret16);
-  std::swap(in16, ret16);
+  std::copy(ret16.begin(), ret16.end(), in16.begin());
   return in16;
 }
 

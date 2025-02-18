@@ -41,15 +41,15 @@ namespace tools {
 __declspec(dllexport)
 #endif
 void convertFloat32ToPCM16(const std::vector<float>& input, std::vector<int16_t>& output) {
-  output.clear();
-  for (std::vector<float>::size_type i = 0; i != input.size(); i++) {
-    float f = input[i] > 0 ?
-          std::round(input[i] * std::numeric_limits<int16_t>::max()):
-          std::round(input[i] * -std::numeric_limits<int16_t>::min());
-    output.emplace_back(std::clamp(static_cast<int16_t>(f),
-                                std::numeric_limits<int16_t>::min(),
-                                std::numeric_limits<int16_t>::max()));
-  }
+    output.resize(input.size());
+    constexpr float scale = static_cast<float>(std::numeric_limits<int16_t>::max());
+    for (size_t i = 0; i < input.size(); ++i) {
+        float scaled = input[i] * scale;
+        // Clamp the value to the range of int16_t
+        if (scaled > scale) scaled = scale;
+        if (scaled < -scale) scaled = -scale;
+        output[i] = static_cast<int16_t>(std::round(scaled));
+    }
 }
 
 /**
@@ -63,13 +63,11 @@ void convertFloat32ToPCM16(const std::vector<float>& input, std::vector<int16_t>
 __declspec(dllexport)
 #endif
 void convertPCM16ToFloat32(const std::vector<int16_t>& input, std::vector<float>& output) {
-  output.clear();
-  for (uint16_t i = 0; i != input.size(); i++) {
-    float f = input[i] > 0 ?
-          static_cast<float>(input[i]) / std::numeric_limits<int16_t>::max():
-          static_cast<float>(input[i]) / -std::numeric_limits<int16_t>::min();
-    output.emplace_back(f);
-  }
+    output.resize(input.size());
+    constexpr float inv_scale = 1.0f / std::numeric_limits<int16_t>::max();
+    for (size_t i = 0; i < input.size(); ++i) {
+        output[i] = input[i] * inv_scale;
+    }
 }
 }  // namespace tools
 

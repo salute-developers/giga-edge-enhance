@@ -61,13 +61,13 @@ SpenchRetCode SpenchDenoise::GetFinalChunk(std::vector<int16_t>& ret16,
   return ret_code;
 }
 
-std::vector<float>& SpenchDenoise::operator()(std::vector<float>& ret,
+std::vector<float>  SpenchDenoise::operator()(std::vector<float>& ret,
                                               SpenchContext<float>* ctx) {
   this->GetFinalChunk(ret, ctx);
   return ret;
 }
 
-std::vector<int16_t>& SpenchDenoise::operator()(std::vector<int16_t>& ret16,
+std::vector<int16_t>  SpenchDenoise::operator()(std::vector<int16_t>& ret16,
                                                 SpenchContext<float>* ctx) {
   this->GetFinalChunk(ret16, ctx);
   return ret16;
@@ -110,14 +110,14 @@ SpenchRetCode SpenchDenoise::ProcessChunk(const std::vector<int16_t>& chunk16,
   return ret_code;
 }
 
-std::vector<float>& SpenchDenoise::operator()(const std::vector<float>& chunk,
+std::vector<float>  SpenchDenoise::operator()(const std::vector<float>& chunk,
                                               std::vector<float>& ret,
                                               SpenchContext<float>* ctx) {
   this->ProcessChunk(chunk, ret, ctx);
   return ret;
 }
 
-std::vector<int16_t>& SpenchDenoise::operator()(const std::vector<int16_t>& chunk16,
+std::vector<int16_t>  SpenchDenoise::operator()(const std::vector<int16_t>& chunk16,
                                                 std::vector<int16_t>& ret16,
                                                 SpenchContext<float>* ctx) {
   this->ProcessChunk(chunk16, ret16, ctx);

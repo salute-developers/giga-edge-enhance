@@ -25,14 +25,14 @@ SpenchAudioEchoCancelation::SpenchAudioEchoCancelation(SpenchAudioEchoCancelatio
 
 }
 
-std::vector<float>& SpenchAudioEchoCancelation::process(const std::vector<float>& chunk,
+std::vector<float>  SpenchAudioEchoCancelation::process(const std::vector<float>& chunk,
                                                         std::vector<float>& ret) {
 //   return m_dsp->process(chunk, ret);
 std::vector<float> tmp;
 return tmp;
 }
 
-std::vector<int16_t>& SpenchAudioEchoCancelation::process(const std::vector<int16_t>& chunk16,
+std::vector<int16_t>  SpenchAudioEchoCancelation::process(const std::vector<int16_t>& chunk16,
                                                           std::vector<int16_t>& ret16) {
   std::vector<float> input;
   std::vector<float> output;
@@ -59,7 +59,7 @@ SpenchRetCode SpenchAudioEchoCancelation::ProcessChunk(const std::vector<int16_t
   return SpenchRetCode::SUCCESS;
 }
 
-std::vector<float>& SpenchAudioEchoCancelation::operator()(const std::vector<float>& chunk,
+std::vector<float>  SpenchAudioEchoCancelation::operator()(const std::vector<float>& chunk,
                                                    std::vector<float>& ret,
                                                    SpenchContext<float>* ctx) {
   (void)ctx;
@@ -68,7 +68,7 @@ std::vector<float>& SpenchAudioEchoCancelation::operator()(const std::vector<flo
   return tmp;
 }
 
-std::vector<int16_t>& SpenchAudioEchoCancelation::operator()(const std::vector<int16_t>& chunk16,
+std::vector<int16_t>  SpenchAudioEchoCancelation::operator()(const std::vector<int16_t>& chunk16,
                                                      std::vector<int16_t>& ret16,
                                                      SpenchContext<float>* ctx) {
   (void)ctx;
@@ -89,7 +89,7 @@ SpenchRetCode SpenchAudioEchoCancelation::GetFinalChunk(std::vector<int16_t>& in
   return SpenchRetCode::SUCCESS;
 }
 
-std::vector<float>& SpenchAudioEchoCancelation::operator()(std::vector<float>& in,
+std::vector<float>  SpenchAudioEchoCancelation::operator()(std::vector<float>& in,
                                                    SpenchContext<float>* ctx) {
   std::vector<float> ret;
   this->ProcessChunk(in, ret);
@@ -97,7 +97,7 @@ std::vector<float>& SpenchAudioEchoCancelation::operator()(std::vector<float>& i
   return in;
 }
 
-std::vector<int16_t>& SpenchAudioEchoCancelation::operator()(std::vector<int16_t>& in16,
+std::vector<int16_t>  SpenchAudioEchoCancelation::operator()(std::vector<int16_t>& in16,
                                                      SpenchContext<float>* ctx) {
   std::vector<int16_t> ret16;
   this->ProcessChunk(in16, ret16);

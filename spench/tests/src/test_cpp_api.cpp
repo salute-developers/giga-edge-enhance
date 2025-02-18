@@ -83,7 +83,7 @@ TEST_CASE("SUCCEED Convert pcm to float point [spench c++ api]") {
 
 TEST_CASE("SUCCEED Convert float point to pcm [spench c++ api]") {
   std::vector<float> float_point32 = {0, 1, -1, 0.06103, -0.1526};
-  std::vector<int16_t> ref_pcm = {0, 32767, -32768, 2000, -5000};
+  std::vector<int16_t> ref_pcm = {0, 32767, -32767, 2000, -5000};
   std::vector<int16_t> converted_pcm;
 
   spench::tools::convertFloat32ToPCM16(float_point32, converted_pcm);
