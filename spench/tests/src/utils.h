@@ -8,22 +8,29 @@
 #include <valarray>
 #include <dsplib.h>
 
+#pragma pack(push, 1)
 typedef struct WAV_HEADER {
-  uint8_t RIFF[4];
-  uint32_t chunkSize;  // RIFF Chunk Size
-  uint8_t WAVE[4];
-  uint8_t fmt[4];
-  uint32_t subchunk1Size;  // Size of the fmt chunk
-  uint16_t audioFormat;  // must be 1 (PCM)
-  uint16_t numOfChan;
+  uint8_t chunkID[4];    // "RIFF"
+  uint32_t chunkSize;
+  uint8_t format[4];     // "WAVE"
+} WavHeader;
+
+typedef struct WAV_FMT_CHUNK {
+  uint8_t subchunk1ID[4];  // "fmt "
+  uint32_t subchunk1Size;
+  uint16_t audioFormat;    // PCM = 1
+  uint16_t numChannels;
   uint32_t sampleRate;
-  uint32_t bytesPerSec;  // bytes per second
+  uint32_t byteRate;
   uint16_t blockAlign;
   uint16_t bitsPerSample;
-  /* "data" sub-chunk */
+} WavFmtChunk;
+
+typedef struct WAV_DATA_CHUNK {
   uint8_t subchunk2ID[4];  // "data"
-  uint32_t subchunk2Size;  // Sampled data length
-} WavHeader;
+  uint32_t subchunk2Size;
+} WavDataChunk;
+#pragma pack(pop)
 
 template <typename InputType, typename OutputType>
 std::vector<OutputType> LoadVectorFromBinaryStream(std::istream& f) {
