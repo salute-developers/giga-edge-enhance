@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <catch.hpp>
+#include <cstring>
 
 
 void loadWavFx(const char* path, std::vector<float>& wavData, float keepUnnorm) {
@@ -32,6 +33,7 @@ void loadWavFx(const char* path, std::vector<int16_t>& wavData) {
   }
 
   WavHeader header;
+  std::memset(&header, 0, sizeof(header));
   static_assert(sizeof(WavHeader) == 44);
   size_t bytesRead = fread(&header, 1, 44, file);
 
