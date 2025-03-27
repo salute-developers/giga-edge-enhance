@@ -22,7 +22,6 @@ SpenchAudioEchoCancelation::~SpenchAudioEchoCancelation() {
 }
 
 SpenchAudioEchoCancelation::SpenchAudioEchoCancelation(SpenchAudioEchoCancelation&&) {
-
 }
 
 std::vector<float>  SpenchAudioEchoCancelation::process(const std::vector<float>& chunk,
