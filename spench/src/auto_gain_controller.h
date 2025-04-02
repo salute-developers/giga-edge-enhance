@@ -6,7 +6,7 @@
 #include <utility>
 
 // #include "spench/contrib/ctpl/ctpl_stl.h"
-#include "spench/contrib/dsplib/include/dsplib.h"
+#include <dsplib.h>
 #include "spench/util/sound/range_control.h"
 #include "spench/include/errors.h"
 

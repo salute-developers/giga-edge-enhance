@@ -1,10 +1,13 @@
 
-#include <catch.hpp>
-#include <iostream>
+#include <dsplib.h>
+
 #include <algorithm>
-#include "tests/src/utils.h"
+#include <catch.hpp>
+
 #include "spench/include/errors.h"
 #include "spench/src/audio_processing.h"
+#include "tests/src/utils.h"
+#include "util/echo/echo_canceler.h"
 
 struct TestAudioProcessing {
   std::unique_ptr<spench::AudioProcessing> m_audio_proc;
@@ -689,4 +692,56 @@ TEST_CASE("SUCCEED Create and run audio processing with DRC specific parameters 
                std::back_inserter(greater_than_0_75),
                [](float& i) { return std::fabs(i) > 0.75; });
   REQUIRE(greater_than_0_75.size() != 0);
+}
+
+TEST_CASE("SUCCEED Create and process speex echo canceler [echo canceling]") {
+  constexpr int fs = 48000;
+  constexpr int chunk_ms = 16;
+  constexpr int frame_len = fs * chunk_ms / 1000;
+  constexpr int num_frames = (10 * fs) / frame_len;
+  constexpr int num_samples = num_frames * frame_len;
+  constexpr int filter_len = 8192;
+
+  auto echo = util::echo::EchoCancelerBuilder()
+                  .SetSampleRate(fs)
+                  .SetFilterLen(filter_len)
+                  .SetFrameLen(frame_len)
+                  .SetType(util::echo::EchoCancelerType::SPEEX)
+                  .SetDelayCompensator(true)
+                  .Create();
+
+  // loopback - noise, speech - sinus
+  auto rir_flt = dsplib::FirFilterR(DumbRIR(filter_len * 0.7));
+  auto tt = dsplib::arange(num_samples) / fs;
+  auto sig = 0.1 * sin(2 * dsplib::pi * 440.0 * tt);
+  auto ref = 0.5 * dsplib::rand({-1, 1}, num_samples);
+  auto noise = rir_flt(ref);
+  auto mic = 0.1 * (sig + noise);
+
+  // add noise (nonlinear effects)
+  mic += 1e-5 * dsplib::randn(num_samples);
+  ref += 1e-5 * dsplib::randn(num_samples);
+
+  // delay mic signal by `filter_len` samples (aec will not work without delay compensator)
+  mic = dsplib::delayseq(mic, filter_len);
+
+  const auto snr_before = dsplib::mag2db(rms(sig) / rms(noise));
+
+  // process frame by frame
+  dsplib::arr_real out;
+  for (int i = 0; i < num_frames; ++i) {
+    const int t1 = i * frame_len;
+    const int t2 = t1 + frame_len;
+    const auto d = *mic.slice(t1, t2);
+    const auto x = *ref.slice(t1, t2);
+    const auto y = echo->Process(d.to_vec(), x.to_vec());
+    out |= dsplib::arr_real(y);
+  }
+
+  // skip first 2 second
+  out = out.slice(fs * 2, num_samples);
+  auto spec = dsplib::welch(out, 1024).pxx;
+  const auto snr_after = dsplib::sinad(spec, dsplib::SinadType::Psd);
+
+  REQUIRE(snr_after - snr_before >= 20);
 }

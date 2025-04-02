@@ -3,6 +3,8 @@
 #include <cassert>
 #include <memory>
 
+#include "spench/util/echo/speex_echo_canceler.h"
+
 namespace util::echo {
 
 EchoCancelerBuilder::EchoCancelerBuilder(const EchoCancelerConfig& config) : m_cfg{config} {}
@@ -37,13 +39,22 @@ EchoCancelerBuilder& EchoCancelerBuilder::SetFrameLen(uint16_t len) {
   return *this;
 }
 
-std::unique_ptr<IEchoCanceler> EchoCancelerBuilder::Create() {
-  // TODO: add more config checks
+EchoCancelerBuilder& EchoCancelerBuilder::SetDelayCompensator(bool enabled) {
+  m_cfg.delay_compensator = enabled;
+  return *this;
+}
 
-  // TODO: add implementations
-  //   if (cfg_.type == EchoCancelerType::SPEEX) {
-  //     return std::move(std::make_unique<SpeexEchoCanceler>(cfg_));
-  //   }
+EchoCancelerBuilder& EchoCancelerBuilder::SetResidualEchoSuppression(bool enabled) {
+  m_cfg.echo_suppression = enabled;
+  return *this;
+}
+
+std::unique_ptr<IEchoCanceler> EchoCancelerBuilder::Create() {
+  // TODO(yulis): add more config checks
+
+  if (m_cfg.type == EchoCancelerType::SPEEX) {
+    return std::make_unique<SpeexEchoCanceler>(m_cfg);
+  }
 
   return nullptr;
 }

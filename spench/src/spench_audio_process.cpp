@@ -14,6 +14,7 @@ SpenchAudioProcess::SpenchAudioProcess() {
 SpenchAudioProcess::SpenchAudioProcess(const char* config_file) {
   auto cfg = std::string(config_file);
   if (cfg.empty()) {
+    std::cout << "SpenchAudioProcess input config is empty. Use default values" << std::endl;
     m_dsp = std::make_unique<spench::AudioProcessing>();
   } else {
     m_dsp = std::make_unique<spench::AudioProcessing>(cfg);

@@ -17,6 +17,8 @@ struct EchoCancelerConfig {
   uint16_t filter_len{4096};    ///< internal AEC filter length (samples)
   uint16_t frame_len{512};      ///< process frame len (samples)
   EchoCancelerType type{EchoCancelerType::SPEEX};
+  bool delay_compensator{false};  ///< delay compensator between microphone and speaker
+  bool echo_suppression{false};   ///< residual echo suppression status
 };
 
 class IEchoCanceler {
@@ -32,8 +34,7 @@ class IEchoCanceler {
     return out;
   }
 
-  virtual void Process(const std::vector<float>& mic, const std::vector<float>& lbk,
-                                     std::vector<float>& out) = 0;
+  virtual void Process(const std::vector<float>& mic, const std::vector<float>& lbk, std::vector<float>& out) = 0;
 
   // current config
   virtual const EchoCancelerConfig& Config() const noexcept = 0;
@@ -58,6 +59,8 @@ class EchoCancelerBuilder {
   EchoCancelerBuilder& SetLbkChannels(uint8_t num);
   EchoCancelerBuilder& SetFilterLen(uint16_t len);
   EchoCancelerBuilder& SetFrameLen(uint16_t len);
+  EchoCancelerBuilder& SetDelayCompensator(bool enabled);
+  EchoCancelerBuilder& SetResidualEchoSuppression(bool enabled);
   std::unique_ptr<IEchoCanceler> Create();
 
  private:

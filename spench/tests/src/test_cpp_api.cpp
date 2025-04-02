@@ -11,16 +11,20 @@ struct TestFixture {
   std::unique_ptr<spench::SpenchDenoise> m_denoiser;
   std::unique_ptr<spench::SpenchAudioDereverb> m_dereverb;
   std::unique_ptr<spench::SpenchAudioProcess> m_dsp;
+  std::unique_ptr<spench::SpenchAudioEchoCancelation> m_aec;
 
   const std::string m_kBase = "data/";
 
   TestFixture() :
           m_denoiser(nullptr),
           m_dereverb(nullptr),
-          m_dsp(nullptr) {}
+          m_dsp(nullptr),
+          m_aec(nullptr) {}
   ~TestFixture() {
     m_denoiser.reset();
+    m_dereverb.reset();
     m_dsp.reset();
+    m_aec.reset();
   }
   TestFixture& operator=(const TestFixture&) = delete;
   TestFixture(const TestFixture&) = delete;
@@ -28,11 +32,13 @@ struct TestFixture {
           m_wav_data(std::move(orig.m_wav_data)),
           m_denoiser(std::move(orig.m_denoiser)),
           m_dereverb(std::move(orig.m_dereverb)),
-          m_dsp(std::move(orig.m_dsp)) {
+          m_dsp(std::move(orig.m_dsp)),
+          m_aec(std::move(orig.m_aec)) {
     orig.m_wav_data.clear();
     orig.m_denoiser = nullptr;
     orig.m_dereverb = nullptr;
     orig.m_dsp = nullptr;
+    orig.m_aec = nullptr;
   }
   TestFixture& SetWav(const std::string& wav_path) {
     std::string full_wav_path = m_kBase + "wavs/" + wav_path;
@@ -59,6 +65,7 @@ struct TestFixture {
                                                                checksum.c_str());
     return *this;
   }
+
   TestFixture& InitAudioProcessor(const std::string& config_name) {
     std::string config_path = m_kBase + "config/" + config_name;
     m_dsp = std::make_unique<spench::SpenchAudioProcess>(config_path.c_str());
@@ -67,6 +74,17 @@ struct TestFixture {
 
   TestFixture& InitAudioProcessor() {
     m_dsp = std::make_unique<spench::SpenchAudioProcess>();
+    return *this;
+  }
+
+  TestFixture& InitAudioEchoCancelation(const std::string& config_name) {
+    std::string config_path = m_kBase + "config/" + config_name;
+    m_aec = std::make_unique<spench::SpenchAudioEchoCancelation>(config_path.c_str());
+    return *this;
+  }
+
+  TestFixture& InitAudioEchoCancelation() {
+    m_aec = std::make_unique<spench::SpenchAudioEchoCancelation>("");
     return *this;
   }
 };
@@ -1499,3 +1517,94 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [
 //   IsVectorsClose(reference_prediction, prediction, 0.1);
 //   #endif
 // }
+
+TEST_CASE("SUCCEED Run Echo Cancelation with simulated audio [spench c++ api]") {
+  auto test_data =
+          std::move(TestFixture().
+                    InitAudioEchoCancelation(std::string("default_configuration_fast_tflite_agc_enabled_24khz.yaml")));
+  constexpr int kAudio_src_sample_rate = 48000;
+  constexpr int kChunk_size_ms = 16;
+  constexpr int frame_len = kAudio_src_sample_rate * kChunk_size_ms / 1000;
+  constexpr int num_frames = (10 * kAudio_src_sample_rate) / frame_len;
+  constexpr int num_samples = num_frames * frame_len;
+  constexpr int filter_len = 4096;
+
+  // loopback - noise, speech - sinus
+  auto rir_flt = dsplib::FirFilterR(DumbRIR(filter_len * 0.7));
+  auto tt = dsplib::arange(num_samples) / kAudio_src_sample_rate;
+  auto sig = 0.1 * sin(2 * dsplib::pi * 440.0 * tt);
+  auto ref = 0.5 * dsplib::rand({-1, 1}, num_samples);
+  auto noise = rir_flt(ref);
+  auto mic = 0.1 * (sig + noise);
+
+  // add noise (nonlinear effects)
+  mic += 1e-5 * dsplib::randn(num_samples);
+  ref += 1e-5 * dsplib::randn(num_samples);
+
+  const auto snr_before = dsplib::mag2db(rms(sig) / rms(noise));
+
+  // process frame by frame
+  dsplib::arr_real out;
+  for (int i = 0; i < num_frames; ++i) {
+    const int t1 = i * frame_len;
+    const int t2 = t1 + frame_len;
+    const auto d = *mic.slice(t1, t2);
+    const auto x = *ref.slice(t1, t2);
+    std::vector<float> y;
+
+    test_data.m_aec->ProcessChunk(d.to_vec(), x.to_vec(), y);
+    out |= dsplib::arr_real(y);
+  }
+
+  // skip first second
+  out = out.slice(kAudio_src_sample_rate, num_samples);
+  auto spec = dsplib::welch(out, 1024).pxx;
+  const auto snr_after = dsplib::sinad(spec, dsplib::SinadType::Psd);
+
+  REQUIRE(snr_after - snr_before >= 20);
+}
+
+TEST_CASE("SUCCEED Run AudioEchoCancelation with empty config with simulated audio [spench c++ api]") {
+  auto test_data = std::move(TestFixture().InitAudioEchoCancelation());
+
+  constexpr int kAudio_src_sample_rate = 48000;
+  constexpr int kChunk_size_ms = 16;
+  constexpr int frame_len = kAudio_src_sample_rate * kChunk_size_ms / 1000;
+  constexpr int num_frames = (10 * kAudio_src_sample_rate) / frame_len;
+  constexpr int num_samples = num_frames * frame_len;
+  constexpr int filter_len = 4096;
+
+  // loopback - noise, speech - sinus
+  auto rir_flt = dsplib::FirFilterR(DumbRIR(filter_len * 0.7));
+  auto tt = dsplib::arange(num_samples) / kAudio_src_sample_rate;
+  auto sig = 0.1 * sin(2 * dsplib::pi * 440.0 * tt);
+  auto ref = 0.5 * dsplib::rand({-1, 1}, num_samples);
+  auto noise = rir_flt(ref);
+  auto mic = 0.1 * (sig + noise);
+
+  // add noise (nonlinear effects)
+  mic += 1e-5 * dsplib::randn(num_samples);
+  ref += 1e-5 * dsplib::randn(num_samples);
+
+  const auto snr_before = dsplib::mag2db(rms(sig) / rms(noise));
+
+  // process frame by frame
+  dsplib::arr_real out;
+  for (int i = 0; i < num_frames; ++i) {
+    const int t1 = i * frame_len;
+    const int t2 = t1 + frame_len;
+    const auto d = *mic.slice(t1, t2);
+    const auto x = *ref.slice(t1, t2);
+    std::vector<float> y;
+
+    test_data.m_aec->ProcessChunk(d.to_vec(), x.to_vec(), y);
+    out |= dsplib::arr_real(y);
+  }
+
+  // skip first second
+  out = out.slice(kAudio_src_sample_rate, num_samples);
+  auto spec = dsplib::welch(out, 1024).pxx;
+  const auto snr_after = dsplib::sinad(spec, dsplib::SinadType::Psd);
+
+  REQUIRE(snr_after - snr_before >= 20);
+}

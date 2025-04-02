@@ -1,4 +1,4 @@
-#include "contrib/dsplib/include/dsplib.h"
+#include <dsplib.h>
 #include "spench/util/metrics/mute_frame_detector.h"
 #include <catch.hpp>
 #include <chrono> // NOLINT

@@ -8,7 +8,7 @@
 namespace spench {
 namespace fe {
 namespace fft {
-using buffer_type = double;
+using buffer_type = float;
 }  // namespace fft
 
 enum class WindowType {

@@ -97,3 +97,13 @@ void IsVectorsClose(const std::vector<int16_t>& v1, const std::vector<int16_t>& 
                                                         });
   IsVectorsClose(v1_float, v2_float, eps);
 }
+
+// dumb room impulse responce generator
+// TODO(vayulis): use real RIR
+dsplib::arr_real DumbRIR(int n) {
+  auto rir = dsplib::rand({-1, 1}, 2 * n) * dsplib::window::gauss(2 * n, 20);
+  rir = rir / dsplib::sum(rir);
+  rir[n] = 0.5;
+  rir = rir.slice(n, 2 * n);
+  return rir;
+}

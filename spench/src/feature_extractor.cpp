@@ -252,7 +252,6 @@ T FeatureExtractor<T>::calcSnrEstimation(const ComplexNumber<T>& input_spec,
   T SNR_est = 10 * std::log10(metrics.m_speech_energy_avg / metrics.m_noise_energy_avg);
   return SNR_est;
 }
-template class FeatureExtractor<float>;
-template class FeatureExtractor<double>;
+template class FeatureExtractor<fft::buffer_type>;
 }  // namespace fe
 }  // namespace spench

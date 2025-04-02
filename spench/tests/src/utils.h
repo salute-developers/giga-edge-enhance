@@ -6,6 +6,7 @@
 #include <string>
 #include <algorithm>
 #include <valarray>
+#include <dsplib.h>
 
 typedef struct WAV_HEADER {
   uint8_t RIFF[4];
@@ -130,3 +131,5 @@ void loadBin(const char* path, std::valarray<InputType>& output) {
   output.resize(fsize / sizeof(InputType));
   ifs.read(reinterpret_cast<char*>(&output[0]), output.size() * sizeof(InputType));
 }
+
+dsplib::arr_real DumbRIR(int n);

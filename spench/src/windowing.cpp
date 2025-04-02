@@ -94,7 +94,6 @@ void Windowing<T>::sumSquareInPlace(std::vector<T>& input) const {
   }
 }
 
-template class Windowing<float>;
-template class Windowing<double>;
+template class Windowing<fft::buffer_type>;
 }  // namespace fe
 }  // namespace spench
