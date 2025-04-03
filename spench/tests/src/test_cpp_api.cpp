@@ -8,6 +8,7 @@
 
 struct TestFixture {
   std::vector<float> m_wav_data;
+  std::vector<float> m_wav_lbk_data;
   std::unique_ptr<spench::SpenchDenoise> m_denoiser;
   std::unique_ptr<spench::SpenchAudioDereverb> m_dereverb;
   std::unique_ptr<spench::SpenchAudioProcess> m_dsp;
@@ -30,11 +31,13 @@ struct TestFixture {
   TestFixture(const TestFixture&) = delete;
   TestFixture(TestFixture&& orig) :
           m_wav_data(std::move(orig.m_wav_data)),
+          m_wav_lbk_data(std::move(orig.m_wav_lbk_data)),
           m_denoiser(std::move(orig.m_denoiser)),
           m_dereverb(std::move(orig.m_dereverb)),
           m_dsp(std::move(orig.m_dsp)),
           m_aec(std::move(orig.m_aec)) {
     orig.m_wav_data.clear();
+    orig.m_wav_lbk_data.clear();
     orig.m_denoiser = nullptr;
     orig.m_dereverb = nullptr;
     orig.m_dsp = nullptr;
@@ -43,6 +46,11 @@ struct TestFixture {
   TestFixture& SetWav(const std::string& wav_path) {
     std::string full_wav_path = m_kBase + "wavs/" + wav_path;
     loadWavFx(full_wav_path.c_str(), m_wav_data, false);
+    return *this;
+  }
+  TestFixture& SetLbk(const std::string& wav_lbk_path) {
+    std::string full_wav_path = m_kBase + "wavs/" + wav_lbk_path;
+    loadWavFx(full_wav_path.c_str(), m_wav_lbk_data, false);
     return *this;
   }
 
@@ -1517,7 +1525,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [
                                 kChunk_size, kChunk_stride);
   std::vector<float> reference(test_data.m_wav_data.begin(),
                                test_data.m_wav_data.begin() + source_data_size);
-    std::vector<float> greater_than_0_75;
+  std::vector<float> greater_than_0_75;
   chunks.resize(kChunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
@@ -1586,7 +1594,7 @@ TEST_CASE("SUCCEED Run inference with the dereverb 48 kHz model on a part of .wa
   #endif
 }
 
-TEST_CASE("SUCCEED Run Echo Cancelation with simulated audio [spench c++ api]") {
+TEST_CASE("SUCCEED Run AudioEchoCancelation with simulated audio [spench c++ api]") {
   auto test_data =
           std::move(TestFixture().
                     InitAudioEchoCancelation(std::string("default_configuration_fast_tflite_agc_enabled_24khz.yaml")));
@@ -1675,4 +1683,36 @@ TEST_CASE("SUCCEED Run AudioEchoCancelation with empty config with simulated aud
   const auto snr_after = dsplib::sinad(spec, dsplib::SinadType::Psd);
 
   REQUIRE(snr_after - snr_before >= 20);
+}
+
+TEST_CASE("SUCCEED Run AudioEchoCancelation successfully with real 16kHz .wav files [spench c++ api]") {
+  auto test_data = std::move(TestFixture().
+                    InitAudioEchoCancelation(std::string("default_configuration_fast_tflite_dsp_enabled_24khz.yaml")).
+                    SetWav("test4_16_echo_mic.wav").
+                    SetLbk("test4_16_echo_lbk.wav"));
+
+  constexpr int kAudio_src_sample_rate = 16000;
+  constexpr int kChunk_size_ms = 16;
+  const uint32_t kChunks_to_compare = 500;
+  std::vector<float> prediction;
+
+  auto chunks_mic = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size_ms, kChunk_size_ms);
+
+  auto chunks_lbk = chunkWav<float>(test_data.m_wav_lbk_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size_ms, kChunk_size_ms);
+
+  chunks_mic.resize(kChunks_to_compare);
+  chunks_lbk.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks_mic.size(); ++i) {
+    auto& chunk_mic = chunks_mic[i];
+    auto& chunk_lbk = chunks_lbk[i];
+    std::vector<float> ret;
+
+    test_data.m_aec->ProcessChunk(chunk_mic, chunk_lbk, ret);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
 }
