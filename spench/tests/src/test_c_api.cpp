@@ -749,6 +749,7 @@ TEST_CASE("FAIL Get statistic information with nullptr stat structure[spench c a
   ret_code = SpenchDenoiseGetStreamStat(test_data.m_denoiser, ctx, nullptr);
 
   REQUIRE(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 
 TEST_CASE("FAIL Get statistic information with nullptr context[spench c api]") {
@@ -1756,6 +1757,9 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [s
                std::back_inserter(greater_than_0_9),
                [](float& i) { return std::fabs(i) > 0.9; });
   REQUIRE(greater_than_0_9.size() == 0);
+
+  SpenchAudioProcessFree(test_data.m_audio_proc);
+  test_data.m_audio_proc = nullptr;
 }
 
 TEST_CASE("SUCCEED Run AudioProcessing for pcm16 data with reading RC parameters from config [spench c api]") {
@@ -1821,6 +1825,8 @@ TEST_CASE("SUCCEED Run AudioProcessing for pcm16 data with reading RC parameters
                std::back_inserter(greater_than_0_9),
                [](float& i) { return std::fabs(i) > 0.9; });
   REQUIRE(greater_than_0_9.size() == 0);
+  SpenchAudioProcessFree(test_data.m_audio_proc);
+  test_data.m_audio_proc = nullptr;
 }
 
 TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [spench c api]") {
@@ -1875,6 +1881,8 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [spench c api]
                std::back_inserter(greater_than_0_8),
                [](float& i) { return std::fabs(i) > 0.8; });
   REQUIRE(greater_than_0_8.size() == 0);
+  SpenchAudioProcessFree(test_data.m_audio_proc);
+  test_data.m_audio_proc = nullptr;
 }
 
 TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [spench c api]") {
@@ -1926,6 +1934,8 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [
   std::copy_if(std::begin(prediction), std::end(prediction), std::back_inserter(greater_than_1),
     [](float& i) { return std::fabs(i) > 1.0; });
   REQUIRE(greater_than_1.size() != 0);
+  SpenchAudioProcessFree(test_data.m_audio_proc);
+  test_data.m_audio_proc = nullptr;
 }
 
 TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [spench c api]") {
@@ -1977,5 +1987,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [spench c api
   std::copy_if(std::begin(prediction), std::end(prediction), std::back_inserter(greater_than_09),
     [](float& i) { return std::fabs(i) > 0.9; });
   REQUIRE(greater_than_09.size() != 0);
+  SpenchAudioProcessFree(test_data.m_audio_proc);
+  test_data.m_audio_proc = nullptr;
 }
 

@@ -154,6 +154,7 @@ TEST_CASE("SUCCEED Run denoise with empty chunk with the model 24kHz [denoiser h
   REQUIRE(ret_code == SpenchRetCode::SUCCESS);
 
   REQUIRE(output.size() == 0);
+  handler_test_env.m_handler->DestroyContext(&ctx_ptr);
 }
 
 TEST_CASE("SUCCEED Run denoise and check zero outputs with the best quality model [denoiser handler]") {
@@ -221,6 +222,7 @@ TEST_CASE("SUCCEED Run dereverb with empty chunk with the model 48kHz [dereverbe
   REQUIRE(ret_code == SpenchRetCode::SUCCESS);
 
   REQUIRE(output.size() == 0);
+  handler_test_env.m_handler->DestroyContext(&ctx_ptr);
   #endif
 }
 

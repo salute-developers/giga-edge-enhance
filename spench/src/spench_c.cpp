@@ -253,12 +253,8 @@ SpenchRetCode   SpenchAudioProcessInit(const char* config_file,
   return ret_code;
 }
 
-void  SpenchAudioProcessFree(SpenchAudioProcess* model) {
-  spench::SpenchAudioProcess * audio_process = (spench::SpenchAudioProcess *)*model;
-  if (audio_process != nullptr) {
-    delete audio_process;
-    audio_process = nullptr;
-  }
+extern "C" void SpenchAudioProcessFree(SpenchAudioProcess model) {
+  delete static_cast<spench::SpenchAudioProcess*>(model);
 }
 
 SpenchRetCode   SpenchAudioProcessAddAgc(SpenchAudioProcess model) {
