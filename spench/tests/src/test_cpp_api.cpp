@@ -908,6 +908,55 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
   IsVectorsClose(reference, prediction, 0.005);
   test_data.m_denoiser->DestroyContext(&ctx);
 }
+
+TEST_CASE("SUCCEED Run inference with the dereverb 48 kHz model with resampling from 44.1 kHz [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    // auto test_data = std::move(TestFixture().
+    //                            InitDereverberator("default_configuration_dereverberation_tflite_48khz.yaml").
+    //                            SetWav("reverb_with_noise_48khz.wav"));
+  #else
+    auto test_data = std::move(TestFixture().
+                               InitDereverberator("default_configuration_dereverberation_onnx_48khz.yaml").
+                               SetWav("reverb_with_noise_44.1khz.wav"));
+
+  std::vector<float> prediction;
+  std::vector<float> reference_prediction;
+  SpenchRetCode ret_code;
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 100;
+  const uint32_t kAudio_dst_sample_rate = 44100;
+  const uint32_t kAudio_src_sample_rate = 44100;
+
+  spench::SpenchContext<float>* ctx = test_data.m_dereverb->CreateContext(kAudio_src_sample_rate,
+                                                                          kAudio_dst_sample_rate);
+
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+
+  loadWavFx("data/results/wavs/dereverb_with_noise_44.1khz.wav", reference_prediction);
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+
+    ret_code = test_data.m_dereverb->ProcessChunk(chunk, ret, ctx);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+  // remove context zeroes as reference does not include that
+  prediction.erase(prediction.begin(),
+                   prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
+  //
+  test_data.m_dereverb->DestroyContext(&ctx);
+  reference_prediction.resize(prediction.size());
+  // ToDo (artsokol) make a threshold smaller for new dereverb model
+  IsVectorsClose(reference_prediction, prediction, 0.4);
+  #endif
+}
 #else
 TEST_CASE("FAIL Run inference with the fast 24 kHz model with input resampling [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
@@ -955,7 +1004,7 @@ TEST_CASE("FAIL Run inference with the fast 24 kHz model with input and output r
   #else
     auto test_data = std::move(TestFixture().
                                InitDenoiser("default_configuration_fast_onnx_24khz.yaml").
-                               SetWav("test1_48_noised.wav"));
+                               SetWav("reverb_with_noise_44.1khz.wav"));
   #endif
 
   const uint32_t kAudio_src_sample_rate = 48000;
@@ -964,6 +1013,25 @@ TEST_CASE("FAIL Run inference with the fast 24 kHz model with input and output r
   REQUIRE_THROWS_WITH(test_data.m_denoiser->CreateContext(kAudio_src_sample_rate,
                                                           kAudio_dst_sample_rate),
                       "Due to errors a context could not be created!");
+}
+
+TEST_CASE("FAIL Run inference with dereverb model 48kHz with output resampling [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    // auto test_data = std::move(TestFixture().
+    //                            InitDereverberator("default_configuration_dereverberation_tflite_48khz.yaml").
+    //                            SetWav("reverb_with_noise_48khz.wav"));
+  #else
+    auto test_data = std::move(TestFixture().
+                               InitDereverberator("default_configuration_dereverberation_onnx_48khz.yaml").
+                               SetWav("test1_24_noised.wav"));
+
+  const uint32_t kAudio_src_sample_rate = 44100;
+  const uint32_t kAudio_dst_sample_rate = 48000;
+
+  REQUIRE_THROWS_WITH(test_data.m_dereverb->CreateContext(kAudio_src_sample_rate,
+                                                          kAudio_dst_sample_rate),
+                      "Due to errors a context could not be created!");
+  #endif
 }
 #endif
 
@@ -1474,49 +1542,49 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [
   REQUIRE(greater_than_0_75.size() == 0);
 }
 
-// TEST_CASE("SUCCEED Run inference with the dereverb 48 kHz model on a part of .wav file [spench c++ api]") {
-//   #ifdef BUILD_TFLITE_ENGINE
-//     // auto test_data = std::move(TestFixture().
-//     //                            InitDereverberator("default_configuration_dereverberation_tflite_48khz.yaml").
-//     //                            SetWav("reverb_with_noise_48khz.wav"));
-//   #else
-//     auto test_data = std::move(TestFixture().
-//                                InitDereverberator("default_configuration_dereverberation_onnx_48khz.yaml").
-//                                SetWav("reverb_with_noise_48khz.wav"));
+TEST_CASE("SUCCEED Run inference with the dereverb 48 kHz model on a part of .wav file [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    // auto test_data = std::move(TestFixture().
+    //                            InitDereverberator("default_configuration_dereverberation_tflite_48khz.yaml").
+    //                            SetWav("reverb_with_noise_48khz.wav"));
+  #else
+    auto test_data = std::move(TestFixture().
+                               InitDereverberator("default_configuration_dereverberation_onnx_48khz.yaml").
+                               SetWav("reverb_with_noise_48khz.wav"));
 
+  std::vector<float> prediction;
+  std::vector<float> reference_prediction;
+  spench::SpenchContext<float>* ctx = test_data.m_dereverb->CreateContext();
 
-//   std::vector<float> prediction;
-//   std::vector<float> reference_prediction;
-//   spench::SpenchContext<float>* ctx = test_data.m_dereverb->CreateContext();
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 300;
+  const uint32_t kAudio_dst_sample_rate = 48000;
 
-//   const uint32_t kChunk_size = 16;
-//   const uint32_t kChunk_stride = 16;
-//   const uint32_t kChunks_to_compare = 300;
-//   const uint32_t kAudio_dst_sample_rate = 48000;
-//   // test_data.m_wav_data.erase(test_data.m_wav_data.begin(), test_data.m_wav_data.begin() + 17);
-//   auto chunks = chunkWav<float>(test_data.m_wav_data,
-//                                 test_data.m_dereverb->GetModelSampleRate(),
-//                                 kChunk_size, kChunk_stride);
-//   loadWavFx("data/results/wavs/dereverb_with_noise_48khz.wav", reference_prediction);
-//   chunks.resize(kChunks_to_compare);
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                test_data.m_dereverb->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
 
-//   for (uint32_t i = 0; i < chunks.size(); ++i) {
-//     auto& chunk = chunks[i];
-//     std::vector<float> ret;
-//     SpenchRetCode ret_code = test_data.m_dereverb->ProcessChunk(chunk, ret, ctx);
-//     CHECK(ret_code >= SpenchRetCode::SUCCESS);
-//     prediction.insert(prediction.end(), ret.begin(), ret.end());
-//   }
-//   // remove context zeroes as reference does not include that
-//   prediction.erase(prediction.begin(),
-//                    prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
-//   //
-//   test_data.m_dereverb->DestroyContext(&ctx);
-//   reference_prediction.resize(prediction.size());
+  loadWavFx("data/results/wavs/dereverb_with_noise_48khz.wav", reference_prediction);
+  chunks.resize(kChunks_to_compare);
 
-//   IsVectorsClose(reference_prediction, prediction, 0.1);
-//   #endif
-// }
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    SpenchRetCode ret_code = test_data.m_dereverb->ProcessChunk(chunk, ret, ctx);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+  // remove context zeroes as reference does not include that
+  prediction.erase(prediction.begin(),
+                   prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
+  //
+  test_data.m_dereverb->DestroyContext(&ctx);
+  reference_prediction.resize(prediction.size());
+
+  IsVectorsClose(reference_prediction, prediction, 0.3);
+  #endif
+}
 
 TEST_CASE("SUCCEED Run Echo Cancelation with simulated audio [spench c++ api]") {
   auto test_data =
