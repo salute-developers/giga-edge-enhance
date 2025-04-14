@@ -41,14 +41,17 @@ export const SELF_WORKER_MESSAGES = {
 } as const;
 
 export type SelfWorkerMessage =
-    | Message<typeof SELF_WORKER_MESSAGES.INIT, { wasm: ArrayBuffer; data: ArrayBuffer }>
+    | Message<
+          typeof SELF_WORKER_MESSAGES.INIT,
+          { isDebug: boolean; isTelemetryEnabled: boolean; wasm: ArrayBuffer; data?: ArrayBuffer }
+      >
     | Message<typeof SELF_WORKER_MESSAGES.NEW_CLIENT, { port: CustomPort<WorkerMessage, ControllerMessage> }>
     | Message<typeof SELF_WORKER_MESSAGES.DESTROY>;
 
 export type WorkerControllerMessage = LogMessage;
 
 export type WorkletMessage =
-    | Message<typeof WORKLET_MESSAGES.INIT, { workerPort: MessagePort }>
+    | Message<typeof WORKLET_MESSAGES.INIT, { isDebug: boolean; isTelemetryEnabled: boolean; workerPort: MessagePort }>
     | Message<typeof WORKLET_MESSAGES.OUTPUT, { output: Float32Array }>
     | Message<typeof WORKLET_MESSAGES.ENABLE>
     | Message<typeof WORKLET_MESSAGES.DISABLE>

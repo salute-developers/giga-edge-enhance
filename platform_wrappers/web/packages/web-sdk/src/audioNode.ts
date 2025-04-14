@@ -61,8 +61,9 @@ interface SpenchAudioNodeCtorParams {
     features: Features;
     ctx: AudioContext;
     logger: Logger;
-    telemetry: AudioNodeTelemetry;
     worker: SpenchWorker;
+    isDebug: boolean;
+    telemetry?: AudioNodeTelemetry;
 }
 
 export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudioNode {
@@ -79,9 +80,9 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
 
     #initStartTime = performance.now();
 
-    #telemetry: AudioNodeTelemetry;
+    #telemetry: AudioNodeTelemetry | undefined;
 
-    constructor({ features, ctx, logger, telemetry, worker }: SpenchAudioNodeCtorParams) {
+    constructor({ isDebug, features, ctx, logger, telemetry, worker }: SpenchAudioNodeCtorParams) {
         super(ctx, SPENCH_WORKLET_NAME);
 
         this.#features = features;
@@ -91,7 +92,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         this.#workerPort = this.#worker.createPort();
 
         this.#attachListeners();
-        this.#init();
+        this.#init(isDebug);
     }
 
     get #port(): WorkletPort {
@@ -146,7 +147,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
                 ...features,
             };
 
-            this.port.postMessage({ type: WORKLET_MESSAGES.WORKER_EJECTED });
+            this.#port.postMessage({ type: WORKLET_MESSAGES.WORKER_EJECTED });
             this.#workerPort.postMessage({ type: WORKER_MESSAGES.SET_FEATURES, features });
         }
     }
@@ -154,7 +155,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
     #handleCommonMessage(event: MessageEvent<ControllerMessage>): boolean {
         switch (event.data.type) {
             case CONTROLLER_MESSAGES.TELEMETRY:
-                this.#telemetry.sendMetric(event.data.metricName, event.data.value);
+                this.#telemetry?.sendMetric(event.data.metricName, event.data.value);
 
                 return true;
             default:
@@ -182,7 +183,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
             case CONTROLLER_MESSAGES.SYSTEM_READY:
                 if (!this.#initialized) {
                     this.#initialized = true;
-                    this.#telemetry.sendMetric('initTime', performance.now() - this.#initStartTime);
+                    this.#telemetry?.sendMetric('initTime', performance.now() - this.#initStartTime);
                 }
                 super.dispatchEvent(new Event('ready'));
 
@@ -220,7 +221,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         }
     };
 
-    #init(): void {
+    #init(isDebug: boolean): void {
         const { sampleRate } = super.context;
 
         const workerWorkletChannel = new MessageChannel();
@@ -238,6 +239,8 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
             {
                 type: WORKLET_MESSAGES.INIT,
                 workerPort: workerWorkletChannel.port2,
+                isDebug,
+                isTelemetryEnabled: Boolean(this.#telemetry),
             },
             [workerWorkletChannel.port2],
         );

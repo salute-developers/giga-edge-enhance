@@ -7,7 +7,7 @@ const baseConfigFactory = (mode = 'development') => {
         resolve: {
             extensions: ['.ts', '.js'],
             alias: {
-                'wasm-wrapper': path.resolve(__dirname, 'lib/Spench'),
+                'wasm-wrapper': path.resolve(__dirname, 'lib/spench'),
             },
             fallback: {
                 crypto: false,

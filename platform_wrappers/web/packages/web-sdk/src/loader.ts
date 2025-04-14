@@ -36,7 +36,12 @@ class SpenchSDK {
 
     #isWorkletRegistered = false;
 
-    protected constructor(ctx: AudioContext, logger: Logger, sendMetric: SendMetricFunction | undefined) {
+    protected constructor(
+        ctx: AudioContext,
+        logger: Logger,
+        sendMetric: SendMetricFunction | undefined,
+        private isDebug: boolean,
+    ) {
         this.#ctx = ctx;
         this.#logger = logger;
         this.#sendMetricFunction = sendMetric;
@@ -53,7 +58,7 @@ class SpenchSDK {
         { isDebug, logger: externalLogger, preloadFeatures, sendMetric }: CreateSpenchParams = {},
     ): SpenchSDK {
         const logger = createLogger(Boolean(isDebug), externalLogger);
-        const instance = new SpenchSDK(ctx, logger, sendMetric);
+        const instance = new SpenchSDK(ctx, logger, sendMetric, Boolean(isDebug));
 
         if (preloadFeatures) {
             instance.#preloadFeatures(preloadFeatures);
@@ -70,6 +75,8 @@ class SpenchSDK {
         features: Features = { normalization: true },
         shared = false,
     ): Promise<SpenchAudioNode | CreateAudioNodeError> {
+        const isTelemetryEnabled = Boolean(this.#sendMetricFunction);
+
         if (shared && this.#sharedWorker) {
             this.#logger.debug('using shared worker');
 
@@ -78,7 +85,10 @@ class SpenchSDK {
                 ctx: this.#ctx,
                 worker: this.#sharedWorker,
                 logger: this.#logger,
-                telemetry: createAudioNodeTelemetry(this.#logger, this.#sendMetricFunction),
+                isDebug: this.isDebug,
+                telemetry: isTelemetryEnabled
+                    ? createAudioNodeTelemetry(this.#logger, this.#sendMetricFunction)
+                    : undefined,
             });
         }
 
@@ -90,9 +100,18 @@ class SpenchSDK {
             res instanceof ArrayBuffer ? res : this.#loadWasm(),
         );
 
-        const dataPromise = Promise.resolve(this.#dataLoadPromise).then((res) =>
-            res instanceof ArrayBuffer ? res : this.#loadModelsData(),
-        );
+        const dataPromise = Promise.resolve(this.#dataLoadPromise).then((res) => {
+            if (res instanceof ArrayBuffer) {
+                return res;
+            }
+
+            if (features.noiseCancellation || features.echoCancellation) {
+                return this.#loadModelsData();
+            }
+
+            // eslint-disable-next-line no-useless-return
+            return;
+        });
 
         const worker = this.#preloadedWorker || this.#createWorker();
         const [workletResult, wasm, data] = await Promise.all([workletPromise, wasmPromise, dataPromise]);
@@ -106,7 +125,7 @@ class SpenchSDK {
             return new CreateAudioNodeError();
         }
 
-        worker.init(wasm, data);
+        worker.init(this.isDebug, Boolean(this.#sendMetricFunction), wasm, data);
 
         if (shared) {
             worker.weak = false;
@@ -124,14 +143,20 @@ class SpenchSDK {
             ctx: this.#ctx,
             worker,
             logger: this.#logger,
-            telemetry: createAudioNodeTelemetry(this.#logger, this.#sendMetricFunction),
+            isDebug: this.isDebug,
+            telemetry: isTelemetryEnabled
+                ? createAudioNodeTelemetry(this.#logger, this.#sendMetricFunction)
+                : undefined,
         });
     }
 
     // TODO link rel prefetch / url list for preloading / maybe load by consumer app
-    #preloadFeatures(_features: Features): void {
+    #preloadFeatures(features: Features): void {
         this.#wasmLoadPromise = this.#loadWasm();
-        this.#dataLoadPromise = this.#loadModelsData();
+
+        if (features.echoCancellation || features.noiseCancellation) {
+            this.#dataLoadPromise = this.#loadModelsData();
+        }
         this.#preloadedWorker = this.#createWorker();
         this.#workletLoadPromise = this.#loadSpenchWorklet();
     }
@@ -153,7 +178,7 @@ class SpenchSDK {
 
     async #loadWasm(): Promise<ArrayBuffer | LoadError> {
         try {
-            const [buffer, time] = await downloadFileAsBuffer(new URL('../bin/Spench.wasm', import.meta.url));
+            const [buffer, time] = await downloadFileAsBuffer(new URL('../bin/spench.wasm', import.meta.url));
             this.#telemetry.sendMetric('wasmDownloadTime', time);
 
             return buffer;
@@ -164,7 +189,7 @@ class SpenchSDK {
 
     async #loadModelsData(): Promise<ArrayBuffer | LoadError> {
         try {
-            const [buffer, time] = await downloadFileAsBuffer(new URL('../bin/Spench.data', import.meta.url));
+            const [buffer, time] = await downloadFileAsBuffer(new URL('../bin/spench.data', import.meta.url));
             this.#telemetry.sendMetric('modelsDataDownloadTime', time);
 
             return buffer;

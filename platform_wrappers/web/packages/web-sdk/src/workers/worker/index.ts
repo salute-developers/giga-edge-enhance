@@ -16,7 +16,8 @@ import SpenchWrapper from '../../utils/wrapper';
 import { getWorkerLogger } from '../../utils/logger';
 import { getWorkerTelemetry, WorkerTelemetry } from '../../utils/telemetry';
 import { Features } from '../../utils/common';
-import { WARMUP_STEP_COUNT, WASM_PATH } from '../../utils/constants';
+import { SPENCH_FRAME_SIZE_SECONDS, TRANSPORT_SIZE_SECONDS, WARMUP_STEP_COUNT, WASM_PATH } from '../../utils/constants';
+import RingBuffer from '../../utils/ringBuffer';
 
 interface SpenchWorkerGlobalScope extends DedicatedWorkerGlobalScope {
     onmessage: ((this: SpenchWorkerGlobalScope, event: MessageEvent<SelfWorkerMessage>) => void) | null;
@@ -42,20 +43,27 @@ type ControllerPort = CustomPort<WorkerMessage, ControllerMessage>;
 const global = self as SpenchWorkerGlobalScope;
 const instances = new Set<SpenchWorker>();
 const logger = getWorkerLogger(global, '[worker]');
+let isTelemetryEnabled = false;
 
 class SpenchWorker {
     private readonly instance: SpenchWrapper;
 
     private readonly telemetry: WorkerTelemetry;
 
+    private readonly inputBuffer: RingBuffer;
+
+    private readonly outputBuffer: RingBuffer;
+
     constructor(
         private readonly controllerPort: ControllerPort,
         private readonly workletPort: WorkletPort,
-        sampleRate: number,
+        readonly sampleRate: number,
         features: Features,
     ) {
         this.instance = new SpenchWrapper(sampleRate, logger);
-        this.telemetry = getWorkerTelemetry(controllerPort);
+        this.telemetry = getWorkerTelemetry(isTelemetryEnabled, controllerPort);
+        this.inputBuffer = new RingBuffer(Math.trunc(2 * TRANSPORT_SIZE_SECONDS * sampleRate));
+        this.outputBuffer = new RingBuffer(Math.trunc(2 * TRANSPORT_SIZE_SECONDS * sampleRate));
         this.workletPort.onmessage = this.handleWorkletMessage;
         this.controllerPort.onmessage = this.handleControllerMessage;
 
@@ -77,20 +85,18 @@ class SpenchWorker {
 
         const hasHeavyComputation = Boolean(features.noiseCancellation);
 
-        // if (features.echoCancellation) {
-        //     const model = features.echoCancellation === true ? 'full48k' : features.echoCancellation;
-        //     this.instance.addDevererberator(WASM_PATH.dereverb[model]);
-        // }
+        if (features.echoCancellation) {
+            const model = features.echoCancellation === true ? 'full48k' : features.echoCancellation;
+            this.instance.addDevererberator(WASM_PATH.dereverb[model]);
+        }
 
         if (features.noiseCancellation) {
-            // const model = features.noiseCancellation === true ? 'full24k' : features.noiseCancellation;
-            const model = 'full24k';
+            const model = features.noiseCancellation === true ? 'full24k' : features.noiseCancellation;
             this.instance.addDenoiser(WASM_PATH.denoiser[model]);
         }
 
         if (features.normalization) {
-            // TODO separate config for norm
-            this.instance.addNormalizer(WASM_PATH.denoiser.full24k);
+            this.instance.addNormalizer();
         }
 
         if (hasHeavyComputation) {
@@ -98,7 +104,7 @@ class SpenchWorker {
             this.instance.resetContext();
         }
 
-        this.telemetry.enabled = hasHeavyComputation;
+        this.telemetry.enabled = hasHeavyComputation && isTelemetryEnabled;
 
         this.workletPort.postMessage({
             type: WORKLET_MESSAGES.WORKER_READY,
@@ -116,24 +122,41 @@ class SpenchWorker {
         switch (event.data.type) {
             case WORKER_MESSAGES.INPUT:
                 const { input } = event.data;
+                const frameSize = Math.ceil(SPENCH_FRAME_SIZE_SECONDS * this.sampleRate);
 
-                const startTime = performance.now();
-                const output = this.instance.process(input);
-                const endTime = performance.now();
+                this.inputBuffer.push(input);
 
-                if (!output.length) {
-                    return;
+                while (this.inputBuffer.size >= frameSize) {
+                    const frame = new Float32Array(frameSize);
+                    this.inputBuffer.pull(frame, 0, frameSize);
+
+                    const startTime = performance.now();
+                    const output = this.instance.process(frame);
+                    const endTime = performance.now();
+
+                    if (!output.length) {
+                        continue;
+                    }
+
+                    this.telemetry.recordFrameProcessTime(endTime - startTime);
+
+                    this.outputBuffer.push(output);
+                    const transferChunkSize = Math.ceil(TRANSPORT_SIZE_SECONDS * this.sampleRate);
+                    const chunksToSend = Math.trunc(this.outputBuffer.size / transferChunkSize);
+
+                    if (chunksToSend > 0) {
+                        const chunk = new Float32Array(transferChunkSize * chunksToSend);
+                        this.outputBuffer.pull(chunk, 0, transferChunkSize * chunksToSend);
+
+                        this.workletPort.postMessage(
+                            {
+                                type: WORKLET_MESSAGES.OUTPUT,
+                                output: chunk,
+                            },
+                            [chunk.buffer],
+                        );
+                    }
                 }
-
-                this.workletPort.postMessage(
-                    {
-                        type: WORKLET_MESSAGES.OUTPUT,
-                        output,
-                    },
-                    [output.buffer],
-                );
-
-                this.telemetry.recordFrameProcessTime(endTime - startTime);
 
                 return;
             case WORKER_MESSAGES.RESET:
@@ -172,8 +195,14 @@ const handleControllerMessage: SpenchWorkerGlobalScope['onmessage'] = (event) =>
         case SELF_WORKER_MESSAGES.INIT:
             logger.debug('init data received');
 
-            const { wasm, data } = event.data;
+            const { isDebug, isTelemetryEnabled: telemetryEnabled, wasm, data } = event.data;
             SpenchWrapper.createBridge(wasm, data);
+
+            // TODO better debug log and telemetry cancelling
+            if (!isDebug) {
+                logger.debug = () => {};
+            }
+            isTelemetryEnabled = telemetryEnabled;
 
             return;
         case SELF_WORKER_MESSAGES.NEW_CLIENT:

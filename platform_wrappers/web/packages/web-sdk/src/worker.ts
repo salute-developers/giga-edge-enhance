@@ -93,15 +93,30 @@ class SpenchWorker extends Worker implements ISpenchWorker {
         this.logger.debug(`worker #${this.workerNumber} destroyed`);
     }
 
-    init(wasm: ArrayBuffer, data: ArrayBuffer): void {
-        this.postMessage(
-            {
-                type: SELF_WORKER_MESSAGES.INIT,
-                wasm,
-                data,
-            },
-            [wasm, data],
-        );
+    init(isDebug: boolean, isTelemetryEnabled: boolean, wasm: ArrayBuffer, data?: ArrayBuffer): void {
+        if (data) {
+            this.postMessage(
+                {
+                    type: SELF_WORKER_MESSAGES.INIT,
+                    wasm,
+                    data,
+                    isDebug,
+                    isTelemetryEnabled,
+                },
+                [wasm, data],
+            );
+        } else {
+            this.logger.warn('Working in normalization-only mode. Feature toggle disabled');
+            this.postMessage(
+                {
+                    type: SELF_WORKER_MESSAGES.INIT,
+                    wasm,
+                    isDebug,
+                    isTelemetryEnabled,
+                },
+                [wasm],
+            );
+        }
 
         this.addEventListener('message', this.#handleMessage);
         this.addEventListener('error', this.#handleError);

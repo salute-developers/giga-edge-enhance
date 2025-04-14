@@ -1,6 +1,7 @@
 import {
     OVERFLOW_COUNTER_WINDOW_SECONDS,
     SPENCH_WORKLET_NAME,
+    TRANSPORT_SIZE_SECONDS,
     WORKLET_OUTPUT_BUFFER_SECONDS,
     WORKLET_OUTPUT_BUFFER_THRESHOLD,
 } from '../../utils/constants';
@@ -28,6 +29,8 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     readonly logger: Logger = getWorkerLogger(this.controllerPort, '[worklet]');
 
     readonly outputBuffer = new RingBuffer(Math.trunc(WORKLET_OUTPUT_BUFFER_SECONDS * sampleRate));
+
+    readonly inputBuffer = new RingBuffer(Math.trunc(2 * TRANSPORT_SIZE_SECONDS * sampleRate));
 
     readonly telemetry = getWorkletTelemetry(this.controllerPort);
 
@@ -85,13 +88,22 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         const [firstInput] = inputs;
         const [input] = firstInput;
 
-        this.workerPort.postMessage(
-            {
-                type: WORKER_MESSAGES.INPUT,
-                input,
-            },
-            [input.buffer],
-        );
+        this.inputBuffer.push(input);
+        const transferChunkSize = Math.ceil(TRANSPORT_SIZE_SECONDS * sampleRate);
+        const chunksToSend = Math.trunc(this.inputBuffer.size / transferChunkSize);
+
+        if (chunksToSend > 0) {
+            const chunk = new Float32Array(transferChunkSize * chunksToSend);
+            this.inputBuffer.pull(chunk, 0, transferChunkSize * chunksToSend);
+
+            this.workerPort.postMessage(
+                {
+                    type: WORKER_MESSAGES.INPUT,
+                    input: chunk,
+                },
+                [chunk.buffer],
+            );
+        }
     }
 
     processOutput(outputs: Float32Array[][]): void {
@@ -158,7 +170,13 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         switch (event.data.type) {
             case WORKLET_MESSAGES.INIT:
                 this.logger.debug('init data received');
-                const { workerPort } = event.data;
+                const { workerPort, isDebug, isTelemetryEnabled } = event.data;
+
+                // TODO better debug log and telemetry cancelling
+                if (!isDebug) {
+                    this.logger.debug = () => {};
+                }
+                this.telemetry.enabled = isTelemetryEnabled;
 
                 this.workerPort = workerPort;
                 this.workerPort.onmessage = this.handleWorkerMessage;

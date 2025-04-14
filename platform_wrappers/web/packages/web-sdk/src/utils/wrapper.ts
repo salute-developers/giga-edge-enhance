@@ -1,12 +1,16 @@
 import Spench, { PipelineElement, SpenchWasm } from 'wasm-wrapper';
 
-import { assert } from './error';
+import SpenchError, { assert } from './error';
 import { FEATURE_SWITCH_CACHE_MILLISECONDS, HEAP_SIZE } from './constants';
 import { Logger } from './logger';
+
+class NotSupportedError extends SpenchError {}
 
 type Element = [cacheKey: string, PipelineElement];
 
 class SpenchWrapper {
+    static isNormalizationMode: boolean = false;
+
     static #bridge: SpenchWasm | undefined;
 
     readonly #pipeline: Element[] = [];
@@ -37,6 +41,10 @@ class SpenchWrapper {
             return;
         }
 
+        if (!data) {
+            SpenchWrapper.isNormalizationMode = true;
+        }
+
         SpenchWrapper.#bridge = Spench({
             wasmBinary: wasm,
             locateFile: (_s1: string, _s2: string) => {
@@ -48,18 +56,22 @@ class SpenchWrapper {
         });
     }
 
-    addNormalizer(configPath: string): void {
-        const key = `normalizer-${configPath}`;
+    addNormalizer(): void {
+        const key = 'normalizer';
         const cached = this.#tryGetFromCache(key);
 
-        this.logger.debug('add norm', configPath);
+        this.logger.debug('add norm');
         this.#pipeline.push([
             key,
-            cached || new SpenchWrapper.#bridge!.AudioProcessPipelineElement(this.sampleRate, configPath),
+            cached || new SpenchWrapper.#bridge!.AudioProcessPipelineElement(this.sampleRate, ''),
         ]);
     }
 
     addDenoiser(configPath: string): void {
+        if (SpenchWrapper.isNormalizationMode) {
+            throw new NotSupportedError('Features other than normalization are disabled');
+        }
+
         const key = `denoiser-${configPath}`;
         const cached = this.#tryGetFromCache(key);
 
@@ -71,6 +83,10 @@ class SpenchWrapper {
     }
 
     addDevererberator(configPath: string): void {
+        if (SpenchWrapper.isNormalizationMode) {
+            throw new NotSupportedError('Features other than normalization are disabled');
+        }
+
         const key = `dereverb-${configPath}`;
         const cached = this.#tryGetFromCache(key);
 
