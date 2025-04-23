@@ -48,23 +48,20 @@ void spx_ifft(void* table, float* in, float* out) {
   auto plan = reinterpret_cast<SpxFftPlan*>(table);
   const uint32_t n = plan->nfft;
 
-  auto* tin = reinterpret_cast<std::complex<float>*>(plan->tmp.data());
-  tin[0].real(in[0]);
-  tin[0].imag(0);
+  auto* tin = plan->tmp.data();
 
-  for (size_t i = 1; i < n / 2 + 1; ++i) {
-    tin[i].real(in[2 * i - 1]);
-    tin[i].imag(in[2 * i]);
-  }
-
-  for (size_t i = 1; i < n / 2; ++i) {
-    tin[n - i].real(tin[i].real());
-    tin[n - i].imag(-tin[i].imag());
+  // speex fft format magic
+  tin[0] = in[0];
+  tin[1] = 0.0f;
+  for (size_t i = 1; i < n; ++i) {
+    tin[i + 1] = in[i];
+    tin[n + 1] = 0.0f;
   }
 
   constexpr std::ptrdiff_t sz = sizeof(float);
   const pocketfft::shape_t shape{1, n};
   const pocketfft::stride_t in_stride{static_cast<int32_t>(sz * n * 2), sz * 2};
   const pocketfft::stride_t out_stride{static_cast<int32_t>(sz * n), sz};
-  pocketfft::c2r<float>(shape, in_stride, out_stride, 1, pocketfft::BACKWARD, tin, out, 1.0);
+  pocketfft::c2r<float>(shape, in_stride, out_stride, 1, pocketfft::BACKWARD,
+                        reinterpret_cast<std::complex<float>*>(tin), out, 1.0);
 }
