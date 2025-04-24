@@ -1,5 +1,5 @@
 import { Logger } from './utils/logger';
-import { AudioNodeTelemetry } from './utils/telemetry';
+import { Telemetry } from './utils/telemetry';
 import SpenchError, { assert } from './utils/error';
 import {
     CONTROLLER_MESSAGES,
@@ -13,10 +13,14 @@ import {
 import { Features } from './utils/common';
 import { SPENCH_WORKLET_NAME } from './utils/constants';
 import SpenchWorker from './worker';
+import Loader, { LoadError } from './loader';
+import Deferred from './utils/deferred';
 
 type OverflowEventCtorParams = {
     overflowCount: number;
 };
+
+class SetFeaturesFailedError extends SpenchError {}
 
 class OverflowEvent extends Event {
     overflowCount: number;
@@ -59,40 +63,42 @@ export interface SpenchAudioNode extends AudioWorkletNode {
 
 interface SpenchAudioNodeCtorParams {
     features: Features;
-    ctx: AudioContext;
     logger: Logger;
-    worker: SpenchWorker;
-    isDebug: boolean;
-    telemetry?: AudioNodeTelemetry;
+    ctx: AudioContext;
+    loader: Loader;
+    telemetry: Telemetry;
 }
 
 export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudioNode {
     readonly #logger: Logger;
 
-    #features: Features;
+    readonly #loader: Loader;
 
-    // TODO SharedArrayBuffer
-    #worker: SpenchWorker;
+    readonly #telemetry: Telemetry;
 
-    #workerPort: WorkerPort;
+    #features: Features = {};
+
+    #worker: SpenchWorker | undefined;
+
+    #workerPort: WorkerPort | undefined;
 
     #initialized = false;
 
+    #isDspLoaded = false;
+
+    #setFeaturesLock: Promise<void> | undefined;
+
     #initStartTime = performance.now();
 
-    #telemetry: AudioNodeTelemetry | undefined;
-
-    constructor({ isDebug, features, ctx, logger, telemetry, worker }: SpenchAudioNodeCtorParams) {
+    constructor({ features, ctx, logger, telemetry, loader }: SpenchAudioNodeCtorParams) {
         super(ctx, SPENCH_WORKLET_NAME);
 
-        this.#features = features;
         this.#logger = logger;
         this.#telemetry = telemetry;
-        this.#worker = worker;
-        this.#workerPort = this.#worker.createPort();
+        this.#loader = loader;
 
-        this.#attachListeners();
-        this.#init(isDebug);
+        this.#init();
+        this.setFeatures(features);
     }
 
     get #port(): WorkletPort {
@@ -111,44 +117,180 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         this.#port.postMessage({ type: WORKLET_MESSAGES.DISABLE });
     }
 
-    setFeatures(features: Features): void {
-        this.#setFeatures(features, true);
+    async setFeatures(features: Features): Promise<void> {
+        await this.#setFeatures(features, true);
     }
 
     destroy(): void {
         this.#logger.debug('Destroying Spench AudioNode');
 
-        this.#workerPort.close();
-        this.#worker.onerror = null;
+        this.#workerPort?.removeEventListener('message', this.#handleWorkerMessage);
+        this.#workerPort?.close();
+        this.#workerPort = undefined;
+        this.#worker?.removeEventListener('error', this.#handleWorkerError);
+        this.#worker = undefined;
 
         this.#port.postMessage({ type: WORKLET_MESSAGES.DESTROY });
-        this.#port.onmessage = null;
-        this.#port.onmessageerror = null;
+        this.#port.removeEventListener('message', this.#handleWorkletMessage);
+        this.#port.removeEventListener('messageerror', this.#handleMessageError);
         this.#port.close();
 
-        super.onprocessorerror = null;
+        super.removeEventListener('processorerror', this.#handleProcessorError);
         super.context.removeEventListener('statechange', this.#handleContextStateChange);
 
         super.dispatchEvent(new Event('destroyed'));
     }
 
-    #setFeatures(features: Features, _manual = false): void {
-        const isChanged = [
-            typeof features.normalization !== 'undefined' && this.#features.normalization !== features.normalization,
-            typeof features.noiseCancellation !== 'undefined' &&
-                this.#features.noiseCancellation !== features.noiseCancellation,
-            typeof features.echoCancellation !== 'undefined' &&
-                this.#features.echoCancellation !== features.echoCancellation,
+    async #setFeatures(features: Features, _manual = false): Promise<void | LoadError | SetFeaturesFailedError> {
+        if (this.#setFeaturesLock) {
+            return this.#setFeaturesLock.then(() => this.#setFeatures(features, _manual));
+        }
+        const { promise, resolve } = new Deferred<void>();
+        this.#setFeaturesLock = promise;
+
+        this.#logger.info('Setting Spench features:', features);
+        const res = await Promise.all([this.#setWorkletFeatures(features), this.#setWorkerFeatures(features)]);
+        const err = res.find((r) => r instanceof SpenchError);
+
+        this.#setFeaturesLock = undefined;
+        resolve();
+
+        if (err) return err;
+    }
+
+    async #setWorkletFeatures(features: Features): Promise<void | LoadError | SetFeaturesFailedError> {
+        if (features.echoCancellation) {
+            this.#logger.warn('echoCancellation feature is not implemented yet, so it will be ignored');
+        }
+        // TODO remove workaround with two types of normalization
+        const normalizationComputed: 'rc' | false = features.normalization === true ? 'rc' : false;
+
+        const areWorkletFeaturesEnabled = [
+            features.normalization,
+            // features.echoCancellation, TODO ADD AEC FEATURE
         ].some(Boolean);
+        const areWorkletFeaturesChanged = true; /* [
+            typeof normalizationComputed !== 'undefined' &&
+                (this.#features.normalization || false) !== (normalizationComputed || false),
+            // typeof features.echoCancellation !== 'undefined' &&
+            //     this.#features.echoCancellation !== features.echoCancellation,
+        ].some(Boolean); */
+        const mixedFeatures = {
+            ...this.#features,
+            ...features,
+            normalization: normalizationComputed,
+        };
+        const {
+            normalization,
+            // echoCancellation,
+        } = mixedFeatures;
+        const workletFeatures = {
+            normalization,
+            // echoCancellation,
+        };
 
-        if (isChanged) {
-            this.#features = {
-                ...this.#features,
-                ...features,
-            };
+        if (areWorkletFeaturesEnabled) {
+            const res = await this.#loadWorkletFeatures();
 
-            this.#port.postMessage({ type: WORKLET_MESSAGES.WORKER_EJECTED });
-            this.#workerPort.postMessage({ type: WORKER_MESSAGES.SET_FEATURES, features });
+            if (res instanceof LoadError) {
+                return res;
+            }
+        }
+
+        if (areWorkletFeaturesChanged) {
+            this.#port.postMessage({ type: WORKLET_MESSAGES.SET_FEATURES, features: workletFeatures });
+
+            const res = await new Promise<void | SetFeaturesFailedError>((resolve) => {
+                const handler = (ev: MessageEvent<ControllerMessage>) => {
+                    switch (ev.data.type) {
+                        case CONTROLLER_MESSAGES.SET_FEATURES_OK:
+                            this.#features = {
+                                ...this.#features,
+                                ...workletFeatures,
+                            };
+                            resolve();
+
+                            break;
+                        case CONTROLLER_MESSAGES.SET_FEATURES_FAIL:
+                            resolve(new SetFeaturesFailedError('set features on worklet failed'));
+
+                            break;
+                        default:
+                            return;
+                    }
+
+                    this.#port.removeEventListener('message', handler);
+                };
+
+                this.#port.addEventListener('message', handler);
+            });
+
+            if (res instanceof SetFeaturesFailedError) {
+                return res;
+            }
+        }
+    }
+
+    async #setWorkerFeatures(features: Features): Promise<void | LoadError | SetFeaturesFailedError> {
+        const areWorkerFeaturesEnabled = [features.noiseCancellation, features.dereverberation].some(Boolean);
+        // TODO false and undefined are equal in terms of starting woker
+        const areWorkerFeaturesChanged = [
+            typeof features.noiseCancellation !== 'undefined' &&
+                (this.#features.noiseCancellation || false) !== (features.noiseCancellation || false),
+            typeof features.dereverberation !== 'undefined' &&
+                (this.#features.dereverberation || false) !== (features.dereverberation || false),
+        ].some(Boolean);
+        const mixedFeatures = {
+            ...this.#features,
+            ...features,
+        };
+        const { noiseCancellation, dereverberation } = mixedFeatures;
+        const workerFeatures = { noiseCancellation, dereverberation };
+
+        if (areWorkerFeaturesEnabled) {
+            const res = await this.#loadWorkerFeatures();
+            this.#initStartTime = performance.now();
+
+            if (res instanceof LoadError) {
+                return res;
+            }
+        }
+
+        if (areWorkerFeaturesChanged) {
+            this.#port.postMessage({
+                type: WORKLET_MESSAGES.WORKER_FEATURES_CHANGED,
+                enabled: areWorkerFeaturesEnabled,
+            });
+            this.#workerPort!.postMessage({ type: WORKER_MESSAGES.SET_FEATURES, features: workerFeatures });
+
+            const res = await new Promise<void | SetFeaturesFailedError>((resolve) => {
+                const handler = (ev: MessageEvent<ControllerMessage>) => {
+                    switch (ev.data.type) {
+                        case CONTROLLER_MESSAGES.SET_FEATURES_OK:
+                            this.#features = {
+                                ...this.#features,
+                                ...workerFeatures,
+                            };
+                            resolve();
+
+                            break;
+                        case CONTROLLER_MESSAGES.SET_FEATURES_FAIL:
+                            resolve(new SetFeaturesFailedError('set features on worker failed'));
+
+                            break;
+                        default:
+                            return;
+                    }
+
+                    this.#workerPort!.removeEventListener('message', handler);
+                };
+
+                this.#workerPort!.addEventListener('message', handler);
+            });
+
+            if (res instanceof SetFeaturesFailedError) {
+                return res;
+            }
         }
     }
 
@@ -158,13 +300,65 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
                 this.#telemetry?.sendMetric(event.data.metricName, event.data.value);
 
                 return true;
+            case CONTROLLER_MESSAGES.SET_FEATURES_OK:
+            case CONTROLLER_MESSAGES.SET_FEATURES_FAIL:
+                return true;
             default:
         }
 
         return false;
     }
 
-    #handleWorkletMessage: WorkletPort['onmessage'] = (event): void => {
+    async #loadWorkletFeatures(): Promise<void | LoadError> {
+        if (this.#isDspLoaded) return;
+
+        const dspWasm = await this.#loader.loadDSPWasm();
+
+        if (dspWasm instanceof LoadError) {
+            return dspWasm;
+        }
+
+        this.#port.postMessage(
+            {
+                type: WORKLET_MESSAGES.RUNTIME_ASSETS,
+                dspWasm,
+            },
+            [dspWasm],
+        );
+    }
+
+    async #loadWorkerFeatures(): Promise<void | LoadError> {
+        if (this.#workerPort) return;
+
+        const { sampleRate } = super.context;
+        const worker = await this.#loader.loadWorker();
+
+        if (worker instanceof LoadError) {
+            return worker;
+        }
+        this.#worker = worker;
+
+        const workerWorkletChannel = new MessageChannel();
+        this.#workerPort = this.#worker.createPort();
+
+        this.#workerPort.postMessage(
+            {
+                type: WORKER_MESSAGES.INIT,
+                workletPort: workerWorkletChannel.port1,
+                sampleRate,
+            },
+            [workerWorkletChannel.port1],
+        );
+        this.#port.postMessage({ type: WORKLET_MESSAGES.WORKER_CREATED, workerPort: workerWorkletChannel.port2 }, [
+            workerWorkletChannel.port2,
+        ]);
+
+        this.#workerPort.addEventListener('message', this.#handleWorkerMessage);
+        this.#workerPort.start();
+        this.#worker.addEventListener('error', this.#handleWorkerError);
+    }
+
+    #handleWorkletMessage: Exclude<WorkletPort['onmessage'], null> = (event): void => {
         if (this.#handleCommonMessage(event)) {
             return;
         }
@@ -181,7 +375,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
 
                 return;
             case CONTROLLER_MESSAGES.SYSTEM_READY:
-                if (!this.#initialized) {
+                if (!this.#initialized && (this.#features.noiseCancellation || this.#features.dereverberation)) {
                     this.#initialized = true;
                     this.#telemetry?.sendMetric('initTime', performance.now() - this.#initStartTime);
                 }
@@ -194,7 +388,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         assert(false, 'Unknown message type from AudioWorkletProcessor');
     };
 
-    #handleWorkerMessage: WorkerPort['onmessage'] = (event): void => {
+    #handleWorkerMessage: Exclude<WorkerPort['onmessage'], null> = (event): void => {
         if (this.#handleCommonMessage(event)) {
             return;
         }
@@ -215,47 +409,31 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         super.dispatchEvent(new ErrorEvent('error', { error, message: message || error.message }));
     };
 
+    #handleProcessorError = () => this.#handleError(new SpenchError('Error in AudioWorkletProcessor'));
+
+    #handleWorkerError = (event: ErrorEvent) =>
+        this.#handleError(new SpenchError(event.error || event.message), event.message);
+
+    #handleMessageError = () => this.#handleError(new SpenchError('Error serializing AudioWorkletProcessor message'));
+
     #handleContextStateChange = () => {
         if (super.context.state === 'closed') {
             this.destroy();
         }
     };
 
-    #init(isDebug: boolean): void {
-        const { sampleRate } = super.context;
-
-        const workerWorkletChannel = new MessageChannel();
-
-        this.#workerPort.postMessage(
-            {
-                type: WORKER_MESSAGES.INIT,
-                workletPort: workerWorkletChannel.port1,
-                features: this.#features,
-                sampleRate,
-            },
-            [workerWorkletChannel.port1],
-        );
-        this.#port.postMessage(
-            {
-                type: WORKLET_MESSAGES.INIT,
-                workerPort: workerWorkletChannel.port2,
-                isDebug,
-                isTelemetryEnabled: Boolean(this.#telemetry),
-            },
-            [workerWorkletChannel.port2],
-        );
-    }
-
-    #attachListeners(): void {
+    #init(): void {
         super.context.addEventListener('statechange', this.#handleContextStateChange);
-        super.onprocessorerror = () => this.#handleError(new SpenchError('Error in AudioWorkletProcessor'));
+        super.addEventListener('processorerror', this.#handleProcessorError);
 
-        this.#port.onmessage = this.#handleWorkletMessage;
-        this.#port.onmessageerror = () =>
-            this.#handleError(new SpenchError('Error serializing AudioWorkletProcessor message'));
+        this.#port.addEventListener('message', this.#handleWorkletMessage);
+        this.#port.addEventListener('messageerror', this.#handleMessageError);
+        this.#port.start();
 
-        this.#workerPort.onmessage = this.#handleWorkerMessage;
-        this.#worker.onerror = (event) =>
-            this.#handleError(new SpenchError(event.error || event.message), event.message);
+        this.#port.postMessage({
+            type: WORKLET_MESSAGES.INIT,
+            verbosity: this.#logger.verbosity,
+            isTelemetryEnabled: this.#telemetry.enabled,
+        });
     }
 }

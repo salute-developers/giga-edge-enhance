@@ -3,6 +3,7 @@
 import {
     WORKER_MESSAGES,
     WORKLET_MESSAGES,
+    CONTROLLER_MESSAGES,
     SELF_WORKER_MESSAGES,
     CustomPort,
     WorkerMessage,
@@ -12,7 +13,7 @@ import {
     ControllerMessage,
 } from '../../utils/ipc';
 import { assert } from '../../utils/error';
-import SpenchWrapper from '../../utils/wrapper';
+import { SpenchWrapper } from '../../utils/wrapper';
 import { getWorkerLogger } from '../../utils/logger';
 import { getWorkerTelemetry, WorkerTelemetry } from '../../utils/telemetry';
 import { Features } from '../../utils/common';
@@ -42,7 +43,7 @@ type ControllerPort = CustomPort<WorkerMessage, ControllerMessage>;
 
 const global = self as SpenchWorkerGlobalScope;
 const instances = new Set<SpenchWorker>();
-const logger = getWorkerLogger(global, '[worker]');
+let logger = getWorkerLogger(global, 'verbose', '[worker]');
 let isTelemetryEnabled = false;
 
 class SpenchWorker {
@@ -57,25 +58,22 @@ class SpenchWorker {
     constructor(
         private readonly controllerPort: ControllerPort,
         private readonly workletPort: WorkletPort,
-        readonly sampleRate: number,
-        features: Features,
+        private readonly sampleRate: number,
     ) {
         this.instance = new SpenchWrapper(sampleRate, logger);
         this.telemetry = getWorkerTelemetry(isTelemetryEnabled, controllerPort);
         this.inputBuffer = new RingBuffer(Math.trunc(2 * TRANSPORT_SIZE_SECONDS * sampleRate));
         this.outputBuffer = new RingBuffer(Math.trunc(2 * TRANSPORT_SIZE_SECONDS * sampleRate));
-        this.workletPort.onmessage = this.handleWorkletMessage;
-        this.controllerPort.onmessage = this.handleControllerMessage;
-
-        this.setFeatures(features);
+        this.workletPort.addEventListener('message', this.handleWorkletMessage);
+        this.controllerPort.addEventListener('message', this.handleControllerMessage);
+        this.workletPort.start();
+        this.controllerPort.start();
     }
 
     destroy() {
         this.telemetry.flush();
         this.instance.destroy();
-        this.workletPort.onmessage = null;
         this.workletPort.close();
-        this.controllerPort.onmessage = null;
         this.controllerPort.close();
     }
 
@@ -83,11 +81,9 @@ class SpenchWorker {
         logger.debug(`setting features: ${JSON.stringify(features)}`);
         this.instance.clear();
 
-        const hasHeavyComputation = Boolean(features.noiseCancellation);
-
-        if (features.echoCancellation) {
-            const model = features.echoCancellation === true ? 'full48k' : features.echoCancellation;
-            this.instance.addDevererberator(WASM_PATH.dereverb[model]);
+        if (features.dereverberation) {
+            const model = features.dereverberation === true ? 'full48k' : features.dereverberation;
+            this.instance.addDereverberator(WASM_PATH.dereverb[model]);
         }
 
         if (features.noiseCancellation) {
@@ -95,16 +91,8 @@ class SpenchWorker {
             this.instance.addDenoiser(WASM_PATH.denoiser[model]);
         }
 
-        if (features.normalization) {
-            this.instance.addNormalizer();
-        }
-
-        if (hasHeavyComputation) {
-            this.warmup();
-            this.instance.resetContext();
-        }
-
-        this.telemetry.enabled = hasHeavyComputation && isTelemetryEnabled;
+        this.warmup();
+        this.instance.resetContext();
 
         this.workletPort.postMessage({
             type: WORKLET_MESSAGES.WORKER_READY,
@@ -118,7 +106,7 @@ class SpenchWorker {
         }
     }
 
-    handleWorkletMessage: WorkletPort['onmessage'] = (event) => {
+    handleWorkletMessage: Exclude<WorkletPort['onmessage'], null> = (event) => {
         switch (event.data.type) {
             case WORKER_MESSAGES.INPUT:
                 const { input } = event.data;
@@ -171,11 +159,18 @@ class SpenchWorker {
         assert(false, 'Unknown message type from Worklet');
     };
 
-    handleControllerMessage: ControllerPort['onmessage'] = (event) => {
+    handleControllerMessage: Exclude<ControllerPort['onmessage'], null> = (event) => {
         switch (event.data.type) {
             case WORKER_MESSAGES.SET_FEATURES:
                 const { features } = event.data;
-                this.setFeatures(features);
+
+                try {
+                    this.setFeatures(features);
+                } catch (e) {
+                    this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.SET_FEATURES_FAIL });
+                    throw e;
+                }
+                this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.SET_FEATURES_OK });
 
                 return;
             case WORKER_MESSAGES.DESTROY:
@@ -193,16 +188,12 @@ class SpenchWorker {
 const handleControllerMessage: SpenchWorkerGlobalScope['onmessage'] = (event) => {
     switch (event.data.type) {
         case SELF_WORKER_MESSAGES.INIT:
-            logger.debug('init data received');
-
-            const { isDebug, isTelemetryEnabled: telemetryEnabled, wasm, data } = event.data;
+            const { verbosity, isTelemetryEnabled: telemetryEnabled, wasm, data } = event.data;
             SpenchWrapper.createBridge(wasm, data);
 
-            // TODO better debug log and telemetry cancelling
-            if (!isDebug) {
-                logger.debug = () => {};
-            }
+            logger = getWorkerLogger(global, verbosity, '[worker]');
             isTelemetryEnabled = telemetryEnabled;
+            logger.debug('init data received');
 
             return;
         case SELF_WORKER_MESSAGES.NEW_CLIENT:
@@ -212,9 +203,9 @@ const handleControllerMessage: SpenchWorkerGlobalScope['onmessage'] = (event) =>
                 'message',
                 (e) => {
                     assert(e.data.type === WORKER_MESSAGES.INIT);
-                    const { features, sampleRate, workletPort } = e.data;
+                    const { sampleRate, workletPort } = e.data;
 
-                    instances.add(new SpenchWorker(controllerPort, workletPort, sampleRate, features));
+                    instances.add(new SpenchWorker(controllerPort, workletPort, sampleRate));
                 },
                 { once: true },
             );
@@ -228,7 +219,6 @@ const handleControllerMessage: SpenchWorkerGlobalScope['onmessage'] = (event) =>
 
             logger.debug('destroyed');
 
-            global.onmessage = null;
             global.close();
 
             return;
@@ -238,4 +228,4 @@ const handleControllerMessage: SpenchWorkerGlobalScope['onmessage'] = (event) =>
     assert(false, 'Unknown message type from Controller');
 };
 
-global.onmessage = handleControllerMessage;
+global.addEventListener('message', handleControllerMessage);

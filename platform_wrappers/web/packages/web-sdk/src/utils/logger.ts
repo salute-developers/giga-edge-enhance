@@ -3,55 +3,80 @@
 import { CONTROLLER_MESSAGES, ControllerMessage, CustomPort } from './ipc';
 
 type LoggingFunc = (...data: unknown[]) => void;
+export type Verbosity = 'verbose' | 'normal' | 'silent';
 
 export type Logger = {
     debug: LoggingFunc;
     error: LoggingFunc;
     warn: LoggingFunc;
+    info: LoggingFunc;
+    verbosity: Verbosity;
 };
 
-export type ExternalLogger = Partial<Logger>;
+export type LogLevel = keyof Omit<Logger, 'verbosity'>;
+
+export type ExternalLogger = Partial<Omit<Logger, 'verbosity'>>;
 
 const defaultLoggingFunc: LoggingFunc = (...data) => console.log('[SpenchSDK]', ...data);
-const noLogging: LoggingFunc = () => {};
 
-// TODO: own logging (track errors)
-function createLogger(isDebug: boolean, externalLogger: ExternalLogger = {}): Logger {
-    const fallbackLogger = isDebug ? defaultLoggingFunc : noLogging;
-    const { debug, error, warn } = externalLogger;
+function getActiveLogLevels(verbosity: Verbosity): LogLevel[] {
+    const levels: LogLevel[] = ['error'];
 
-    return {
-        error(...data) {
-            if (error) error(...data);
-            else defaultLoggingFunc('[error]', ...data);
-        },
-        warn(...data) {
-            if (warn) warn(...data);
-            else fallbackLogger('[warn]', ...data);
-        },
-        debug(...data) {
-            if (debug) debug(...data);
-            else fallbackLogger('[debug]', ...data);
-        },
-    };
+    if (['normal', 'verbose'].includes(verbosity)) levels.push('warn', 'info');
+
+    if (verbosity === 'verbose') levels.push('debug');
+
+    return levels;
 }
 
-export function getWorkerLogger(port: Pick<CustomPort<any, ControllerMessage>, 'postMessage'>, prefix = ''): Logger {
-    const factory =
-        (level: keyof Logger): LoggingFunc =>
-        (...data) => {
+// TODO: own logging (track errors)
+function createLogger(verbosity: Verbosity, externalLogger: ExternalLogger = {}): Logger {
+    const activeLevels = getActiveLogLevels(verbosity);
+    const factory = (level: LogLevel): LoggingFunc => {
+        const ext = externalLogger[level];
+
+        if (typeof ext === 'function') return ext;
+
+        if (!activeLevels.includes(level)) return () => {};
+
+        return (...data) => defaultLoggingFunc(`[${level}]`, ...data);
+    };
+
+    return (['error', 'info', 'warn', 'debug'] as const).reduce(
+        (acc, lev) => {
+            acc[lev] = factory(lev);
+
+            return acc;
+        },
+        { verbosity } as Logger,
+    );
+}
+
+export function getWorkerLogger(
+    port: Pick<CustomPort<any, ControllerMessage>, 'postMessage'>,
+    verbosity: Verbosity,
+    prefix = '',
+): Logger {
+    const activeLevels = getActiveLogLevels(verbosity);
+    const factory = (level: LogLevel): LoggingFunc => {
+        if (!activeLevels.includes(level)) return () => {};
+
+        return (...data) =>
             port.postMessage({
                 type: CONTROLLER_MESSAGES.LOG,
                 level,
                 data: prefix ? [prefix, ...data] : data,
             });
-        };
+    };
 
-    return (['error', 'warn', 'debug'] as const).reduce((acc, lev) => {
-        acc[lev] = factory(lev);
+    return (['error', 'info', 'warn', 'debug'] as const).reduce(
+        (acc, lev) => {
+            acc[lev] = factory(lev);
 
-        return acc;
-    }, {} as Logger);
+            return acc;
+        },
+        { verbosity } as Logger,
+    );
 }
 
 export default createLogger;

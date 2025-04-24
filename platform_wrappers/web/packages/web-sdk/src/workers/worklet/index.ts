@@ -16,30 +16,38 @@ import {
     WORKLET_MESSAGES,
     WorkletMessage,
 } from '../../utils/ipc';
-import { getWorkerLogger, Logger } from '../../utils/logger';
+import { getWorkerLogger } from '../../utils/logger';
 import { getWorkletTelemetry } from '../../utils/telemetry';
+import { SpenchDspWrapper } from '../../utils/wrapper';
+import { Features } from '../../utils/common';
 
 type ControllerPort = CustomPort<WorkletMessage, ControllerMessage>;
 type WorkerPort = CustomPort<WorkletMessage, WorkerMessage>;
 
 // TODO shared array buffer
 class SpenchWorkletProcessor extends AudioWorkletProcessor {
-    workerPort: WorkerPort | undefined;
-
-    readonly logger: Logger = getWorkerLogger(this.controllerPort, '[worklet]');
-
     readonly outputBuffer = new RingBuffer(Math.trunc(WORKLET_OUTPUT_BUFFER_SECONDS * sampleRate));
 
     readonly inputBuffer = new RingBuffer(Math.trunc(2 * TRANSPORT_SIZE_SECONDS * sampleRate));
 
-    readonly telemetry = getWorkletTelemetry(this.controllerPort);
+    logger = getWorkerLogger(this.controllerPort, 'verbose', '[worklet]');
+
+    telemetry = getWorkletTelemetry(false, this.controllerPort);
+
+    instance: SpenchDspWrapper | undefined;
+
+    workerPort: WorkerPort | undefined;
+
+    isDspEnabled: boolean = false;
+
+    isWorkerFeaturesEnabled: boolean = false;
 
     // State
     enabled = false;
 
     destroyed = false;
 
-    initialized = false;
+    workerInitialized = false;
 
     // Overflow
     previouslyRendered = false;
@@ -51,7 +59,8 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     constructor() {
         super();
 
-        this.controllerPort.onmessage = this.handleControllerMessage;
+        this.controllerPort.addEventListener('message', this.handleControllerMessage);
+        this.controllerPort.start();
     }
 
     get controllerPort(): ControllerPort {
@@ -68,14 +77,22 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
             return true;
         }
 
-        if (!this.enabled || !this.initialized) {
+        if (!this.enabled || !(this.isDspEnabled || this.isWorkerFeaturesEnabled)) {
             this.pass(inputs, outputs);
 
             return true;
         }
 
-        this.processInput(inputs);
-        this.processOutput(outputs);
+        if (this.isWorkerFeaturesEnabled && this.workerInitialized) {
+            this.processInput(inputs);
+            this.processOutput(outputs);
+        } else {
+            this.pass(inputs, outputs);
+        }
+
+        if (this.isDspEnabled) {
+            this.processDsp(outputs, outputs);
+        }
 
         this.timerTick();
 
@@ -126,6 +143,19 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         }
     }
 
+    processDsp(inputs: Float32Array[][], outputs: Float32Array[][]) {
+        assert(this.instance, 'dsp instance must be initialized before processing');
+        const [input] = inputs;
+        const [output] = outputs;
+        const [inputChannel] = input;
+
+        const result = this.instance.process(inputChannel);
+
+        for (const outputChannel of output) {
+            outputChannel.set(result);
+        }
+    }
+
     pass(inputs: Float32Array[][], outputs: Float32Array[][]) {
         const [input] = inputs;
         const [output] = outputs;
@@ -166,20 +196,44 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         }
     }
 
-    handleControllerMessage: ControllerPort['onmessage'] = (event) => {
+    handleControllerMessage: Exclude<ControllerPort['onmessage'], null> = (event) => {
         switch (event.data.type) {
             case WORKLET_MESSAGES.INIT:
+                const { verbosity, isTelemetryEnabled } = event.data;
+
+                this.logger = getWorkerLogger(this.controllerPort, verbosity, '[worklet]');
+                this.telemetry = getWorkletTelemetry(isTelemetryEnabled, this.controllerPort);
                 this.logger.debug('init data received');
-                const { workerPort, isDebug, isTelemetryEnabled } = event.data;
 
-                // TODO better debug log and telemetry cancelling
-                if (!isDebug) {
-                    this.logger.debug = () => {};
+                return;
+            case WORKLET_MESSAGES.RUNTIME_ASSETS:
+                const { dspWasm } = event.data;
+
+                SpenchDspWrapper.createBridge(dspWasm);
+                this.instance = new SpenchDspWrapper(sampleRate, this.logger);
+
+                return;
+            case WORKLET_MESSAGES.SET_FEATURES:
+                const { features } = event.data;
+
+                try {
+                    this.setFeatures(features);
+                } catch (e) {
+                    this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.SET_FEATURES_FAIL });
+                    throw e;
                 }
-                this.telemetry.enabled = isTelemetryEnabled;
+                this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.SET_FEATURES_OK });
 
+                if (!this.isWorkerFeaturesEnabled) {
+                    this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.SYSTEM_READY });
+                }
+
+                return;
+            case WORKLET_MESSAGES.WORKER_CREATED:
+                const { workerPort } = event.data;
                 this.workerPort = workerPort;
-                this.workerPort.onmessage = this.handleWorkerMessage;
+                this.workerPort.addEventListener('message', this.handleWorkerMessage);
+                this.workerPort.start();
 
                 return;
             case WORKLET_MESSAGES.ENABLE:
@@ -194,8 +248,17 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
                 this.destroy();
 
                 return;
-            case WORKLET_MESSAGES.WORKER_EJECTED:
-                this.initialized = false;
+            case WORKLET_MESSAGES.WORKER_FEATURES_CHANGED:
+                const { enabled } = event.data;
+                this.isWorkerFeaturesEnabled = enabled;
+                this.workerInitialized = false;
+                this.previouslyRendered = false;
+                this.overflowWindowStartTime = undefined;
+                this.overflowCounter = 0;
+
+                if (!enabled) {
+                    this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.SYSTEM_READY });
+                }
 
                 return;
             default:
@@ -204,18 +267,24 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         assert(false, 'Unknown message type from Controller');
     };
 
-    handleWorkerMessage: WorkerPort['onmessage'] = (event) => {
+    handleWorkerMessage: Exclude<WorkerPort['onmessage'], null> = (event) => {
         switch (event.data.type) {
             case WORKLET_MESSAGES.OUTPUT:
-                if (this.initialized) {
-                    this.outputBuffer.push(event.data.output);
-                    this.telemetry.frameReceived();
+                if (!this.workerInitialized) {
+                    return;
                 }
+
+                this.outputBuffer.push(event.data.output);
+                this.telemetry.frameReceived();
 
                 return;
             case WORKLET_MESSAGES.WORKER_READY:
-                this.initialized = true;
+                this.workerInitialized = true;
                 this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.SYSTEM_READY });
+
+                if (this.isWorkerFeaturesEnabled) {
+                    this.telemetry.start(currentTime);
+                }
 
                 return;
             default:
@@ -223,6 +292,21 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
 
         assert(false, 'Unknown message type from Worker');
     };
+
+    setFeatures(features: Features) {
+        assert(this.instance, 'spench dsp core instance must exist');
+        this.logger.debug(`setting features: ${JSON.stringify(features)}`);
+        this.instance.clear();
+        this.isDspEnabled = [
+            features.normalization,
+            // features.echoCancellation
+        ].some(Boolean);
+
+        if (features.normalization) {
+            assert(typeof features.normalization === 'string');
+            this.instance.addNormalizer(features.normalization);
+        }
+    }
 
     enable() {
         if (this.enabled) return;
@@ -234,7 +318,11 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         this.overflowWindowStartTime = undefined;
 
         this.outputBuffer.clear();
-        this.telemetry.start(currentTime);
+
+        if (this.isWorkerFeaturesEnabled) {
+            this.telemetry.start(currentTime);
+        }
+
         this.resetContext();
         this.logger.debug('enabled');
     }
@@ -258,11 +346,9 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         this.destroyed = true;
         this.telemetry.stop(currentTime);
         this.controllerPort.close();
-        this.controllerPort.onmessage = null;
 
         if (this.workerPort) {
             this.workerPort.close();
-            this.workerPort.onmessage = null;
             this.workerPort = undefined;
         }
     }

@@ -10,6 +10,7 @@ import {
 } from './utils/ipc';
 import { Logger } from './utils/logger';
 import { assert } from './utils/error';
+import { Telemetry } from './utils/telemetry';
 
 let currentWorkerNumber = 0;
 
@@ -36,13 +37,16 @@ interface ISpenchWorker extends Worker {
 class SpenchWorker extends Worker implements ISpenchWorker {
     weak = true;
 
-    private clients: number = 0;
+    protected clients: number = 0;
 
-    private workerNumber = currentWorkerNumber++;
+    protected workerNumber = currentWorkerNumber++;
 
-    private portNumber = 0;
+    protected portNumber = 0;
 
-    constructor(private readonly logger: Logger) {
+    constructor(
+        protected readonly logger: Logger,
+        protected readonly telemetry: Telemetry,
+    ) {
         // Don't allow the bundler to process prepared worker
         const url = new URL('../dist/workers/spench-worker.min.js', import.meta.url);
         super(url);
@@ -93,30 +97,17 @@ class SpenchWorker extends Worker implements ISpenchWorker {
         this.logger.debug(`worker #${this.workerNumber} destroyed`);
     }
 
-    init(isDebug: boolean, isTelemetryEnabled: boolean, wasm: ArrayBuffer, data?: ArrayBuffer): void {
-        if (data) {
-            this.postMessage(
-                {
-                    type: SELF_WORKER_MESSAGES.INIT,
-                    wasm,
-                    data,
-                    isDebug,
-                    isTelemetryEnabled,
-                },
-                [wasm, data],
-            );
-        } else {
-            this.logger.warn('Working in normalization-only mode. Feature toggle disabled');
-            this.postMessage(
-                {
-                    type: SELF_WORKER_MESSAGES.INIT,
-                    wasm,
-                    isDebug,
-                    isTelemetryEnabled,
-                },
-                [wasm],
-            );
-        }
+    init(wasm: ArrayBuffer, data: ArrayBuffer): void {
+        this.postMessage(
+            {
+                type: SELF_WORKER_MESSAGES.INIT,
+                wasm,
+                data,
+                verbosity: this.logger.verbosity,
+                isTelemetryEnabled: this.telemetry.enabled,
+            },
+            [wasm, data],
+        );
 
         this.addEventListener('message', this.#handleMessage);
         this.addEventListener('error', this.#handleError);

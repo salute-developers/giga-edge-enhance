@@ -6,9 +6,6 @@ const baseConfigFactory = (mode = 'development') => {
         devtool: mode === 'production' ? 'source-map' : 'eval-source-map',
         resolve: {
             extensions: ['.ts', '.js'],
-            alias: {
-                'wasm-wrapper': path.resolve(__dirname, 'lib/spench'),
-            },
             fallback: {
                 crypto: false,
             },

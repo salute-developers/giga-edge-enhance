@@ -1,5 +1,6 @@
 import { MetricNameToPayloadMap } from './telemetry';
 import { Features } from './common';
+import { LogLevel, Verbosity } from './logger';
 
 export type Message<N, D = unknown> = D & {
     type: N;
@@ -19,7 +20,10 @@ export const WORKLET_MESSAGES = {
     INIT: 'init',
     ENABLE: 'enable',
     DISABLE: 'disable',
-    WORKER_EJECTED: 'worker_ejected',
+    WORKER_FEATURES_CHANGED: 'worker_features_changed',
+    RUNTIME_ASSETS: 'runtime_assets',
+    SET_FEATURES: 'set_features',
+    WORKER_CREATED: 'worker_created',
     DESTROY: 'destroy',
 
     // From worker
@@ -29,6 +33,8 @@ export const WORKLET_MESSAGES = {
 
 export const CONTROLLER_MESSAGES = {
     OVERFLOW: 'overflow',
+    SET_FEATURES_OK: 'set_features_ok',
+    SET_FEATURES_FAIL: 'set_features_fail',
     TELEMETRY: 'telemetry',
     LOG: 'log',
     SYSTEM_READY: 'sys_ready',
@@ -43,7 +49,7 @@ export const SELF_WORKER_MESSAGES = {
 export type SelfWorkerMessage =
     | Message<
           typeof SELF_WORKER_MESSAGES.INIT,
-          { isDebug: boolean; isTelemetryEnabled: boolean; wasm: ArrayBuffer; data?: ArrayBuffer }
+          { verbosity: Verbosity; isTelemetryEnabled: boolean; wasm: ArrayBuffer; data: ArrayBuffer }
       >
     | Message<typeof SELF_WORKER_MESSAGES.NEW_CLIENT, { port: CustomPort<WorkerMessage, ControllerMessage> }>
     | Message<typeof SELF_WORKER_MESSAGES.DESTROY>;
@@ -51,19 +57,21 @@ export type SelfWorkerMessage =
 export type WorkerControllerMessage = LogMessage;
 
 export type WorkletMessage =
-    | Message<typeof WORKLET_MESSAGES.INIT, { isDebug: boolean; isTelemetryEnabled: boolean; workerPort: MessagePort }>
+    | Message<typeof WORKLET_MESSAGES.INIT, { verbosity: Verbosity; isTelemetryEnabled: boolean }>
+    | Message<typeof WORKLET_MESSAGES.WORKER_CREATED, { workerPort: MessagePort }>
+    | Message<typeof WORKLET_MESSAGES.RUNTIME_ASSETS, { dspWasm: ArrayBuffer }>
+    | Message<typeof WORKLET_MESSAGES.SET_FEATURES, { features: Features }>
     | Message<typeof WORKLET_MESSAGES.OUTPUT, { output: Float32Array }>
     | Message<typeof WORKLET_MESSAGES.ENABLE>
     | Message<typeof WORKLET_MESSAGES.DISABLE>
     | Message<typeof WORKLET_MESSAGES.DESTROY>
-    | Message<typeof WORKLET_MESSAGES.WORKER_EJECTED>
+    | Message<typeof WORKLET_MESSAGES.WORKER_FEATURES_CHANGED, { enabled: boolean }>
     | Message<typeof WORKLET_MESSAGES.WORKER_READY>;
 
 export type WorkerMessage =
     | Message<
           typeof WORKER_MESSAGES.INIT,
           {
-              features: Features;
               sampleRate: number;
               workletPort: MessagePort;
           }
@@ -73,14 +81,13 @@ export type WorkerMessage =
     | Message<typeof WORKER_MESSAGES.DESTROY>
     | Message<typeof WORKER_MESSAGES.RESET>;
 
-export type LogMessage = Message<
-    typeof CONTROLLER_MESSAGES.LOG,
-    { level: 'debug' | 'error' | 'warn'; data: unknown[] }
->;
+export type LogMessage = Message<typeof CONTROLLER_MESSAGES.LOG, { level: LogLevel; data: unknown[] }>;
 
 export type ControllerMessage<T extends keyof MetricNameToPayloadMap = keyof MetricNameToPayloadMap> =
     | LogMessage
     | Message<typeof CONTROLLER_MESSAGES.SYSTEM_READY>
+    | Message<typeof CONTROLLER_MESSAGES.SET_FEATURES_OK>
+    | Message<typeof CONTROLLER_MESSAGES.SET_FEATURES_FAIL>
     | Message<typeof CONTROLLER_MESSAGES.TELEMETRY, { metricName: T; value: MetricNameToPayloadMap[T] }>
     | Message<typeof CONTROLLER_MESSAGES.OVERFLOW, { overflowCount: number }>;
 

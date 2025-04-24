@@ -1,2 +1,2 @@
-export { default as SpenchSDK } from './loader';
+export { default as SpenchSDK } from './sdk';
 export type { SpenchAudioNode } from './audioNode';

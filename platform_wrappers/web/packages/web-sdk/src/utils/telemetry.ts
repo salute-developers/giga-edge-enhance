@@ -1,4 +1,3 @@
-import { Logger } from './logger';
 import { CONTROLLER_MESSAGES, ControllerMessage, CustomPort } from './ipc';
 import { TELEMETRY_FRAME_TIME_MAX_COUNT } from './constants';
 
@@ -8,6 +7,7 @@ export interface MetricNameToPayloadMap {
     initTime: number;
 
     wasmDownloadTime: number;
+    wasmDSPDownloadTime: number;
     modelsDataDownloadTime: number;
 }
 
@@ -16,23 +16,18 @@ export type SendMetricFunction = <T extends keyof MetricNameToPayloadMap>(
     payload: MetricNameToPayloadMap[T],
 ) => void;
 
-export type AudioNodeTelemetry = {
+export type Telemetry = {
+    enabled: boolean;
     sendMetric: SendMetricFunction;
 };
 
 // TODO: own telemetry (submit to eye sbdv)
-export function createAudioNodeTelemetry(logger: Logger, sendMetric?: SendMetricFunction): AudioNodeTelemetry {
-    const fallbackSendMetric: SendMetricFunction = (name, payload) => logger.debug('metric', name, payload);
-
+export function createTelemetry(sendMetric?: SendMetricFunction): Telemetry {
     return {
-        sendMetric: sendMetric || fallbackSendMetric,
+        enabled: Boolean(sendMetric),
+        sendMetric: sendMetric || (() => {}),
     };
 }
-
-export type LoaderTelemetry = AudioNodeTelemetry;
-
-export const createLoaderTelemetry: (logger: Logger, sendMetric?: SendMetricFunction) => LoaderTelemetry =
-    createAudioNodeTelemetry;
 
 export type WorkerTelemetry = {
     enabled: boolean;
@@ -54,7 +49,7 @@ export function getWorkerTelemetry(enabled: boolean, port: CustomPort<any, Contr
     return {
         enabled,
         recordFrameProcessTime(time: number) {
-            if (!this.enabled) return;
+            if (!this.enabled || enabled) return;
 
             times.push(time);
 
@@ -77,17 +72,18 @@ export function getWorkerTelemetry(enabled: boolean, port: CustomPort<any, Contr
     };
 }
 
-export function getWorkletTelemetry(port: CustomPort<any, ControllerMessage>): WorkletTelemetry {
+export function getWorkletTelemetry(enabled: boolean, port: CustomPort<any, ControllerMessage>): WorkletTelemetry {
     let started = false;
     let startTime = 0;
     let chunkCount = 0;
 
     return {
-        enabled: true,
+        enabled,
         frameReceived() {
             chunkCount++;
         },
         start(time) {
+            this.stop(time);
             startTime = time;
             chunkCount = 0;
             started = true;
