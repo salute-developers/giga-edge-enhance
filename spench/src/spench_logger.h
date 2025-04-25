@@ -5,6 +5,7 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
 
 #ifdef _WIN32
   #include <spdlog/sinks/msvc_sink.h>
@@ -34,8 +35,8 @@ inline std::shared_ptr<spdlog::logger> gLogger;
 
 // Initialize the global logger (call once at startup)
 // name: logger name, level: minimum log level to output, logfile: optional file path
-void InitLogger(const std::string& name = "Spench",
-                LogLevel level = LogLevel::Info,
+void InitLogger(LogLevel level = LogLevel::Info,
+                const std::string& name = "Spench",
                 const std::string& logfile = {});
 
 // Shutdown and flush all loggers
