@@ -20,7 +20,8 @@ class LoudnessControl {
    * @param bypass_time time (sec) to skip gain apply
    * @param max_gain max gain limit (db)
    */
-  explicit LoudnessControl(int32_t sample_rate, float target_level = -23, float bypass_time = 3.0, float max_gain = 40);
+  explicit LoudnessControl(uint32_t sample_rate, float target_level = -23,
+                           float bypass_time = 3.0, float max_gain = 40);
 
   [[nodiscard]] std::vector<float> process(const std::vector<float>& x);
 
