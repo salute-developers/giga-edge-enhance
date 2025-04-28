@@ -41,7 +41,7 @@ class LoudnessStat {
   std::optional<float> max_power_;
 };
 
-LoudnessControl::LoudnessControl(int32_t sample_rate, float target_level, float bypass_time, float max_gain)
+LoudnessControl::LoudnessControl(uint32_t sample_rate, float target_level, float bypass_time, float max_gain)
     : m_target_db{target_level}, m_max_gain_db{max_gain} {
   m_mtr = std::make_shared<LoudnessMeter>(sample_rate);
   m_stat = std::make_shared<LoudnessStat>();

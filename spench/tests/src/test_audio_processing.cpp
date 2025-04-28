@@ -379,6 +379,48 @@ TEST_CASE("SUCCEED Run audio processing with reading RC parameters from config [
   REQUIRE(greater_than_0_9.size() == 0);
 }
 
+TEST_CASE("SUCCEED Run audio processing with reading LC parameters from config [audio processing]") {
+  auto audio_proc_test_env = std::move(TestAudioProcessing().
+                                       InitAudioProcessing("default_configuration_fast_tflite_rc_enabled_24khz.yaml"));
+  audio_proc_test_env.getAudioProc().addLC();
+  constexpr int fs = 48000;
+  constexpr int chunk_ms = 16;
+  constexpr int frame_len = fs * chunk_ms / 1000;
+  constexpr int num_frames = (10 * fs) / frame_len;
+  constexpr int num_samples = num_frames * frame_len;
+  const int bypass_time = 3;
+
+  const auto tt = dsplib::arange(num_samples) / fs;
+  const auto in = 0.5 * sin(2 * dsplib::pi * 440.0 * tt);
+
+  auto rms_before = dsplib::mag2db(dsplib::rms(in));
+
+  // process frame by frame
+  dsplib::arr_real out;
+  for (uint32_t i = 0; i < num_frames; ++i) {
+    const uint32_t t1 = i * frame_len;
+    const uint32_t t2 = t1 + frame_len;
+    const auto x = *in.slice(t1, t2);
+    std::vector<float> chunk = x.to_vec();
+    std::vector<float> ret;
+    audio_proc_test_env.m_audio_proc->process(chunk, ret);
+    out |= dsplib::arr_real(ret);
+  }
+
+  // rms changed (after bypass time)
+  {
+    auto rms_gained = dsplib::mag2db(dsplib::rms(out.slice(fs * bypass_time, num_samples)));
+    const dsplib::real_t rms_target = -22.31;
+    REQUIRE(std::abs(rms_gained - rms_target) < 0.5);
+  }
+
+  // rms not changed (before bypass time)
+  {
+    auto rms_bypassed = dsplib::mag2db(dsplib::rms(out.slice(0, fs * bypass_time)));
+    REQUIRE(std::abs(rms_bypassed - rms_before) < 0.5);
+  }
+}
+
 TEST_CASE("SUCCEED Run audio processing with reading RC and NG parameters from config [audio processing]") {
   auto audio_proc_test_env = std::move(TestAudioProcessing().
                                        InitAudioProcessing("default_configuration_fast_tflite_dsp_enabled_24khz.yaml").
