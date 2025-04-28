@@ -313,6 +313,33 @@ SpenchRetCode   SpenchAudioProcessAddRcWithParam(SpenchAudioProcess model,
   return ret_code;
 }
 
+SpenchRetCode   SpenchAudioProcessAddLc(SpenchAudioProcess model) {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  if (model == nullptr) {
+    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  } else {
+    ((spench::SpenchAudioProcess*)model)->AddLC();
+  }
+  return ret_code;
+}
+
+SpenchRetCode   SpenchAudioProcessAddLcWithParam(SpenchAudioProcess model,
+                                                 u_int32_t audio_sample_rate,
+                                                 float target_level_db,
+                                                 float bypass_time,
+                                                 float max_gain_db) {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  if (model == nullptr) {
+    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  } else {
+    ((spench::SpenchAudioProcess*)model)->AddLC(audio_sample_rate,
+                                                target_level_db,
+                                                bypass_time,
+                                                max_gain_db);
+  }
+  return ret_code;
+}
+
 SpenchRetCode   SpenchAudioProcessChunkFp(SpenchAudioProcess model,
                                           const u_int8_t* memory_in,
                                           u_int64_t in_size,

@@ -1885,6 +1885,72 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [spench c api]
   test_data.m_audio_proc = nullptr;
 }
 
+TEST_CASE("SUCCEED Run AudioProcessing with changed LC parameters [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+auto test_data = std::move(TestCAPI().
+                           InitAudioProcessor("default_configuration_fast_tflite_rc_enabled_24khz.yaml", ret_code));
+
+  constexpr uint32_t fs = 16000;
+  constexpr uint32_t chunk_ms = 32;
+  constexpr uint32_t frame_len = fs * chunk_ms / 1000;
+  constexpr int32_t num_frames = (12 * fs) / frame_len;
+  constexpr int32_t num_samples = num_frames * frame_len;
+  const     int32_t bypass_time = 3;
+  const     int32_t target_db = -23;
+  const     int32_t max_gain_db = 40;
+
+  SpenchAudioProcessAddLcWithParam(test_data.m_audio_proc, fs, target_db, bypass_time, max_gain_db);
+
+  const auto tt = dsplib::arange(num_samples) / fs;
+  const auto in = 0.5 * sin(2 * dsplib::pi * 440.0 * tt);
+
+  auto rms_before = dsplib::mag2db(dsplib::rms(in));
+
+  // process frame by frame
+  dsplib::arr_real out;
+
+  for (uint32_t i = 0; i < num_frames; ++i) {
+    unsigned char* ret_mem = nullptr;
+    uint64_t ret_size = 0;
+    const uint32_t t1 = i * frame_len;
+    const uint32_t t2 = t1 + frame_len;
+    const auto x = *in.slice(t1, t2);
+    std::vector<float> chunk = x.to_vec();
+
+    ret_code = SpenchAudioProcessChunkFp(test_data.m_audio_proc,
+                                             (const unsigned char*) chunk.data(),
+                                             chunk.size() * sizeof(float),
+                                             &ret_mem,
+                                             &ret_size);
+    // Memory to vector
+    std::vector<float> ret(ret_size / sizeof(float));
+    std::memcpy(ret.data(), ret_mem, ret_size);
+    // Vector to dsplib::arr_real
+    out |= dsplib::arr_real(ret);
+
+    if (ret_mem != nullptr) {
+      std::free(ret_mem);
+      ret_mem = nullptr;
+    }
+  }
+
+  // rms changed (after bypass time)
+  {
+    auto rms_gained = dsplib::mag2db(dsplib::rms(out.slice(fs * bypass_time, num_samples)));
+    const dsplib::real_t rms_target = -22.31;
+    REQUIRE(std::abs(rms_gained - rms_target) < 0.5);
+  }
+
+  // rms not changed (before bypass time)
+  {
+    auto rms_bypassed = dsplib::mag2db(dsplib::rms(out.slice(0, fs * bypass_time)));
+    REQUIRE(std::abs(rms_bypassed - rms_before) < 0.5);
+  }
+
+  SpenchAudioProcessFree(test_data.m_audio_proc);
+  test_data.m_audio_proc = nullptr;
+}
+
 TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   auto test_data = std::move(TestCAPI().

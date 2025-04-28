@@ -130,6 +130,19 @@ SpenchAudioProcess& SpenchAudioProcess::AddRC(uint32_t audio_sample_rate,
   return *this;
 }
 
+SpenchAudioProcess& SpenchAudioProcess::AddLC() {
+  m_dsp->addLC();
+  return *this;
+}
+
+SpenchAudioProcess& SpenchAudioProcess::AddLC(uint32_t audio_sample_rate,
+                                              float target_level_db,
+                                              float bypass_time,
+                                              float max_gain_db) {
+  m_dsp->addLC({audio_sample_rate, target_level_db, bypass_time, max_gain_db});
+  return *this;
+}
+
 SpenchAudioProcess& SpenchAudioProcess::AddNG() {
   m_dsp->addNoiseGate();
   return *this;
