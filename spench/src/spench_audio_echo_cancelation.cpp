@@ -1,11 +1,12 @@
 #include "include/spench_audio_echo_cancelation.h"
-#include "spench/src/spench_task.h"
-#include "spench/src/acoustic_echo_cancelation_handler.h"
-#include <iostream>
 #include <limits>
 #include <filesystem>
 #include <algorithm>
 #include <memory>
+#include <spdlog/spdlog.h>
+#include "spench/src/spench_task.h"
+#include "spench/src/acoustic_echo_cancelation_handler.h"
+#include "spench/src/spench_logger.h"
 
 namespace spench {
 
@@ -14,7 +15,7 @@ SpenchAudioEchoCancelation::SpenchAudioEchoCancelation(const char* config) {
   if (!config_file.empty() && std::filesystem::exists(config_file)) {
       m_aec = std::make_unique<spench::AudioEchoCancelationHandler>(config_file);
   } else if (config_file.empty()) {
-    std::cout << "SpenchAudioEchoCancelation input config is empty. Use default values" << std::endl;
+    spdlog::info("SpenchAudioEchoCancelation input config is empty. Use default values");
     m_aec = std::make_unique<spench::AudioEchoCancelationHandler>();
   } else {
       throw std::invalid_argument("Invalid or missing config file.");

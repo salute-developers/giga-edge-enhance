@@ -1,9 +1,35 @@
 #include "spench/src/spench_logger.h"
+#include <spdlog/spdlog-inl.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
 
+#ifdef _WIN32
+  #include <spdlog/sinks/msvc_sink.h>
+#endif
+
+#ifdef __ANDROID__
+  #include <spdlog/sinks/android_sink.h>
+#endif
+
+#ifdef __linux__
+  #include <spdlog/sinks/syslog_sink.h>
+#endif
 
 namespace spench {
 
-void InitLogger(LogLevel level,
+// Helper: map uint to spdlog level_enum
+static spdlog::level::level_enum MapLevel(uint32_t lvl) {
+  switch (lvl) {
+    case 0: return spdlog::level::trace;
+    case 1: return spdlog::level::debug;
+    case 2: return spdlog::level::info;
+    case 3: return spdlog::level::warn;
+    case 4: return spdlog::level::err;
+    default: return spdlog::level::off;
+  }
+}
+
+void InitLogger(uint32_t level,
                 const std::string& name,
                 const std::string& logfile) {
   std::vector<spdlog::sink_ptr> sinks;
@@ -41,16 +67,8 @@ void InitLogger(LogLevel level,
 
   spdlog::set_default_logger(gLogger);
 
-  // Map LogLevel to spdlog level
-  spdlog::level::level_enum lvl;
-  switch (level) {
-    case LogLevel::Trace: lvl = spdlog::level::trace; break;
-    case LogLevel::Debug: lvl = spdlog::level::debug; break;
-    case LogLevel::Info:  lvl = spdlog::level::info;  break;
-    case LogLevel::Warn:  lvl = spdlog::level::warn;  break;
-    case LogLevel::Error: lvl = spdlog::level::err;   break;
-    default:              lvl = spdlog::level::off;   break;
-  }
+  // Set initial level
+  spdlog::level::level_enum lvl = MapLevel(level);
   spdlog::set_level(lvl);
   spdlog::flush_every(std::chrono::seconds(3));
 }
@@ -58,6 +76,12 @@ void InitLogger(LogLevel level,
 void ShutdownLogger() {
   spdlog::shutdown();
   gLogger.reset();
+}
+
+void SetLogLevel(unsigned int level) {
+  auto lvl = MapLevel(level);
+  spdlog::set_level(lvl);
+  spdlog::flush_on(lvl);
 }
 
 struct LoggerInitializer {

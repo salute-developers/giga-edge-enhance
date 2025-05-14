@@ -1,8 +1,6 @@
 #include "spench/src/feature_extractor_runner.h"
 #include <cmath>
 #include <vector>
-#include <fstream>
-#include <iostream>
 #include <deque>
 #include <algorithm>
 #include <chrono> // NOLINT

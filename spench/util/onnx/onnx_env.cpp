@@ -6,7 +6,6 @@
 
 #include <memory>
 #include <mutex>  // NOLINT
-#include <iostream>
 
 namespace util {
 namespace onnx {
@@ -17,7 +16,7 @@ static std::mutex OrtMutex;
 void CheckStatus(OrtStatus* status) {
   if (status != NULL) {
     const char* msg = OrtApiPtr->GetErrorMessage(status);
-    std::cerr << msg << std::endl;
+    (void) msg;
     // VOICE_ERROR() << msg;
     // Logging::Terminate();
   }

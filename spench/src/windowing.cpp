@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <numeric>
 #include <stdexcept>
-#include <iostream>
 
 namespace spench {
 namespace fe {

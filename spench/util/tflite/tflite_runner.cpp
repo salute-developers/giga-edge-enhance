@@ -1,7 +1,6 @@
 #include <functional>
 #include <string>
 #include <memory>
-#include <iostream>
 #include "spench/util/tflite/tflite_runner.h"
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION

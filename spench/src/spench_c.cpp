@@ -1,7 +1,6 @@
 #include "include/spench_c.h"
 #include "include/spench.h"
 #include "spench/src/spench_task.h"
-#include <iostream>
 #include <cstring>
 
 namespace ctools {
@@ -10,7 +9,7 @@ SpenchRetCode AllocateAndCopy(std::vector<T> input, uint8_t **output, uint64_t *
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   uint64_t bytes_to_allocate = input.size() * sizeof(T);
   if (input.empty()) {
-    std::cerr << __FUNCTION__ << "input container is empty" << std::endl;
+    printf("input container is empty");
     *output_size = 0;
     ret_code = SpenchRetCode::ERR_ALLOCATION_PROBLEM;
   }

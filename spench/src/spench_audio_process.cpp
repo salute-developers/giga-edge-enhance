@@ -1,10 +1,11 @@
 #include "include/spench_audio_process.h"
-#include "spench/src/spench_task.h"
-#include "spench/src/audio_processing.h"
-#include <iostream>
 #include <limits>
 #include <algorithm>
 #include <memory>
+#include <spdlog/spdlog.h>
+#include "spench/src/spench_task.h"
+#include "spench/src/audio_processing.h"
+#include "spench/src/spench_logger.h"
 
 namespace spench {
 SpenchAudioProcess::SpenchAudioProcess() {
@@ -14,7 +15,7 @@ SpenchAudioProcess::SpenchAudioProcess() {
 SpenchAudioProcess::SpenchAudioProcess(const char* config_file) {
   auto cfg = std::string(config_file);
   if (cfg.empty()) {
-    std::cout << "SpenchAudioProcess input config is empty. Use default values" << std::endl;
+    spdlog::info("SpenchAudioProcess input config is empty. Use default values");
     m_dsp = std::make_unique<spench::AudioProcessing>();
   } else {
     m_dsp = std::make_unique<spench::AudioProcessing>(cfg);

@@ -2,7 +2,6 @@
 #include "spench/src/spench_task.h"
 #include "spench/src/base_audio_handler.h"
 #include "spench/src/denoiser_audio_handler.h"
-#include <iostream>
 #include <memory>
 
 namespace spench {
