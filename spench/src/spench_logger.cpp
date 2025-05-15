@@ -84,9 +84,11 @@ void SetLogLevel(unsigned int level) {
   spdlog::flush_on(lvl);
 }
 
+#ifndef __EMSCRIPTEN__
 struct LoggerInitializer {
   LoggerInitializer() { InitLogger(); }
 };
 static LoggerInitializer s_loggerInitializer;
+#endif
 
 }  // namespace spench
