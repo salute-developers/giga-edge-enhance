@@ -8,7 +8,7 @@ export type Models = {
 export type Features = Partial<{
     noiseCancellation: boolean | keyof Models['noiseCancellation'];
     dereverberation: boolean | keyof Models['dereverberation'];
-    normalization: boolean | 'rc' | 'agc';
+    normalization: boolean;
     echoCancellation: boolean;
 }>;
 

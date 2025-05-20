@@ -104,16 +104,11 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
         SpenchDspWrapper.bridge = SpenchDsp({ wasmBinary: wasm });
     }
 
-    addNormalizer(type: 'agc' | 'rc'): void {
-        const key = `normalizer-${type}`;
+    addNormalizer(): void {
+        const key = 'normalizer';
 
-        this.logger.debug(`add normalizer to SpenchDSP Pipeline, type: ${type}`);
-        this.pipeline.push([
-            key,
-            type === 'agc'
-                ? new SpenchDspWrapper.bridge!.AudioProcessPipelineElement(this.sampleRate, '')
-                : new SpenchDspWrapper.bridge!.AudioProcessPipelineElementRC(this.sampleRate, ''),
-        ]);
+        this.logger.debug('add normalizer to SpenchDSP Pipeline');
+        this.pipeline.push([key, new SpenchDspWrapper.bridge!.AudioProcessPipelineElement(this.sampleRate, '')]);
     }
 
     override pop() {
@@ -160,17 +155,11 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
         });
     }
 
-    addNormalizer(type: 'agc' | 'rc'): void {
-        const key = `normalizer-${type}`;
-        const cached = this.tryGetFromCache(key);
+    addNormalizer(): void {
+        const key = 'normalizer';
 
-        this.logger.debug('add normalizer to SpenchDSP Pipeline');
-        this.pipeline.push([
-            key,
-            cached || type === 'agc'
-                ? new SpenchWrapper.bridge!.AudioProcessPipelineElement(this.sampleRate, '')
-                : new SpenchWrapper.bridge!.AudioProcessPipelineElementRC(this.sampleRate, ''),
-        ]);
+        this.logger.debug('add normalizer to Spench Pipeline');
+        this.pipeline.push([key, new SpenchWrapper.bridge!.AudioProcessPipelineElement(this.sampleRate, '')]);
     }
 
     addDenoiser(configPath: string): void {

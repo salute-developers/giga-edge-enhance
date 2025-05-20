@@ -162,23 +162,22 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         if (features.echoCancellation) {
             this.#logger.warn('echoCancellation feature is not implemented yet, so it will be ignored');
         }
-        // TODO remove workaround with two types of normalization
-        const normalizationComputed: 'rc' | false = features.normalization === true ? 'rc' : false;
 
         const areWorkletFeaturesEnabled = [
             features.normalization,
             // features.echoCancellation, TODO ADD AEC FEATURE
         ].some(Boolean);
+
+        // Always rebuild normalizer
         const areWorkletFeaturesChanged = true; /* [
-            typeof normalizationComputed !== 'undefined' &&
-                (this.#features.normalization || false) !== (normalizationComputed || false),
+            typeof features.normalization !== 'undefined' &&
+                (this.#features.normalization || false) !== (features.normalization || false),
             // typeof features.echoCancellation !== 'undefined' &&
             //     this.#features.echoCancellation !== features.echoCancellation,
         ].some(Boolean); */
         const mixedFeatures = {
             ...this.#features,
             ...features,
-            normalization: normalizationComputed,
         };
         const {
             normalization,

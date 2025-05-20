@@ -303,8 +303,7 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         ].some(Boolean);
 
         if (features.normalization) {
-            assert(typeof features.normalization === 'string');
-            this.instance.addNormalizer(features.normalization);
+            this.instance.addNormalizer();
         }
     }
 
