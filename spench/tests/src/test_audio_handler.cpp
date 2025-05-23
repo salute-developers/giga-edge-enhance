@@ -74,7 +74,8 @@ TEST_CASE("FAIL Run dereverberator handler with exception from inference runner 
 
 TEST_CASE("FAIL Run dereverberator handler with exception for incorrect config path [dereverberator handler]") {
   REQUIRE_THROWS_WITH(TestHandler()
-      .InitDereverberatorHandler("config.json"), "Due to errors denoiser could not be created! ret_code: -10");
+      .InitDereverberatorHandler("config.json"),
+                      "Due to errors dereverberation module could not be created! ret_code: -10");
 }
 
 TEST_CASE("SUCCEED Create frame [denoiser handler]") {

@@ -2,7 +2,9 @@
 #include "spench/src/spench_task.h"
 #include "spench/src/base_audio_handler.h"
 #include "spench/src/denoiser_audio_handler.h"
+#include "spench/src/spench_logger.h"
 #include <memory>
+#include <spdlog/spdlog.h>
 
 namespace spench {
 
@@ -14,6 +16,7 @@ SpenchDenoise::SpenchDenoise(const char* config_file,
                                                 std::string(config_file),
                                                 std::string(password),
                                                 std::string(checksum));
+  spdlog::info("Create Spench denoiser form config {}", std::string(config_file));
 }
 
 SpenchDenoise::SpenchDenoise(SpenchDenoise&& orig):

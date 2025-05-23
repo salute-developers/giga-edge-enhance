@@ -42,39 +42,7 @@ class DenoiseModelParams {
 
   DenoiseModelParams() = default;
 
-  void ReadModelNode(const YAML::Node& yaml_config) {
-    if (yaml_config["model_path"] && !yaml_config["model_path"].IsNull()) {
-      if (yaml_config["model_path"].Type() != YAML::NodeType::Scalar) {
-        throw("Config reading error. Model path parameter is not a single string!");
-      }
-      m_model_path = yaml_config["model_path"].as<std::string>();
-    }
-
-    if (yaml_config["model_inputs"] && !yaml_config["model_inputs"].IsNull()) {
-      if (yaml_config["model_inputs"].Type() != YAML::NodeType::Sequence) {
-        throw("Config reading error. Model inputs parameter is not a sequence!");
-      }
-      for (auto& item : yaml_config["model_inputs"]) {
-        m_model_inputs.push_back(item.as<std::string>());
-      }
-    }
-
-    if (yaml_config["model_outputs"] && !yaml_config["model_outputs"].IsNull()) {
-      if (yaml_config["model_outputs"].Type() != YAML::NodeType::Sequence) {
-        throw("Config reading error. Model outputs parameter is not a sequence!");
-      }
-      for (auto& item : yaml_config["model_outputs"]) {
-        m_model_outputs.push_back(item.as<std::string>());
-      }
-    }
-
-    if (yaml_config["model_input_ctx_len"] && !yaml_config["model_input_ctx_len"].IsNull()) {
-      if (yaml_config["model_input_ctx_len"].Type() != YAML::NodeType::Scalar) {
-        throw("Config reading error. Model context length is not a scalar!");
-      }
-      m_network_input_ctx_len = yaml_config["model_input_ctx_len"].as<uint32_t>();
-    }
-  }
+  void ReadModelNode(const YAML::Node& yaml_config);
 };
 
 class SpenchTask {

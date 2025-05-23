@@ -18,8 +18,10 @@ SpenchAudioEchoCancelation::SpenchAudioEchoCancelation(const char* config) {
     spdlog::info("SpenchAudioEchoCancelation input config is empty. Use default values");
     m_aec = std::make_unique<spench::AudioEchoCancelationHandler>();
   } else {
-      throw std::invalid_argument("Invalid or missing config file.");
+    spdlog::error("Invalid or missing config file.");
+    throw std::invalid_argument("Invalid or missing config file.");
   }
+  spdlog::info("Create Spench echo cancelation form config {}", std::string(config));
 }
 
 SpenchAudioEchoCancelation::~SpenchAudioEchoCancelation() {
@@ -128,7 +130,8 @@ std::vector<int16_t>  SpenchAudioEchoCancelation::operator()(std::vector<int16_t
 std::vector<float> SpenchAudioEchoCancelation::convertToInterleaved(const std::vector<float>& mic,
                                                                     const std::vector<float>& lbk) {
   if (mic.size() != lbk.size()) {
-      throw std::invalid_argument("Original and loopback signals must have the same size.");
+    spdlog::error("Original and loopback signals must have the same size.");
+    throw std::invalid_argument("Original and loopback signals must have the same size.");
   }
 
   std::vector<float> interlvd;

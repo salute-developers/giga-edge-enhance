@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <numeric>
 #include <stdexcept>
+#include <spdlog/spdlog.h>
+#include "spench/src/spench_logger.h"
 
 namespace spench {
 namespace fe {
@@ -17,6 +19,7 @@ Windowing<T>::Windowing(int64_t n, WindowType window_type, uint32_t hop_size, bo
       m_hop_size(hop_size),
       m_window_periodic(is_periodic) {
   if (m_window_length <= 1) {
+    spdlog::error("Windowing: window_length must be > 1");
     throw std::invalid_argument("Windowing: window_length must be > 1");
   }
 
@@ -41,6 +44,7 @@ Windowing<T>::Windowing(int64_t n, WindowType window_type, uint32_t hop_size, bo
       }
       break;
     default:
+      spdlog::error("Windowing: unsupported window type");
       throw std::invalid_argument("Windowing: unsupported window type");
   }
 }
@@ -56,6 +60,7 @@ template <typename T>
 void Windowing<T>::ApplyInPlace(std::vector<T>& input) const {
   if ((!m_window_periodic && input.size() % (m_window_length) != 0) ||
        (m_window_periodic && input.size() % (m_window_length - 1) != 0)) {
+    spdlog::error("Windowing: input size is not divisible by windowLength");
     throw std::invalid_argument(
         "Windowing: input size is not divisible by windowLength");
   }
