@@ -594,7 +594,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   }
   test_data.m_denoiser->DestroyContext(&ctx);
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.001);
+  IsVectorsClose(reference_prediction, prediction, 0.01);
 }
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
@@ -631,7 +631,7 @@ TEST_CASE("SUCCEED Run inference with encrypted fast 24 kHz model on a part of .
   }
   test_data.m_denoiser->DestroyContext(&ctx);
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.001);
+  IsVectorsClose(reference_prediction, prediction, 0.01);
 }
 
 TEST_CASE("SUCCEED Run inference with licenced encrypted fast 24 kHz model on a part of .wav file [spench c++ api]") {
@@ -671,7 +671,7 @@ TEST_CASE("SUCCEED Run inference with licenced encrypted fast 24 kHz model on a 
   }
   test_data.m_denoiser->DestroyContext(&ctx);
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.001);
+  IsVectorsClose(reference_prediction, prediction, 0.01);
 }
 #else
 TEST_CASE("FAIL Run with password when the framework built without encryption [spench c++ api]") {
@@ -798,7 +798,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resamplin
   reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
   prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
 
-  IsVectorsClose(reference, prediction, 0.005);
+  IsVectorsClose(reference, prediction, 0.03);
   test_data.m_denoiser->DestroyContext(&ctx);
 }
 
@@ -855,7 +855,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with output resampli
   reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
   prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
 
-  IsVectorsClose(reference, prediction, 0.008);
+  IsVectorsClose(reference, prediction, 0.03);
   test_data.m_denoiser->DestroyContext(&ctx);
 }
 
@@ -913,7 +913,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
   reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
   prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
 
-  IsVectorsClose(reference, prediction, 0.005);
+  IsVectorsClose(reference, prediction, 0.03);
   test_data.m_denoiser->DestroyContext(&ctx);
 }
 

@@ -1157,7 +1157,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   }
 
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.001);
+  IsVectorsClose(reference_prediction, prediction, 0.01);
   SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 
@@ -1213,7 +1213,7 @@ TEST_CASE("SUCCEED Run inference with the encrypted fast 24 kHz model on a part 
   }
 
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.001);
+  IsVectorsClose(reference_prediction, prediction, 0.01);
   SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 
@@ -1270,7 +1270,7 @@ TEST_CASE("SUCCEED Run inference with the licensed encrypted fast 24 kHz model o
   }
 
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.001);
+  IsVectorsClose(reference_prediction, prediction, 0.01);
   SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 #else
@@ -1449,7 +1449,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resamplin
   reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
   prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
 
-  IsVectorsClose(reference, prediction, 0.005);
+  IsVectorsClose(reference, prediction, 0.03);
   SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 
@@ -1534,7 +1534,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with output resampli
   reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
   prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
 
-  IsVectorsClose(reference, prediction, 0.008);
+  IsVectorsClose(reference, prediction, 0.03);
   SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 
@@ -1619,7 +1619,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
   reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
   prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
 
-  IsVectorsClose(reference, prediction, 0.005);
+  IsVectorsClose(reference, prediction, 0.03);
   SpenchDenoiseDestroyContext(test_data.m_denoiser, &ctx);
 }
 #else

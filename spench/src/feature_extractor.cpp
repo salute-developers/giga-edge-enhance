@@ -228,8 +228,9 @@ void FeatureExtractor<T>::calcEnhancedPartsInPlace(const ComplexNumber<T>& input
   // This will help prevent anomalies at the frame boundaries caused by the influence of the phase.
   const auto abs_mask = enhanced_spec.getMagnitude();
   for (uint32_t i = 0; i < abs_mask.size(); ++i) {
-    enhanced_spec.real[i] = input_spec.real[i] * abs_mask[i];
-    enhanced_spec.imag[i] = input_spec.imag[i] * abs_mask[i];
+    auto mult = std::min(abs_mask[i], 1.0f);
+    enhanced_spec.real[i] = input_spec.real[i] * mult;
+    enhanced_spec.imag[i] = input_spec.imag[i] * mult;
   }
 }
 
