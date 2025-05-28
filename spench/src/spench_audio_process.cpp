@@ -159,6 +159,21 @@ SpenchAudioProcess& SpenchAudioProcess::AddNG(uint32_t audio_sample_rate,
   return *this;
 }
 
+SpenchAudioProcess& SpenchAudioProcess::AddLim() {
+  m_dsp->addLimiter();
+  return *this;
+}
+
+SpenchAudioProcess& SpenchAudioProcess::AddLim(uint32_t audio_sample_rate,
+                                              float threshold_db,
+                                              float knee_width,
+                                              float attack_time,
+                                              float release_time) {
+  m_dsp->addLimiter({audio_sample_rate, threshold_db,
+                  knee_width, attack_time, release_time});
+  return *this;
+}
+
 SpenchAudioProcess& SpenchAudioProcess::AddDRC() {
   m_dsp->addDRCompressor();
   return *this;
