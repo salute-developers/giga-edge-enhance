@@ -49,7 +49,7 @@ export function getWorkerTelemetry(enabled: boolean, port: CustomPort<any, Contr
     return {
         enabled,
         recordFrameProcessTime(time: number) {
-            if (!this.enabled || enabled) return;
+            if (!this.enabled || !enabled) return;
 
             times.push(time);
 
