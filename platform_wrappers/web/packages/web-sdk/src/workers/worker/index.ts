@@ -106,7 +106,21 @@ class SpenchWorker {
         }
     }
 
-    handleWorkletMessage: Exclude<WorkletPort['onmessage'], null> = (event) => {
+    withErrorHandling = <T extends (...args: any[]) => any>(fn: T): T => {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        const origThis = this;
+
+        return function wrapped(this: ThisParameterType<T>, ...args: Parameters<T>): ReturnType<T> | void {
+            try {
+                return fn.apply(this, args);
+            } catch (e) {
+                origThis.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.ERROR, error: e as Error });
+            }
+        } as T;
+    };
+
+    // eslint-disable-next-line @typescript-eslint/member-ordering
+    handleWorkletMessage: Exclude<WorkletPort['onmessage'], null> = this.withErrorHandling((event) => {
         switch (event.data.type) {
             case WORKER_MESSAGES.INPUT:
                 const { input } = event.data;
@@ -157,9 +171,10 @@ class SpenchWorker {
         }
 
         assert(false, 'Unknown message type from Worklet');
-    };
+    });
 
-    handleControllerMessage: Exclude<ControllerPort['onmessage'], null> = (event) => {
+    // eslint-disable-next-line @typescript-eslint/member-ordering
+    handleControllerMessage: Exclude<ControllerPort['onmessage'], null> = this.withErrorHandling((event) => {
         switch (event.data.type) {
             case WORKER_MESSAGES.SET_FEATURES:
                 const { features } = event.data;
@@ -183,7 +198,7 @@ class SpenchWorker {
         }
 
         assert(false, 'Unknown message type from Worklet');
-    };
+    });
 }
 
 const handleControllerMessage: SpenchWorkerGlobalScope['onmessage'] = (event) => {

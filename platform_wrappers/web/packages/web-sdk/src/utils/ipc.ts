@@ -37,6 +37,7 @@ export const CONTROLLER_MESSAGES = {
     SET_FEATURES_FAIL: 'set_features_fail',
     TELEMETRY: 'telemetry',
     LOG: 'log',
+    ERROR: 'error',
     SYSTEM_READY: 'sys_ready',
 } as const;
 
@@ -88,6 +89,7 @@ export type ControllerMessage<T extends keyof MetricNameToPayloadMap = keyof Met
     | Message<typeof CONTROLLER_MESSAGES.SYSTEM_READY>
     | Message<typeof CONTROLLER_MESSAGES.SET_FEATURES_OK>
     | Message<typeof CONTROLLER_MESSAGES.SET_FEATURES_FAIL, { error: Error }>
+    | Message<typeof CONTROLLER_MESSAGES.ERROR, { error: Error }>
     | Message<typeof CONTROLLER_MESSAGES.TELEMETRY, { metricName: T; value: MetricNameToPayloadMap[T] }>
     | Message<typeof CONTROLLER_MESSAGES.OVERFLOW, { overflowCount: number }>;
 

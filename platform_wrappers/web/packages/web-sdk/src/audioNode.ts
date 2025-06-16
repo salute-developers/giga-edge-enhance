@@ -376,6 +376,11 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
                 this.#logger[event.data.level](...event.data.data);
 
                 return;
+            case CONTROLLER_MESSAGES.ERROR:
+                const { error } = event.data;
+                this.#handleError(new SpenchError(error));
+
+                return;
             case CONTROLLER_MESSAGES.OVERFLOW:
                 if (!super.dispatchEvent(new OverflowEvent({ overflowCount: event.data.overflowCount }))) {
                     this.#handleOverflow(event.data.overflowCount);

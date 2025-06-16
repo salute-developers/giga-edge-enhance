@@ -196,7 +196,21 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         }
     }
 
-    handleControllerMessage: Exclude<ControllerPort['onmessage'], null> = (event) => {
+    withErrorHandling = <T extends (...args: any[]) => any>(fn: T): T => {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        const origThis = this;
+
+        return function wrapped(this: ThisParameterType<T>, ...args: Parameters<T>): ReturnType<T> | void {
+            try {
+                return fn.apply(this, args);
+            } catch (e) {
+                origThis.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.ERROR, error: e as Error });
+            }
+        } as T;
+    };
+
+    // eslint-disable-next-line @typescript-eslint/member-ordering
+    handleControllerMessage: Exclude<ControllerPort['onmessage'], null> = this.withErrorHandling((event) => {
         switch (event.data.type) {
             case WORKLET_MESSAGES.INIT:
                 const { verbosity, isTelemetryEnabled } = event.data;
@@ -269,9 +283,10 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         }
 
         assert(false, 'Unknown message type from Controller');
-    };
+    });
 
-    handleWorkerMessage: Exclude<WorkerPort['onmessage'], null> = (event) => {
+    // eslint-disable-next-line @typescript-eslint/member-ordering
+    handleWorkerMessage: Exclude<WorkerPort['onmessage'], null> = this.withErrorHandling((event) => {
         switch (event.data.type) {
             case WORKLET_MESSAGES.OUTPUT:
                 if (!this.workerInitialized) {
@@ -295,7 +310,7 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         }
 
         assert(false, 'Unknown message type from Worker');
-    };
+    });
 
     setFeatures(features: Features) {
         assert(this.instance, 'spench dsp core instance must exist');
