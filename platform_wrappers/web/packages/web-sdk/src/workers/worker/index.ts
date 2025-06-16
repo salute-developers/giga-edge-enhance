@@ -102,7 +102,7 @@ class SpenchWorker {
 
     warmup() {
         for (let stepsCount = 0; stepsCount < WARMUP_STEP_COUNT; ++stepsCount) {
-            this.instance.process(new Float32Array(128));
+            this.instance.process(new Float32Array(this.sampleRate * SPENCH_FRAME_SIZE_SECONDS));
         }
     }
 
