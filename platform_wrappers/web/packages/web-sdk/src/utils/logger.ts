@@ -2,7 +2,7 @@
 
 import { CONTROLLER_MESSAGES, ControllerMessage, CustomPort } from './ipc';
 
-type LoggingFunc = (...data: unknown[]) => void;
+export type LoggingFunc = (...data: unknown[]) => void;
 export type Verbosity = 'verbose' | 'normal' | 'silent';
 
 export type Logger = {

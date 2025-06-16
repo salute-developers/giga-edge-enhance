@@ -3,7 +3,7 @@ import SpenchDsp, { MainModule as SpenchDSPCore } from '../../lib/spench.dsp';
 
 import { assert } from './error';
 import { FEATURE_SWITCH_CACHE_MILLISECONDS, HEAP_SIZE } from './constants';
-import { Logger } from './logger';
+import { Logger, LoggingFunc } from './logger';
 
 interface PipelineElement {
     process(srcPtr: number, chunkSize: number): number;
@@ -96,12 +96,12 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
         return SpenchDspWrapper.bridge!.HEAPF32;
     }
 
-    static createBridge(wasm: ArrayBuffer): void {
+    static createBridge(wasm: ArrayBuffer, print: LoggingFunc): void {
         if (SpenchDspWrapper.bridge) {
             return;
         }
 
-        SpenchDspWrapper.bridge = SpenchDsp({ wasmBinary: wasm });
+        SpenchDspWrapper.bridge = SpenchDsp({ wasmBinary: wasm, print });
     }
 
     addNormalizer(): void {
@@ -139,7 +139,7 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
         return SpenchWrapper.bridge!.HEAPF32;
     }
 
-    static createBridge(wasm: ArrayBuffer, data: ArrayBuffer): void {
+    static createBridge(wasm: ArrayBuffer, data: ArrayBuffer, print: LoggingFunc): void {
         if (SpenchWrapper.bridge) {
             return;
         }
@@ -152,6 +152,7 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
             getPreloadedPackage(_remotePackageName: string, _remotePackageSize: number) {
                 return data;
             },
+            print,
         });
     }
 
