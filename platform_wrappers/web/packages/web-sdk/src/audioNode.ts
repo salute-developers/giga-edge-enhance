@@ -169,12 +169,11 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         ].some(Boolean);
 
         // Always rebuild normalizer
-        const areWorkletFeaturesChanged = true; /* [
-            typeof features.normalization !== 'undefined' &&
-                (this.#features.normalization || false) !== (features.normalization || false),
+        const areWorkletFeaturesChanged = [
+            features.normalization === undefined ? this.#features.normalization : features.normalization,
             // typeof features.echoCancellation !== 'undefined' &&
             //     this.#features.echoCancellation !== features.echoCancellation,
-        ].some(Boolean); */
+        ].some(Boolean);
         const mixedFeatures = {
             ...this.#features,
             ...features,
