@@ -87,7 +87,7 @@ export type ControllerMessage<T extends keyof MetricNameToPayloadMap = keyof Met
     | LogMessage
     | Message<typeof CONTROLLER_MESSAGES.SYSTEM_READY>
     | Message<typeof CONTROLLER_MESSAGES.SET_FEATURES_OK>
-    | Message<typeof CONTROLLER_MESSAGES.SET_FEATURES_FAIL>
+    | Message<typeof CONTROLLER_MESSAGES.SET_FEATURES_FAIL, { error: Error }>
     | Message<typeof CONTROLLER_MESSAGES.TELEMETRY, { metricName: T; value: MetricNameToPayloadMap[T] }>
     | Message<typeof CONTROLLER_MESSAGES.OVERFLOW, { overflowCount: number }>;
 

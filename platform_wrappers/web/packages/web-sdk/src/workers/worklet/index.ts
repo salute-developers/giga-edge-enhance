@@ -219,8 +219,12 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
                 try {
                     this.setFeatures(features);
                 } catch (e) {
-                    this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.SET_FEATURES_FAIL });
-                    throw e;
+                    this.controllerPort.postMessage({
+                        type: CONTROLLER_MESSAGES.SET_FEATURES_FAIL,
+                        error: e as Error,
+                    });
+
+                    return;
                 }
                 this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.SET_FEATURES_OK });
 

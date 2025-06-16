@@ -196,12 +196,14 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         }
 
         if (areWorkletFeaturesChanged) {
+            this.#logger.debug('Applying Worklet features:', features);
             this.#port.postMessage({ type: WORKLET_MESSAGES.SET_FEATURES, features: workletFeatures });
 
             const res = await new Promise<void | SetFeaturesFailedError>((resolve) => {
                 const handler = (ev: MessageEvent<ControllerMessage>) => {
                     switch (ev.data.type) {
                         case CONTROLLER_MESSAGES.SET_FEATURES_OK:
+                            this.#logger.debug('Worklet features applied');
                             this.#features = {
                                 ...this.#features,
                                 ...workletFeatures,
@@ -210,7 +212,10 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
 
                             break;
                         case CONTROLLER_MESSAGES.SET_FEATURES_FAIL:
-                            resolve(new SetFeaturesFailedError('set features on worklet failed'));
+                            const { error } = ev.data;
+
+                            this.#logger.error('Worklet features not applied', error);
+                            resolve(new SetFeaturesFailedError(error));
 
                             break;
                         default:
@@ -255,6 +260,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         }
 
         if (areWorkerFeaturesChanged) {
+            this.#logger.debug('Applying Worker features:', features);
             this.#port.postMessage({
                 type: WORKLET_MESSAGES.WORKER_FEATURES_CHANGED,
                 enabled: areWorkerFeaturesEnabled,
@@ -265,6 +271,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
                 const handler = (ev: MessageEvent<ControllerMessage>) => {
                     switch (ev.data.type) {
                         case CONTROLLER_MESSAGES.SET_FEATURES_OK:
+                            this.#logger.debug('Worker features applied');
                             this.#features = {
                                 ...this.#features,
                                 ...workerFeatures,
@@ -273,7 +280,10 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
 
                             break;
                         case CONTROLLER_MESSAGES.SET_FEATURES_FAIL:
-                            resolve(new SetFeaturesFailedError('set features on worker failed'));
+                            const { error } = ev.data;
+
+                            this.#logger.error('Worker features not applied', error);
+                            resolve(new SetFeaturesFailedError(error));
 
                             break;
                         default:
