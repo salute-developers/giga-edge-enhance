@@ -77,24 +77,32 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
             return true;
         }
 
-        if (!this.enabled || !(this.isDspEnabled || this.isWorkerFeaturesEnabled)) {
+        const processingEnabled = this.isDspEnabled || this.isWorkerFeaturesEnabled;
+
+        if (!this.enabled || !processingEnabled) {
             this.pass(inputs, outputs);
 
             return true;
         }
 
-        if (this.isWorkerFeaturesEnabled && this.workerInitialized) {
-            this.processInput(inputs);
-            this.processOutput(outputs);
-        } else {
-            this.pass(inputs, outputs);
-        }
+        this.timerTick();
+
+        const virtualOutputs = outputs.map((channels) => channels.map((channel) => new Float32Array(channel.length)));
+        this.pass(inputs, virtualOutputs);
 
         if (this.isDspEnabled) {
-            this.processDsp(outputs, outputs);
+            this.processDsp(virtualOutputs, virtualOutputs);
         }
 
-        this.timerTick();
+        if (this.isWorkerFeaturesEnabled && this.workerInitialized) {
+            this.processInput(virtualOutputs);
+
+            if (!this.processOutput(virtualOutputs)) {
+                return true;
+            }
+        }
+
+        this.pass(virtualOutputs, outputs);
 
         return true;
     }
@@ -102,10 +110,10 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     processInput(inputs: Float32Array[][]): void {
         assert(this.workerPort, 'Worker must be ready to accept input');
 
-        const [firstInput] = inputs;
-        const [input] = firstInput;
+        const [input] = inputs;
+        const [inputChannel] = input;
 
-        this.inputBuffer.push(input);
+        this.inputBuffer.push(inputChannel);
         const transferChunkSize = Math.ceil(TRANSPORT_SIZE_SECONDS * sampleRate);
         const chunksToSend = Math.trunc(this.inputBuffer.size / transferChunkSize);
 
@@ -123,7 +131,7 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         }
     }
 
-    processOutput(outputs: Float32Array[][]): void {
+    processOutput(outputs: Float32Array[][]): boolean {
         const [output] = outputs;
         const [outputChannel] = output;
         const isBufferSufficientlyFilled = this.outputBuffer.size >= WORKLET_OUTPUT_BUFFER_THRESHOLD * sampleRate;
@@ -138,9 +146,14 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
                     restOutput.set(outputChannel);
                 }
             }
-        } else {
+        } else if (this.previouslyRendered) {
+            // This is frame skip and artifacts will appear
             this.handleOverflow();
+
+            return false;
         }
+
+        return true;
     }
 
     processDsp(inputs: Float32Array[][], outputs: Float32Array[][]) {
@@ -167,12 +180,6 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     }
 
     handleOverflow() {
-        if (!this.previouslyRendered) {
-            // The beginning of rendering
-            return;
-        }
-
-        // This is frame skip and artifacts will appear
         this.overflowCounter++;
 
         if (typeof this.overflowWindowStartTime === 'undefined') {
@@ -369,6 +376,8 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
             this.workerPort.close();
             this.workerPort = undefined;
         }
+
+        this.instance?.destroy();
     }
 }
 
