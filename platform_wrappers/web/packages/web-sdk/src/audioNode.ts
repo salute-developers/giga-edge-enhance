@@ -333,6 +333,8 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
             },
             [dspWasm],
         );
+
+        this.#isDspLoaded = true;
     }
 
     async #loadWorkerFeatures(): Promise<void | LoadError> {
