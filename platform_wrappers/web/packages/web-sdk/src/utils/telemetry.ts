@@ -2,8 +2,11 @@ import { CONTROLLER_MESSAGES, ControllerMessage, CustomPort } from './ipc';
 import { TELEMETRY_FRAME_TIME_MAX_COUNT } from './constants';
 
 export interface MetricNameToPayloadMap {
+    // todo use repeated usage metric
     totalTimeAndFrameCount: { count: number; time: number };
+    // todo use quartiles
     frameProcessTimeRaw: number[];
+    // todo separate full/DSP
     initTime: number;
 
     wasmDownloadTime: number;

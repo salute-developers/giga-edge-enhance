@@ -41,8 +41,6 @@ type WorkletPort = CustomPort<ControllerMessage, WorkletMessage>;
 type WorkerPort = CustomPort<ControllerMessage, WorkerMessage>;
 
 export interface SpenchAudioNode extends AudioWorkletNode {
-    enable(): void;
-    disable(): void;
     setFeatures(features: Features): void;
     reset(): void;
     destroy(): void;
@@ -100,18 +98,6 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
 
     get #port(): WorkletPort {
         return super.port;
-    }
-
-    enable(): void {
-        this.#logger.debug('Enabling Spench AudioNode');
-
-        this.#port.postMessage({ type: WORKLET_MESSAGES.ENABLE });
-    }
-
-    disable(): void {
-        this.#logger.debug('Disabling Spench AudioNode');
-
-        this.#port.postMessage({ type: WORKLET_MESSAGES.DISABLE });
     }
 
     async setFeatures(features: Features): Promise<void | LoadError | SetFeaturesFailedError> {
@@ -434,8 +420,14 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
     #handleMessageError = () => this.#handleError(new SpenchError('Error serializing AudioWorkletProcessor message'));
 
     #handleContextStateChange = () => {
-        if (super.context.state === 'closed') {
-            this.destroy();
+        switch (super.context.state) {
+            case 'closed':
+                this.destroy();
+                break;
+            case 'suspended':
+                this.#port.postMessage({ type: WORKLET_MESSAGES.RESET, telemetry: true });
+                break;
+            default:
         }
     };
 

@@ -42,9 +42,6 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
 
     areWorkerFeaturesEnabled = false;
 
-    // State
-    enabled = false;
-
     destroyed = false;
 
     // Overflow
@@ -77,7 +74,7 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
 
         const processingEnabled = this.isDspEnabled || this.areWorkerFeaturesEnabled;
 
-        if (!this.enabled || !processingEnabled) {
+        if (!processingEnabled) {
             this.pass(inputs, outputs);
 
             return true;
@@ -258,16 +255,16 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
                 this.workerPort.start();
 
                 return;
-            case WORKLET_MESSAGES.ENABLE:
-                this.enable();
-
-                return;
-            case WORKLET_MESSAGES.DISABLE:
-                this.disable();
-
-                return;
             case WORKLET_MESSAGES.RESET:
-                this.reset();
+                const { telemetry: telemetryOnly } = event.data;
+
+                if (telemetryOnly) {
+                    if (this.areWorkerFeaturesEnabled) {
+                        this.telemetry.start(currentTime);
+                    }
+                } else {
+                    this.reset();
+                }
 
                 return;
             case WORKLET_MESSAGES.DESTROY:
@@ -331,20 +328,6 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         if (this.areWorkerFeaturesEnabled) {
             this.telemetry.start(currentTime);
         }
-    }
-
-    enable() {
-        this.enabled = true;
-
-        this.reset();
-        this.logger.debug('enabled');
-    }
-
-    disable() {
-        this.enabled = false;
-
-        this.telemetry.stop(currentTime);
-        this.logger.debug('disabled');
     }
 
     destroy() {

@@ -18,8 +18,6 @@ export const WORKER_MESSAGES = {
 
 export const WORKLET_MESSAGES = {
     INIT: 'init',
-    ENABLE: 'enable',
-    DISABLE: 'disable',
     RESET: 'reset',
     RUNTIME_ASSETS: 'runtime_assets',
     SET_FEATURES: 'set_features',
@@ -61,9 +59,7 @@ export type WorkletMessage =
     | Message<typeof WORKLET_MESSAGES.RUNTIME_ASSETS, { dspWasm: ArrayBuffer }>
     | Message<typeof WORKLET_MESSAGES.SET_FEATURES, { features: Features; workerFeaturesEnabled: boolean }>
     | Message<typeof WORKLET_MESSAGES.OUTPUT, { output: Float32Array }>
-    | Message<typeof WORKLET_MESSAGES.ENABLE>
-    | Message<typeof WORKLET_MESSAGES.DISABLE>
-    | Message<typeof WORKLET_MESSAGES.RESET>
+    | Message<typeof WORKLET_MESSAGES.RESET, { telemetry?: boolean }>
     | Message<typeof WORKLET_MESSAGES.DESTROY>;
 
 export type WorkerMessage =
