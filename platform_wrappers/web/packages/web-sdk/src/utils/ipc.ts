@@ -10,9 +10,9 @@ export const WORKER_MESSAGES = {
     INIT: 'init',
     DESTROY: 'destroy',
     SET_FEATURES: 'set_features',
+    RESET: 'reset',
 
     // from worklet
-    RESET: 'reset',
     INPUT: 'input',
 } as const;
 
@@ -20,7 +20,7 @@ export const WORKLET_MESSAGES = {
     INIT: 'init',
     ENABLE: 'enable',
     DISABLE: 'disable',
-    WORKER_FEATURES_CHANGED: 'worker_features_changed',
+    RESET: 'reset',
     RUNTIME_ASSETS: 'runtime_assets',
     SET_FEATURES: 'set_features',
     WORKER_CREATED: 'worker_created',
@@ -28,7 +28,6 @@ export const WORKLET_MESSAGES = {
 
     // From worker
     OUTPUT: 'output',
-    WORKER_READY: 'worker_ready',
 } as const;
 
 export const CONTROLLER_MESSAGES = {
@@ -38,7 +37,6 @@ export const CONTROLLER_MESSAGES = {
     TELEMETRY: 'telemetry',
     LOG: 'log',
     ERROR: 'error',
-    SYSTEM_READY: 'sys_ready',
 } as const;
 
 export const SELF_WORKER_MESSAGES = {
@@ -61,13 +59,12 @@ export type WorkletMessage =
     | Message<typeof WORKLET_MESSAGES.INIT, { verbosity: Verbosity; isTelemetryEnabled: boolean }>
     | Message<typeof WORKLET_MESSAGES.WORKER_CREATED, { workerPort: MessagePort }>
     | Message<typeof WORKLET_MESSAGES.RUNTIME_ASSETS, { dspWasm: ArrayBuffer }>
-    | Message<typeof WORKLET_MESSAGES.SET_FEATURES, { features: Features }>
+    | Message<typeof WORKLET_MESSAGES.SET_FEATURES, { features: Features; workerFeaturesEnabled: boolean }>
     | Message<typeof WORKLET_MESSAGES.OUTPUT, { output: Float32Array }>
     | Message<typeof WORKLET_MESSAGES.ENABLE>
     | Message<typeof WORKLET_MESSAGES.DISABLE>
-    | Message<typeof WORKLET_MESSAGES.DESTROY>
-    | Message<typeof WORKLET_MESSAGES.WORKER_FEATURES_CHANGED, { enabled: boolean }>
-    | Message<typeof WORKLET_MESSAGES.WORKER_READY>;
+    | Message<typeof WORKLET_MESSAGES.RESET>
+    | Message<typeof WORKLET_MESSAGES.DESTROY>;
 
 export type WorkerMessage =
     | Message<
@@ -86,7 +83,6 @@ export type LogMessage = Message<typeof CONTROLLER_MESSAGES.LOG, { level: LogLev
 
 export type ControllerMessage<T extends keyof MetricNameToPayloadMap = keyof MetricNameToPayloadMap> =
     | LogMessage
-    | Message<typeof CONTROLLER_MESSAGES.SYSTEM_READY>
     | Message<typeof CONTROLLER_MESSAGES.SET_FEATURES_OK>
     | Message<typeof CONTROLLER_MESSAGES.SET_FEATURES_FAIL, { error: Error }>
     | Message<typeof CONTROLLER_MESSAGES.ERROR, { error: Error }>

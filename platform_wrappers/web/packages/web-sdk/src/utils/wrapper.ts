@@ -7,7 +7,6 @@ import { Logger, LoggingFunc } from './logger';
 
 interface PipelineElement {
     process(srcPtr: number, chunkSize: number): number;
-    process(srcPtr: number, loopbackPtr: number, chunkSize: number): number;
     resetContext(): void;
 }
 
@@ -82,6 +81,8 @@ abstract class AbstractSpenchWrapper {
 export class SpenchDspWrapper extends AbstractSpenchWrapper {
     protected static bridge: SpenchDSPCore | undefined;
 
+    protected timeouts: Map<string, number> = new Map();
+
     constructor(
         protected readonly sampleRate: number,
         protected logger: Logger,
@@ -106,15 +107,37 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
 
     addNormalizer(): void {
         const key = 'normalizer';
+        const cached = this.tryGetFromCache(key);
 
         this.logger.debug('add normalizer to SpenchDSP Pipeline');
-        this.pipeline.push([key, new SpenchDspWrapper.bridge!.AudioProcessPipelineElement(this.sampleRate, '')]);
+        this.pipeline.push([
+            key,
+            cached || new SpenchDspWrapper.bridge!.AudioProcessPipelineElement(this.sampleRate, ''),
+        ]);
     }
 
     override pop() {
         const elem = this.pipeline.pop();
 
-        return Boolean(elem);
+        if (!elem) return false;
+
+        const [key, element] = elem;
+
+        this.timeouts.set(key, currentTime);
+        this.cache.set(key, [() => this.timeouts.delete(key), element]);
+
+        return true;
+    }
+
+    tick() {
+        for (const [key, time] of this.timeouts) {
+            if ((currentTime - time) * 1000 > FEATURE_SWITCH_CACHE_MILLISECONDS) {
+                this.logger.debug(`Cleared ${key} from SpenchDSP cache`);
+
+                this.cache.delete(key);
+                this.timeouts.delete(key);
+            }
+        }
     }
 
     destroy() {
@@ -154,13 +177,6 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
             },
             print,
         });
-    }
-
-    addNormalizer(): void {
-        const key = 'normalizer';
-
-        this.logger.debug('add normalizer to Spench Pipeline');
-        this.pipeline.push([key, new SpenchWrapper.bridge!.AudioProcessPipelineElement(this.sampleRate, '')]);
     }
 
     addDenoiser(configPath: string): void {

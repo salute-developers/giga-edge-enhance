@@ -17,7 +17,7 @@ import { SpenchWrapper } from '../../utils/wrapper';
 import { getWorkerLogger } from '../../utils/logger';
 import { getWorkerTelemetry, WorkerTelemetry } from '../../utils/telemetry';
 import { Features } from '../../utils/common';
-import { SPENCH_FRAME_SIZE_SECONDS, TRANSPORT_SIZE_SECONDS, WARMUP_STEP_COUNT, WASM_PATH } from '../../utils/constants';
+import { SPENCH_FRAME_SIZE_SECONDS, TRANSPORT_SIZE_SECONDS, WASM_PATH } from '../../utils/constants';
 import RingBuffer from '../../utils/ringBuffer';
 
 interface SpenchWorkerGlobalScope extends DedicatedWorkerGlobalScope {
@@ -77,6 +77,15 @@ class SpenchWorker {
         this.controllerPort.close();
     }
 
+    reset() {
+        this.instance.resetContext();
+        this.inputBuffer.clear();
+        this.outputBuffer.clear();
+        this.telemetry.flush();
+
+        logger.debug('context reset');
+    }
+
     setFeatures(features: Features): void {
         logger.debug(`setting features: ${JSON.stringify(features)}`);
         this.instance.clear();
@@ -89,20 +98,6 @@ class SpenchWorker {
         if (features.noiseCancellation) {
             const model = features.noiseCancellation === true ? 'full24k' : features.noiseCancellation;
             this.instance.addDenoiser(WASM_PATH.denoiser[model]);
-        }
-
-        this.warmup();
-        this.instance.resetContext();
-
-        this.workletPort.postMessage({
-            type: WORKLET_MESSAGES.WORKER_READY,
-        });
-        logger.debug('ready');
-    }
-
-    warmup() {
-        for (let stepsCount = 0; stepsCount < WARMUP_STEP_COUNT; ++stepsCount) {
-            this.instance.process(new Float32Array(this.sampleRate * SPENCH_FRAME_SIZE_SECONDS));
         }
     }
 
@@ -161,12 +156,6 @@ class SpenchWorker {
                 }
 
                 return;
-            case WORKER_MESSAGES.RESET:
-                this.instance.resetContext();
-                logger.debug('context reset');
-                this.telemetry.flush();
-
-                return;
             default:
         }
 
@@ -192,6 +181,10 @@ class SpenchWorker {
             case WORKER_MESSAGES.DESTROY:
                 this.destroy();
                 instances.delete(this);
+
+                return;
+            case WORKER_MESSAGES.RESET:
+                this.reset();
 
                 return;
             default:

@@ -12,6 +12,17 @@ export type Features = Partial<{
     echoCancellation: boolean;
 }>;
 
+export function areWorkerFeaturesEnabled(features: Features) {
+    return [features.noiseCancellation, features.dereverberation].some(Boolean);
+}
+
+export function areWorkletFeaturesEnabled(features: Features) {
+    return [
+        features.normalization,
+        // features.echoCancellation,
+    ].some(Boolean);
+}
+
 export type SharedFeatures = Pick<Features, 'normalization'>;
 
 export async function downloadFileAsBuffer(url: URL): Promise<[ArrayBuffer, number]> {
