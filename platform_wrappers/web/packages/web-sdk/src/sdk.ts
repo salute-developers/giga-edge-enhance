@@ -1,11 +1,9 @@
 import SpenchError from './utils/error';
-import { SpenchAudioNode, SpenchAudioNodeImpl } from './audioNode';
+import { SetFeaturesFailedError, SpenchAudioNode, SpenchAudioNodeImpl } from './audioNode';
 import { Features } from './utils/common';
 import createLogger, { ExternalLogger, Logger, Verbosity } from './utils/logger';
 import { createTelemetry, Telemetry, SendMetricFunction } from './utils/telemetry';
 import Loader, { LoadError } from './loader';
-
-class CreateAudioNodeError extends SpenchError {}
 
 type CreateSpenchParams = {
     logger?: ExternalLogger;
@@ -60,22 +58,33 @@ class SpenchSDK {
         return instance;
     }
 
-    async createAudioNode(features: Features = {}): Promise<SpenchAudioNode | CreateAudioNodeError> {
-        this.#loader.preload(features);
+    async createAudioNode(features?: Features): Promise<SpenchAudioNode | LoadError | SetFeaturesFailedError> {
+        this.#loader.preload(features || {});
 
         const workletLoad = await this.#loader.loadSpenchWorklet();
 
         if (workletLoad instanceof LoadError) {
-            return new CreateAudioNodeError();
+            return workletLoad;
         }
 
-        return new SpenchAudioNodeImpl({
-            features,
+        const node = new SpenchAudioNodeImpl({
             loader: this.#loader,
             ctx: this.#ctx,
             logger: this.#logger,
             telemetry: this.#telemetry,
         });
+
+        if (!features) {
+            return node;
+        }
+
+        const res = await node.setFeatures(features);
+
+        if (res instanceof SpenchError) {
+            return res;
+        }
+
+        return node;
     }
 }
 

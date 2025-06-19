@@ -20,7 +20,7 @@ type OverflowEventCtorParams = {
     overflowCount: number;
 };
 
-class SetFeaturesFailedError extends SpenchError {}
+export class SetFeaturesFailedError extends SpenchError {}
 
 class OverflowEvent extends Event {
     overflowCount: number;
@@ -33,8 +33,6 @@ class OverflowEvent extends Event {
 }
 
 interface SpenchAudioNodeEventMap {
-    ready: Event;
-    error: ErrorEvent;
     overflow: OverflowEvent;
     destroyed: Event;
 }
@@ -63,7 +61,6 @@ export interface SpenchAudioNode extends AudioWorkletNode {
 }
 
 interface SpenchAudioNodeCtorParams {
-    features: Features;
     logger: Logger;
     ctx: AudioContext;
     loader: Loader;
@@ -91,7 +88,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
 
     #initStartTime = performance.now();
 
-    constructor({ features, ctx, logger, telemetry, loader }: SpenchAudioNodeCtorParams) {
+    constructor({ ctx, logger, telemetry, loader }: SpenchAudioNodeCtorParams) {
         super(ctx, SPENCH_WORKLET_NAME);
 
         this.#logger = logger;
@@ -99,7 +96,6 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         this.#loader = loader;
 
         this.#init();
-        this.setFeatures(features);
     }
 
     get #port(): WorkletPort {
@@ -189,7 +185,6 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
             this.#initialized = true;
             this.#telemetry?.sendMetric('initTime', performance.now() - this.#initStartTime);
         }
-        super.dispatchEvent(new Event('ready'));
     }
 
     async #setWorkletFeatures(features: Features, previousFeatures: Features): Promise<void | SetFeaturesFailedError> {
@@ -426,20 +421,15 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         // now — based on frame drop (just signal n samples dropped per frame)
     }
 
-    #handleError = (error: SpenchError, message: string = '', critical = true) => {
+    #handleError = (error: SpenchError) => {
         this.#logger.error(`${error} at SpenchAudioNode`);
 
-        if (critical) {
-            this.destroy();
-
-            super.dispatchEvent(new ErrorEvent('error', { error, message: message || error.message }));
-        }
+        this.destroy();
     };
 
     #handleProcessorError = () => this.#handleError(new SpenchError('Error in AudioWorkletProcessor'));
 
-    #handleWorkerError = (event: ErrorEvent) =>
-        this.#handleError(new SpenchError(event.error || event.message), event.message);
+    #handleWorkerError = (event: ErrorEvent) => this.#handleError(new SpenchError(event.error || event.message));
 
     #handleMessageError = () => this.#handleError(new SpenchError('Error serializing AudioWorkletProcessor message'));
 
