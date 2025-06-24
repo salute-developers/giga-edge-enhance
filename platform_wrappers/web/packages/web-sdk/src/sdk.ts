@@ -1,6 +1,6 @@
 import SpenchError from './utils/error';
 import { SetFeaturesFailedError, SpenchAudioNode, SpenchAudioNodeImpl } from './audioNode';
-import { Features } from './utils/common';
+import { Features, getSettingsWithDefaults, Settings } from './utils/common';
 import createLogger, { ExternalLogger, Logger, Verbosity } from './utils/logger';
 import { createTelemetry, Telemetry, SendMetricFunction } from './utils/telemetry';
 import Loader, { LoadError } from './loader';
@@ -10,6 +10,7 @@ type CreateSpenchParams = {
     sendMetric?: SendMetricFunction;
     preloadFeatures?: Features;
     loggerVerbosity?: Verbosity;
+    settings?: Partial<Settings>;
 };
 
 class SpenchSDK {
@@ -21,10 +22,13 @@ class SpenchSDK {
 
     #loader: Loader;
 
-    protected constructor(ctx: AudioContext, logger: Logger, telemetry: Telemetry) {
+    #settings: Settings;
+
+    protected constructor(ctx: AudioContext, logger: Logger, telemetry: Telemetry, settings: Settings) {
         this.#ctx = ctx;
         this.#logger = logger;
         this.#telemetry = telemetry;
+        this.#settings = settings;
         this.#loader = new Loader(ctx, logger, this.#telemetry);
     }
 
@@ -35,11 +39,18 @@ class SpenchSDK {
 
     static create(
         ctx: AudioContext,
-        { loggerVerbosity = 'normal', logger: externalLogger, preloadFeatures, sendMetric }: CreateSpenchParams = {},
+        {
+            loggerVerbosity = 'normal',
+            logger: externalLogger,
+            preloadFeatures,
+            sendMetric,
+            settings: rawSettings,
+        }: CreateSpenchParams = {},
     ): SpenchSDK {
         const logger = createLogger(loggerVerbosity, externalLogger);
         const telemetry = createTelemetry(sendMetric);
-        const instance = new SpenchSDK(ctx, logger, telemetry);
+        const settings = getSettingsWithDefaults(rawSettings);
+        const instance = new SpenchSDK(ctx, logger, telemetry, settings);
 
         if (preloadFeatures) {
             instance.#loader.preload(preloadFeatures);
@@ -72,6 +83,7 @@ class SpenchSDK {
             ctx: this.#ctx,
             logger: this.#logger,
             telemetry: this.#telemetry,
+            settings: this.#settings,
         });
 
         if (!features) {

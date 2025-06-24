@@ -1,5 +1,5 @@
 import { CONTROLLER_MESSAGES, ControllerMessage, CustomPort } from './ipc';
-import { TELEMETRY_FRAME_TIME_MAX_COUNT } from './constants';
+import { MEAN_PROCESS_TIME_COUNT, TELEMETRY_FRAME_TIME_MAX_COUNT } from './constants';
 
 export interface MetricNameToPayloadMap {
     // todo use repeated usage metric
@@ -12,6 +12,7 @@ export interface MetricNameToPayloadMap {
     wasmDownloadTime: number;
     wasmDSPDownloadTime: number;
     modelsDataDownloadTime: number;
+    currentMeanProcessTime: number;
 }
 
 export type SendMetricFunction = <T extends keyof MetricNameToPayloadMap>(
@@ -35,6 +36,7 @@ export function createTelemetry(sendMetric?: SendMetricFunction): Telemetry {
 export type WorkerTelemetry = {
     enabled: boolean;
     recordFrameProcessTime(time: number): void;
+    recordMeanFrameProcessTime(time: number): void;
     flush(): void;
 };
 
@@ -48,6 +50,8 @@ type WorkletTelemetry = {
 
 export function getWorkerTelemetry(enabled: boolean, port: CustomPort<any, ControllerMessage>): WorkerTelemetry {
     let times = [] as number[];
+    let currentMeanProcessTime = 0;
+    let currentMeanProcessTimeCount = 0;
 
     return {
         enabled,
@@ -58,6 +62,21 @@ export function getWorkerTelemetry(enabled: boolean, port: CustomPort<any, Contr
 
             if (times.length > TELEMETRY_FRAME_TIME_MAX_COUNT) {
                 this.flush();
+            }
+        },
+        recordMeanFrameProcessTime(time: number) {
+            currentMeanProcessTimeCount++;
+            currentMeanProcessTime += (time - currentMeanProcessTime) / currentMeanProcessTimeCount;
+
+            if (currentMeanProcessTimeCount >= MEAN_PROCESS_TIME_COUNT) {
+                port.postMessage({
+                    type: CONTROLLER_MESSAGES.TELEMETRY,
+                    metricName: 'currentMeanProcessTime',
+                    value: currentMeanProcessTime,
+                });
+
+                currentMeanProcessTime = 0;
+                currentMeanProcessTimeCount = 0;
             }
         },
         flush() {

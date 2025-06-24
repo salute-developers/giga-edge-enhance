@@ -71,6 +71,7 @@ abstract class AbstractSpenchWrapper {
         this.cache.delete(key);
         const [clear, element] = res;
         clear();
+        element.resetContext();
 
         return element;
     }

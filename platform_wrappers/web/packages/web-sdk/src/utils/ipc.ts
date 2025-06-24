@@ -1,5 +1,5 @@
 import { MetricNameToPayloadMap } from './telemetry';
-import { Features } from './common';
+import { Features, Settings } from './common';
 import { LogLevel, Verbosity } from './logger';
 
 export type Message<N, D = unknown> = D & {
@@ -29,7 +29,7 @@ export const WORKLET_MESSAGES = {
 } as const;
 
 export const CONTROLLER_MESSAGES = {
-    OVERFLOW: 'overflow',
+    LOW_PERFORMANCE: 'low_performance',
     SET_FEATURES_OK: 'set_features_ok',
     SET_FEATURES_FAIL: 'set_features_fail',
     TELEMETRY: 'telemetry',
@@ -54,7 +54,7 @@ export type SelfWorkerMessage =
 export type WorkerControllerMessage = LogMessage;
 
 export type WorkletMessage =
-    | Message<typeof WORKLET_MESSAGES.INIT, { verbosity: Verbosity; isTelemetryEnabled: boolean }>
+    | Message<typeof WORKLET_MESSAGES.INIT, { verbosity: Verbosity; isTelemetryEnabled: boolean; settings: Settings }>
     | Message<typeof WORKLET_MESSAGES.WORKER_CREATED, { workerPort: MessagePort }>
     | Message<typeof WORKLET_MESSAGES.RUNTIME_ASSETS, { dspWasm: ArrayBuffer }>
     | Message<typeof WORKLET_MESSAGES.SET_FEATURES, { features: Features; workerFeaturesEnabled: boolean }>
@@ -83,7 +83,7 @@ export type ControllerMessage<T extends keyof MetricNameToPayloadMap = keyof Met
     | Message<typeof CONTROLLER_MESSAGES.SET_FEATURES_FAIL, { error: Error }>
     | Message<typeof CONTROLLER_MESSAGES.ERROR, { error: Error }>
     | Message<typeof CONTROLLER_MESSAGES.TELEMETRY, { metricName: T; value: MetricNameToPayloadMap[T] }>
-    | Message<typeof CONTROLLER_MESSAGES.OVERFLOW, { overflowCount: number }>;
+    | Message<typeof CONTROLLER_MESSAGES.LOW_PERFORMANCE>;
 
 export interface CustomPort<I extends Message<string>, O extends Message<string>> extends MessagePort {
     onmessage: ((this: CustomPort<I, O>, event: MessageEvent<I>) => void) | null;

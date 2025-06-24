@@ -10,30 +10,27 @@ import {
     WORKLET_MESSAGES,
     WorkletMessage,
 } from './utils/ipc';
-import { areWorkerFeaturesEnabled, areWorkletFeaturesEnabled, Features } from './utils/common';
-import { SPENCH_WORKLET_NAME } from './utils/constants';
+import { areWorkerFeaturesEnabled, areWorkletFeaturesEnabled, Features, Settings } from './utils/common';
+import { LP_CAUSE_THRESHOLD, SPENCH_WORKLET_NAME } from './utils/constants';
 import SpenchWorker from './worker';
 import Loader, { LoadError } from './loader';
 import Deferred from './utils/deferred';
 
-type OverflowEventCtorParams = {
-    overflowCount: number;
-};
-
 export class SetFeaturesFailedError extends SpenchError {}
 
-class OverflowEvent extends Event {
-    overflowCount: number;
+type LowPerformanceCause = 'transport' | 'inference' | 'unknown';
 
-    constructor({ overflowCount }: OverflowEventCtorParams) {
-        super('overflow', { cancelable: true });
-
-        this.overflowCount = overflowCount;
+class LowPerformanceEvent extends Event {
+    constructor(
+        public potentialCause: LowPerformanceCause,
+        public meanProcessTime?: number,
+    ) {
+        super('low_performance', { cancelable: true });
     }
 }
 
 interface SpenchAudioNodeEventMap {
-    overflow: OverflowEvent;
+    low_performance: LowPerformanceEvent;
     destroyed: Event;
 }
 
@@ -63,12 +60,15 @@ interface SpenchAudioNodeCtorParams {
     ctx: AudioContext;
     loader: Loader;
     telemetry: Telemetry;
+    settings: Settings;
 }
 
 export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudioNode {
     readonly #logger: Logger;
 
     readonly #loader: Loader;
+
+    readonly #settings: Settings;
 
     readonly #telemetry: Telemetry;
 
@@ -82,16 +82,19 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
 
     #isDspLoaded = false;
 
+    #currentMeanProcessTime: number | undefined;
+
     #setFeaturesLock: Promise<void> | undefined;
 
     #initStartTime = performance.now();
 
-    constructor({ ctx, logger, telemetry, loader }: SpenchAudioNodeCtorParams) {
+    constructor({ ctx, logger, telemetry, loader, settings }: SpenchAudioNodeCtorParams) {
         super(ctx, SPENCH_WORKLET_NAME);
 
         this.#logger = logger;
         this.#telemetry = telemetry;
         this.#loader = loader;
+        this.#settings = settings;
 
         this.#init();
     }
@@ -294,6 +297,12 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
     #handleCommonMessage(event: MessageEvent<ControllerMessage>): boolean {
         switch (event.data.type) {
             case CONTROLLER_MESSAGES.TELEMETRY:
+                if (event.data.metricName === 'currentMeanProcessTime') {
+                    this.#currentMeanProcessTime = event.data.value as number;
+
+                    return true;
+                }
+
                 this.#telemetry?.sendMetric(event.data.metricName, event.data.value);
 
                 return true;
@@ -381,9 +390,16 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
                 this.#handleError(new SpenchError(error));
 
                 return;
-            case CONTROLLER_MESSAGES.OVERFLOW:
-                if (!super.dispatchEvent(new OverflowEvent({ overflowCount: event.data.overflowCount }))) {
-                    this.#handleOverflow(event.data.overflowCount);
+            case CONTROLLER_MESSAGES.LOW_PERFORMANCE:
+                const potentialCause: LowPerformanceCause =
+                    this.#currentMeanProcessTime === undefined
+                        ? 'unknown'
+                        : this.#currentMeanProcessTime > LP_CAUSE_THRESHOLD
+                          ? 'inference'
+                          : 'transport';
+
+                if (!super.dispatchEvent(new LowPerformanceEvent(potentialCause, this.#currentMeanProcessTime))) {
+                    this.#handleLowPerformance();
                 }
 
                 return;
@@ -401,10 +417,8 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         assert(false, 'Unknown message type from Worker');
     };
 
-    #handleOverflow(_count: number) {
-        // TODO HANDLE DEFAULT OVERFLOW
-        // Based on latency (frame distance)
-        // now — based on frame drop (just signal n samples dropped per frame)
+    #handleLowPerformance() {
+        // TODO HANDLE DEFAULT LOW PERFORMANCE
     }
 
     #handleError = (error: SpenchError) => {
@@ -443,6 +457,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
             type: WORKLET_MESSAGES.INIT,
             verbosity: this.#logger.verbosity,
             isTelemetryEnabled: this.#telemetry.enabled,
+            settings: this.#settings,
         });
     }
 }

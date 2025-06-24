@@ -135,7 +135,9 @@ class SpenchWorker {
                         continue;
                     }
 
-                    this.telemetry.recordFrameProcessTime(endTime - startTime);
+                    const elapsed = endTime - startTime;
+                    this.telemetry.recordFrameProcessTime(elapsed);
+                    this.telemetry.recordMeanFrameProcessTime(elapsed);
 
                     this.outputBuffer.push(output);
                     const transferChunkSize = Math.ceil(TRANSPORT_SIZE_SECONDS * this.sampleRate);

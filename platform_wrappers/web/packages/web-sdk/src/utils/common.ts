@@ -1,3 +1,5 @@
+import { DEFAULT_LP_MAX_REFILL_TIMES, DEFAULT_LP_WINDOW_SECONDS } from './constants';
+
 type ModelOrigin = string;
 
 export type Models = {
@@ -11,6 +13,24 @@ export type Features = Partial<{
     normalization: boolean;
     echoCancellation: boolean;
 }>;
+
+export type Settings = {
+    lowPerformanceWindowSeconds: number;
+    lowPerformanceMaxRefillTimes: number;
+};
+
+export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Settings {
+    return {
+        lowPerformanceWindowSeconds:
+            typeof settings.lowPerformanceWindowSeconds === 'number'
+                ? settings.lowPerformanceWindowSeconds
+                : DEFAULT_LP_WINDOW_SECONDS,
+        lowPerformanceMaxRefillTimes:
+            typeof settings.lowPerformanceMaxRefillTimes === 'number'
+                ? settings.lowPerformanceMaxRefillTimes
+                : DEFAULT_LP_MAX_REFILL_TIMES,
+    };
+}
 
 export function areWorkerFeaturesEnabled(features: Features) {
     return [features.noiseCancellation, features.dereverberation].some(Boolean);

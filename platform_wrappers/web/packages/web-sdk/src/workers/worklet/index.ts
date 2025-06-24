@@ -1,5 +1,4 @@
 import {
-    OVERFLOW_COUNTER_WINDOW_SECONDS,
     SPENCH_WORKLET_NAME,
     TRANSPORT_SIZE_SECONDS,
     WORKLET_OUTPUT_BUFFER_SECONDS,
@@ -19,7 +18,7 @@ import {
 import { getWorkerLogger } from '../../utils/logger';
 import { getWorkletTelemetry } from '../../utils/telemetry';
 import { SpenchDspWrapper } from '../../utils/wrapper';
-import { Features } from '../../utils/common';
+import { Features, getSettingsWithDefaults, Settings } from '../../utils/common';
 
 type ControllerPort = CustomPort<WorkletMessage, ControllerMessage>;
 type WorkerPort = CustomPort<WorkletMessage, WorkerMessage>;
@@ -36,6 +35,8 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
 
     instance: SpenchDspWrapper | undefined;
 
+    settings: Settings = getSettingsWithDefaults();
+
     workerPort: WorkerPort | undefined;
 
     isDspEnabled: boolean = false;
@@ -45,11 +46,9 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     destroyed = false;
 
     // Overflow
+    refillTimes: number[] = [];
+
     previouslyRendered = false;
-
-    overflowCounter = 0;
-
-    overflowWindowStartTime: number | undefined;
 
     constructor() {
         super();
@@ -175,29 +174,25 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     }
 
     handleOverflow() {
-        this.overflowCounter++;
+        this.logger.debug('The output buffer is empty, refilling');
 
-        if (typeof this.overflowWindowStartTime === 'undefined') {
-            this.logger.warn('dropped frame detected, counting overflow');
-            this.overflowWindowStartTime = currentTime;
+        this.refillTimes = [
+            ...this.refillTimes.filter((t) => currentTime - t <= this.settings.lowPerformanceWindowSeconds),
+            currentTime,
+        ];
+        this.previouslyRendered = false;
+
+        if (this.refillTimes.length >= this.settings.lowPerformanceMaxRefillTimes) {
+            this.logger.debug(
+                `The output buffer is empty for ${this.settings.lowPerformanceMaxRefillTimes} times in ${this.settings.lowPerformanceWindowSeconds} seconds, emitting LOW_PERFORMANCE`,
+            );
+            this.refillTimes = [];
+            this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.LOW_PERFORMANCE });
         }
     }
 
     timerTick() {
         this.instance?.tick();
-
-        if (
-            typeof this.overflowWindowStartTime === 'number' &&
-            currentTime - this.overflowWindowStartTime >= OVERFLOW_COUNTER_WINDOW_SECONDS
-        ) {
-            this.controllerPort.postMessage({
-                type: CONTROLLER_MESSAGES.OVERFLOW,
-                overflowCount: this.overflowCounter,
-            });
-
-            this.overflowCounter = 0;
-            this.overflowWindowStartTime = undefined;
-        }
     }
 
     withErrorHandling = <T extends (...args: any[]) => any>(fn: T): T => {
@@ -217,10 +212,11 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     handleControllerMessage: Exclude<ControllerPort['onmessage'], null> = this.withErrorHandling((event) => {
         switch (event.data.type) {
             case WORKLET_MESSAGES.INIT:
-                const { verbosity, isTelemetryEnabled } = event.data;
+                const { verbosity, isTelemetryEnabled, settings } = event.data;
 
                 this.logger = getWorkerLogger(this.controllerPort, verbosity, '[worklet]');
                 this.telemetry = getWorkletTelemetry(isTelemetryEnabled, this.controllerPort);
+                this.settings = settings;
                 this.logger.debug('init data received');
 
                 return;
@@ -259,6 +255,8 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
                 const { telemetry: telemetryOnly } = event.data;
 
                 if (telemetryOnly) {
+                    this.logger.debug('Reset telemetry');
+
                     if (this.areWorkerFeaturesEnabled) {
                         this.telemetry.start(currentTime);
                     }
@@ -322,8 +320,6 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         this.outputBuffer.clear();
 
         this.previouslyRendered = false;
-        this.overflowCounter = 0;
-        this.overflowWindowStartTime = undefined;
 
         if (this.areWorkerFeaturesEnabled) {
             this.telemetry.start(currentTime);
