@@ -37,10 +37,7 @@ export function areWorkerFeaturesEnabled(features: Features) {
 }
 
 export function areWorkletFeaturesEnabled(features: Features) {
-    return [
-        features.normalization,
-        // features.echoCancellation,
-    ].some(Boolean);
+    return [features.normalization, features.echoCancellation].some(Boolean);
 }
 
 export type SharedFeatures = Pick<Features, 'normalization'>;

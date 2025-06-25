@@ -5,10 +5,19 @@ import { assert } from './error';
 import { FEATURE_SWITCH_CACHE_MILLISECONDS, HEAP_SIZE } from './constants';
 import { Logger, LoggingFunc } from './logger';
 
-interface PipelineElement {
-    process(srcPtr: number, chunkSize: number): number;
+interface AbstractPipelineElement {
     resetContext(): void;
 }
+
+interface CommonPipelineElement extends AbstractPipelineElement {
+    process(srcPtr: number, chunkSize: number): number;
+}
+
+interface AECElement extends AbstractPipelineElement {
+    process(srcPtr: number, lbPtr: number, chunkSize: number): number;
+}
+
+type PipelineElement = CommonPipelineElement | AECElement;
 
 type Element = [cacheKey: string, PipelineElement];
 
@@ -17,10 +26,16 @@ abstract class AbstractSpenchWrapper {
 
     protected dataPtr = 0;
 
+    protected lbPtr = 0;
+
     protected readonly cache: Map<string, [() => void, PipelineElement]> = new Map();
 
     protected get dataStartIndex() {
         return this.dataPtr / Float32Array.BYTES_PER_ELEMENT;
+    }
+
+    protected get lbStartIndex() {
+        return this.lbPtr / Float32Array.BYTES_PER_ELEMENT;
     }
 
     protected abstract get heap(): Float32Array;
@@ -41,16 +56,25 @@ abstract class AbstractSpenchWrapper {
         while (this.pop());
     }
 
-    process(frame: Float32Array): Float32Array {
+    process(frame: Float32Array, loopback?: Float32Array): Float32Array {
         if (!this.pipeline.length) {
             return new Float32Array(frame.subarray());
         }
 
         this.heap.set(frame, this.dataStartIndex);
+
+        if (loopback) {
+            this.heap.set(loopback, this.lbStartIndex);
+        }
+
         let samplesProcessed = frame.length;
 
         for (const [, el] of this.pipeline) {
-            samplesProcessed = el.process(this.dataPtr, samplesProcessed);
+            if (el.process.length === 2) {
+                samplesProcessed = (el as CommonPipelineElement).process(this.dataPtr, samplesProcessed);
+            } else if (el.process.length === 3) {
+                samplesProcessed = (el as AECElement).process(this.dataPtr, this.lbPtr, samplesProcessed);
+            }
 
             if (!samplesProcessed) break;
         }
@@ -92,6 +116,7 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
         assert(SpenchDspWrapper.bridge, 'Bridge must be created');
 
         this.dataPtr = SpenchDspWrapper.bridge!._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
+        this.lbPtr = SpenchDspWrapper.bridge!._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
     }
 
     protected get heap(): Float32Array {
@@ -115,6 +140,14 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
             key,
             cached || new SpenchDspWrapper.bridge!.AudioProcessPipelineElement(this.sampleRate, ''),
         ]);
+    }
+
+    addEchoCanceller(): void {
+        const key = 'aec';
+        const cached = this.tryGetFromCache(key);
+
+        this.logger.debug('add aec to SpenchDSP Pipeline');
+        this.pipeline.push([key, cached || new SpenchDspWrapper.bridge!.EchoCancelationElement(this.sampleRate, '')]);
     }
 
     override pop() {

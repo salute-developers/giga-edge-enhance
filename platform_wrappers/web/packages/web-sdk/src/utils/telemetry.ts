@@ -42,6 +42,7 @@ export type WorkerTelemetry = {
 
 type WorkletTelemetry = {
     enabled: boolean;
+    started: boolean;
     frameReceived(): void;
 
     start(time: number): void;
@@ -95,12 +96,12 @@ export function getWorkerTelemetry(enabled: boolean, port: CustomPort<any, Contr
 }
 
 export function getWorkletTelemetry(enabled: boolean, port: CustomPort<any, ControllerMessage>): WorkletTelemetry {
-    let started = false;
     let startTime = 0;
     let chunkCount = 0;
 
     return {
         enabled,
+        started: false,
         frameReceived() {
             chunkCount++;
         },
@@ -108,12 +109,12 @@ export function getWorkletTelemetry(enabled: boolean, port: CustomPort<any, Cont
             this.stop(time);
             startTime = time;
             chunkCount = 0;
-            started = true;
+            this.started = true;
         },
         stop(time) {
             if (!this.enabled) return;
 
-            if (chunkCount > 0 && started && time > startTime) {
+            if (chunkCount > 0 && this.started && time > startTime) {
                 port.postMessage({
                     type: CONTROLLER_MESSAGES.TELEMETRY,
                     metricName: 'totalTimeAndFrameCount',
@@ -122,7 +123,7 @@ export function getWorkletTelemetry(enabled: boolean, port: CustomPort<any, Cont
                         time: time - startTime,
                     },
                 });
-                started = false;
+                this.started = false;
             }
         },
     };

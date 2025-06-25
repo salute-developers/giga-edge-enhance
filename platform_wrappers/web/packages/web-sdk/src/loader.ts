@@ -62,7 +62,7 @@ class Loader {
     preload(features: Features): void {
         this.loadSpenchWorklet();
 
-        if (features.normalization) {
+        if (features.normalization || features.echoCancellation) {
             this.loadDSPWasm();
         }
 

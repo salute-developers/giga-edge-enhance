@@ -38,7 +38,7 @@ type WorkletPort = CustomPort<ControllerMessage, WorkletMessage>;
 type WorkerPort = CustomPort<ControllerMessage, WorkerMessage>;
 
 export interface SpenchAudioNode extends AudioWorkletNode {
-    setFeatures(features: Features): void;
+    setFeatures(features: Features): Promise<void | LoadError | SetFeaturesFailedError>;
     reset(): void;
     destroy(): void;
 
@@ -89,7 +89,11 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
     #initStartTime = performance.now();
 
     constructor({ ctx, logger, telemetry, loader, settings }: SpenchAudioNodeCtorParams) {
-        super(ctx, SPENCH_WORKLET_NAME);
+        super(ctx, SPENCH_WORKLET_NAME, {
+            numberOfInputs: 2,
+            numberOfOutputs: 1,
+            outputChannelCount: [1],
+        });
 
         this.#logger = logger;
         this.#telemetry = telemetry;
@@ -182,20 +186,17 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         const areWorkletFeaturesChanged = [
             typeof features.normalization !== 'undefined' &&
                 (this.#features.normalization || false) !== (features.normalization || false),
-            // typeof features.echoCancellation !== 'undefined' &&
-            //     (this.#features.echoCancellation || false) !== (features.echoCancellation || false),
+            typeof features.echoCancellation !== 'undefined' &&
+                (this.#features.echoCancellation || false) !== (features.echoCancellation || false),
         ].some(Boolean);
         const mixedFeatures = {
             ...this.#features,
             ...features,
         };
-        const {
-            normalization = false,
-            // echoCancellation,
-        } = mixedFeatures;
+        const { normalization = false, echoCancellation } = mixedFeatures;
         const workletFeatures = {
             normalization,
-            // echoCancellation,
+            echoCancellation,
         };
 
         if (areWorkletFeaturesChanged || shouldToggleWorkerFeatures) {
@@ -439,7 +440,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
                 this.destroy();
                 break;
             case 'suspended':
-                this.#port.postMessage({ type: WORKLET_MESSAGES.RESET, telemetry: true });
+                this.reset();
                 break;
             default:
         }

@@ -62,21 +62,17 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     }
 
     process(inputs: Float32Array[][], outputs: Float32Array[][], _parameters: Record<string, Float32Array>) {
-        if (this.destroyed) {
-            return false;
-        }
-
         // Skip processing if not connected
         if (!inputs[0]?.[0]?.length || !outputs[0]?.[0]?.length) {
-            return true;
+            return !this.destroyed;
         }
 
         const processingEnabled = this.isDspEnabled || this.areWorkerFeaturesEnabled;
 
-        if (!processingEnabled) {
+        if (this.destroyed || !processingEnabled) {
             this.pass(inputs, outputs);
 
-            return true;
+            return !this.destroyed;
         }
 
         this.timerTick();
@@ -134,12 +130,6 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         if (isBufferSufficientlyFilled || shouldRenderAnyway) {
             this.outputBuffer.pull(outputChannel, 0, outputChannel.length);
             this.previouslyRendered = true;
-
-            for (const restOutput of output) {
-                if (restOutput !== outputChannel) {
-                    restOutput.set(outputChannel);
-                }
-            }
         } else if (this.previouslyRendered) {
             // This is frame skip and artifacts will appear
             this.handleOverflow();
@@ -152,25 +142,23 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
 
     processDsp(inputs: Float32Array[][], outputs: Float32Array[][]) {
         assert(this.instance, 'dsp instance must be initialized before processing');
-        const [input] = inputs;
+        const [input, loopback] = inputs;
         const [output] = outputs;
         const [inputChannel] = input;
+        const [outputChannel] = output;
+        const [loopbackChannel] = loopback || [];
 
-        const result = this.instance.process(inputChannel);
-
-        for (const outputChannel of output) {
-            outputChannel.set(result);
-        }
+        const result = this.instance.process(inputChannel, loopbackChannel);
+        outputChannel.set(result);
     }
 
     pass(inputs: Float32Array[][], outputs: Float32Array[][]) {
         const [input] = inputs;
         const [output] = outputs;
         const [inputChannel] = input;
+        const [outputChannel] = output;
 
-        for (const outputChannel of output) {
-            outputChannel.set(inputChannel);
-        }
+        outputChannel.set(inputChannel);
     }
 
     handleOverflow() {
@@ -193,6 +181,10 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
 
     timerTick() {
         this.instance?.tick();
+
+        if (!this.telemetry.started && this.areWorkerFeaturesEnabled) {
+            this.telemetry.start(currentTime);
+        }
     }
 
     withErrorHandling = <T extends (...args: any[]) => any>(fn: T): T => {
@@ -252,17 +244,7 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
 
                 return;
             case WORKLET_MESSAGES.RESET:
-                const { telemetry: telemetryOnly } = event.data;
-
-                if (telemetryOnly) {
-                    this.logger.debug('Reset telemetry');
-
-                    if (this.areWorkerFeaturesEnabled) {
-                        this.telemetry.start(currentTime);
-                    }
-                } else {
-                    this.reset();
-                }
+                this.reset();
 
                 return;
             case WORKLET_MESSAGES.DESTROY:
@@ -298,15 +280,16 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
             `Setting features: ${JSON.stringify(features)}, worker features enabled: ${workerFeaturesEnabled}`,
         );
 
-        this.isDspEnabled = [
-            features.normalization,
-            // features.echoCancellation
-        ].some(Boolean);
+        this.isDspEnabled = [features.normalization, features.echoCancellation].some(Boolean);
         this.areWorkerFeaturesEnabled = workerFeaturesEnabled;
 
         if (this.isDspEnabled) {
             assert(this.instance, 'spench dsp core instance must exist');
             this.instance.clear();
+
+            if (features.echoCancellation) {
+                this.instance.addEchoCanceller();
+            }
 
             if (features.normalization) {
                 this.instance.addNormalizer();
@@ -318,12 +301,9 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         this.instance?.resetContext();
         this.inputBuffer.clear();
         this.outputBuffer.clear();
+        this.telemetry.stop(currentTime);
 
         this.previouslyRendered = false;
-
-        if (this.areWorkerFeaturesEnabled) {
-            this.telemetry.start(currentTime);
-        }
     }
 
     destroy() {
