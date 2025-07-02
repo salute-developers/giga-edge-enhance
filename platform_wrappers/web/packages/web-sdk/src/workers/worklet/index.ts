@@ -215,8 +215,7 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
             case WORKLET_MESSAGES.RUNTIME_ASSETS:
                 const { dspWasm } = event.data;
 
-                SpenchDspWrapper.createBridge(dspWasm, this.logger.info);
-                this.instance = new SpenchDspWrapper(sampleRate, this.logger);
+                this.instance = new SpenchDspWrapper(dspWasm, sampleRate, this.logger);
                 this.logger.debug('SpenchDSP instance created');
 
                 return;
@@ -319,6 +318,7 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         }
 
         this.instance?.destroy();
+        this.instance = undefined;
     }
 }
 

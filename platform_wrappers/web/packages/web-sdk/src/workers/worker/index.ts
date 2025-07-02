@@ -200,7 +200,7 @@ const handleControllerMessage: SpenchWorkerGlobalScope['onmessage'] = (event) =>
     switch (event.data.type) {
         case SELF_WORKER_MESSAGES.INIT:
             const { verbosity, isTelemetryEnabled: telemetryEnabled, wasm, data } = event.data;
-            SpenchWrapper.createBridge(wasm, data, logger.info);
+            SpenchWrapper.createBridge(wasm, data, logger);
 
             logger = getWorkerLogger(global, verbosity, '[worker]');
             isTelemetryEnabled = telemetryEnabled;

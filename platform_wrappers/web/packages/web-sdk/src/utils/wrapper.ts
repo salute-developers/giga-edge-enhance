@@ -3,10 +3,11 @@ import SpenchDsp, { MainModule as SpenchDSPCore } from '../../lib/spench.dsp';
 
 import { assert } from './error';
 import { FEATURE_SWITCH_CACHE_MILLISECONDS, HEAP_SIZE } from './constants';
-import { Logger, LoggingFunc } from './logger';
+import { Logger } from './logger';
 
 interface AbstractPipelineElement {
     resetContext(): void;
+    delete(): void;
 }
 
 interface CommonPipelineElement extends AbstractPipelineElement {
@@ -40,18 +41,6 @@ abstract class AbstractSpenchWrapper {
 
     protected abstract get heap(): Float32Array;
 
-    pop() {
-        const elem = this.pipeline.pop();
-
-        if (!elem) return false;
-
-        const [key, element] = elem;
-        const timeout = setTimeout(() => this.cache.delete(key), FEATURE_SWITCH_CACHE_MILLISECONDS);
-        this.cache.set(key, [() => clearTimeout(timeout), element]);
-
-        return true;
-    }
-
     clear() {
         while (this.pop());
     }
@@ -72,7 +61,7 @@ abstract class AbstractSpenchWrapper {
         for (const [, el] of this.pipeline) {
             if (el.process.length === 2) {
                 samplesProcessed = (el as CommonPipelineElement).process(this.dataPtr, samplesProcessed);
-            } else if (el.process.length === 3) {
+            } else if (el.process.length === 3 && loopback) {
                 samplesProcessed = (el as AECElement).process(this.dataPtr, this.lbPtr, samplesProcessed);
             }
 
@@ -88,6 +77,14 @@ abstract class AbstractSpenchWrapper {
         }
     }
 
+    destroy(): void {
+        let current;
+        while ((current = this.pipeline.pop())) {
+            const [, element] = current;
+            element.delete();
+        }
+    }
+
     protected tryGetFromCache(key: string): PipelineElement | undefined {
         const res = this.cache.get(key);
 
@@ -100,35 +97,28 @@ abstract class AbstractSpenchWrapper {
         return element;
     }
 
-    abstract destroy(): void;
+    protected abstract pop(): boolean;
 }
 
 export class SpenchDspWrapper extends AbstractSpenchWrapper {
-    protected static bridge: SpenchDSPCore | undefined;
+    protected bridge: SpenchDSPCore;
 
     protected timeouts: Map<string, number> = new Map();
 
     constructor(
+        wasm: ArrayBuffer,
         protected readonly sampleRate: number,
         protected logger: Logger,
     ) {
         super();
-        assert(SpenchDspWrapper.bridge, 'Bridge must be created');
 
-        this.dataPtr = SpenchDspWrapper.bridge!._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
-        this.lbPtr = SpenchDspWrapper.bridge!._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
+        this.bridge = SpenchDsp({ wasmBinary: wasm, print: logger.info, printErr: logger.error });
+        this.dataPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
+        this.lbPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
     }
 
     protected get heap(): Float32Array {
-        return SpenchDspWrapper.bridge!.HEAPF32;
-    }
-
-    static createBridge(wasm: ArrayBuffer, print: LoggingFunc): void {
-        if (SpenchDspWrapper.bridge) {
-            return;
-        }
-
-        SpenchDspWrapper.bridge = SpenchDsp({ wasmBinary: wasm, print });
+        return this.bridge.HEAPF32;
     }
 
     addNormalizer(): void {
@@ -136,10 +126,7 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
         const cached = this.tryGetFromCache(key);
 
         this.logger.debug('add normalizer to SpenchDSP Pipeline');
-        this.pipeline.push([
-            key,
-            cached || new SpenchDspWrapper.bridge!.AudioProcessPipelineElement(this.sampleRate, ''),
-        ]);
+        this.pipeline.push([key, cached || new this.bridge.AudioProcessPipelineElement(this.sampleRate, '')]);
     }
 
     addEchoCanceller(): void {
@@ -147,7 +134,7 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
         const cached = this.tryGetFromCache(key);
 
         this.logger.debug('add aec to SpenchDSP Pipeline');
-        this.pipeline.push([key, cached || new SpenchDspWrapper.bridge!.EchoCancelationElement(this.sampleRate, '')]);
+        this.pipeline.push([key, cached || new this.bridge.EchoCancelationElement(this.sampleRate, '')]);
     }
 
     override pop() {
@@ -168,6 +155,7 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
             if ((currentTime - time) * 1000 > FEATURE_SWITCH_CACHE_MILLISECONDS) {
                 this.logger.debug(`Cleared ${key} from SpenchDSP cache`);
 
+                this.cache.get(key)?.[1].delete();
                 this.cache.delete(key);
                 this.timeouts.delete(key);
             }
@@ -175,7 +163,10 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
     }
 
     destroy() {
-        SpenchDspWrapper.bridge?._free(this.dataPtr);
+        super.destroy();
+
+        this.bridge._free(this.dataPtr);
+        this.bridge._free(this.lbPtr);
     }
 }
 
@@ -196,7 +187,7 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
         return SpenchWrapper.bridge!.HEAPF32;
     }
 
-    static createBridge(wasm: ArrayBuffer, data: ArrayBuffer, print: LoggingFunc): void {
+    static createBridge(wasm: ArrayBuffer, data: ArrayBuffer, logger: Logger): void {
         if (SpenchWrapper.bridge) {
             return;
         }
@@ -209,8 +200,24 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
             getPreloadedPackage(_remotePackageName: string, _remotePackageSize: number) {
                 return data;
             },
-            print,
+            print: logger.info,
+            printErr: logger.error,
         });
+    }
+
+    override pop() {
+        const elem = this.pipeline.pop();
+
+        if (!elem) return false;
+
+        const [key, element] = elem;
+        const timeout = setTimeout(() => {
+            this.cache.get(key)?.[1].delete();
+            this.cache.delete(key);
+        }, FEATURE_SWITCH_CACHE_MILLISECONDS);
+        this.cache.set(key, [() => clearTimeout(timeout), element]);
+
+        return true;
     }
 
     addDenoiser(configPath: string): void {
@@ -236,6 +243,8 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
     }
 
     destroy() {
+        super.destroy();
+
         SpenchWrapper.bridge?._free(this.dataPtr);
     }
 }
