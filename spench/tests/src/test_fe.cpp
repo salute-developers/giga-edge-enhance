@@ -616,7 +616,6 @@ TEST_CASE("SUCCEED Run calcEnhancedPartsInPlace with real input [feature extract
   IsVectorsClose(gt_imag_mask, test_mask.imag, 0.3);
 }
 
-#if 0
 TEST_CASE("SUCCEED Run calcSnrEstimation with one chunk [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
@@ -643,9 +642,7 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with one chunk [feature extractor]") {
 
   IsVectorsClose(std::vector{test_snr_result}, std::vector{gt_test_snr_result[0]}, 0.001);
 }
-#endif
 
-#if 0
 TEST_CASE("SUCCEED Run calcSnrEstimation with dumped recording [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
@@ -674,7 +671,6 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with dumped recording [feature extracto
 
   IsVectorsClose(test_snr_result, test_snr_result, 0.000001);
 }
-#endif
 
 TEST_CASE("SUCCEED Run calcSnrEstimation with zero recording [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
@@ -718,4 +714,98 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with empty recording [feature extractor
   }
 
   IsVectorsClose(test_snr_result, test_snr_result, 0.000001);
+}
+
+TEST_CASE("FAIL calcSnrEstimation with overflow values [feature extractor]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
+  auto feature_extractor = std::move(TestFE().InitFE(params));
+  spench::StreamCurrentMetrics<float> metrics;
+
+  float big_val = 1e38f;
+  std::valarray<float> test_real(big_val, 10);
+  std::valarray<float> test_imag(big_val, 10);
+
+  spench::ComplexNumber<float> spec(test_real, test_imag);
+  float snr = feature_extractor.m_feature_extractor->calcSnrEstimation(spec, spec, metrics);
+
+  CHECK(std::isfinite(snr));
+}
+
+TEST_CASE("FAIL calcSnrEstimation with NaN in input [feature extractor]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
+  auto feature_extractor = std::move(TestFE().InitFE(params));
+  spench::StreamCurrentMetrics<float> metrics;
+
+  std::valarray<float> test_real(1.0f, 10);
+  test_real[3] = std::nanf("");
+  std::valarray<float> test_imag(0.0f, 10);
+
+  spench::ComplexNumber<float> spec(test_real, test_imag);
+  float snr = feature_extractor.m_feature_extractor->calcSnrEstimation(spec, spec, metrics);
+
+  CHECK(std::isfinite(snr));
+}
+
+TEST_CASE("FAIL calcSnrEstimation with mismatched input sizes [feature extractor]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
+  auto feature_extractor = std::move(TestFE().InitFE(params));
+  spench::StreamCurrentMetrics<float> metrics;
+
+  std::valarray<float> real(1.0f, 10);
+  std::valarray<float> imag(1.0f, 3);
+
+  spench::ComplexNumber<float> spec(real, imag);
+  float snr = feature_extractor.m_feature_extractor->calcSnrEstimation(spec, spec, metrics);
+
+  CHECK(std::isfinite(snr));
+}
+
+TEST_CASE("FAIL calcSnrEstimation with mostly zeros [feature extractor]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
+  auto feature_extractor = std::move(TestFE().InitFE(params));
+  spench::StreamCurrentMetrics<float> metrics;
+
+  std::valarray<float> real(0.0f, 100);
+  real[0] = 1e-10f;
+  std::valarray<float> imag = real;
+
+  spench::ComplexNumber<float> input_spec(real, imag);
+  spench::ComplexNumber<float> enhanced_spec(real, imag);
+  float snr = feature_extractor.m_feature_extractor->calcSnrEstimation(input_spec, enhanced_spec, metrics);
+
+  CHECK(std::isfinite(snr));
+}
+
+TEST_CASE("FAIL calcSnrEstimation with empty complex numbers [feature extractor]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
+  auto feature_extractor = std::move(TestFE().InitFE(params));
+  spench::StreamCurrentMetrics<float> metrics;
+
+
+  std::valarray<float> empty_real{};
+  std::valarray<float> empty_imag{};
+
+  spench::ComplexNumber<float> spec(empty_real, empty_imag);
+  float snr = feature_extractor.m_feature_extractor->calcSnrEstimation(spec, spec, metrics);
+
+  CHECK(std::isfinite(snr));
+}
+
+TEST_CASE("FAIL calcSnrEstimation with mismatched real/imag sizes [feature extractor]") {
+  spench::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
+  auto feature_extractor = std::move(TestFE().InitFE(params));
+  spench::StreamCurrentMetrics<float> metrics;
+
+  std::valarray<float> noisy_real(1.0f, 8);
+  std::valarray<float> noisy_imag(1.0f, 10);
+
+  std::valarray<float> enhanced_real(1.0f, 10);
+  std::valarray<float> enhanced_imag(1.0f, 10);
+
+  spench::ComplexNumber<float> input_spec(noisy_real, noisy_imag);
+  spench::ComplexNumber<float> enhanced_spec(enhanced_real, enhanced_imag);
+
+  float snr = feature_extractor.m_feature_extractor->calcSnrEstimation(input_spec, enhanced_spec, metrics);
+
+  CHECK(snr == 0.0f);
 }
