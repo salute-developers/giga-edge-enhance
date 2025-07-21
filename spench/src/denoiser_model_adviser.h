@@ -7,11 +7,10 @@
 #include <cmath>
 #include <type_traits>
 
-// Forward declarations
-// template <typename T> struct ComplexNumber;
-// template <typename T> struct StreamCurrentMetrics;
-
 namespace spench {
+
+template <typename T> struct ComplexNumber;
+template <typename T> struct StreamCurrentMetrics;
 
 /**
  * @brief High‑level instruction returned by the decision controller.
@@ -87,11 +86,17 @@ class DenoiserModelAdviser {
     return 0.0f;
   }
 
+  T calcSnrEstimation(const ComplexNumber<T>& input_spec,
+                    const ComplexNumber<T>& enhanced_spec,
+                    StreamCurrentMetrics<T>& metrics);
+
  private:
   std::deque<T> m_snr_history;  ///< Circular buffer of recent SNR estimates (in dB).
   size_t        m_window_frames;  ///< Window length expressed in *frames*.
   T             m_lower_db;  ///< Heavy‑model threshold (dB).
   T             m_upper_db;  ///< Bypass threshold (dB).
+  const T       m_eps = static_cast<T>(1e-8);
+  const T       vad_threshold = static_cast<T>(0.1);
 };
 
 }  // namespace spench
