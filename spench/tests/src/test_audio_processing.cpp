@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <catch.hpp>
 
-#include "spench/include/errors.h"
+#include <spench/errors.h>
 #include "spench/src/audio_processing.h"
 #include "tests/src/utils.h"
 #include "util/echo/echo_canceler.h"

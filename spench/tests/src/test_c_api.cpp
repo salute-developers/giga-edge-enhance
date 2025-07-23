@@ -1,7 +1,7 @@
 #include <memory>
 #include <cstring>
 #include <catch.hpp>
-#include "include/spench_c.h"
+#include <spench/spench_c.h>
 #include "tests/src/utils.h"
 #include <chrono> // NOLINT
 #include <thread> // NOLINT

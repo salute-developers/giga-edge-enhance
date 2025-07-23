@@ -1,4 +1,4 @@
-#include "include/spench_audio_process.h"
+#include "spench/spench_audio_process.h"
 #include <limits>
 #include <algorithm>
 #include <memory>

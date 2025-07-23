@@ -1,0 +1,58 @@
+/**
+ * \file
+ * \defgroup group_cpp C++ API
+ */
+#pragma once
+
+#include <memory>
+#include <vector>
+#include <string>
+
+#include "spench/errors.h"
+#include "spench/stream_stat.h"
+
+namespace spench {
+template<typename T>
+struct SpenchContext;
+
+class
+#ifdef _MSC_VER
+__declspec(dllexport)
+#endif
+ISpenchSequencer {
+ public:
+  ISpenchSequencer() = default;
+  ISpenchSequencer(ISpenchSequencer&) = delete;
+  ISpenchSequencer(ISpenchSequencer&&) = delete;
+  ISpenchSequencer& operator=(const ISpenchSequencer&) = delete;
+  virtual ~ISpenchSequencer() = default;
+
+  virtual SpenchRetCode ProcessChunk(const std::vector<float>& chunk,
+                                     std::vector<float>& ret,
+                                     SpenchContext<float>* ctx = nullptr) = 0;
+
+  virtual SpenchRetCode ProcessChunk(const std::vector<int16_t>& chunk16,
+                                     std::vector<int16_t>& ret16,
+                                     SpenchContext<float>* ctx = nullptr) = 0;
+
+  virtual std::vector<float> operator()(const std::vector<float>& chunk,
+                                         std::vector<float>& ret,
+                                         SpenchContext<float>* ctx = nullptr) = 0;
+
+  virtual std::vector<int16_t> operator()(const std::vector<int16_t>& chunk16,
+                                           std::vector<int16_t>& ret16,
+                                           SpenchContext<float>* ctx = nullptr) = 0;
+
+  virtual SpenchRetCode GetFinalChunk(std::vector<float>& ret,
+                                      SpenchContext<float>* ctx = nullptr) = 0;
+
+  virtual SpenchRetCode GetFinalChunk(std::vector<int16_t>& ret16,
+                                      SpenchContext<float>* ctx = nullptr) = 0;
+
+  virtual std::vector<float> operator()(std::vector<float>& ret,
+                                         SpenchContext<float>* ctx = nullptr) = 0;
+
+  virtual std::vector<int16_t> operator()(std::vector<int16_t>& ret16,
+                                           SpenchContext<float>* ctx = nullptr) = 0;
+};
+}  // namespace spench

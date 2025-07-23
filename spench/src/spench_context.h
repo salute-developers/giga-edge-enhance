@@ -9,7 +9,7 @@
 #include <memory>
 #include <utility>
 #include "spench/util/sound/sound_stream.h"
-#include "spench/include/stream_stat.h"
+#include "spench/stream_stat.h"
 
 namespace spench {
 

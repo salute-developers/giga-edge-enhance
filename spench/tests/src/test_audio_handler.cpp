@@ -3,7 +3,7 @@
 #include <catch.hpp>
 #include <iostream>
 #include "tests/src/utils.h"
-#include "spench/include/errors.h"
+#include <spench/errors.h>
 
 struct TestHandler {
   std::unique_ptr<spench::BaseAudioHandler> m_handler;

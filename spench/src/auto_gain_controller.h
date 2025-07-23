@@ -8,7 +8,7 @@
 // #include "spench/contrib/ctpl/ctpl_stl.h"
 #include <dsplib.h>
 #include "spench/util/sound/range_control.h"
-#include "spench/include/errors.h"
+#include "spench/errors.h"
 
 namespace spench {
 

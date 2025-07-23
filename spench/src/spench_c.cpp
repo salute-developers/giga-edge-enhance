@@ -1,4 +1,4 @@
-#include "include/spench_c.h"
+#include "spench/spench_c.h"
 #include "include/spench.h"
 #include "spench/src/spench_task.h"
 #include <cstring>

@@ -1,7 +1,7 @@
 #include <memory>
 #include <unordered_map>
 #include <catch.hpp>
-#include "include/spench.h"
+#include <spench.h>
 #include "spench/src/spench_task.h"
 #include "tests/src/utils.h"
 #include <future> // NOLINT
