@@ -1,9 +1,9 @@
+#pragma once
 /**
- * \file
+ * \file spench_c_api.h
  * \defgroup group_c C API
+ * \brief Plain C wrapper for the Spench audio processing C++ library.
  */
-#ifndef __SPENCH_C_WRAPPER_HEADER__
-#define __SPENCH_C_WRAPPER_HEADER__
 
 #include <stdlib.h>
 #include "spench/errors.h"
@@ -26,6 +26,10 @@ extern "C" {
 # endif
 #endif
 
+/* -------------------------------------------------------------------------- */
+/*  Opaque handles                                                             */
+/* -------------------------------------------------------------------------- */
+
 typedef void* SpenchDenoise;
 typedef void* SpenchContext;
 typedef void* SpenchAudioProcess;
@@ -37,367 +41,531 @@ typedef uint16_t u_int16_t;
 typedef uint8_t  u_int8_t;
 #endif
 
-/**
- *    SpenchDenoise
- */
+/* -------------------------------------------------------------------------- */
+/*  SpenchDenoise                                                              */
+/* -------------------------------------------------------------------------- */
 
 /**
- *  \brief: Allocate and return a model for audio enhancement.
- *  \param config_file: Pointer to string with path to .yaml config file.
- *  \param SpenchDenoise: Pointer to pointer to model to be allocated.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Allocate and return an audio enhancement model.
+ * \param config_file Pointer to a string with the path to a .yaml config file.
+ * \param model       Pointer to the model handle to be allocated.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchDenoiseInit(const char* config_file,
-                                                SpenchDenoise* model);
+SPENCH_EXPORT SpenchRetCode SpenchDenoiseInit(
+    const char*      config_file,
+    SpenchDenoise*   model
+);
 
 /**
- *  \brief: Allocate and return an encrypted model for audio enhancement.
- *  \param config_file: A pointer to string with path to .yaml config file.
- *  \param password: A pointer to string with password for a model decryption.
- *                   Could be empty, if a model was not encrypted.
- *  \param checksum: A pointer to string with licence checksum for a model decryption.
- *                   Could be empty, if a model was not encrypted or was not involved
- *                   licencing.
- *  \param SpenchDenoise: A pointer to pointer to model to be allocated.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Allocate and return an encrypted audio enhancement model.
+ * \param config_file Pointer to a string with the path to a .yaml config file.
+ * \param password    Pointer to a string with the password for model decryption. Can be empty if the
+ *                    model is not encrypted.
+ * \param checksum    Pointer to a string with the license checksum for model decryption. Can be empty
+ *                    if the model is not encrypted or licensing is not used.
+ * \param model       Pointer to the model handle to be allocated.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchEncryptedDenoiseInit(const char* config_file,
-                                                       const char* password,
-                                                       const char* checksum,
-                                                       SpenchDenoise* model);
+SPENCH_EXPORT SpenchRetCode SpenchEncryptedDenoiseInit(
+    const char*      config_file,
+    const char*      password,
+    const char*      checksum,
+    SpenchDenoise*   model
+);
 
 /**
- *  \brief: Deallocate a model structure.
- *  \param SpenchDenoise: A pointer to pointer to model to be destroyed.
- *  \return: None
- *  \ingroup group_c
+ * \brief Deallocate a model structure.
+ * \param model Pointer to the model handle to be destroyed. The handle will be set to NULL.
+ * \ingroup group_c
  */
-SPENCH_EXPORT void            SpenchDenoiseFree(SpenchDenoise* model);
+SPENCH_EXPORT void SpenchDenoiseFree(
+    SpenchDenoise* model
+);
 
 /**
- *  \brief: Create a context for audio stream denoising.
- *  \param SpenchDenoise: A pointer to model.
- *  \param ctx: A pointer to pointer to context.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
- *  \param in_audio_sr: An input sample rate of a audio stream.
- *                      If the resampling is not required, please set to 0.
- *  \param out_audio_sr: An output sample rate of a audio stream.
- *                       If the resampling is not required, please set to 0.
- *  \out: Error code. SpenchRetCode::SUCCESS means success.
+ * \brief Create a context for audio stream denoising.
+ * \details If resampling is not required, set the corresponding sample rate to 0.
+ * \param model        Model handle.
+ * \param ctx          Pointer to the context handle to be created.
+ * \param in_audio_sr  Input stream sample rate. Set to 0 to skip resampling.
+ * \param out_audio_sr Output stream sample rate. Set to 0 to skip resampling.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchDenoiseCreateContext(SpenchDenoise model,
-                                                         SpenchContext* ctx,
-                                                         u_int32_t in_audio_sr,
-                                                         u_int32_t out_audio_sr);
+SPENCH_EXPORT SpenchRetCode SpenchDenoiseCreateContext(
+    SpenchDenoise   model,
+    SpenchContext*  ctx,
+    u_int32_t        in_audio_sr,
+    u_int32_t        out_audio_sr
+);
 
 /**
- *  \brief: Deallocate a context memory.
- *  \param SpenchDenoise: pointer to a model.
- *  \param ctx: A pointer to pointer to context to be destroyed.
- *  \return: None.
- *  \ingroup group_c
+ * \brief Destroy and free a context.
+ * \param model Model handle.
+ * \param ctx   Pointer to the context handle to be destroyed.
+ * \ingroup group_c
  */
-SPENCH_EXPORT void            SpenchDenoiseDestroyContext(SpenchDenoise model,
-                                                          SpenchContext* ctx);
+SPENCH_EXPORT void SpenchDenoiseDestroyContext(
+    SpenchDenoise   model,
+    SpenchContext*  ctx
+);
 
 /**
- *  \brief: Retrieve the id number of a context.
- *  \param model: A pointer to a model.
- *  \param ctx: A pointer to a context.
- *  \param id: A pointer to returning id number.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Retrieve the numeric identifier of a context.
+ * \param model Model handle.
+ * \param ctx   Context handle.
+ * \param id    Pointer to the returned identifier.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchDenoiseGetContextId(SpenchDenoise model,
-                                                        const SpenchContext ctx,
-                                                        u_int64_t* id);
-/**
- *  \brief: Set the id number for a context.
- *  \param model: A pointer to a model.
- *  \param ctx: A pointer to a context.
- *  \param id: Number to be set.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
- */
-SPENCH_EXPORT SpenchRetCode   SpenchDenoiseSetContextId(SpenchDenoise model,
-                                                        SpenchContext ctx,
-                                                        u_int64_t id);
+SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetContextId(
+    SpenchDenoise       model,
+    const SpenchContext ctx,
+    u_int64_t*           id
+);
 
 /**
- *  \brief: Retrieve the SNR stat of a context.
- *  \param model: A pointer to a model.
- *  \param ctx: A pointer to a context.
- *  \param snr: A pointer to returning SNR value.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Set the numeric identifier for a context.
+ * \param model Model handle.
+ * \param ctx   Context handle.
+ * \param id    Identifier value to set.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchDenoiseGetStreamStat(SpenchDenoise model,
-                                                         const SpenchContext ctx,
-                                                         StreamStatStruct* stream_stat);
+SPENCH_EXPORT SpenchRetCode SpenchDenoiseSetContextId(
+    SpenchDenoise  model,
+    SpenchContext  ctx,
+    u_int64_t       id
+);
 
 /**
- *  \brief: Retrieve the number of inference engine (onnx, tflite) threads number.
- *  \param model: A pointer to a model.
- *  \param engine_threads: A pointer to returning number of threads.
- *  \return: Code of error. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Retrieve stream statistics (e.g., SNR) for a context.
+ * \param model        Model handle.
+ * \param ctx          Context handle.
+ * \param stream_stat  Pointer to the structure where statistics will be written.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchDenoiseGetEngineThreads(const SpenchDenoise model,
-                                                            u_int64_t* engine_threads);
+SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetStreamStat(
+    SpenchDenoise        model,
+    const SpenchContext  ctx,
+    StreamStatStruct*    stream_stat
+);
 
 /**
- *  \brief: Retrieve the model input size.
- *  \param model: A pointer to a model.
- *  \param input_size: A pointer to returning number of threads.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Retrieve the number of threads used by the inference engine (ONNX, TFLite, etc.).
+ * \param model          Model handle.
+ * \param engine_threads Pointer to the returned number of threads.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchDenoiseGetInputFrameSize(const SpenchDenoise model,
-                                                             u_int64_t* input_size);
+SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetEngineThreads(
+    const SpenchDenoise  model,
+    u_int64_t*            engine_threads
+);
 
 /**
- *  \brief: Retrieve the model sample rate value, specified in .yaml file.
- *  \param model: A pointer to a model.
- *  \param sample_rate: A pointer to returning sample rate value.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Retrieve the model input frame size.
+ * \param model      Model handle.
+ * \param input_size Pointer to the returned input frame size.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchDenoiseGetSampleRate(const SpenchDenoise model,
-                                                         u_int64_t* sample_rate);
+SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetInputFrameSize(
+    const SpenchDenoise  model,
+    u_int64_t*            input_size
+);
 
 /**
- *  \brief: Enhance a chunk of audio with float point data.
- *  \param model: A pointer to a model.
- *  \param ctx: A pointer to context.
- *  \param memory_in: A pointer to input data.
- *  \param in_size: The size of input data in bytes.
- *  \param memory_out: A pointer to memory output data will be allocated.
- *                     Should be freed after that.
- *  \param out_size: A pointer to variable where the size of allocated
- *                   data in bytes will be provided.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Retrieve the model sample rate value specified in the .yaml file.
+ * \param model       Model handle.
+ * \param sample_rate Pointer to the returned sample rate value.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchDenoiseProcessChunkFp(SpenchDenoise model,
-                                                          SpenchContext ctx,
-                                                          const u_int8_t* memory_in,
-                                                          u_int64_t in_size,
-                                                          u_int8_t** memory_out,
-                                                          u_int64_t* out_size);
+SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetSampleRate(
+    const SpenchDenoise  model,
+    u_int64_t*            sample_rate
+);
 
 /**
- *  \brief: Enhance a chunk of audio with pcm16 data. Implemented through
- *          a call to float point data processing and requires additional
- *          time for convertion.
- *  \param model: A pointer to model.
- *  \param ctx: A pointer to context.
- *  \param memory_in: A pointer to input data.
- *  \param in_size: A size of input data in bytes.
- *  \param memory_out: A pointer to memory output data will be allocated.
- *                     Should be freed after that.
- *  \param out_size: A pointer to variable where the size of allocated
- *                   data in bytes will be provided.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Enhance a chunk of audio with floating-point data.
+ * \param model      Model handle.
+ * \param ctx        Context handle.
+ * \param memory_in  Pointer to input data (float array as raw bytes).
+ * \param in_size    Size of the input data in bytes.
+ * \param memory_out Pointer to the buffer that will be allocated for output data. Must be freed by
+ *                    the caller.
+ * \param out_size   Pointer to the returned size of the allocated output buffer in bytes.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchDenoiseProcessChunkInt(SpenchDenoise model,
-                                                           SpenchContext ctx,
-                                                           const u_int8_t* memory_in,
-                                                           u_int64_t in_size,
-                                                           u_int8_t** memory_out,
-                                                           u_int64_t* out_size);
+SPENCH_EXPORT SpenchRetCode SpenchDenoiseProcessChunkFp(
+    SpenchDenoise   model,
+    SpenchContext   ctx,
+    const u_int8_t*  memory_in,
+    u_int64_t        in_size,
+    u_int8_t**       memory_out,
+    u_int64_t*       out_size
+);
 
 /**
- *  \brief: Retrieve final chunks with float point data. If model has a future
- *          context, the method enhances and returns remaining data from a
- *          context. In other case method returns empty memory.
- *  \param model: A pointer to model.
- *  \param ctx: A pointer to context.
- *  \param memory_out: A pointer to memory output data will be allocated.
- *              Should be freed after that. If threre are no data available
- *              NULL will be returned.
- *  \param out_size: A pointer to variable where the size of allocated
- *                   data in bytes will be provided. If threre are no data
- *                   available 0 will be returned.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Enhance a chunk of audio with PCM16 data.
+ * \details Internally converts to floating point, processes, then converts back; therefore it is
+ *          slightly slower than SpenchDenoiseProcessChunkFp.
+ * \param model      Model handle.
+ * \param ctx        Context handle.
+ * \param memory_in  Pointer to input data.
+ * \param in_size    Size of the input data in bytes.
+ * \param memory_out Pointer to the buffer that will be allocated for output data. Must be freed by
+ *                    the caller.
+ * \param out_size   Pointer to the returned size of the allocated output buffer in bytes.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchDenoiseGetFinalChunkFp(SpenchDenoise model,
-                                                           SpenchContext ctx,
-                                                           u_int8_t** memory_out,
-                                                           u_int64_t* out_size);
+SPENCH_EXPORT SpenchRetCode SpenchDenoiseProcessChunkInt(
+    SpenchDenoise   model,
+    SpenchContext   ctx,
+    const u_int8_t*  memory_in,
+    u_int64_t        in_size,
+    u_int8_t**       memory_out,
+    u_int64_t*       out_size
+);
 
 /**
- *  \brief: Retrieve final chunks with pcm16 data. If model has a future
- *          context, the method enhances and returns remaining data from a
- *          context. In other case method returns empty memory.
- *  \param model: A pointer to model.
- *  \param ctx: A pointer to context.
- *  \param memory_out: A the pointer to memory output data will be allocated.
- *              Should be freed after that. If threre are no data available
- *              NULL will be returned.
- *  \param out_size: A pointer to variable where the size of allocated
- *                   data in bytes will be provided. If threre are no data
- *                   available 0 will be returned.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Retrieve final buffered data with floating-point samples.
+ * \details If the model uses look-ahead/future context, this function flushes and returns the
+ *          remaining data. Otherwise, it returns NULL and size 0.
+ * \param model      Model handle.
+ * \param ctx        Context handle.
+ * \param memory_out Pointer to the buffer that will be allocated for output data. Must be freed by
+ *                    the caller. Can be NULL if no data is available.
+ * \param out_size   Pointer to the returned size of the allocated output buffer in bytes. Zero if no
+ *                    data is available.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchDenoiseGetFinalChunkInt(SpenchDenoise model,
-                                                            SpenchContext ctx,
-                                                            u_int8_t** memory_out,
-                                                            u_int64_t* out_size);
-
-
-/**
- *    SpenchAudioProcess
- */
+SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetFinalChunkFp(
+    SpenchDenoise   model,
+    SpenchContext   ctx,
+    u_int8_t**       memory_out,
+    u_int64_t*       out_size
+);
 
 /**
- *  \brief: Allocate and return a model for audio normalizing.
- *  \param config_file: Pointer to string with path to .yaml config file.
- *  \param SpenchAudioProcess: Pointer to pointer to model to be allocated.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Retrieve final buffered data with PCM16 samples.
+ * \details If the model uses look-ahead/future context, this function flushes and returns the
+ *          remaining data. Otherwise, it returns NULL and size 0.
+ * \param model      Model handle.
+ * \param ctx        Context handle.
+ * \param memory_out Pointer to the buffer that will be allocated for output data. Must be freed by
+ *                    the caller. Can be NULL if no data is available.
+ * \param out_size   Pointer to the returned size of the allocated output buffer in bytes. Zero if no
+ *                    data is available.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchAudioProcessInit(const char* config_file,
-                                                     SpenchAudioProcess* model);
+SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetFinalChunkInt(
+    SpenchDenoise   model,
+    SpenchContext   ctx,
+    u_int8_t**       memory_out,
+    u_int64_t*       out_size
+);
+
+/* -------------------------------------------------------------------------- */
+/*  SpenchAudioProcess                                                         */
+/* -------------------------------------------------------------------------- */
 
 /**
- *  \brief: Deallocate a model structure.
- *  \param SpenchAudioProcess: A pointer to pointer to model to be destroyed.
- *  \return: None
- *  \ingroup group_c
+ * \brief Allocate and return a model for audio normalization/processing.
+ * \param config_file Pointer to a string with the path to a .yaml config file.
+ * \param model       Pointer to the model handle to be allocated.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT void  SpenchAudioProcessFree(SpenchAudioProcess model);
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessInit(
+    const char*         config_file,
+    SpenchAudioProcess* model
+);
 
 /**
- *  \brief: Add Auto Gain Controller object with defauilt parameters
- *          optimized for audio sample rate 48000Hz, or specified in config file
- *          if it was provided for SpenchAudioProcess object.
- *  \param SpenchAudioProcess: Pointer to pointer to model to be allocated.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Deallocate a SpenchAudioProcess model structure.
+ * \param model Model handle to be destroyed.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchAudioProcessAddAgc(SpenchAudioProcess model);
+SPENCH_EXPORT void SpenchAudioProcessFree(
+    SpenchAudioProcess model
+);
 
 /**
- *  \brief: Add Auto Gain Controller object with specific parameters.
- *          They will applied for an object even config file was provided.
- *  \param SpenchAudioProcess: Pointer to pointer to model to be allocated.
- *  \param audio_sample_rate: An audio sample rate.
- *  \param target_power_level: Desired target power level.
- *  \param max_power_gain: Max power gain.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Add an Automatic Gain Control (AGC) module with default parameters (optimized for 48 kHz)
+ *        or parameters from the config file if provided.
+ * \param model Model handle.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchAudioProcessAddAgcWithParam(SpenchAudioProcess model,
-                                                                u_int32_t audio_sample_rate,
-                                                                float target_power_level,
-                                                                float max_power_gain);
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddAgc(
+    SpenchAudioProcess model
+);
 
 /**
- *  \brief: Add Range Control object with defauilt parameters
- *          optimized for audio sample rate 48000Hz, or specified in config file
- *          if it was provided for SpenchAudioProcess object.
- *  \param SpenchAudioProcess: Pointer to pointer to model to be allocated.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Add an Automatic Gain Control (AGC) module with explicit parameters.
+ *        These override any config file values.
+ * \param model              Model handle.
+ * \param audio_sample_rate  Audio sample rate (Hz).
+ * \param target_power_level Desired target power level.
+ * \param max_power_gain     Maximum power gain.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchAudioProcessAddRc(SpenchAudioProcess model);
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddAgcWithParam(
+    SpenchAudioProcess model,
+    u_int32_t           audio_sample_rate,
+    float              target_power_level,
+    float              max_power_gain
+);
 
 /**
- *  \brief: Add Range Controller object with specific parameters.
- *          They will applied for an object even config file was provided.
- *  \param SpenchAudioProcess: A Pointer to pointer to model to be allocated.
- *  \param audio_sample_rate: An audio sample rate (Hz).
- *  \param target_level_db: An target peak value (db).
- *  \param max_gain_db: A max output signal value (db). 0db means that range control do not provide control effect.
- *  \param attack_time: An attack time value for peak value estimation (sec)
- *  \param release_time: A release time value for peak value estimation (sec)
- *  \param hold_time: A hold time value for peak value estimation (sec)
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Add a Range Control (RC) module with default parameters (optimized for 48 kHz) or
+ *        parameters from the config file if provided.
+ * \param model Model handle.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchAudioProcessAddRcWithParam(SpenchAudioProcess model,
-                                                               u_int32_t audio_sample_rate,
-                                                               float target_level_db,
-                                                               float max_gain_db,
-                                                               float attack_time,
-                                                               float release_time,
-                                                               float hold_time);
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddRc(
+    SpenchAudioProcess model
+);
 
 /**
- *  \brief: Add Loudness Control object with defauilt parameters
- *          optimized for audio sample rate 48000Hz, or specified in config file
- *          if it was provided for SpenchAudioProcess object.
- *  \param SpenchAudioProcess: Pointer to pointer to model to be allocated.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Add a Range Control (RC) module with explicit parameters. These override any config file
+ *        values.
+ * \param model             Model handle.
+ * \param audio_sample_rate Audio sample rate (Hz).
+ * \param target_level_db   Target peak value (dB).
+ * \param max_gain_db       Maximum output signal value (dB). 0 dB means no effect.
+ * \param attack_time       Attack time for peak estimation (seconds).
+ * \param release_time      Release time for peak estimation (seconds).
+ * \param hold_time         Hold time for peak estimation (seconds).
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchAudioProcessAddLc(SpenchAudioProcess model);
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddRcWithParam(
+    SpenchAudioProcess model,
+    u_int32_t           audio_sample_rate,
+    float              target_level_db,
+    float              max_gain_db,
+    float              attack_time,
+    float              release_time,
+    float              hold_time
+);
 
 /**
- *  \brief: Add Loudness Controller object with specific parameters.
- *          They will applied for an object even config file was provided.
- *  \param SpenchAudioProcess: Pointer to pointer to model to be allocated.
- *  \param audio_sample_rate: An audio sample rate (Hz).
- *  \param target_level_db: An target peak value (db).
- *  \param bypass_time: A value of the time bypassed for Loudness controll configuring (sec)
- *  \param max_gain_db: A max output signal value (db). 0db means that range control do not provide control effect.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Add a Loudness Control (LC) module with default parameters (optimized for 48 kHz) or
+ *        parameters from the config file if provided.
+ * \param model Model handle.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchAudioProcessAddLcWithParam(SpenchAudioProcess model,
-                                                               u_int32_t audio_sample_rate,
-                                                               float target_level_db,
-                                                               float bypass_time,
-                                                               float max_gain_db);
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddLc(
+    SpenchAudioProcess model
+);
 
 /**
- *  \brief: Normalize a chunk of audio with float point data.
- *          Process goes through all modules added from first to last one.
- *  \param SpenchAudioProcess: A pointer to a model.
- *  \param memory_in: A pointer to input data.
- *  \param in_size: The size of input data in bytes.
- *  \param memory_out: A pointer to memory output data will be allocated.
- *                     Should be freed after that.
- *  \param out_size: A pointer to variable where the size of allocated
- *                   data in bytes will be provided.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Add a Loudness Control (LC) module with explicit parameters. These override any config file
+ *        values.
+ * \param model             Model handle.
+ * \param audio_sample_rate Audio sample rate (Hz).
+ * \param target_level_db   Target level (dB).
+ * \param bypass_time       Time in seconds during which LC stays in bypass for configuration.
+ * \param max_gain_db       Maximum output signal value (dB). 0 dB means no effect.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchAudioProcessChunkFp(SpenchAudioProcess model,
-                                                        const u_int8_t* memory_in,
-                                                        u_int64_t in_size,
-                                                        u_int8_t** memory_out,
-                                                        u_int64_t* out_size);
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddLcWithParam(
+    SpenchAudioProcess model,
+    u_int32_t           audio_sample_rate,
+    float              target_level_db,
+    float              bypass_time,
+    float              max_gain_db
+);
+
+/* --------------------------- Newly Added Functions ------------------------ */
 
 /**
- *  \brief: Normalize a chunk of audio with pcm16 data. Implemented through
- *          a call to float point data processing and requires additional
- *          time for convertion.
- *          Process goes through all modules added from first to last one.
- *  \param SpenchAudioProcess: A pointer to model.
- *  \param memory_in: A pointer to input data.
- *  \param in_size: A size of input data in bytes.
- *  \param memory_out: A pointer to memory output data will be allocated.
- *                     Should be freed after that.
- *  \param out_size: A pointer to variable where the size of allocated
- *                   data in bytes will be provided.
- *  \return: Error code. SpenchRetCode::SUCCESS means success.
- *  \ingroup group_c
+ * \brief Add a Noise Gate (NG) module with default parameters (optimized for 48 kHz) or parameters
+ *        from the config file if provided.
+ * \param model Model handle.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode   SpenchAudioProcessChunkInt(SpenchAudioProcess model,
-                                                         const u_int8_t* memory_in,
-                                                         u_int64_t in_size,
-                                                         u_int8_t** memory_out,
-                                                         u_int64_t* out_size);
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddNg(
+    SpenchAudioProcess model
+);
+
+/**
+ * \brief Add a Noise Gate (NG) module with explicit parameters. These override any config file
+ *        values.
+ * \param model             Model handle.
+ * \param audio_sample_rate Audio sample rate (Hz).
+ * \param threshold_db      Threshold (dB).
+ * \param attack_time       Attack time coefficient (seconds).
+ * \param release_time      Release time coefficient (seconds).
+ * \param hold_time         Hold time (seconds).
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
+ */
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddNgWithParam(
+    SpenchAudioProcess model,
+    u_int32_t           audio_sample_rate,
+    float              threshold_db,
+    float              attack_time,
+    float              release_time,
+    float              hold_time
+);
+
+/**
+ * \brief Add a Limiter (Lim) module with default parameters (optimized for 48 kHz) or parameters
+ *        from the config file if provided.
+ * \param model Model handle.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
+ */
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddLim(
+    SpenchAudioProcess model
+);
+
+/**
+ * \brief Add a Limiter (Lim) module with explicit parameters. These override any config file values.
+ * \param model             Model handle.
+ * \param audio_sample_rate Audio sample rate (Hz).
+ * \param threshold_db      Threshold (dB).
+ * \param knee_width        Knee width.
+ * \param attack_time       Attack time coefficient (seconds).
+ * \param release_time      Release time coefficient (seconds).
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
+ */
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddLimWithParam(
+    SpenchAudioProcess model,
+    u_int32_t           audio_sample_rate,
+    float              threshold_db,
+    float              knee_width,
+    float              attack_time,
+    float              release_time
+);
+
+/**
+ * \brief Add a Dynamic Range Compressor (DRC) module with default parameters (optimized for 48 kHz)
+ *        or parameters from the config file if provided.
+ * \param model Model handle.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
+ */
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddDrc(
+    SpenchAudioProcess model
+);
+
+/**
+ * \brief Add a Dynamic Range Compressor (DRC) module with explicit parameters. These override any
+ *        config file values.
+ * \param model             Model handle.
+ * \param audio_sample_rate Audio sample rate (Hz).
+ * \param threshold_db      Threshold (dB).
+ * \param ratio             Compression ratio.
+ * \param knee_width        Knee width.
+ * \param attack_time       Attack time coefficient (seconds).
+ * \param release_time      Release time coefficient (seconds).
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
+ */
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddDrcWithParam(
+    SpenchAudioProcess model,
+    u_int32_t           audio_sample_rate,
+    float              threshold_db,
+    u_int32_t           ratio,
+    float              knee_width,
+    float              attack_time,
+    float              release_time
+);
+
+/**
+ * \brief Process a chunk of audio with floating-point data through the chain of added modules.
+ * \param model      Model handle.
+ * \param memory_in  Pointer to input data (float array as raw bytes).
+ * \param in_size    Size of the input data in bytes.
+ * \param memory_out Pointer to the buffer that will be allocated for output data. Must be freed by
+ *                    the caller.
+ * \param out_size   Pointer to the returned size of the allocated output buffer in bytes.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
+ */
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessChunkFp(
+    SpenchAudioProcess model,
+    const u_int8_t*     memory_in,
+    u_int64_t           in_size,
+    u_int8_t**          memory_out,
+    u_int64_t*          out_size
+);
+
+/**
+ * \brief Process a chunk of audio with PCM16 data through the chain of added modules.
+ * \details Implemented via floating-point processing and therefore requires additional conversion
+ *          time.
+ * \param model      Model handle.
+ * \param memory_in  Pointer to input data.
+ * \param in_size    Size of the input data in bytes.
+ * \param memory_out Pointer to the buffer that will be allocated for output data. Must be freed by
+ *                    the caller.
+ * \param out_size   Pointer to the returned size of the allocated output buffer in bytes.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
+ */
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessChunkInt(
+    SpenchAudioProcess model,
+    const u_int8_t*     memory_in,
+    u_int64_t           in_size,
+    u_int8_t**          memory_out,
+    u_int64_t*          out_size
+);
+
+/**
+ * \brief Retrieve final buffered data with floating-point samples from the processing chain.
+ * \details If any module buffers data internally (look-ahead, etc.), this flushes the remaining
+ *          samples.
+ * \param model      Model handle.
+ * \param memory_out Pointer to the buffer that will be allocated for output data. Must be freed by
+ *                    the caller. Can be NULL if no data is available.
+ * \param out_size   Pointer to the returned size of the allocated output buffer in bytes. Zero if no
+ *                    data is available.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
+ */
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessGetFinalChunkFp(
+    SpenchAudioProcess model,
+    u_int8_t**          memory_out,
+    u_int64_t*          out_size
+);
+
+/**
+ * \brief Retrieve final buffered data with PCM16 samples from the processing chain.
+ * \details If any module buffers data internally (look-ahead, etc.), this flushes the remaining
+ *          samples.
+ * \param model      Model handle.
+ * \param memory_out Pointer to the buffer that will be allocated for output data. Must be freed by
+ *                    the caller. Can be NULL if no data is available.
+ * \param out_size   Pointer to the returned size of the allocated output buffer in bytes. Zero if no
+ *                    data is available.
+ * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
+ * \ingroup group_c
+ */
+SPENCH_EXPORT SpenchRetCode SpenchAudioProcessGetFinalChunkInt(
+    SpenchAudioProcess model,
+    u_int8_t**          memory_out,
+    u_int64_t*          out_size
+);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif  // __SPENCH_C_WRAPPER_HEADER__

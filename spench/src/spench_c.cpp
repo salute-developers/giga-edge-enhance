@@ -2,377 +2,528 @@
 #include "include/spench.h"
 #include "spench/src/spench_task.h"
 #include <cstring>
+#include <vector>
 
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
 namespace ctools {
+
 template <typename T>
-SpenchRetCode AllocateAndCopy(std::vector<T> input, uint8_t **output, uint64_t *output_size) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  uint64_t bytes_to_allocate = input.size() * sizeof(T);
+SpenchRetCode AllocateAndCopy(const std::vector<T>& input,
+                              uint8_t**             output,
+                              uint64_t*             output_size) {
+  if (output == nullptr || output_size == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  }
+
   if (input.empty()) {
-    printf("input container is empty");
+    *output = nullptr;
     *output_size = 0;
-    ret_code = SpenchRetCode::ERR_ALLOCATION_PROBLEM;
+    return SpenchRetCode::SUCCESS;
   }
-  if (ret_code == SpenchRetCode::SUCCESS) {
-    *output = reinterpret_cast<uint8_t*>(std::calloc(bytes_to_allocate, sizeof(uint8_t)));
-    if (*output == NULL) {
-      ret_code = SpenchRetCode::ERR_NOT_ENOUGH_MEMORY;
-    }
-    *output_size = bytes_to_allocate;
+
+  const uint64_t bytes = static_cast<uint64_t>(input.size() * sizeof(T));
+  *output = reinterpret_cast<uint8_t*>(std::calloc(bytes, sizeof(uint8_t)));
+  if (*output == nullptr) {
+    *output_size = 0;
+    return SpenchRetCode::ERR_NOT_ENOUGH_MEMORY;
   }
-  if (ret_code == SpenchRetCode::SUCCESS) {
-    std::memcpy(*output, input.data(), bytes_to_allocate);
-  }
-  return ret_code;
+
+  std::memcpy(*output, input.data(), bytes);
+  *output_size = bytes;
+  return SpenchRetCode::SUCCESS;
 }
+
 }  // namespace ctools
 
+// -----------------------------------------------------------------------------
+// C API implementation
+// -----------------------------------------------------------------------------
+extern "C" {
+
+// ------------------------------ SpenchDenoise ---------------------------------
+
 SpenchRetCode SpenchDenoiseInit(const char* config_file, SpenchDenoise* model) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  if (config_file == NULL || model == NULL) {
+  if (config_file == nullptr || model == nullptr) {
     return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
   try {
-    *model = reinterpret_cast<void *>(new spench::SpenchDenoise(config_file));
-  } catch(...) {
-    ret_code = SpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM;
+    *model = reinterpret_cast<void*>(new spench::SpenchDenoise(config_file));
+  } catch (...) {
+    return SpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM;
   }
-  return ret_code;
+  return SpenchRetCode::SUCCESS;
 }
 
-SpenchRetCode SpenchEncryptedDenoiseInit(const char* config_file,
-                                         const char* password,
-                                         const char* checksum,
+SpenchRetCode SpenchEncryptedDenoiseInit(const char*  config_file,
+                                         const char*  password,
+                                         const char*  checksum,
                                          SpenchDenoise* model) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  if (config_file == NULL || password == NULL || model == NULL) {
+  (void)checksum;  // Not used in current constructor, kept for API symmetry.
+  if (config_file == nullptr || password == nullptr || model == nullptr) {
     return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
   try {
-    *model = reinterpret_cast<void *>(new spench::SpenchDenoise(config_file, password));
-  } catch(...) {
-    ret_code = SpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM;
+    *model = reinterpret_cast<void*>(new spench::SpenchDenoise(config_file, password));
+  } catch (...) {
+    return SpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM;
   }
-  return ret_code;
+  return SpenchRetCode::SUCCESS;
 }
 
 void SpenchDenoiseFree(SpenchDenoise* model) {
-  spench::SpenchDenoise * denoise = (spench::SpenchDenoise *)*model;
-  if (denoise != nullptr) {
-    delete denoise;
-    denoise = nullptr;
+  if (model == nullptr || *model == nullptr) {
+    return;
   }
+  auto* denoise = static_cast<spench::SpenchDenoise*>(*model);
+  delete denoise;
+  *model = nullptr;
 }
 
-SpenchRetCode SpenchDenoiseCreateContext(SpenchDenoise model,
+SpenchRetCode SpenchDenoiseCreateContext(SpenchDenoise  model,
                                          SpenchContext* ctx,
-                                         uint32_t in_audio_sr,
-                                         uint32_t out_audio_sr) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  if (model == nullptr) {
-    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  } else {
-    try {
-      *ctx = ((spench::SpenchDenoise*)model)->CreateContext(in_audio_sr, out_audio_sr);
-    } catch(...) {
-      ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-    }
+                                         uint32_t       in_audio_sr,
+                                         uint32_t       out_audio_sr) {
+  if (model == nullptr || ctx == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
-  return ret_code;
+  try {
+    *ctx = static_cast<spench::SpenchDenoise*>(model)
+             ->CreateContext(in_audio_sr, out_audio_sr);
+  } catch (...) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  }
+  return SpenchRetCode::SUCCESS;
 }
 
-void SpenchDenoiseDestroyContext(SpenchDenoise model,
-                                 SpenchContext* ctx) {
-  ((spench::SpenchDenoise*)model)->DestroyContext((spench::SpenchContext<float>**)ctx);
+void SpenchDenoiseDestroyContext(SpenchDenoise model, SpenchContext* ctx) {
+  if (model == nullptr || ctx == nullptr || *ctx == nullptr) {
+    return;
+  }
+  static_cast<spench::SpenchDenoise*>(model)
+    ->DestroyContext(reinterpret_cast<spench::SpenchContext<float>**>(ctx));
 }
 
-SpenchRetCode SpenchDenoiseGetContextId(SpenchDenoise model,
+SpenchRetCode SpenchDenoiseGetContextId(SpenchDenoise      model,
                                         const SpenchContext ctx,
-                                        uint64_t* id) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+                                        uint64_t*          id) {
   if (model == nullptr || ctx == nullptr || id == nullptr) {
-    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  } else {
-    *id = ((spench::SpenchDenoise*)model)->GetContextId((const spench::SpenchContext<float>*)ctx);
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
-  return ret_code;
+  *id = static_cast<spench::SpenchDenoise*>(model)
+          ->GetContextId(static_cast<const spench::SpenchContext<float>*>(ctx));
+  return SpenchRetCode::SUCCESS;
 }
 
 SpenchRetCode SpenchDenoiseSetContextId(SpenchDenoise model,
                                         SpenchContext ctx,
-                                        uint64_t id) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+                                        uint64_t      id) {
   if (model == nullptr || ctx == nullptr) {
-    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  } else {
-    ((spench::SpenchDenoise*)model)->SetContextId((spench::SpenchContext<float>*)ctx, id);
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
-  return ret_code;
+  static_cast<spench::SpenchDenoise*>(model)
+    ->SetContextId(static_cast<spench::SpenchContext<float>*>(ctx), id);
+  return SpenchRetCode::SUCCESS;
 }
 
-SpenchRetCode SpenchDenoiseGetStreamStat(SpenchDenoise model,
+SpenchRetCode SpenchDenoiseGetStreamStat(SpenchDenoise       model,
                                          const SpenchContext ctx,
-                                         StreamStatStruct* stream_stat) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+                                         StreamStatStruct*   stream_stat) {
   if (model == nullptr || ctx == nullptr || stream_stat == nullptr) {
-    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  } else {
-    *stream_stat = ((spench::SpenchDenoise*)model)->GetStreamStat((const spench::SpenchContext<float>*)ctx);
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
-  return ret_code;
+  *stream_stat = static_cast<spench::SpenchDenoise*>(model)
+                   ->GetStreamStat(static_cast<const spench::SpenchContext<float>*>(ctx));
+  return SpenchRetCode::SUCCESS;
 }
 
-SpenchRetCode SpenchDenoiseGetEngineThreads(SpenchDenoise model, uint64_t* engine_threads) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+SpenchRetCode SpenchDenoiseGetEngineThreads(SpenchDenoise model,
+                                            uint64_t*     engine_threads) {
   if (model == nullptr || engine_threads == nullptr) {
-    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  } else {
-    *engine_threads = ((spench::SpenchDenoise*)model)->GetEngineThreads();
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
-  return ret_code;
+  *engine_threads = static_cast<spench::SpenchDenoise*>(model)->GetEngineThreads();
+  return SpenchRetCode::SUCCESS;
 }
 
-SpenchRetCode   SpenchDenoiseGetSampleRate(const SpenchDenoise model,
-                                           u_int64_t* sample_rate) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+SpenchRetCode SpenchDenoiseGetSampleRate(const SpenchDenoise model,
+                                         uint64_t*           sample_rate) {
   if (model == nullptr || sample_rate == nullptr) {
-    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  } else {
-    *sample_rate = ((spench::SpenchDenoise*)model)->GetModelSampleRate();
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
-  return ret_code;
+  *sample_rate = static_cast<spench::SpenchDenoise*>(model)->GetModelSampleRate();
+  return SpenchRetCode::SUCCESS;
 }
 
 SpenchRetCode SpenchDenoiseGetInputFrameSize(const SpenchDenoise model,
-                                             u_int64_t* input_size) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+                                             uint64_t*           input_size) {
   if (model == nullptr || input_size == nullptr) {
-    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  } else {
-    *input_size = ((spench::SpenchDenoise*)model)->GetModelInputFrameSize();
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
-  return ret_code;
+  *input_size = static_cast<spench::SpenchDenoise*>(model)->GetModelInputFrameSize();
+  return SpenchRetCode::SUCCESS;
 }
 
-SpenchRetCode SpenchDenoiseProcessChunkFp(SpenchDenoise model,
-                                          SpenchContext ctx,
-                                          const uint8_t *data,
-                                          uint64_t input_size,
-                                          uint8_t **output,
-                                          uint64_t *output_size) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  const float* input_ptr = reinterpret_cast<const float*> (data);
+SpenchRetCode SpenchDenoiseProcessChunkFp(SpenchDenoise  model,
+                                          SpenchContext  ctx,
+                                          const uint8_t* data,
+                                          uint64_t       input_size,
+                                          uint8_t**      output,
+                                          uint64_t*      output_size) {
+  if (model == nullptr || ctx == nullptr || data == nullptr ||
+      output == nullptr || output_size == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  }
+
+  const float* input_ptr = reinterpret_cast<const float*>(data);
   std::vector<float> res;
-  ret_code = ((spench::SpenchDenoise*)model)->
-                              ProcessChunk(std::vector<float> (input_ptr, input_ptr + input_size / sizeof(float)),
-                                           res,
-                                           (spench::SpenchContext<float>*)ctx);
-  if (ret_code == SpenchRetCode::SUCCESS ||
-      ret_code == SpenchRetCode::CONTEXT_ACCUMULATION) {
-    ret_code = ctools::AllocateAndCopy<float>(res, output, output_size);
-  }
+  SpenchRetCode rc = static_cast<spench::SpenchDenoise*>(model)->ProcessChunk(
+    std::vector<float>(input_ptr, input_ptr + input_size / sizeof(float)),
+    res,
+    static_cast<spench::SpenchContext<float>*>(ctx));
 
-  return ret_code;
+  if (rc == SpenchRetCode::SUCCESS || rc == SpenchRetCode::CONTEXT_ACCUMULATION) {
+    return ctools::AllocateAndCopy<float>(res, output, output_size);
+  }
+  return rc;
 }
 
-SpenchRetCode SpenchDenoiseProcessChunkInt(SpenchDenoise model,
-                                           SpenchContext ctx,
-                                           const uint8_t *data,
-                                           uint64_t input_size,
-                                           uint8_t **output,
-                                           uint64_t *output_size) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  const int16_t* input_ptr = reinterpret_cast<const int16_t*> (data);
-  std::vector<int16_t> res;
-  ret_code = ((spench::SpenchDenoise*)model)->
-                              ProcessChunk(std::vector<int16_t> (input_ptr, input_ptr + input_size / sizeof(int16_t)),
-                                           res,
-                                           (spench::SpenchContext<float>*)ctx);
-  if (ret_code == SpenchRetCode::SUCCESS ||
-      ret_code == SpenchRetCode::CONTEXT_ACCUMULATION) {
-    ret_code = ctools::AllocateAndCopy<int16_t>(res, output, output_size);
+SpenchRetCode SpenchDenoiseProcessChunkInt(SpenchDenoise  model,
+                                           SpenchContext  ctx,
+                                           const uint8_t* data,
+                                           uint64_t       input_size,
+                                           uint8_t**      output,
+                                           uint64_t*      output_size) {
+  if (model == nullptr || ctx == nullptr || data == nullptr ||
+      output == nullptr || output_size == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
 
-  return ret_code;
+  const int16_t* input_ptr = reinterpret_cast<const int16_t*>(data);
+  std::vector<int16_t> res;
+  SpenchRetCode rc = static_cast<spench::SpenchDenoise*>(model)->ProcessChunk(
+    std::vector<int16_t>(input_ptr, input_ptr + input_size / sizeof(int16_t)),
+    res,
+    static_cast<spench::SpenchContext<float>*>(ctx));
+
+  if (rc == SpenchRetCode::SUCCESS || rc == SpenchRetCode::CONTEXT_ACCUMULATION) {
+    return ctools::AllocateAndCopy<int16_t>(res, output, output_size);
+  }
+  return rc;
 }
 
 SpenchRetCode SpenchDenoiseGetFinalChunkFp(SpenchDenoise model,
                                            SpenchContext ctx,
-                                           uint8_t** output,
-                                           u_int64_t* output_size) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  std::vector<float> res;
-  ret_code = ((spench::SpenchDenoise*)model)->
-                              GetFinalChunk(res,
-                                            (spench::SpenchContext<float>*)ctx);
-  if (ret_code == SpenchRetCode::SUCCESS) {
-    if (res.size() == 0) {
-      *output = NULL;
-      *output_size = 0;
-    } else {
-      ret_code = ctools::AllocateAndCopy<float>(res, output, output_size);
-    }
+                                           uint8_t**     output,
+                                           uint64_t*     output_size) {
+  if (model == nullptr || ctx == nullptr || output == nullptr || output_size == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
 
-  return ret_code;
+  std::vector<float> res;
+  SpenchRetCode rc = static_cast<spench::SpenchDenoise*>(model)->GetFinalChunk(
+    res,
+    static_cast<spench::SpenchContext<float>*>(ctx));
+
+  if (rc != SpenchRetCode::SUCCESS) {
+    return rc;
+  }
+
+  if (res.empty()) {
+    *output = nullptr;
+    *output_size = 0;
+    return SpenchRetCode::SUCCESS;
+  }
+  return ctools::AllocateAndCopy<float>(res, output, output_size);
 }
 
 SpenchRetCode SpenchDenoiseGetFinalChunkInt(SpenchDenoise model,
-                                          SpenchContext ctx,
-                                          uint8_t **output,
-                                          uint64_t *output_size) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  std::vector<int16_t> res;
-  ret_code = ((spench::SpenchDenoise*)model)->
-                              GetFinalChunk(res,
-                                            (spench::SpenchContext<float>*)ctx);
-  if (ret_code == SpenchRetCode::SUCCESS) {
-    if (res.size() == 0) {
-      *output = NULL;
-      *output_size = 0;
-    } else {
-      ret_code = ctools::AllocateAndCopy<int16_t>(res, output, output_size);
-    }
+                                            SpenchContext ctx,
+                                            uint8_t**     output,
+                                            uint64_t*     output_size) {
+  if (model == nullptr || ctx == nullptr || output == nullptr || output_size == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
 
-  return ret_code;
+  std::vector<int16_t> res;
+  SpenchRetCode rc = static_cast<spench::SpenchDenoise*>(model)->GetFinalChunk(
+    res,
+    static_cast<spench::SpenchContext<float>*>(ctx));
+
+  if (rc != SpenchRetCode::SUCCESS) {
+    return rc;
+  }
+
+  if (res.empty()) {
+    *output = nullptr;
+    *output_size = 0;
+    return SpenchRetCode::SUCCESS;
+  }
+  return ctools::AllocateAndCopy<int16_t>(res, output, output_size);
 }
 
-SpenchRetCode   SpenchAudioProcessInit(const char* config_file,
-                                       SpenchAudioProcess* model) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  if (config_file == NULL || model == NULL) {
+// --------------------------- SpenchAudioProcess -----------------------------
+
+SpenchRetCode SpenchAudioProcessInit(const char*         config_file,
+                                     SpenchAudioProcess* model) {
+  if (config_file == nullptr || model == nullptr) {
     return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
   try {
-    *model = reinterpret_cast<void *>(new spench::SpenchAudioProcess(config_file));
-  } catch(...) {
-    ret_code = SpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM;
+    *model = reinterpret_cast<void*>(new spench::SpenchAudioProcess(config_file));
+  } catch (...) {
+    return SpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM;
   }
-  return ret_code;
+  return SpenchRetCode::SUCCESS;
 }
 
-extern "C" void SpenchAudioProcessFree(SpenchAudioProcess model) {
+void SpenchAudioProcessFree(SpenchAudioProcess model) {
   delete static_cast<spench::SpenchAudioProcess*>(model);
 }
 
-SpenchRetCode   SpenchAudioProcessAddAgc(SpenchAudioProcess model) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+SpenchRetCode SpenchAudioProcessAddAgc(SpenchAudioProcess model) {
   if (model == nullptr) {
-    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  } else {
-    ((spench::SpenchAudioProcess*)model)->AddAGC();
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
-  return ret_code;
+  static_cast<spench::SpenchAudioProcess*>(model)->AddAGC();
+  return SpenchRetCode::SUCCESS;
 }
 
-SpenchRetCode   SpenchAudioProcessAddAgcWithParam(SpenchAudioProcess model,
-                                                  u_int32_t audio_sample_rate,
-                                                  float target_power_level,
-                                                  float max_power_gain) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+SpenchRetCode SpenchAudioProcessAddAgcWithParam(SpenchAudioProcess model,
+                                                uint32_t           audio_sample_rate,
+                                                float              target_power_level,
+                                                float              max_power_gain) {
   if (model == nullptr) {
-    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  } else {
-    ((spench::SpenchAudioProcess*)model)->AddAGC(audio_sample_rate,
-                                                 target_power_level,
-                                                 max_power_gain);
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
-  return ret_code;
+  static_cast<spench::SpenchAudioProcess*>(model)->AddAGC(audio_sample_rate,
+                                                          target_power_level,
+                                                          max_power_gain,
+                                                          1e-2f,
+                                                          1e-2f);
+  return SpenchRetCode::SUCCESS;
 }
 
-SpenchRetCode   SpenchAudioProcessAddRc(SpenchAudioProcess model) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+SpenchRetCode SpenchAudioProcessAddRc(SpenchAudioProcess model) {
   if (model == nullptr) {
-    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  } else {
-    ((spench::SpenchAudioProcess*)model)->AddRC();
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
-  return ret_code;
+  static_cast<spench::SpenchAudioProcess*>(model)->AddRC();
+  return SpenchRetCode::SUCCESS;
 }
 
-SpenchRetCode   SpenchAudioProcessAddRcWithParam(SpenchAudioProcess model,
-                                                 u_int32_t audio_sample_rate,
-                                                 float target_level_db,
-                                                 float max_gain_db,
-                                                 float attack_time,
-                                                 float release_time,
-                                                 float hold_time) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+SpenchRetCode SpenchAudioProcessAddRcWithParam(SpenchAudioProcess model,
+                                               uint32_t           audio_sample_rate,
+                                               float              target_level_db,
+                                               float              max_gain_db,
+                                               float              attack_time,
+                                               float              release_time,
+                                               float              hold_time) {
   if (model == nullptr) {
-    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  } else {
-    ((spench::SpenchAudioProcess*)model)->AddRC(audio_sample_rate,
-                                                target_level_db,
-                                                max_gain_db,
-                                                attack_time,
-                                                release_time,
-                                                hold_time);
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
-  return ret_code;
+  static_cast<spench::SpenchAudioProcess*>(model)->AddRC(audio_sample_rate,
+                                                         target_level_db,
+                                                         max_gain_db,
+                                                         attack_time,
+                                                         release_time,
+                                                         hold_time);
+  return SpenchRetCode::SUCCESS;
 }
 
-SpenchRetCode   SpenchAudioProcessAddLc(SpenchAudioProcess model) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+SpenchRetCode SpenchAudioProcessAddLc(SpenchAudioProcess model) {
   if (model == nullptr) {
-    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  } else {
-    ((spench::SpenchAudioProcess*)model)->AddLC();
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
-  return ret_code;
+  static_cast<spench::SpenchAudioProcess*>(model)->AddLC();
+  return SpenchRetCode::SUCCESS;
 }
 
-SpenchRetCode   SpenchAudioProcessAddLcWithParam(SpenchAudioProcess model,
-                                                 u_int32_t audio_sample_rate,
-                                                 float target_level_db,
-                                                 float bypass_time,
-                                                 float max_gain_db) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+SpenchRetCode SpenchAudioProcessAddLcWithParam(SpenchAudioProcess model,
+                                               uint32_t           audio_sample_rate,
+                                               float              target_level_db,
+                                               float              bypass_time,
+                                               float              max_gain_db) {
   if (model == nullptr) {
-    ret_code = SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  } else {
-    ((spench::SpenchAudioProcess*)model)->AddLC(audio_sample_rate,
-                                                target_level_db,
-                                                bypass_time,
-                                                max_gain_db);
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
-  return ret_code;
+  static_cast<spench::SpenchAudioProcess*>(model)->AddLC(audio_sample_rate,
+                                                         target_level_db,
+                                                         bypass_time,
+                                                         max_gain_db);
+  return SpenchRetCode::SUCCESS;
 }
 
-SpenchRetCode   SpenchAudioProcessChunkFp(SpenchAudioProcess model,
-                                          const u_int8_t* memory_in,
-                                          u_int64_t in_size,
-                                          u_int8_t** memory_out,
-                                          u_int64_t* out_size) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  const float* input_ptr = reinterpret_cast<const float*> (memory_in);
+// -------------------------- Newly added methods -----------------------------
+
+SpenchRetCode SpenchAudioProcessAddNg(SpenchAudioProcess model) {
+  if (model == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  }
+  static_cast<spench::SpenchAudioProcess*>(model)->AddNG();
+  return SpenchRetCode::SUCCESS;
+}
+
+SpenchRetCode SpenchAudioProcessAddNgWithParam(SpenchAudioProcess model,
+                                               uint32_t           audio_sample_rate,
+                                               float              threshold_db,
+                                               float              attack_time,
+                                               float              release_time,
+                                               float              hold_time) {
+  if (model == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  }
+  static_cast<spench::SpenchAudioProcess*>(model)->AddNG(audio_sample_rate,
+                                                         threshold_db,
+                                                         attack_time,
+                                                         release_time,
+                                                         hold_time);
+  return SpenchRetCode::SUCCESS;
+}
+
+SpenchRetCode SpenchAudioProcessAddLim(SpenchAudioProcess model) {
+  if (model == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  }
+  static_cast<spench::SpenchAudioProcess*>(model)->AddLim();
+  return SpenchRetCode::SUCCESS;
+}
+
+SpenchRetCode SpenchAudioProcessAddLimWithParam(SpenchAudioProcess model,
+                                                uint32_t           audio_sample_rate,
+                                                float              threshold_db,
+                                                float              knee_width,
+                                                float              attack_time,
+                                                float              release_time) {
+  if (model == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  }
+  static_cast<spench::SpenchAudioProcess*>(model)->AddLim(audio_sample_rate,
+                                                          threshold_db,
+                                                          knee_width,
+                                                          attack_time,
+                                                          release_time);
+  return SpenchRetCode::SUCCESS;
+}
+
+SpenchRetCode SpenchAudioProcessAddDrc(SpenchAudioProcess model) {
+  if (model == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  }
+  static_cast<spench::SpenchAudioProcess*>(model)->AddDRC();
+  return SpenchRetCode::SUCCESS;
+}
+
+SpenchRetCode SpenchAudioProcessAddDrcWithParam(SpenchAudioProcess model,
+                                                uint32_t           audio_sample_rate,
+                                                float              threshold_db,
+                                                uint32_t           ratio,
+                                                float              knee_width,
+                                                float              attack_time,
+                                                float              release_time) {
+  if (model == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  }
+  static_cast<spench::SpenchAudioProcess*>(model)->AddDRC(audio_sample_rate,
+                                                          threshold_db,
+                                                          ratio,
+                                                          knee_width,
+                                                          attack_time,
+                                                          release_time);
+  return SpenchRetCode::SUCCESS;
+}
+
+SpenchRetCode SpenchAudioProcessChunkFp(SpenchAudioProcess model,
+                                        const uint8_t*     memory_in,
+                                        uint64_t           in_size,
+                                        uint8_t**          memory_out,
+                                        uint64_t*          out_size) {
+  if (model == nullptr || memory_in == nullptr || memory_out == nullptr || out_size == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  }
+
+  const float* input_ptr = reinterpret_cast<const float*>(memory_in);
   std::vector<float> res;
-  ((spench::SpenchAudioProcess*)model)->
-                              ProcessChunk(std::vector<float> (input_ptr, input_ptr + in_size / sizeof(float)),
-                                           res);
-  if (ret_code == SpenchRetCode::SUCCESS ||
-      ret_code == SpenchRetCode::CONTEXT_ACCUMULATION) {
-    ret_code = ctools::AllocateAndCopy<float>(res, memory_out, out_size);
-  }
+  SpenchRetCode rc = static_cast<spench::SpenchAudioProcess*>(model)->ProcessChunk(
+    std::vector<float>(input_ptr, input_ptr + in_size / sizeof(float)),
+    res,
+    nullptr);
 
-  return ret_code;
+  if (rc == SpenchRetCode::SUCCESS || rc == SpenchRetCode::CONTEXT_ACCUMULATION) {
+    return ctools::AllocateAndCopy<float>(res, memory_out, out_size);
+  }
+  return rc;
 }
 
-SpenchRetCode   SpenchAudioProcessChunkInt(SpenchAudioProcess model,
-                                           const u_int8_t* memory_in,
-                                           u_int64_t in_size,
-                                           u_int8_t** memory_out,
-                                           u_int64_t* out_size) {
-  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  const int16_t* input_ptr = reinterpret_cast<const int16_t*> (memory_in);
+SpenchRetCode SpenchAudioProcessChunkInt(SpenchAudioProcess model,
+                                         const uint8_t*     memory_in,
+                                         uint64_t           in_size,
+                                         uint8_t**          memory_out,
+                                         uint64_t*          out_size) {
+  if (model == nullptr || memory_in == nullptr || memory_out == nullptr || out_size == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  }
+
+  const int16_t* input_ptr = reinterpret_cast<const int16_t*>(memory_in);
   std::vector<int16_t> res;
-  ((spench::SpenchAudioProcess*)model)->
-                              ProcessChunk(std::vector<int16_t> (input_ptr, input_ptr + in_size / sizeof(int16_t)),
-                                           res);
-  if (ret_code == SpenchRetCode::SUCCESS ||
-      ret_code == SpenchRetCode::CONTEXT_ACCUMULATION) {
-    ret_code = ctools::AllocateAndCopy<int16_t>(res, memory_out, out_size);
+  SpenchRetCode rc = static_cast<spench::SpenchAudioProcess*>(model)->ProcessChunk(
+    std::vector<int16_t>(input_ptr, input_ptr + in_size / sizeof(int16_t)),
+    res,
+    nullptr);
+
+  if (rc == SpenchRetCode::SUCCESS || rc == SpenchRetCode::CONTEXT_ACCUMULATION) {
+    return ctools::AllocateAndCopy<int16_t>(res, memory_out, out_size);
+  }
+  return rc;
+}
+
+SpenchRetCode SpenchAudioProcessGetFinalChunkFp(SpenchAudioProcess model,
+                                                uint8_t**          memory_out,
+                                                uint64_t*          out_size) {
+  if (model == nullptr || memory_out == nullptr || out_size == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
 
-  return ret_code;
+  std::vector<float> res;
+  SpenchRetCode rc = static_cast<spench::SpenchAudioProcess*>(model)->GetFinalChunk(
+    res,
+    nullptr);
+
+  if (rc != SpenchRetCode::SUCCESS) {
+    return rc;
+  }
+
+  if (res.empty()) {
+    *memory_out = nullptr;
+    *out_size = 0;
+    return SpenchRetCode::SUCCESS;
+  }
+  return ctools::AllocateAndCopy<float>(res, memory_out, out_size);
 }
+
+SpenchRetCode SpenchAudioProcessGetFinalChunkInt(SpenchAudioProcess model,
+                                                 uint8_t**          memory_out,
+                                                 uint64_t*          out_size) {
+  if (model == nullptr || memory_out == nullptr || out_size == nullptr) {
+    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  }
+
+  std::vector<int16_t> res;
+  SpenchRetCode rc = static_cast<spench::SpenchAudioProcess*>(model)->GetFinalChunk(
+    res,
+    nullptr);
+
+  if (rc != SpenchRetCode::SUCCESS) {
+    return rc;
+  }
+
+  if (res.empty()) {
+    *memory_out = nullptr;
+    *out_size = 0;
+    return SpenchRetCode::SUCCESS;
+  }
+  return ctools::AllocateAndCopy<int16_t>(res, memory_out, out_size);
+}
+
+}  // extern "C"
