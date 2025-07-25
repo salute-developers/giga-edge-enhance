@@ -10,7 +10,7 @@
 namespace util {
 namespace onnx {
 
-const OrtApi* OrtApiPtr = OrtGetApiBase()->GetApi(ORT_API_VERSION);
+static const OrtApi* OrtApiPtr = OrtGetApiBase()->GetApi(ORT_API_VERSION);
 static std::mutex OrtMutex;
 
 void CheckStatus(OrtStatus* status) {
