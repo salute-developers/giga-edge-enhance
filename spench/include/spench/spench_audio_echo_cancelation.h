@@ -89,7 +89,14 @@ class SPENCH_API SpenchAudioEchoCancelation : public ISpenchSequencer {
    *  \ingroup group_cpp
    */
   explicit SpenchAudioEchoCancelation(const char* config_file);
-
+  /**
+   *  \brief: Constructor which could take parameters for aec object from config file.
+   *  \param yaml_conf: A string with YAML configuration. Only provided parameters will be changed. Other ones
+   *                    will be passed by default.
+   *  \return: None
+   *  \ingroup group_cpp
+   */
+  explicit SpenchAudioEchoCancelation(const std::string& yaml_conf);
   /**
    *  \brief: Destructor.
    *  \return: None

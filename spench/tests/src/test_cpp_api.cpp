@@ -97,9 +97,17 @@ struct TestFixture {
     return *this;
   }
 
-  TestFixture& InitAudioEchoCancelation(const std::string& config_name) {
-    std::string config_path = m_kBase + "config/" + config_name;
-    m_aec = std::make_unique<spench::SpenchAudioEchoCancelation>(config_path.c_str());
+  TestFixture& InitAudioEchoCancelation(const std::filesystem::path& config_name) {
+    std::filesystem::path config_path = m_kBase + "config/";
+    config_path += config_name;
+    const std::string cfg = config_path.string();  // narrow on Windows
+
+    m_aec = std::make_unique<spench::SpenchAudioEchoCancelation>(cfg.c_str());
+    return *this;
+  }
+
+  TestFixture& InitAudioEchoCancelation(const std::string& yaml) {
+    m_aec = std::make_unique<spench::SpenchAudioEchoCancelation>(yaml);
     return *this;
   }
 
@@ -1527,7 +1535,8 @@ TEST_CASE("FAIL Run AudioProcessing with incorrect config file [spench c++ api]"
 
 TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [spench c++ api]") {
   auto test_data = std::move(TestFixture().
-                             InitAudioProcessor(std::string("default_configuration_fast_tflite_rc_enabled_24khz.yaml")).
+                             InitAudioProcessor(
+                                std::string("default_configuration_fast_tflite_rc_enabled_24khz.yaml")).
                              SetWav("test1_48_noised.wav"));
 
   test_data.m_dsp->AddRC();
@@ -1608,7 +1617,8 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [
 
 TEST_CASE("SUCCEED Run AudioProcessing with reading NG parameters from config [spench c++ api]") {
   auto test_data = std::move(TestFixture().
-                             InitAudioProcessor(std::string("default_configuration_fast_tflite_rc_enabled_24khz.yaml")).
+                             InitAudioProcessor(
+                                std::string("default_configuration_fast_tflite_rc_enabled_24khz.yaml")).
                              SetWav("test1_48_noised.wav"));
 
   test_data.m_dsp->AddNG();
@@ -1741,7 +1751,8 @@ TEST_CASE("SUCCEED Run inference with the dereverb 48 kHz model on a part of .wa
 TEST_CASE("SUCCEED Run AudioEchoCancelation with simulated audio [spench c++ api]") {
   auto test_data =
           std::move(TestFixture().
-                    InitAudioEchoCancelation(std::string("default_configuration_fast_tflite_agc_enabled_24khz.yaml")));
+                InitAudioEchoCancelation(
+                  std::filesystem::path("default_configuration_fast_tflite_agc_enabled_24khz.yaml")));
   constexpr int kAudio_src_sample_rate = 48000;
   constexpr int kChunk_size_ms = 16;
   constexpr int frame_len = kAudio_src_sample_rate * kChunk_size_ms / 1000;
@@ -1785,8 +1796,60 @@ TEST_CASE("SUCCEED Run AudioEchoCancelation with simulated audio [spench c++ api
 }
 
 TEST_CASE("SUCCEED Run AudioEchoCancelation with empty config with simulated audio [spench c++ api]") {
-  auto test_data = std::move(TestFixture().InitAudioEchoCancelation());
+    const std::string yaml = R"(
+echo_cancellation:
+  sample_rate: 48000
+)";
 
+  auto test_data = std::move(TestFixture().InitAudioEchoCancelation(yaml));
+
+  constexpr int kAudio_src_sample_rate = 48000;
+  constexpr int kChunk_size_ms = 16;
+  constexpr int frame_len = kAudio_src_sample_rate * kChunk_size_ms / 1000;
+  constexpr int num_frames = (10 * kAudio_src_sample_rate) / frame_len;
+  constexpr int num_samples = num_frames * frame_len;
+  constexpr int filter_len = 4096;
+
+  // loopback - noise, speech - sinus
+  auto rir_flt = dsplib::FirFilterR(DumbRIR(filter_len * 0.7));
+  auto tt = dsplib::arange(num_samples) / kAudio_src_sample_rate;
+  auto sig = 0.1 * sin(2 * dsplib::pi * 440.0 * tt);
+  auto ref = 0.5 * dsplib::rand({-1, 1}, num_samples);
+  auto noise = rir_flt(ref);
+  auto mic = 0.1 * (sig + noise);
+
+  // add noise (nonlinear effects)
+  mic += 1e-5 * dsplib::randn(num_samples);
+  ref += 1e-5 * dsplib::randn(num_samples);
+
+  const auto snr_before = dsplib::mag2db(rms(sig) / rms(noise));
+
+  // process frame by frame
+  dsplib::arr_real out;
+  for (int i = 0; i < num_frames; ++i) {
+    const int t1 = i * frame_len;
+    const int t2 = t1 + frame_len;
+    const auto d = *mic.slice(t1, t2);
+    const auto x = *ref.slice(t1, t2);
+    std::vector<float> y;
+
+    test_data.m_aec->ProcessChunk(d.to_vec(), x.to_vec(), y);
+    out |= dsplib::arr_real(y);
+  }
+
+  // skip first second
+  out = out.slice(kAudio_src_sample_rate, num_samples);
+  auto spec = dsplib::welch(out, 1024).pxx;
+  const auto snr_after = dsplib::sinad(spec, dsplib::SinadType::Psd);
+
+  REQUIRE(snr_after - snr_before >= 20);
+}
+
+TEST_CASE("SUCCEED Run AudioEchoCancelation passing yaml string to constructor [spench c++ api]") {
+  auto test_data =
+          std::move(TestFixture().
+                InitAudioEchoCancelation(
+                    std::filesystem::path("default_configuration_fast_tflite_agc_enabled_24khz.yaml")));
   constexpr int kAudio_src_sample_rate = 48000;
   constexpr int kChunk_size_ms = 16;
   constexpr int frame_len = kAudio_src_sample_rate * kChunk_size_ms / 1000;
@@ -1831,7 +1894,8 @@ TEST_CASE("SUCCEED Run AudioEchoCancelation with empty config with simulated aud
 
 TEST_CASE("SUCCEED Run AudioEchoCancelation successfully with real 16kHz .wav files [spench c++ api]") {
   auto test_data = std::move(TestFixture().
-                    InitAudioEchoCancelation(std::string("default_configuration_fast_tflite_dsp_enabled_24khz.yaml")).
+                    InitAudioEchoCancelation(
+                              std::filesystem::path("default_configuration_fast_tflite_dsp_enabled_24khz.yaml")).
                     SetWav("test4_16_echo_mic.wav").
                     SetLbk("test4_16_echo_lbk.wav"));
 

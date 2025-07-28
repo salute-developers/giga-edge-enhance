@@ -2,9 +2,9 @@
 #include "spench/src/denoiser_model_adviser.h"
 #include "spench/src/dereverberator_audio_handler.h"
 #include <catch.hpp>
-
 #include "tests/src/utils.h"
 #include <spench/errors.h>
+#include <filesystem>
 
 struct TestHandler {
   std::unique_ptr<spench::BaseAudioHandler> m_handler;
@@ -13,7 +13,7 @@ struct TestHandler {
   std::vector<float> m_wav_data;
 
  public:
-  TestHandler() = default;
+  TestHandler() : m_handler(nullptr) {}
   TestHandler& operator=(const TestHandler&) = delete;
   TestHandler(const TestHandler&) = delete;
   TestHandler(TestHandler&& orig) :
@@ -23,11 +23,20 @@ struct TestHandler {
     orig.m_handler = nullptr;
   }
 
-  TestHandler& InitDenoserHandler(const std::string& config_path) {
-    std::string config = m_kBase + "config/" + config_path;
+  TestHandler& InitDenoserHandler(const std::filesystem::path& config_path) {
+    std::filesystem::path config = m_kBase + "config/";
+    config += config_path;
+    const std::string cfg = config.string();  // narrow on Windows
     m_handler = std::unique_ptr<spench::BaseAudioHandler>(
         new spench::DenoiserAudioHandler(std::make_unique<spench::DenoiserConfigReader>(
-                                            std::make_unique<spench::FileConfigReader>(config))));
+                                            std::make_unique<spench::FileConfigReader>(cfg))));
+    return *this;
+  }
+
+  TestHandler& InitDenoserHandler(const std::string& yaml) {
+    m_handler = std::unique_ptr<spench::BaseAudioHandler>(
+        new spench::DenoiserAudioHandler(std::make_unique<spench::DenoiserConfigReader>(
+                                            std::make_unique<spench::StringConfigReader>(yaml))));
     return *this;
   }
 
@@ -76,19 +85,20 @@ struct TestHandler {
 
 TEST_CASE("FAIL Run denoiser handler with exception from fe runner [denoiser handler]") {
   REQUIRE_THROWS_WITH(TestHandler()
-      .InitDenoserHandler("test_configuration_with_incorrect_sampling_freq.yaml"),
+      .InitDenoserHandler(std::filesystem::path("test_configuration_with_incorrect_sampling_freq.yaml")),
       "Config reading error. Sampling frequency is not a scalar!");
 }
 
 TEST_CASE("FAIL Run denoiser handler with exception from inference runner [denoiser handler]") {
   REQUIRE_THROWS_WITH(TestHandler()
-      .InitDenoserHandler("test_configuration_with_incorrect_model_path.yaml"),
+      .InitDenoserHandler(std::filesystem::path("test_configuration_with_incorrect_model_path.yaml")),
       "Config reading error. Model path parameter is not a single string!");
 }
 
 TEST_CASE("FAIL Run denoiser handler with exception for incorrect config path [denoiser handler]") {
   REQUIRE_THROWS_WITH(TestHandler()
-      .InitDenoserHandler("config.json"), "Config file load error: bad file: data/config/config.json");
+      .InitDenoserHandler(std::filesystem::path("config.json")),
+                                        "Config file load error: bad file: data/config/config.json");
 }
 
 TEST_CASE("FAIL Run dereverberator handler with exception from fe runner [dereverberator handler]") {
@@ -121,11 +131,13 @@ TEST_CASE("SUCCEED Create frame [denoiser handler]") {
 
 TEST_CASE("FAIL Run denoiser handler with error for incorrect input lengh [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_best_quality_tflite_16khz.yaml"));
+    auto sheduler_test_env =
+            std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
   #else
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_best_quality_onnx_16khz.yaml"));
+    auto sheduler_test_env =
+            std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
   #endif
 
   spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
@@ -140,11 +152,13 @@ TEST_CASE("FAIL Run denoiser handler with error for incorrect input lengh [denoi
 
 TEST_CASE("SUCCEED Change number of engine threads [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_best_quality_tflite_16khz.yaml"));
+    auto sheduler_test_env =
+          std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
   #else
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_best_quality_onnx_16khz.yaml"));
+    auto sheduler_test_env =
+          std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
   #endif
 
   const uint32_t kDefaultThreadsNum = 4;
@@ -154,11 +168,13 @@ TEST_CASE("SUCCEED Change number of engine threads [denoiser handler]") {
 
 TEST_CASE("SUCCEED Change number of engine threads [dereverberator handler]") {
   #ifdef BUILD_TFLITE_ENGINE
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDereverberatorHandler("default_configuration_best_quality_tflite_16khz.yaml"));
+    auto sheduler_test_env =
+          std::move(TestHandler().
+                  InitDereverberatorHandler("default_configuration_best_quality_tflite_16khz.yaml"));
   #else
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDereverberatorHandler("default_configuration_best_quality_onnx_16khz.yaml"));
+    auto sheduler_test_env =
+          std::move(TestHandler().
+                  InitDereverberatorHandler("default_configuration_best_quality_onnx_16khz.yaml"));
   #endif
 
   const uint32_t kDefaultThreadsNum = 4;
@@ -168,11 +184,13 @@ TEST_CASE("SUCCEED Change number of engine threads [dereverberator handler]") {
 
 TEST_CASE("SUCCEED Run denoise with empty chunk with the model 24kHz [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
-    auto handler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+    auto handler_test_env =
+          std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
-    auto handler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+    auto handler_test_env =
+          std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
   #endif
 
   spench::SpenchContext<float>* ctx_ptr = handler_test_env.m_handler->CreateContext();
@@ -191,11 +209,13 @@ TEST_CASE("SUCCEED Run denoise with empty chunk with the model 24kHz [denoiser h
 
 TEST_CASE("SUCCEED Run denoise and check zero outputs with the best quality model [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_best_quality_tflite_16khz.yaml"));
+    auto sheduler_test_env =
+          std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
   #else
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_best_quality_onnx_16khz.yaml"));
+    auto sheduler_test_env =
+          std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
   #endif
 
   spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
@@ -301,11 +321,13 @@ TEST_CASE("SUCCEED Run dereverb and check zero outputs with the model 48kHz [der
 
 TEST_CASE("SUCCEED Run denoise and check first non-zero output with the best quality model [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_best_quality_tflite_16khz.yaml"));
+    auto sheduler_test_env =
+          std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
   #else
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_best_quality_onnx_16khz.yaml"));
+    auto sheduler_test_env =
+          std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
   #endif
 
   spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
@@ -334,11 +356,13 @@ TEST_CASE("SUCCEED Run denoise and check first non-zero output with the best qua
 
 TEST_CASE("SUCCEED Check finalize chunk for the best quality model [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_best_quality_tflite_16khz.yaml"));
+    auto sheduler_test_env =
+          std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
   #else
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_best_quality_onnx_16khz.yaml"));
+    auto sheduler_test_env =
+          std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
   #endif
 
   spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
@@ -357,11 +381,13 @@ TEST_CASE("SUCCEED Check finalize chunk for the best quality model [denoiser han
 
 TEST_CASE("SUCCEED Run denoise and check finalize chunk for the best quality model [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_best_quality_tflite_16khz.yaml"));
+    auto sheduler_test_env =
+            std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
   #else
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_best_quality_onnx_16khz.yaml"));
+    auto sheduler_test_env =
+            std::move(TestHandler().
+                  InitDenoserHandler(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
   #endif
 
   spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
@@ -397,11 +423,66 @@ TEST_CASE("SUCCEED Run denoise and check finalize chunk for the best quality mod
 
 TEST_CASE("SUCCEED Run denoise and check finalize chunk for the fast model [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+    auto sheduler_test_env =
+          std::move(TestHandler().
+                InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
+    auto sheduler_test_env =
+          std::move(TestHandler().
+                InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
+  #endif
+
+  spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
+  spench::DenoiseContextF<float>* ctx_f = dynamic_cast<spench::DenoiseContextF<float>*>(ctx);
+  uint16_t kInput_frame_size = 384;
+  const std::vector<float> input1(kInput_frame_size, 0.5);
+  std::vector<float> output;
+
+  SpenchRetCode ret_code = sheduler_test_env.m_handler->ProcessFrame(ctx_f, input1, output);
+  CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
+
+  ret_code = sheduler_test_env.m_handler->ProcessFrame(ctx_f, input1, output);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  // non-zero tensor now. just check size
+  CHECK(output.size() == kInput_frame_size);
+  REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
+
+  ret_code = sheduler_test_env.m_handler->ProcessFrame(ctx_f, input1, output);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  CHECK(output.size() == kInput_frame_size);
+  REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
+
+  ret_code = sheduler_test_env.m_handler->ProcessFrame(ctx_f, input1, output);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  CHECK(output.size() == kInput_frame_size);
+  REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
+
+  output.resize(0);
+
+  ret_code = sheduler_test_env.m_handler->FinalizeInference(ctx_f, output);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  REQUIRE(kInput_frame_size * 1 == output.size());
+  REQUIRE(std::vector<float>(kInput_frame_size * 1, 0.0) != output);
+  sheduler_test_env.m_handler->DestroyContext(&ctx);
+}
+
+TEST_CASE("SUCCEED Run denoise and check result with yaml string config [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+  static constexpr char yaml[] = R"(
+model:
+  model_path: data/models/fast_model_24khz.tflite)";
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler(std::string(yaml)));
+  #else
+    static constexpr char yaml[] = R"(
+model:
+  model_path: data/models/fast_model_24khz.onnx)";
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler(std::string(yaml)));
   #endif
 
   spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
@@ -444,11 +525,12 @@ TEST_CASE("SUCCEED Run denoise and check finalize chunk for the fast model [deno
 
 TEST_CASE("SUCCEED Run calcSnrEstimation with one chunk [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
-    auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+    auto sheduler_test_env =
+          std::move(TestHandler().
+                InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
   #endif
 
   std::valarray<float> test_noisy_real;
@@ -477,10 +559,10 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with one chunk [denoiser handler]") {
 TEST_CASE("SUCCEED Run calcSnrEstimation with dumped recording [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
   #endif
 
   std::valarray<float> test_noisy_real;
@@ -511,10 +593,10 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with dumped recording [denoiser handler
 TEST_CASE("SUCCEED Run calcSnrEstimation with zero recording [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
   #endif
 
   std::valarray<float> test_noisy_real = {0};
@@ -538,10 +620,10 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with zero recording [denoiser handler]"
 TEST_CASE("SUCCEED Run calcSnrEstimation with empty recording [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
   #endif
 
   std::valarray<float> test_noisy_real = {};
@@ -565,10 +647,10 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with empty recording [denoiser handler]
 TEST_CASE("FAIL calcSnrEstimation with overflow values [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
   #endif
 
   spench::StreamCurrentMetrics<float> metrics;
@@ -586,10 +668,10 @@ TEST_CASE("FAIL calcSnrEstimation with overflow values [denoiser handler]") {
 TEST_CASE("FAIL calcSnrEstimation with NaN in input [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
   #endif
 
   spench::StreamCurrentMetrics<float> metrics;
@@ -607,10 +689,10 @@ TEST_CASE("FAIL calcSnrEstimation with NaN in input [denoiser handler]") {
 TEST_CASE("FAIL calcSnrEstimation with mismatched input sizes [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
   #endif
 
   spench::StreamCurrentMetrics<float> metrics;
@@ -627,10 +709,10 @@ TEST_CASE("FAIL calcSnrEstimation with mismatched input sizes [denoiser handler]
 TEST_CASE("FAIL calcSnrEstimation with mostly zeros [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
   #endif
 
   spench::StreamCurrentMetrics<float> metrics;
@@ -649,10 +731,10 @@ TEST_CASE("FAIL calcSnrEstimation with mostly zeros [denoiser handler]") {
 TEST_CASE("FAIL calcSnrEstimation with empty complex numbers [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
   #endif
 
   spench::StreamCurrentMetrics<float> metrics;
@@ -669,10 +751,10 @@ TEST_CASE("FAIL calcSnrEstimation with empty complex numbers [denoiser handler]"
 TEST_CASE("FAIL calcSnrEstimation with mismatched real/imag sizes [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
   #endif
 
   spench::StreamCurrentMetrics<float> metrics;
@@ -694,10 +776,10 @@ TEST_CASE("FAIL calcSnrEstimation with mismatched real/imag sizes [denoiser hand
 TEST_CASE("SUCCEED calcSnrEstimation with exit from practical range [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
   #endif
 
   spench::StreamCurrentMetrics<float> metrics;
@@ -719,10 +801,10 @@ TEST_CASE("SUCCEED calcSnrEstimation with exit from practical range [denoiser ha
 TEST_CASE("FAIL averageSnrDb with no input values [denoiser handler]") {
   #ifdef BUILD_TFLITE_ENGINE
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
   #else
     auto sheduler_test_env = std::move(TestHandler().
-                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+                          InitDenoserHandler(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
   #endif
 
   float avg = sheduler_test_env.GetAdviser()->averageSnrDb();

@@ -7,6 +7,8 @@
 
 #include "spench/src/spench_config_reader.h"
 
+#include "spench/util/echo/echo_canceler.h"
+
 namespace fs = std::filesystem;
 
 namespace {
@@ -46,7 +48,7 @@ struct DummyReader : public spench::ConfigReader {
 // ------------------------------------------------------------------------------
 // mergeYaml
 // ------------------------------------------------------------------------------
-TEST_CASE("mergeYaml deep-merges maps and overrides scalars/sequences [config reader]") {
+TEST_CASE("SUCCESS mergeYaml deep-merges maps and overrides scalars/sequences [config reader]") {
   DummyReader r;
 
   YAML::Node dest = YAML::Load(R"(
@@ -75,7 +77,7 @@ e: 7
   REQUIRE(dest["e"].as<int>() == 7);            // added
 }
 
-TEST_CASE("mergeYaml with non-map source is a no-op [config reader]") {
+TEST_CASE("SUCCESS mergeYaml with non-map source is a no-op [config reader]") {
   DummyReader r;
 
   YAML::Node dest1 = YAML::Load("{ a: 1, b: { c: 2 } }");
@@ -95,7 +97,7 @@ TEST_CASE("mergeYaml with non-map source is a no-op [config reader]") {
 // ------------------------------------------------------------------------------
 // StringConfigReader
 // ------------------------------------------------------------------------------
-TEST_CASE("StringConfigReader merges overrides and keeps built-in defaults [config reader]") {
+TEST_CASE("SUCCESS StringConfigReader merges overrides and keeps built-in defaults [config reader]") {
   const std::string override_yaml = R"(
 model:
   model_path: "my_model.onnx"
@@ -127,7 +129,7 @@ extra_section:
   REQUIRE(p["extra_section"]["flag"].as<bool>() == true);
 }
 
-TEST_CASE("StringConfigReader throws on malformed YAML", "[config reader]") {
+TEST_CASE("FAIL StringConfigReader throws on malformed YAML", "[config reader]") {
   const std::string bad_yaml = "model: [in1, in2\n";  // missing ]
   spench::StringConfigReader reader(bad_yaml);
   REQUIRE_THROWS_AS(reader.load(), YAML::ParserException);
@@ -136,7 +138,7 @@ TEST_CASE("StringConfigReader throws on malformed YAML", "[config reader]") {
 // ------------------------------------------------------------------------------
 // FileConfigReader
 // ------------------------------------------------------------------------------
-TEST_CASE("FileConfigReader loads file and merges over defaults [config reader]") {
+TEST_CASE("SUCCESS FileConfigReader loads file and merges over defaults [config reader]") {
   const std::string file_yaml = R"(
 model:
   model_path: "file_model.onnx"
@@ -157,12 +159,12 @@ inference:
   REQUIRE_FALSE(p["model"]["model_outputs"]);
 }
 
-TEST_CASE("FileConfigReader throws if file missing [config reader]") {
+TEST_CASE("FAIL FileConfigReader throws if file missing [config reader]") {
   spench::FileConfigReader reader("/does/not/exist.yaml");
   REQUIRE_THROWS(reader.load());
 }
 
-TEST_CASE("FileConfigReader throws on malformed YAML in file [config reader]") {
+TEST_CASE("FAIL FileConfigReader throws on malformed YAML in file [config reader]") {
   TempYamlFile tmp("inference: [1, 2\n");  // bad YAML
   spench::FileConfigReader reader(tmp.path);
   REQUIRE_THROWS_AS(reader.load(), std::runtime_error);
@@ -171,7 +173,7 @@ TEST_CASE("FileConfigReader throws on malformed YAML in file [config reader]") {
 // ------------------------------------------------------------------------------
 // DenoiserConfigReader
 // ------------------------------------------------------------------------------
-TEST_CASE("DenoiserConfigReader getters return correct override and default values [denoiser config reader]") {
+TEST_CASE("SUCCESS DenoiserConfigReader getters return correct override and default values [denoiser config reader]") {
   const std::string yaml = R"(
 model:
   model_path: "mod.onnx"
@@ -204,7 +206,7 @@ inference:
   REQUIRE(cfg.modelType()    == "best_quality");
 }
 
-TEST_CASE("DenoiserConfigReader uses defaults when fields are missing [denoiser config reader]") {
+TEST_CASE("SUCCESS DenoiserConfigReader uses defaults when fields are missing [denoiser config reader]") {
   const std::string yaml = R"(
 model:
   model_path: "onlypath.onnx"
@@ -226,11 +228,72 @@ model:
   REQUIRE(cfg.modelType()    == "best_speed");
 }
 
-TEST_CASE("DenoiserConfigReader throws if model_path is missing [denoiser config reader]") {
+TEST_CASE("SUCCESS DenoiserConfigReader throws if model_path is missing [denoiser config reader]") {
   const std::string yaml = R"(
 model: {}
 )";
   auto base = std::make_unique<spench::StringConfigReader>(yaml);
   spench::DenoiserConfigReader cfg(std::move(base));
+  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+}
+
+TEST_CASE("SUCCESS AecConfigReader full override [aec config reader]") {
+  const std::string yaml = R"(
+echo_cancellation:
+  sample_rate: 44100
+  filter_len: 2048
+  residual_echo_suppression_enabled: false
+  delay_compensator_enabled: false
+  chunk_len_ms: 32
+  type: speex
+)";
+
+  auto base = std::make_unique<spench::StringConfigReader>(spench::DefaultAecConfigYAML, yaml);
+  spench::AecConfigReader cfg(std::move(base));
+  REQUIRE_NOTHROW(cfg.load());
+  REQUIRE_NOTHROW(cfg.validate());
+
+  REQUIRE(cfg.sampleRate()                       == 44100u);
+  REQUIRE(cfg.filterLen()                        == 2048u);
+  REQUIRE(cfg.residualEchoSuppressionEnabled()   == false);
+  REQUIRE(cfg.delayCompensatorEnabled()          == false);
+  REQUIRE(cfg.frameLen()                         == uint16_t(std::round(44.1f*32)));
+  REQUIRE(cfg.type()                             == util::echo::EchoCancelerType::SPEEX);
+}
+
+TEST_CASE("SUCCESS AecConfigReader partial override uses defaults [aec config reader]") {
+  const std::string yaml = R"(
+echo_cancellation:
+  sample_rate: 32000
+)";
+
+  auto base = std::make_unique<spench::StringConfigReader>(spench::DefaultAecConfigYAML, yaml);
+  spench::AecConfigReader cfg(std::move(base));
+  REQUIRE_NOTHROW(cfg.load());
+  REQUIRE_NOTHROW(cfg.validate());
+
+  REQUIRE(cfg.sampleRate()                       == 32000u);
+  REQUIRE(cfg.filterLen()                        == 4096u);
+  REQUIRE(cfg.residualEchoSuppressionEnabled()   == true);
+  REQUIRE(cfg.delayCompensatorEnabled()          == true);
+  // default chunk_len_ms=16 → frameLen = round(32 * 16) = 512
+  REQUIRE(cfg.frameLen()                         == 512u);
+  REQUIRE(cfg.type()                             == util::echo::EchoCancelerType::SPEEX);
+}
+
+TEST_CASE("FAIL AecConfigReader invalid type throws [aec config reader]") {
+  const std::string yaml = R"(
+echo_cancellation:
+  type: unknown
+)";
+
+  auto base = std::make_unique<spench::StringConfigReader>(spench::DefaultAecConfigYAML, yaml);
+  spench::AecConfigReader cfg(std::move(base));
+  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+}
+
+TEST_CASE("FAIL AecConfigReader missing section throws [aec config reader]") {
+  auto base = std::make_unique<spench::StringConfigReader>("");  // empty
+  spench::AecConfigReader cfg(std::move(base));
   REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
 }
