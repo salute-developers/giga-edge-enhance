@@ -1,0 +1,127 @@
+#pragma once
+
+#include <string>
+#include <memory>
+#include <utility>
+#include <vector>
+#include "spench/src/spench_default_configurations.h"
+
+namespace YAML { class Node; class ParserException; }
+
+namespace util {
+namespace echo {
+enum class EchoCancelerType;
+}  // echo
+}  // util
+
+namespace spench {
+
+inline YAML::Node lookup(const YAML::Node& root,
+                         const std::initializer_list<std::string>& path) {
+  YAML::Node node = YAML::Clone(root);
+  for (const auto& key : path) {
+    if (!node[key])    // missing or null
+      return YAML::Node{};
+    node = node[key];
+  }
+  return node;
+}
+
+/// Return node.as<T>() if present, otherwise fallback.
+template<typename T>
+inline T asOr(const YAML::Node& node, const T& fallback) {
+  return (node && !node.IsNull()) ? node.as<T>() : fallback;
+}
+
+/// Return node.as<T>() if present.
+template<typename T>
+inline T as(const YAML::Node& node) {
+  return node.as<T>();
+}
+
+class ConfigReader {
+ public:
+  virtual ~ConfigReader() = default;
+  virtual void load() = 0;
+  inline const YAML::Node& params() const noexcept { return m_params; }
+  void mergeYaml(YAML::Node& dest, const YAML::Node& src);
+
+ protected:
+  YAML::Node m_params;
+};
+
+//  Loads the entire document from a file path
+class FileConfigReader final : public ConfigReader {
+ public:
+  explicit FileConfigReader(std::string path);
+  void load() override;
+
+ private:
+  std::string m_path;
+};
+
+//  Loads from an in-memory YAML string
+class StringConfigReader final : public ConfigReader {
+ public:
+  explicit StringConfigReader(std::string yaml);
+  StringConfigReader(const char* default_yaml, std::string override_yaml);
+  void load() override;
+
+ private:
+  const char* m_default = nullptr;
+  std::string m_yaml;
+};
+
+template<typename Derived>
+class PipelineConfigReader : public ConfigReader {
+ public:
+  explicit PipelineConfigReader(std::unique_ptr<ConfigReader> base_reader)
+      : m_base(std::move(base_reader))
+  {}
+
+  void load() final {
+    m_base->load();
+    m_params = m_base->params();
+    validate();
+  }
+
+ protected:
+  virtual void validate() const = 0;
+  std::unique_ptr<ConfigReader> m_base;
+};
+
+class DenoiserConfigReader final: public PipelineConfigReader<DenoiserConfigReader> {
+ public:
+  explicit DenoiserConfigReader(std::unique_ptr<ConfigReader> base_reader)
+  : PipelineConfigReader<DenoiserConfigReader>(std::move(base_reader)) {}
+
+  void validate() const override;
+
+  std::string               modelPath()    const;
+  std::vector<std::string>  modelInputs()  const;
+  std::vector<std::string>  modelOutputs() const;
+  uint32_t                  samplingFreq() const;
+  uint32_t                  frameSizeMs()  const;
+  uint32_t                  frameStrideMs()const;
+  std::string               windowType()   const;
+  bool                      useGpu()       const;
+  uint32_t                  numThreads()   const;
+  std::string               modelType()    const;
+};
+
+class AecConfigReader final : public PipelineConfigReader<AecConfigReader> {
+ public:
+    explicit AecConfigReader(std::unique_ptr<ConfigReader> base_reader)
+    : PipelineConfigReader<AecConfigReader>(std::move(base_reader)) {}
+    /// Ensure the `echo_cancellation` block exists and `type` is valid
+    void validate() const override;
+
+    // typed getters (with code-baked defaults):
+    uint32_t                     sampleRate()                      const;
+    uint16_t                     filterLen()                       const;
+    bool                         residualEchoSuppressionEnabled()  const;
+    bool                         delayCompensatorEnabled()         const;
+    uint16_t                     frameLen()                        const;
+    util::echo::EchoCancelerType type()                            const;
+};
+}  // namespace spench
