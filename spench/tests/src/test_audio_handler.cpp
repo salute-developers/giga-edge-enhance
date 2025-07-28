@@ -1,4 +1,5 @@
 #include "spench/src/denoiser_audio_handler.h"
+#include "spench/src/denoiser_model_adviser.h"
 #include "spench/src/dereverberator_audio_handler.h"
 #include <catch.hpp>
 #include <iostream>
@@ -40,6 +41,35 @@ struct TestHandler {
     std::string full_wav_path = m_kBase + "wavs/" + wav_path;
     loadWavFx(full_wav_path.c_str(), m_wav_data);
     return *this;
+  }
+
+  TestHandler& LoadDataFromBin(const std::string& dump, uint32_t step_size_samples,
+                               std::vector<std::vector<float>>& output) {
+    std::string full_wav_path = m_kBase + "binary/" + dump;
+    loadBin(full_wav_path.c_str(), step_size_samples, output);
+    return *this;
+  }
+
+  TestHandler& LoadDataFromBin(const std::string& dump,
+                               std::vector<float>& output) {
+    std::string full_wav_path = m_kBase + "binary/" + dump;
+    loadBin(full_wav_path.c_str(), output);
+    return *this;
+  }
+
+  TestHandler& LoadDataFromBin(const std::string& dump,
+                               std::valarray<float>& output) {
+    std::string full_wav_path = m_kBase + "binary/" + dump;
+    loadBin(full_wav_path.c_str(), output);
+    return *this;
+  }
+
+  spench::DenoiserModelAdviser<float>* GetAdviser() {
+    if (auto* m_denoiser_handler = dynamic_cast<spench::DenoiserAudioHandler*>(m_handler.get())) {
+      return m_denoiser_handler->adviser();
+    } else {
+      return nullptr;
+    }
   }
 };
 
@@ -409,4 +439,253 @@ TEST_CASE("SUCCEED Run denoise and check finalize chunk for the fast model [deno
   REQUIRE(kInput_frame_size * 1 == output.size());
   REQUIRE(std::vector<float>(kInput_frame_size * 1, 0.0) != output);
   sheduler_test_env.m_handler->DestroyContext(&ctx);
+}
+
+TEST_CASE("SUCCEED Run calcSnrEstimation with one chunk [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+  #else
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+  #endif
+
+  std::valarray<float> test_noisy_real;
+  std::valarray<float> test_noisy_imag;
+  std::valarray<float> test_enhanced_real;
+  std::valarray<float> test_enhanced_imag;
+  spench::StreamCurrentMetrics<float> metrics;
+  // Load from binary dump
+  sheduler_test_env.LoadDataFromBin("calc_snr_enhanced_real.dump", test_enhanced_real);
+  sheduler_test_env.LoadDataFromBin("calc_snr_enhanced_imag.dump", test_enhanced_imag);
+  sheduler_test_env.LoadDataFromBin("calc_snr_noisy_real.dump", test_noisy_real);
+  sheduler_test_env.LoadDataFromBin("calc_snr_noisy_imag.dump", test_noisy_imag);
+
+  spench::ComplexNumber<float> test_noisy_mag(test_noisy_real, test_noisy_imag);
+  spench::ComplexNumber<float> test_enhanced_mag(test_enhanced_real, test_enhanced_imag);
+  std::vector<float> gt_test_snr_result;
+
+  sheduler_test_env.LoadDataFromBin("calc_snr_result.dump", gt_test_snr_result);
+  float test_snr_result = sheduler_test_env.GetAdviser()->calcSnrEstimation(test_noisy_mag,
+                                                 test_enhanced_mag,
+                                                 metrics);
+
+  IsVectorsClose(std::vector{test_snr_result}, std::vector{gt_test_snr_result[0]}, 0.001);
+}
+
+TEST_CASE("SUCCEED Run calcSnrEstimation with dumped recording [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+  #else
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+  #endif
+
+  std::valarray<float> test_noisy_real;
+  std::valarray<float> test_noisy_imag;
+  std::valarray<float> test_enhanced_real;
+  std::valarray<float> test_enhanced_imag;
+  spench::StreamCurrentMetrics<float> metrics;
+  // Load from binary dump
+  sheduler_test_env.LoadDataFromBin("calc_snr_enhanced_real.dump", test_enhanced_real);
+  sheduler_test_env.LoadDataFromBin("calc_snr_enhanced_imag.dump", test_enhanced_imag);
+  sheduler_test_env.LoadDataFromBin("calc_snr_noisy_real.dump", test_noisy_real);
+  sheduler_test_env.LoadDataFromBin("calc_snr_noisy_imag.dump", test_noisy_imag);
+
+  std::vector<float> test_snr_result;
+  sheduler_test_env.LoadDataFromBin("calc_snr_result.dump", test_snr_result);
+
+  for (uint32_t i = 0; i < test_enhanced_real.size(); ++i) {
+    spench::ComplexNumber<float> test_noisy_mag(test_noisy_real[0], 1, test_noisy_imag[0], 1);
+    spench::ComplexNumber<float> test_enhanced_mag(test_enhanced_real[0], 1, test_enhanced_imag[0], 1);
+    test_snr_result.emplace_back(sheduler_test_env.GetAdviser()->calcSnrEstimation(test_noisy_mag,
+                                                        test_enhanced_mag,
+                                                        metrics));
+  }
+
+  IsVectorsClose(test_snr_result, test_snr_result, 0.000001);
+}
+
+TEST_CASE("SUCCEED Run calcSnrEstimation with zero recording [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+  #else
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+  #endif
+
+  std::valarray<float> test_noisy_real = {0};
+  std::valarray<float> test_noisy_imag = {0};
+  std::valarray<float> test_enhanced_real = {0};
+  std::valarray<float> test_enhanced_imag = {0};
+  spench::StreamCurrentMetrics<float> metrics;
+  std::vector<float> test_snr_result = {0};
+
+  for (uint32_t i = 0; i < test_enhanced_real.size(); ++i) {
+    spench::ComplexNumber<float> test_noisy_mag(test_noisy_real[0], 1, test_noisy_imag[0], 1);
+    spench::ComplexNumber<float> test_enhanced_mag(test_enhanced_real[0], 1, test_enhanced_imag[0], 1);
+    test_snr_result.emplace_back(sheduler_test_env.GetAdviser()->calcSnrEstimation(test_noisy_mag,
+                                                        test_enhanced_mag,
+                                                        metrics));
+  }
+
+  IsVectorsClose(test_snr_result, test_snr_result, 0.000001);
+}
+
+TEST_CASE("SUCCEED Run calcSnrEstimation with empty recording [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+  #else
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+  #endif
+
+  std::valarray<float> test_noisy_real = {};
+  std::valarray<float> test_noisy_imag = {};
+  std::valarray<float> test_enhanced_real = {};
+  std::valarray<float> test_enhanced_imag = {};
+  spench::StreamCurrentMetrics<float> metrics;
+  std::vector<float> test_snr_result = {};
+
+  for (uint32_t i = 0; i < test_enhanced_real.size(); ++i) {
+    spench::ComplexNumber<float> test_noisy_mag(test_noisy_real[0], 1, test_noisy_imag[0], 1);
+    spench::ComplexNumber<float> test_enhanced_mag(test_enhanced_real[0], 1, test_enhanced_imag[0], 1);
+    test_snr_result.emplace_back(sheduler_test_env.GetAdviser()->calcSnrEstimation(test_noisy_mag,
+                                                        test_enhanced_mag,
+                                                        metrics));
+  }
+
+  IsVectorsClose(test_snr_result, test_snr_result, 0.000001);
+}
+
+TEST_CASE("FAIL calcSnrEstimation with overflow values [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+  #else
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+  #endif
+
+  spench::StreamCurrentMetrics<float> metrics;
+
+  float big_val = 1e38f;
+  std::valarray<float> test_real(big_val, 10);
+  std::valarray<float> test_imag(big_val, 10);
+
+  spench::ComplexNumber<float> spec(test_real, test_imag);
+  float snr = sheduler_test_env.GetAdviser()->calcSnrEstimation(spec, spec, metrics);
+
+  CHECK(std::isfinite(snr));
+}
+
+TEST_CASE("FAIL calcSnrEstimation with NaN in input [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+  #else
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+  #endif
+
+  spench::StreamCurrentMetrics<float> metrics;
+
+  std::valarray<float> test_real(1.0f, 10);
+  test_real[3] = std::nanf("");
+  std::valarray<float> test_imag(0.0f, 10);
+
+  spench::ComplexNumber<float> spec(test_real, test_imag);
+  float snr = sheduler_test_env.GetAdviser()->calcSnrEstimation(spec, spec, metrics);
+
+  CHECK(std::isfinite(snr));
+}
+
+TEST_CASE("FAIL calcSnrEstimation with mismatched input sizes [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+  #else
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+  #endif
+
+  spench::StreamCurrentMetrics<float> metrics;
+
+  std::valarray<float> real(1.0f, 10);
+  std::valarray<float> imag(1.0f, 3);
+
+  spench::ComplexNumber<float> spec(real, imag);
+  float snr = sheduler_test_env.GetAdviser()->calcSnrEstimation(spec, spec, metrics);
+
+  CHECK(std::isfinite(snr));
+}
+
+TEST_CASE("FAIL calcSnrEstimation with mostly zeros [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+  #else
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+  #endif
+
+  spench::StreamCurrentMetrics<float> metrics;
+
+  std::valarray<float> real(0.0f, 100);
+  real[0] = 1e-10f;
+  std::valarray<float> imag = real;
+
+  spench::ComplexNumber<float> input_spec(real, imag);
+  spench::ComplexNumber<float> enhanced_spec(real, imag);
+  float snr = sheduler_test_env.GetAdviser()->calcSnrEstimation(input_spec, enhanced_spec, metrics);
+
+  CHECK(std::isfinite(snr));
+}
+
+TEST_CASE("FAIL calcSnrEstimation with empty complex numbers [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+  #else
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+  #endif
+
+  spench::StreamCurrentMetrics<float> metrics;
+
+  std::valarray<float> empty_real{};
+  std::valarray<float> empty_imag{};
+
+  spench::ComplexNumber<float> spec(empty_real, empty_imag);
+  float snr = sheduler_test_env.GetAdviser()->calcSnrEstimation(spec, spec, metrics);
+
+  CHECK(std::isfinite(snr));
+}
+
+TEST_CASE("FAIL calcSnrEstimation with mismatched real/imag sizes [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+  #else
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+  #endif
+
+  spench::StreamCurrentMetrics<float> metrics;
+
+  std::valarray<float> noisy_real(1.0f, 8);
+  std::valarray<float> noisy_imag(1.0f, 10);
+
+  std::valarray<float> enhanced_real(1.0f, 10);
+  std::valarray<float> enhanced_imag(1.0f, 10);
+
+  spench::ComplexNumber<float> input_spec(noisy_real, noisy_imag);
+  spench::ComplexNumber<float> enhanced_spec(enhanced_real, enhanced_imag);
+
+  float snr = sheduler_test_env.GetAdviser()->calcSnrEstimation(input_spec, enhanced_spec, metrics);
+
+  CHECK(snr == 0.0f);
 }

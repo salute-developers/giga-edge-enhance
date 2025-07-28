@@ -8,7 +8,6 @@
 #include "spench/src/windowing.h"
 #include "spench/src/fft_calculator.h"
 #include "spench/src/ifft_calculator.h"
-#include "spench/src/spench_context.h"
 
 namespace spench {
 namespace fe {
@@ -34,10 +33,6 @@ class FeatureExtractor {
   // last 2 vectors (real, imag) of input_spec will be changed
   void calcEnhancedPartsInPlace(const ComplexNumber<T>& input_spec,
                                 ComplexNumber<T>& predicted_mask);
-
-  T calcSnrEstimation(const ComplexNumber<T>& input_spec,
-                      const ComplexNumber<T>& enhanced_spec,
-                      StreamCurrentMetrics<T>& metrics);
 
  protected:
   void STFTImpl(std::vector<T>& frames,
@@ -70,8 +65,6 @@ class FeatureExtractor {
   iFftCalculator<T> m_ifft_calculator;
   const T m_cirmK = static_cast<T>(10.0);
   const T m_cirmLimit = static_cast<T>(9.9);
-  const T m_eps = static_cast<T>(1e-8);
-  const T vad_threshold = static_cast<T>(0.1);
 };
 
 }  // namespace fe
