@@ -2,7 +2,7 @@
 #include "spench/src/denoiser_model_adviser.h"
 #include "spench/src/dereverberator_audio_handler.h"
 #include <catch.hpp>
-#include <iostream>
+
 #include "tests/src/utils.h"
 #include <spench/errors.h>
 
@@ -26,7 +26,8 @@ struct TestHandler {
   TestHandler& InitDenoserHandler(const std::string& config_path) {
     std::string config = m_kBase + "config/" + config_path;
     m_handler = std::unique_ptr<spench::BaseAudioHandler>(
-                                                new spench::DenoiserAudioHandler(config));
+        new spench::DenoiserAudioHandler(std::make_unique<spench::DenoiserConfigReader>(
+                                            std::make_unique<spench::FileConfigReader>(config))));
     return *this;
   }
 
@@ -87,7 +88,7 @@ TEST_CASE("FAIL Run denoiser handler with exception from inference runner [denoi
 
 TEST_CASE("FAIL Run denoiser handler with exception for incorrect config path [denoiser handler]") {
   REQUIRE_THROWS_WITH(TestHandler()
-      .InitDenoserHandler("config.json"), "Due to errors denoiser could not be created! ret_code: -10");
+      .InitDenoserHandler("config.json"), "Config file load error: bad file: data/config/config.json");
 }
 
 TEST_CASE("FAIL Run dereverberator handler with exception from fe runner [dereverberator handler]") {
@@ -105,7 +106,7 @@ TEST_CASE("FAIL Run dereverberator handler with exception from inference runner 
 TEST_CASE("FAIL Run dereverberator handler with exception for incorrect config path [dereverberator handler]") {
   REQUIRE_THROWS_WITH(TestHandler()
       .InitDereverberatorHandler("config.json"),
-                      "Due to errors dereverberation module could not be created! ret_code: -10");
+                      "Config file load error: bad file: data/config/config.json");
 }
 
 TEST_CASE("SUCCEED Create frame [denoiser handler]") {

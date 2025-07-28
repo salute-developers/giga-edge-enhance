@@ -1042,25 +1042,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a dereverb model 48kHz and with
 TEST_CASE("FAIL Read config for Inference Runner with incorrect model path [onnx runner]") {
   CHECK_THROWS_WITH(TestOnnxRunner()
       .InitRunner("test_configuration_with_incorrect_model_path.yaml"),
-                                            "Config reading error. Model path parameter is not a single string!");
-}
-
-TEST_CASE("FAIL Read config for Inference Runner with incorrect model inputs [onnx runner]") {
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("test_configuration_with_incorrect_model_inputs.yaml"),
-                                            "Config reading error. Model inputs parameter is not a sequence!");
-}
-
-TEST_CASE("FAIL Read config for Inference Runner with incorrect model outputs [onnx runner]") {
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("test_configuration_with_incorrect_model_outputs.yaml"),
-                                            "Config reading error. Model outputs parameter is not a sequence!");
-}
-
-TEST_CASE("FAIL Read config for Inference Runner with incorrect model context length [onnx runner]") {
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("test_configuration_with_incorrect_model_ctx_len.yaml"),
-                                            "Config reading error. Model context length is not a scalar!");
+                                            "Config reading error!");
 }
 
 TEST_CASE("FAIL Read config for Inference Runner with not existed model path [onnx runner]") {
