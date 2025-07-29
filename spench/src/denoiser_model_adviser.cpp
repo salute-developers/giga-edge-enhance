@@ -36,7 +36,7 @@ T DenoiserModelAdviser<T>::calcSnrEstimation(const ComplexNumber<T>& input_spec,
 
   metrics.m_e1_max = std::max(metrics.m_e1_max, static_cast<T>(E1));
 
-  if (E1 > static_cast<double>(metrics.m_e1_max) * this->vad_threshold) {
+  if (E1 > static_cast<double>(metrics.m_e1_max) * this->m_snr_vad_threshold) {
     metrics.m_speech_energy_avg = static_cast<T>(
             (static_cast<double>(metrics.m_speech_energy_avg) * 0.95) + (E1 * 0.05));
   } else {
@@ -62,6 +62,14 @@ T DenoiserModelAdviser<T>::calcSnrEstimation(const ComplexNumber<T>& input_spec,
   if (!std::isfinite(SNR_est)) {
     spdlog::error("log10(SNR) returned non-finite: {}", SNR_est);
     return static_cast<T>(0.0);
+  }
+
+  // When exiting the practical range [-20, 50]
+  // we assign a double practical minimum/maximum
+  if (SNR_est > 50) {
+    SNR_est = 100.0;
+  } else if (SNR_est < -20) {
+    SNR_est = -40.0;
   }
 
   return static_cast<T>(SNR_est);

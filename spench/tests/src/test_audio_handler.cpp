@@ -689,3 +689,43 @@ TEST_CASE("FAIL calcSnrEstimation with mismatched real/imag sizes [denoiser hand
 
   CHECK(snr == 0.0f);
 }
+
+TEST_CASE("SUCCEED calcSnrEstimation with exit from practical range [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+  #else
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+  #endif
+
+  spench::StreamCurrentMetrics<float> metrics;
+
+  std::valarray<float> noisy_real(0.01f, 10);
+  std::valarray<float> noisy_imag(0.01f, 10);
+
+  std::valarray<float> enhanced_real(10000.0f, 10);
+  std::valarray<float> enhanced_imag(10000.0f, 10);
+
+  spench::ComplexNumber<float> input_spec(noisy_real, noisy_imag);
+  spench::ComplexNumber<float> enhanced_spec(enhanced_real, enhanced_imag);
+
+  float snr = sheduler_test_env.GetAdviser()->calcSnrEstimation(input_spec, enhanced_spec, metrics);
+
+  CHECK(snr == 100.0f);
+}
+
+TEST_CASE("FAIL averageSnrDb with no input values [denoiser handler]") {
+  #ifdef BUILD_TFLITE_ENGINE
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_tflite_24khz.yaml"));
+  #else
+    auto sheduler_test_env = std::move(TestHandler().
+                          InitDenoserHandler("default_configuration_fast_onnx_24khz.yaml"));
+  #endif
+
+  float avg = sheduler_test_env.GetAdviser()->averageSnrDb();
+
+  CHECK(std::isnan(avg));
+}
+
