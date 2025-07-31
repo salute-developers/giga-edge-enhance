@@ -7,23 +7,22 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include <optional>
 
 #include "spench/spench_sequencer.h"
+#include "spench/export.h"
 
 namespace spench {
+
 class AudioEchoCancelationHandler;
+
 template<typename T>
 struct SpenchContext;
+
 /**
  * \brief: The class that implement acoustic echo cancelation routine.
  * \ingroup group_cpp
 */
-class
-#ifdef _MSC_VER
-__declspec(dllexport)
-#endif
-SpenchAudioEchoCancelation : public ISpenchSequencer {
+class SPENCH_API SpenchAudioEchoCancelation : public ISpenchSequencer {
  public:
   // echo cancelation
   /**

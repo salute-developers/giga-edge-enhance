@@ -10,16 +10,13 @@
 
 #include "spench/errors.h"
 #include "spench/stream_stat.h"
+#include "spench/export.h"
 
 namespace spench {
 template<typename T>
 struct SpenchContext;
 
-class
-#ifdef _MSC_VER
-__declspec(dllexport)
-#endif
-ISpenchSequencer {
+class SPENCH_API ISpenchSequencer {
  public:
   ISpenchSequencer() = default;
   ISpenchSequencer(ISpenchSequencer&) = delete;

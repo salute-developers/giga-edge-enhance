@@ -9,9 +9,12 @@
 #include <string>
 
 #include "spench/spench_sequencer.h"
+#include "spench/export.h"
 
 namespace spench {
+  
 class DenoiserAudioHandler;
+
 template<typename T>
 struct SpenchContext;
 
@@ -19,11 +22,7 @@ struct SpenchContext;
  * \brief: The class that implement audio denoising routine.
  * \ingroup group_cpp
 */
-class
-#ifdef _MSC_VER
-__declspec(dllexport)
-#endif
-SpenchDenoise : public ISpenchSequencer {
+class SPENCH_API SpenchDenoise : public ISpenchSequencer {
  public:
   /**
    *  \brief: Constructor which loads model from configuration file.

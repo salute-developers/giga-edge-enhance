@@ -8,22 +8,14 @@
 #include <stdlib.h>
 #include "spench/errors.h"
 #include "spench/stream_stat.h"
+#include "spench/export.h"
+
 #if defined(EMSCRIPTEN) || defined(WIN32)
 #include <stdint.h>
 #endif
 
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-#ifndef SPENCH_EXPORT
-# if defined(__GNUC__)
-#  define SPENCH_EXPORT __attribute__ ((visibility ("default")))
-# elif defined(_MSC_VER)
-#  define SPENCH_EXPORT __declspec(dllexport)
-# else
-#  define SPENCH_EXPORT
-# endif
 #endif
 
 /* -------------------------------------------------------------------------- */
@@ -52,7 +44,7 @@ typedef uint8_t  u_int8_t;
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchDenoiseInit(
+SPENCH_API SpenchRetCode SpenchDenoiseInit(
     const char*      config_file,
     SpenchDenoise*   model
 );
@@ -68,7 +60,7 @@ SPENCH_EXPORT SpenchRetCode SpenchDenoiseInit(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchEncryptedDenoiseInit(
+SPENCH_API SpenchRetCode SpenchEncryptedDenoiseInit(
     const char*      config_file,
     const char*      password,
     const char*      checksum,
@@ -80,7 +72,7 @@ SPENCH_EXPORT SpenchRetCode SpenchEncryptedDenoiseInit(
  * \param model Pointer to the model handle to be destroyed. The handle will be set to NULL.
  * \ingroup group_c
  */
-SPENCH_EXPORT void SpenchDenoiseFree(
+SPENCH_API void SpenchDenoiseFree(
     SpenchDenoise* model
 );
 
@@ -94,7 +86,7 @@ SPENCH_EXPORT void SpenchDenoiseFree(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchDenoiseCreateContext(
+SPENCH_API SpenchRetCode SpenchDenoiseCreateContext(
     SpenchDenoise   model,
     SpenchContext*  ctx,
     u_int32_t        in_audio_sr,
@@ -107,7 +99,7 @@ SPENCH_EXPORT SpenchRetCode SpenchDenoiseCreateContext(
  * \param ctx   Pointer to the context handle to be destroyed.
  * \ingroup group_c
  */
-SPENCH_EXPORT void SpenchDenoiseDestroyContext(
+SPENCH_API void SpenchDenoiseDestroyContext(
     SpenchDenoise   model,
     SpenchContext*  ctx
 );
@@ -120,7 +112,7 @@ SPENCH_EXPORT void SpenchDenoiseDestroyContext(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetContextId(
+SPENCH_API SpenchRetCode SpenchDenoiseGetContextId(
     SpenchDenoise       model,
     const SpenchContext ctx,
     u_int64_t*           id
@@ -134,7 +126,7 @@ SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetContextId(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchDenoiseSetContextId(
+SPENCH_API SpenchRetCode SpenchDenoiseSetContextId(
     SpenchDenoise  model,
     SpenchContext  ctx,
     u_int64_t       id
@@ -148,7 +140,7 @@ SPENCH_EXPORT SpenchRetCode SpenchDenoiseSetContextId(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetStreamStat(
+SPENCH_API SpenchRetCode SpenchDenoiseGetStreamStat(
     SpenchDenoise        model,
     const SpenchContext  ctx,
     StreamStatStruct*    stream_stat
@@ -161,7 +153,7 @@ SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetStreamStat(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetEngineThreads(
+SPENCH_API SpenchRetCode SpenchDenoiseGetEngineThreads(
     const SpenchDenoise  model,
     u_int64_t*            engine_threads
 );
@@ -173,7 +165,7 @@ SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetEngineThreads(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetInputFrameSize(
+SPENCH_API SpenchRetCode SpenchDenoiseGetInputFrameSize(
     const SpenchDenoise  model,
     u_int64_t*            input_size
 );
@@ -185,7 +177,7 @@ SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetInputFrameSize(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetSampleRate(
+SPENCH_API SpenchRetCode SpenchDenoiseGetSampleRate(
     const SpenchDenoise  model,
     u_int64_t*            sample_rate
 );
@@ -202,7 +194,7 @@ SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetSampleRate(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchDenoiseProcessChunkFp(
+SPENCH_API SpenchRetCode SpenchDenoiseProcessChunkFp(
     SpenchDenoise   model,
     SpenchContext   ctx,
     const u_int8_t*  memory_in,
@@ -225,7 +217,7 @@ SPENCH_EXPORT SpenchRetCode SpenchDenoiseProcessChunkFp(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchDenoiseProcessChunkInt(
+SPENCH_API SpenchRetCode SpenchDenoiseProcessChunkInt(
     SpenchDenoise   model,
     SpenchContext   ctx,
     const u_int8_t*  memory_in,
@@ -247,7 +239,7 @@ SPENCH_EXPORT SpenchRetCode SpenchDenoiseProcessChunkInt(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetFinalChunkFp(
+SPENCH_API SpenchRetCode SpenchDenoiseGetFinalChunkFp(
     SpenchDenoise   model,
     SpenchContext   ctx,
     u_int8_t**       memory_out,
@@ -267,7 +259,7 @@ SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetFinalChunkFp(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetFinalChunkInt(
+SPENCH_API SpenchRetCode SpenchDenoiseGetFinalChunkInt(
     SpenchDenoise   model,
     SpenchContext   ctx,
     u_int8_t**       memory_out,
@@ -285,7 +277,7 @@ SPENCH_EXPORT SpenchRetCode SpenchDenoiseGetFinalChunkInt(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessInit(
+SPENCH_API SpenchRetCode SpenchAudioProcessInit(
     const char*         config_file,
     SpenchAudioProcess* model
 );
@@ -295,7 +287,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessInit(
  * \param model Model handle to be destroyed.
  * \ingroup group_c
  */
-SPENCH_EXPORT void SpenchAudioProcessFree(
+SPENCH_API void SpenchAudioProcessFree(
     SpenchAudioProcess model
 );
 
@@ -306,7 +298,7 @@ SPENCH_EXPORT void SpenchAudioProcessFree(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddAgc(
+SPENCH_API SpenchRetCode SpenchAudioProcessAddAgc(
     SpenchAudioProcess model
 );
 
@@ -320,7 +312,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddAgc(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddAgcWithParam(
+SPENCH_API SpenchRetCode SpenchAudioProcessAddAgcWithParam(
     SpenchAudioProcess model,
     u_int32_t           audio_sample_rate,
     float              target_power_level,
@@ -334,7 +326,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddAgcWithParam(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddRc(
+SPENCH_API SpenchRetCode SpenchAudioProcessAddRc(
     SpenchAudioProcess model
 );
 
@@ -351,7 +343,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddRc(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddRcWithParam(
+SPENCH_API SpenchRetCode SpenchAudioProcessAddRcWithParam(
     SpenchAudioProcess model,
     u_int32_t           audio_sample_rate,
     float              target_level_db,
@@ -368,7 +360,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddRcWithParam(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddLc(
+SPENCH_API SpenchRetCode SpenchAudioProcessAddLc(
     SpenchAudioProcess model
 );
 
@@ -383,7 +375,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddLc(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddLcWithParam(
+SPENCH_API SpenchRetCode SpenchAudioProcessAddLcWithParam(
     SpenchAudioProcess model,
     u_int32_t           audio_sample_rate,
     float              target_level_db,
@@ -400,7 +392,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddLcWithParam(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddNg(
+SPENCH_API SpenchRetCode SpenchAudioProcessAddNg(
     SpenchAudioProcess model
 );
 
@@ -416,7 +408,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddNg(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddNgWithParam(
+SPENCH_API SpenchRetCode SpenchAudioProcessAddNgWithParam(
     SpenchAudioProcess model,
     u_int32_t           audio_sample_rate,
     float              threshold_db,
@@ -432,7 +424,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddNgWithParam(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddLim(
+SPENCH_API SpenchRetCode SpenchAudioProcessAddLim(
     SpenchAudioProcess model
 );
 
@@ -447,7 +439,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddLim(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddLimWithParam(
+SPENCH_API SpenchRetCode SpenchAudioProcessAddLimWithParam(
     SpenchAudioProcess model,
     u_int32_t           audio_sample_rate,
     float              threshold_db,
@@ -463,7 +455,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddLimWithParam(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddDrc(
+SPENCH_API SpenchRetCode SpenchAudioProcessAddDrc(
     SpenchAudioProcess model
 );
 
@@ -480,7 +472,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddDrc(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddDrcWithParam(
+SPENCH_API SpenchRetCode SpenchAudioProcessAddDrcWithParam(
     SpenchAudioProcess model,
     u_int32_t           audio_sample_rate,
     float              threshold_db,
@@ -501,7 +493,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessAddDrcWithParam(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessChunkFp(
+SPENCH_API SpenchRetCode SpenchAudioProcessChunkFp(
     SpenchAudioProcess model,
     const u_int8_t*     memory_in,
     u_int64_t           in_size,
@@ -522,7 +514,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessChunkFp(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessChunkInt(
+SPENCH_API SpenchRetCode SpenchAudioProcessChunkInt(
     SpenchAudioProcess model,
     const u_int8_t*     memory_in,
     u_int64_t           in_size,
@@ -542,7 +534,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessChunkInt(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessGetFinalChunkFp(
+SPENCH_API SpenchRetCode SpenchAudioProcessGetFinalChunkFp(
     SpenchAudioProcess model,
     u_int8_t**          memory_out,
     u_int64_t*          out_size
@@ -560,7 +552,7 @@ SPENCH_EXPORT SpenchRetCode SpenchAudioProcessGetFinalChunkFp(
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
-SPENCH_EXPORT SpenchRetCode SpenchAudioProcessGetFinalChunkInt(
+SPENCH_API SpenchRetCode SpenchAudioProcessGetFinalChunkInt(
     SpenchAudioProcess model,
     u_int8_t**          memory_out,
     u_int64_t*          out_size

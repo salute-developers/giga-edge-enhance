@@ -9,22 +9,22 @@
 #include <string>
 
 #include "spench/spench_sequencer.h"
+#include "spench/export.h"
 
 namespace spench {
+  
 class AudioProcessing;
+
 template<typename T>
 struct SpenchContext;
+
 /**
  * \brief: The class that implement audio processing routine.
  *         This is the sequence of objects that can be added one by one to modify
  *         sound by dsp algorithms.
  * \ingroup group_cpp
 */
-class
-#ifdef _MSC_VER
-__declspec(dllexport)
-#endif
-SpenchAudioProcess : public ISpenchSequencer {
+class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
  public:
   SpenchRetCode ProcessChunk(const std::vector<float>& chunk,
                              std::vector<float>& ret,
