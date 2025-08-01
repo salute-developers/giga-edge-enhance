@@ -5,17 +5,17 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
 
-#include "spench/spench_sequencer.h"
 #include "spench/export.h"
+#include "spench/spench_sequencer.h"
 
 namespace spench {
-  
+
 class AudioProcessing;
 
-template<typename T>
+template <typename T>
 struct SpenchContext;
 
 /**
@@ -23,36 +23,28 @@ struct SpenchContext;
  *         This is the sequence of objects that can be added one by one to modify
  *         sound by dsp algorithms.
  * \ingroup group_cpp
-*/
+ */
 class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
  public:
-  SpenchRetCode ProcessChunk(const std::vector<float>& chunk,
-                             std::vector<float>& ret,
+  SpenchRetCode ProcessChunk(const std::vector<float>& chunk, std::vector<float>& ret,
                              SpenchContext<float>* ctx = nullptr) final;
 
-  SpenchRetCode ProcessChunk(const std::vector<int16_t>& chunk16,
-                             std::vector<int16_t>& ret16,
+  SpenchRetCode ProcessChunk(const std::vector<int16_t>& chunk16, std::vector<int16_t>& ret16,
                              SpenchContext<float>* ctx = nullptr) final;
 
-  std::vector<float>  operator() (const std::vector<float>& chunk,
-                                  std::vector<float>& ret,
+  std::vector<float> operator()(const std::vector<float>& chunk, std::vector<float>& ret,
+                                SpenchContext<float>* ctx = nullptr) final;
+
+  std::vector<int16_t> operator()(const std::vector<int16_t>& chunk16, std::vector<int16_t>& ret16,
                                   SpenchContext<float>* ctx = nullptr) final;
 
-  std::vector<int16_t>  operator() (const std::vector<int16_t>& chunk16,
-                                    std::vector<int16_t>& ret16,
-                                    SpenchContext<float>* ctx = nullptr) final;
+  SpenchRetCode GetFinalChunk(std::vector<float>& ret, SpenchContext<float>* ctx = nullptr) final;
 
-  SpenchRetCode GetFinalChunk(std::vector<float>& ret,
-                              SpenchContext<float>* ctx = nullptr) final;
+  SpenchRetCode GetFinalChunk(std::vector<int16_t>& ret16, SpenchContext<float>* ctx = nullptr) final;
 
-  SpenchRetCode GetFinalChunk(std::vector<int16_t>& ret16,
-                              SpenchContext<float>* ctx = nullptr) final;
+  std::vector<float> operator()(std::vector<float>& ret, SpenchContext<float>* ctx = nullptr) final;
 
-  std::vector<float>  operator()(std::vector<float>& ret,
-                                 SpenchContext<float>* ctx = nullptr) final;
-
-  std::vector<int16_t>  operator() (std::vector<int16_t>& chunk16,
-                                    SpenchContext<float>* ctx = nullptr) final;
+  std::vector<int16_t> operator()(std::vector<int16_t>& chunk16, SpenchContext<float>* ctx = nullptr) final;
 
  public:
   /**
@@ -60,7 +52,7 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \return: None
    *  \ingroup group_cpp
    */
-                                  SpenchAudioProcess();
+  SpenchAudioProcess();
 
   /**
    *  \brief: Constructor which could take parameters for dsp objects from config file.
@@ -70,17 +62,17 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \return: None
    *  \ingroup group_cpp
    */
-  explicit                        SpenchAudioProcess(const char* config_file);
+  explicit SpenchAudioProcess(const char* config_file);
 
   /**
    *  \brief: Destructor.
    *  \return: None
    *  \ingroup group_cpp
    */
-                                  ~SpenchAudioProcess();
-                                  SpenchAudioProcess(SpenchAudioProcess&&) = delete;
-                                  SpenchAudioProcess(const SpenchAudioProcess&) = delete;
-  SpenchAudioProcess&             operator=(const SpenchAudioProcess&) = delete;
+  ~SpenchAudioProcess();
+  SpenchAudioProcess(SpenchAudioProcess&&) = delete;
+  SpenchAudioProcess(const SpenchAudioProcess&) = delete;
+  SpenchAudioProcess& operator=(const SpenchAudioProcess&) = delete;
 
   /**
    *  \brief: Create and Add Automatic Gain Control object to Audio Process with default
@@ -89,7 +81,7 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
-  SpenchAudioProcess&             AddAGC();
+  SpenchAudioProcess& AddAGC();
 
   /**
    *  \brief: Create and Add Automatic Gain Control object to Audio Process with specific
@@ -102,11 +94,8 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
-  SpenchAudioProcess&             AddAGC(uint32_t audio_sample_rate,
-                                         float target_power_level = 1.0,
-                                         float max_power_gain = 20.0,
-                                         float time_rise = 1e-2,
-                                         float time_fall = 1e-2);
+  SpenchAudioProcess& AddAGC(uint32_t audio_sample_rate, float target_power_level = 1.0, float max_power_gain = 20.0,
+                             float time_rise = 1e-2, float time_fall = 1e-2);
 
   /**
    *  \brief: Create and Add Range Control object to Audio Process with default parameters
@@ -115,7 +104,7 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
-  SpenchAudioProcess&             AddRC();
+  SpenchAudioProcess& AddRC();
 
   /**
    *  \brief: Create and Add Loudness Control object to Audio Process with specific
@@ -128,10 +117,8 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \ingroup group_cpp
    */
 
-  SpenchAudioProcess&             AddLC(uint32_t audio_sample_rate,
-                                        float target_level_db = -23,
-                                        float bypass_time = 3,
-                                        float max_gain_db = 40);
+  SpenchAudioProcess& AddLC(uint32_t audio_sample_rate, float target_level_db = -23, float bypass_time = 3,
+                            float max_gain_db = 40);
 
   /**
    *  \brief: Create and Add Loudness Control object to Audio Process with default parameters
@@ -140,7 +127,7 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
-  SpenchAudioProcess&             AddLC();
+  SpenchAudioProcess& AddLC();
 
   /**
    *  \brief: Create and Add Range Control object to Audio Process with specific
@@ -155,12 +142,8 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \ingroup group_cpp
    */
 
-  SpenchAudioProcess&             AddRC(uint32_t audio_sample_rate,
-                                        float target_level_db = -3,
-                                        float max_gain_db = 10,
-                                        float attack_time = 1e-5,
-                                        float release_time = 300,
-                                        float hold_time = 5);
+  SpenchAudioProcess& AddRC(uint32_t audio_sample_rate, float target_level_db = -3, float max_gain_db = 10,
+                            float attack_time = 1e-5, float release_time = 300, float hold_time = 5);
 
 
   /**
@@ -170,7 +153,7 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
-  SpenchAudioProcess&             AddNG();
+  SpenchAudioProcess& AddNG();
 
   /**
    *  \brief: Create and Add Noise Gate object to Audio Process with specific
@@ -183,11 +166,8 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
-  SpenchAudioProcess&             AddNG(uint32_t audio_sample_rate,
-                                        float threshold_db = -15.0,
-                                        float attack_time = 5e-2,
-                                        float release_time = 2e-2,
-                                        float hold_time = 5e-2);
+  SpenchAudioProcess& AddNG(uint32_t audio_sample_rate, float threshold_db = -15.0, float attack_time = 5e-2,
+                            float release_time = 2e-2, float hold_time = 5e-2);
 
   /**
    *  \brief: Create and Add Limiter object to Audio Process with default parameters
@@ -196,7 +176,7 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
-  SpenchAudioProcess&             AddLim();
+  SpenchAudioProcess& AddLim();
 
   /**
    *  \brief: Create and Add Limiter object to Audio Process with specific
@@ -209,11 +189,8 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
-  SpenchAudioProcess&             AddLim(uint32_t audio_sample_rate,
-                                        float threshold_db = -3.0,
-                                        float knee_width = 0.0,
-                                        float attack_time = 0.0,
-                                        float release_time = 0.2);
+  SpenchAudioProcess& AddLim(uint32_t audio_sample_rate, float threshold_db = -3.0, float knee_width = 0.0,
+                             float attack_time = 0.0, float release_time = 0.2);
 
   /**
    *  \brief: Create and Add Dynamic Range Compressor object to Audio Process with default
@@ -222,7 +199,7 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
-  SpenchAudioProcess&             AddDRC();
+  SpenchAudioProcess& AddDRC();
 
   /**
    *  \brief: Create and Add Dynamic Range Compressor object to Audio Process with specific
@@ -236,14 +213,10 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
-  SpenchAudioProcess&             AddDRC(uint32_t audio_sample_rate,
-                                         float threshold_db = -15.0,
-                                         uint32_t ratio = 5,
-                                         float knee_width = 0.0,
-                                         float attack_time = 1e-2,
-                                         float release_time = 2e-1);
+  SpenchAudioProcess& AddDRC(uint32_t audio_sample_rate, float threshold_db = -15.0, uint32_t ratio = 5,
+                             float knee_width = 0.0, float attack_time = 1e-2, float release_time = 2e-1);
 
-private:
+ private:
   /**
    *  \brief: Process a chunk of audio with float point data via sequence of dsp objects.
    *  \param: A const vector of input data.
@@ -251,8 +224,7 @@ private:
    *  \return: Reference to out.
    *  \ingroup group_cpp
    */
-  std::vector<float>               process(const std::vector<float>& in,
-                                                 std::vector<float>& out);
+  std::vector<float> process(const std::vector<float>& in, std::vector<float>& out);
   /**
    *  \brief: Process a chunk of audio withpcm16 data via sequence of dsp objects.
    *          Requires additional time for convertion ot fp32 and vice versa.
@@ -261,8 +233,7 @@ private:
    *  \return: Reference to out.
    *  \ingroup group_cpp
    */
-  std::vector<int16_t>            process(const std::vector<int16_t>& in,
-                                                std::vector<int16_t>& out);
+  std::vector<int16_t> process(const std::vector<int16_t>& in, std::vector<int16_t>& out);
 
 
   std::unique_ptr<AudioProcessing> m_dsp;

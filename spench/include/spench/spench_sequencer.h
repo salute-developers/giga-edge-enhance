@@ -5,15 +5,15 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "spench/errors.h"
-#include "spench/stream_stat.h"
 #include "spench/export.h"
+#include "spench/stream_stat.h"
 
 namespace spench {
-template<typename T>
+template <typename T>
 struct SpenchContext;
 
 class SPENCH_API ISpenchSequencer {
@@ -24,32 +24,24 @@ class SPENCH_API ISpenchSequencer {
   ISpenchSequencer& operator=(const ISpenchSequencer&) = delete;
   virtual ~ISpenchSequencer() = default;
 
-  virtual SpenchRetCode ProcessChunk(const std::vector<float>& chunk,
-                                     std::vector<float>& ret,
+  virtual SpenchRetCode ProcessChunk(const std::vector<float>& chunk, std::vector<float>& ret,
                                      SpenchContext<float>* ctx = nullptr) = 0;
 
-  virtual SpenchRetCode ProcessChunk(const std::vector<int16_t>& chunk16,
-                                     std::vector<int16_t>& ret16,
+  virtual SpenchRetCode ProcessChunk(const std::vector<int16_t>& chunk16, std::vector<int16_t>& ret16,
                                      SpenchContext<float>* ctx = nullptr) = 0;
 
-  virtual std::vector<float> operator()(const std::vector<float>& chunk,
-                                         std::vector<float>& ret,
-                                         SpenchContext<float>* ctx = nullptr) = 0;
+  virtual std::vector<float> operator()(const std::vector<float>& chunk, std::vector<float>& ret,
+                                        SpenchContext<float>* ctx = nullptr) = 0;
 
-  virtual std::vector<int16_t> operator()(const std::vector<int16_t>& chunk16,
-                                           std::vector<int16_t>& ret16,
-                                           SpenchContext<float>* ctx = nullptr) = 0;
+  virtual std::vector<int16_t> operator()(const std::vector<int16_t>& chunk16, std::vector<int16_t>& ret16,
+                                          SpenchContext<float>* ctx = nullptr) = 0;
 
-  virtual SpenchRetCode GetFinalChunk(std::vector<float>& ret,
-                                      SpenchContext<float>* ctx = nullptr) = 0;
+  virtual SpenchRetCode GetFinalChunk(std::vector<float>& ret, SpenchContext<float>* ctx = nullptr) = 0;
 
-  virtual SpenchRetCode GetFinalChunk(std::vector<int16_t>& ret16,
-                                      SpenchContext<float>* ctx = nullptr) = 0;
+  virtual SpenchRetCode GetFinalChunk(std::vector<int16_t>& ret16, SpenchContext<float>* ctx = nullptr) = 0;
 
-  virtual std::vector<float> operator()(std::vector<float>& ret,
-                                         SpenchContext<float>* ctx = nullptr) = 0;
+  virtual std::vector<float> operator()(std::vector<float>& ret, SpenchContext<float>* ctx = nullptr) = 0;
 
-  virtual std::vector<int16_t> operator()(std::vector<int16_t>& ret16,
-                                           SpenchContext<float>* ctx = nullptr) = 0;
+  virtual std::vector<int16_t> operator()(std::vector<int16_t>& ret16, SpenchContext<float>* ctx = nullptr) = 0;
 };
 }  // namespace spench

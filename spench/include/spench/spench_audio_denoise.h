@@ -5,23 +5,23 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
 
-#include "spench/spench_sequencer.h"
 #include "spench/export.h"
+#include "spench/spench_sequencer.h"
 
 namespace spench {
-  
+
 class DenoiserAudioHandler;
 
-template<typename T>
+template <typename T>
 struct SpenchContext;
 
 /**
  * \brief: The class that implement audio denoising routine.
  * \ingroup group_cpp
-*/
+ */
 class SPENCH_API SpenchDenoise : public ISpenchSequencer {
  public:
   /**
@@ -36,46 +36,44 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
    *  \return: None
    *  \ingroup group_cpp
    */
-                                  SpenchDenoise(const char* config_file,
-                                               const char* password = "",
-                                               const char* checksum = "");
+  explicit SpenchDenoise(const char* config_file, const char* password = "", const char* checksum = "");
 
   /**
    *  \brief: Destructor.
    *  \return: None
    *  \ingroup group_cpp
    */
-                                  ~SpenchDenoise();
-                                  SpenchDenoise(SpenchDenoise&&);
-                                  SpenchDenoise(const SpenchDenoise&) = delete;
-  SpenchDenoise&                  operator=(const SpenchDenoise&) = delete;
+  ~SpenchDenoise();
+  SpenchDenoise(SpenchDenoise&&);
+  SpenchDenoise(const SpenchDenoise&) = delete;
+  SpenchDenoise& operator=(const SpenchDenoise&) = delete;
 
   /**
    * \brief: Reload a feature extractor runner pointer and an inference runner pointer.
    * \ingroup group_cpp
-  */
-  SpenchRetCode                   ReloadConfig();
+   */
+  SpenchRetCode ReloadConfig();
 
   /**
    *  \brief: Retrieve a number of inference engine (onnx, tflite) threads number.
    *  \return: A number of threads.
    *  \ingroup group_cpp
    */
-  uint32_t                        GetEngineThreads();
+  uint32_t GetEngineThreads();
 
   /**
    *  \brief: Retrieve a model sample rate value, specified in .yaml file.
    *  \return: A model sample rate value.
    *  \ingroup group_cpp
    */
-  uint64_t                        GetModelSampleRate();
+  uint64_t GetModelSampleRate();
 
   /**
    *  \brief: Retrieve a model input size.
    *  \return: A model input size.
    *  \ingroup group_cpp
    */
-  uint64_t                        GetModelInputFrameSize();
+  uint64_t GetModelInputFrameSize();
 
   /**
    *  \brief: Retrieve a structure with sound stream statistic.
@@ -83,7 +81,7 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
    *  \param: A pointer to a context.
    *  \ingroup group_cpp
    */
-  StreamStatStruct                GetStreamStat(const SpenchContext<float>*);
+  StreamStatStruct GetStreamStat(const SpenchContext<float>*);
 
   // working with context
   /**
@@ -95,8 +93,7 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
    *  \return: A pointer to a context.
    *  \ingroup group_cpp
    */
-  SpenchContext<float>*          CreateContext(uint32_t in_audio_sr = 0,
-                                                uint32_t out_audio_sr = 0);
+  SpenchContext<float>* CreateContext(uint32_t in_audio_sr = 0, uint32_t out_audio_sr = 0);
 
   /**
    *  \brief: Retrieve an id number of context.
@@ -104,7 +101,7 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
    *  \return: An id number.
    *  \ingroup group_cpp
    */
-  uint64_t                        GetContextId(const SpenchContext<float>*);
+  uint64_t GetContextId(const SpenchContext<float>*);
 
   /**
    *  \brief: Set an id number for a context.
@@ -113,8 +110,7 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
    *  \return: None.
    *  \ingroup group_cpp
    */
-  void                            SetContextId(SpenchContext<float>*,
-                                               uint64_t);
+  void SetContextId(SpenchContext<float>*, uint64_t);
 
   /**
    *  \brief: Deallocate a context memory.
@@ -122,7 +118,7 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
    *  \return: None.
    *  \ingroup group_cpp
    */
-  void                            DestroyContext(SpenchContext<float>**);
+  void DestroyContext(SpenchContext<float>**);
 
   // denoising
   /**
@@ -134,9 +130,7 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
    *  \return: Error code. SpenchRetCode::SUCCESS means success.
    *  \ingroup group_cpp
    */
-  SpenchRetCode                   ProcessChunk(const std::vector<float>&,
-                                               std::vector<float>&,
-                                               SpenchContext<float>*) final;
+  SpenchRetCode ProcessChunk(const std::vector<float>&, std::vector<float>&, SpenchContext<float>*) final;
   /**
    *  \brief: Enhance a chunk of audio with pcm16 data. Implemented as
    *          a call of analouge for fp32 data processing and requires additional
@@ -148,17 +142,13 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
    *  \return: Error code. SpenchRetCode::SUCCESS means success.
    *  \ingroup group_cpp
    */
-  SpenchRetCode                   ProcessChunk(const std::vector<int16_t>&,
-                                               std::vector<int16_t>&,
-                                               SpenchContext<float>*) final;
+  SpenchRetCode ProcessChunk(const std::vector<int16_t>&, std::vector<int16_t>&, SpenchContext<float>*) final;
 
-  std::vector<float>              operator()(const std::vector<float>& chunk,
-                                         std::vector<float>& ret,
-                                         SpenchContext<float>* ctx) final;
+  std::vector<float> operator()(const std::vector<float>& chunk, std::vector<float>& ret,
+                                SpenchContext<float>* ctx) final;
 
-  std::vector<int16_t>            operator()(const std::vector<int16_t>& chunk16,
-                                             std::vector<int16_t>& ret16,
-                                             SpenchContext<float>* ctx) final;
+  std::vector<int16_t> operator()(const std::vector<int16_t>& chunk16, std::vector<int16_t>& ret16,
+                                  SpenchContext<float>* ctx) final;
   /**
    *  \brief: Retrieve final chunks with float point data. If model has a future
    *          context, the method enhances and returns remaining data from a
@@ -170,8 +160,7 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
    *  \return: Error code. SpenchRetCode::SUCCESS means success.
    *  \ingroup group_cpp
    */
-  SpenchRetCode                   GetFinalChunk(std::vector<float>& ret,
-                                                SpenchContext<float>* ctx) final;
+  SpenchRetCode GetFinalChunk(std::vector<float>& ret, SpenchContext<float>* ctx) final;
 
   /**
    *  \brief: Retrieve final chunks with pcm16 data. If model has a future
@@ -184,14 +173,11 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
    *  \return: Error code. SpenchRetCode::SUCCESS means success.
    *  \ingroup group_cpp
    */
-  SpenchRetCode                   GetFinalChunk(std::vector<int16_t>& ret16,
-                                                SpenchContext<float>* ctx) final;
+  SpenchRetCode GetFinalChunk(std::vector<int16_t>& ret16, SpenchContext<float>* ctx) final;
 
-  std::vector<float>              operator()(std::vector<float>& ret,
-                                             SpenchContext<float>* ctx) final;
+  std::vector<float> operator()(std::vector<float>& ret, SpenchContext<float>* ctx) final;
 
-  std::vector<int16_t>            operator()(std::vector<int16_t>& ret16,
-                                             SpenchContext<float>* ctx) final;
+  std::vector<int16_t> operator()(std::vector<int16_t>& ret16, SpenchContext<float>* ctx) final;
 
  private:
   std::unique_ptr<DenoiserAudioHandler> m_handler;

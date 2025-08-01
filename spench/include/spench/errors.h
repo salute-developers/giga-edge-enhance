@@ -9,7 +9,7 @@
  *  \brief: Spench API provides status codes that are usually related to client-side errors.
  *          Here the definition and description of each of them.
  */
-typedef enum  SpenchRetCodeEnum {
+typedef enum SpenchRetCodeEnum {
   /**
    *  \brief: Everything processed successfully.
    */
@@ -66,11 +66,13 @@ typedef enum  SpenchRetCodeEnum {
    */
   ERR_INVALID_FRAME_SIZE,
   /**
-   *  \brief: A error happened during output resampling. Probably, an incorrect input sample rate was provided for stream context.
+   *  \brief: A error happened during output resampling. Probably, an incorrect input sample rate was provided for
+   * stream context.
    */
   ERR_INPUT_AUDIO_RESAMPLE_PROBLEM,
   /**
-   *  \brief: A error happened during output resampling. Probably, an incorrect output sample rate was provided for stream context.
+   *  \brief: A error happened during output resampling. Probably, an incorrect output sample rate was provided for
+   * stream context.
    */
   ERR_OUTPUT_AUDIO_RESAMPLE_PROBLEM,
   /**
@@ -79,8 +81,8 @@ typedef enum  SpenchRetCodeEnum {
    */
   ERR_MEL_SPEC_CALC_PROBLEM,
   /**
-   *  \brief: A error happened during audio chunk processing by the model. Probably a problem related to inference engine
-   *          or drivers configuration.
+   *  \brief: A error happened during audio chunk processing by the model. Probably a problem related to inference
+   * engine or drivers configuration.
    */
   ERR_INFERENCE_PROBLEM,
   /**
