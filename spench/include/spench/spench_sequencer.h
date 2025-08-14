@@ -18,6 +18,8 @@ struct SpenchContext;
 
 class SPENCH_API ISpenchSequencer {
  public:
+  /// Parse & validate a YAML document from a raw string
+  explicit ISpenchSequencer(const std::string& yaml_str) {}
   ISpenchSequencer() = default;
   ISpenchSequencer(ISpenchSequencer&) = delete;
   ISpenchSequencer(ISpenchSequencer&&) = delete;

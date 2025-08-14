@@ -19,6 +19,13 @@ SpenchDenoise::SpenchDenoise(const char* config_file,
   spdlog::info("Create Spench denoiser form config {}", std::string(config_file));
 }
 
+// YAML-snippet-based config constructor
+SpenchDenoise::SpenchDenoise(const std::string& yaml_str,
+                             const char* password,
+                             const char* checksum) {
+  spdlog::info("Create Spench denoiser from YAML string config");
+}
+
 SpenchDenoise::SpenchDenoise(SpenchDenoise&& orig):
                             m_handler(std::move(orig.m_handler)) {
   orig.m_handler.reset();

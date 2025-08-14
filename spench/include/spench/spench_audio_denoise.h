@@ -38,6 +38,8 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
    */
   explicit SpenchDenoise(const char* config_file, const char* password = "", const char* checksum = "");
 
+  explicit SpenchDenoise(const std::string& yaml_str, const char* password = "", const char* checksum = "");
+
   /**
    *  \brief: Destructor.
    *  \return: None
