@@ -3,7 +3,6 @@
 #include "contrib/yaml-cpp/yaml.h"
 #include "tests/src/utils.h"
 #include <memory>
-#include <unordered_map>
 #include <catch.hpp>
 #include <map>
 #include <iostream>

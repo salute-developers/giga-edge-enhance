@@ -1,5 +1,4 @@
 #include <memory>
-#include <unordered_map>
 #include <catch.hpp>
 #include <spench.h>
 #include "spench/src/spench_task.h"

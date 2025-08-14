@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <functional>
 #include <numeric>
-#include <unordered_map>
 #include <tuple>
 #include <cassert>
 #include "spench/src/feature_params.h"

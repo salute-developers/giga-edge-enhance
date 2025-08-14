@@ -2,8 +2,8 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <yaml-cpp/yaml.h>
 #include "contrib/ctpl/ctpl_stl.h"
-#include "contrib/yaml-cpp/yaml.h"
 #include "spench/src/feature_params.h"
 #include "spench/src/spench_task.h"
 #include "spench/src/feature_extractor.h"
