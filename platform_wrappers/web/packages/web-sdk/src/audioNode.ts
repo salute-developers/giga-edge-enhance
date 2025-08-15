@@ -10,7 +10,16 @@ import {
     WORKLET_MESSAGES,
     WorkletMessage,
 } from './utils/ipc';
-import { areWorkerFeaturesEnabled, areWorkletFeaturesEnabled, Features, Settings } from './utils/common';
+import {
+    areWorkerFeaturesEnabled,
+    areWorkletFeaturesEnabled,
+    Features,
+    getWorkerFeatures,
+    getWorkletFeatures,
+    Settings,
+    WorkerFeatures,
+    WorkletFeatures,
+} from './utils/common';
 import { LP_CAUSE_THRESHOLD, SPENCH_WORKLET_NAME } from './utils/constants';
 import SpenchWorker from './worker';
 import Loader, { LoadError } from './loader';
@@ -38,7 +47,7 @@ type WorkletPort = CustomPort<ControllerMessage, WorkletMessage>;
 type WorkerPort = CustomPort<ControllerMessage, WorkerMessage>;
 
 export interface SpenchAudioNode extends AudioWorkletNode {
-    setFeatures(features: Features): Promise<void | LoadError | SetFeaturesFailedError>;
+    setFeatures(features: Partial<Features>): Promise<void | LoadError | SetFeaturesFailedError>;
     reset(): void;
     destroy(): void;
 
@@ -72,7 +81,12 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
 
     readonly #telemetry: Telemetry;
 
-    #features: Features = {};
+    #features: Features = {
+        normalization: false,
+        echoCancellation: false,
+        noiseCancellation: false,
+        dereverberation: false,
+    };
 
     #worker: SpenchWorker | undefined;
 
@@ -107,18 +121,39 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         return super.port;
     }
 
-    async setFeatures(features: Features): Promise<void | LoadError | SetFeaturesFailedError> {
+    async setFeatures(features: Partial<Features>): Promise<void | LoadError | SetFeaturesFailedError> {
         if (this.#setFeaturesLock) {
             return this.#setFeaturesLock.then(() => this.setFeatures(features));
         }
         const { promise, resolve } = new Deferred<void>();
         this.#setFeaturesLock = promise;
 
-        const filteredFeatures: Features = Object.fromEntries(
+        const filteredFeatures = Object.fromEntries(
             Object.entries(features).filter(([, value]) => value !== undefined),
         );
         this.#logger.info('Setting Spench features:', filteredFeatures);
-        const res = await this.#setFeatures(filteredFeatures);
+        this.#loader.preload(filteredFeatures);
+
+        const mixed: Features = {
+            ...this.#features,
+            ...filteredFeatures,
+        };
+
+        let res;
+
+        // Incremental start (to speed up dsp start)
+        if (areWorkerFeaturesEnabled(mixed) && areWorkletFeaturesEnabled(mixed) && !this.#workerPort) {
+            this.#logger.debug('Starting DSP features first to speed up loading');
+            const workletFeatures = getWorkletFeatures(mixed);
+
+            res = await this.#setFeatures({ ...workletFeatures, ...getWorkerFeatures() });
+
+            if (!(res instanceof SpenchError)) {
+                res = await this.#setFeatures(mixed);
+            }
+        } else {
+            res = await this.#setFeatures(mixed);
+        }
 
         this.#setFeaturesLock = undefined;
         resolve();
@@ -184,20 +219,10 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         const workerFeaturesEnabled = areWorkerFeaturesEnabled(features);
         const shouldToggleWorkerFeatures = workerFeaturesEnabled !== areWorkerFeaturesEnabled(previousFeatures);
         const areWorkletFeaturesChanged = [
-            typeof features.normalization !== 'undefined' &&
-                (this.#features.normalization || false) !== (features.normalization || false),
-            typeof features.echoCancellation !== 'undefined' &&
-                (this.#features.echoCancellation || false) !== (features.echoCancellation || false),
+            this.#features.normalization !== features.normalization,
+            this.#features.echoCancellation !== features.echoCancellation,
         ].some(Boolean);
-        const mixedFeatures = {
-            ...this.#features,
-            ...features,
-        };
-        const { normalization = false, echoCancellation } = mixedFeatures;
-        const workletFeatures = {
-            normalization,
-            echoCancellation,
-        };
+        const workletFeatures = getWorkletFeatures(features);
 
         if (areWorkletFeaturesChanged || shouldToggleWorkerFeatures) {
             this.#logger.debug('Applying Worklet features:', workletFeatures);
@@ -242,19 +267,12 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         }
     }
 
-    async #setWorkerFeatures(features: Features): Promise<void | SetFeaturesFailedError> {
+    async #setWorkerFeatures(features: WorkerFeatures): Promise<void | SetFeaturesFailedError> {
         const areWorkerFeaturesChanged = [
-            typeof features.noiseCancellation !== 'undefined' &&
-                (this.#features.noiseCancellation || false) !== (features.noiseCancellation || false),
-            typeof features.dereverberation !== 'undefined' &&
-                (this.#features.dereverberation || false) !== (features.dereverberation || false),
+            this.#features.noiseCancellation !== features.noiseCancellation,
+            this.#features.dereverberation !== features.dereverberation,
         ].some(Boolean);
-        const mixedFeatures = {
-            ...this.#features,
-            ...features,
-        };
-        const { noiseCancellation = false, dereverberation = false } = mixedFeatures;
-        const workerFeatures = { noiseCancellation, dereverberation };
+        const workerFeatures = getWorkerFeatures(features);
 
         if (areWorkerFeaturesChanged) {
             this.#logger.debug('Applying Worker features:', workerFeatures);
@@ -316,7 +334,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         return false;
     }
 
-    async #loadWorkletFeatures(features: Features): Promise<void | LoadError> {
+    async #loadWorkletFeatures(features: WorkletFeatures): Promise<void | LoadError> {
         if (this.#isDspLoaded) return;
 
         const workletFeaturesEnabled = areWorkletFeaturesEnabled(features);
@@ -340,7 +358,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         this.#isDspLoaded = true;
     }
 
-    async #loadWorkerFeatures(features: Features): Promise<void | LoadError> {
+    async #loadWorkerFeatures(features: WorkerFeatures): Promise<void | LoadError> {
         if (this.#workerPort) return;
 
         const workerFeaturesEnabled = areWorkerFeaturesEnabled(features);

@@ -18,7 +18,7 @@ import {
 import { getWorkerLogger } from '../../utils/logger';
 import { getWorkletTelemetry } from '../../utils/telemetry';
 import { SpenchDspWrapper } from '../../utils/wrapper';
-import { Features, getSettingsWithDefaults, Settings } from '../../utils/common';
+import { getSettingsWithDefaults, Settings, WorkletFeatures } from '../../utils/common';
 
 type ControllerPort = CustomPort<WorkletMessage, ControllerMessage>;
 type WorkerPort = CustomPort<WorkletMessage, WorkerMessage>;
@@ -274,7 +274,7 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         assert(false, 'Unknown message type from Worker');
     });
 
-    setFeatures(features: Features, workerFeaturesEnabled: boolean) {
+    setFeatures(features: WorkletFeatures, workerFeaturesEnabled: boolean) {
         this.logger.debug(
             `Setting features: ${JSON.stringify(features)}, worker features enabled: ${workerFeaturesEnabled}`,
         );

@@ -1,5 +1,5 @@
 import { MetricNameToPayloadMap } from './telemetry';
-import { Features, Settings } from './common';
+import { Settings, WorkerFeatures, WorkletFeatures } from './common';
 import { LogLevel, Verbosity } from './logger';
 
 export type Message<N, D = unknown> = D & {
@@ -57,7 +57,7 @@ export type WorkletMessage =
     | Message<typeof WORKLET_MESSAGES.INIT, { verbosity: Verbosity; isTelemetryEnabled: boolean; settings: Settings }>
     | Message<typeof WORKLET_MESSAGES.WORKER_CREATED, { workerPort: MessagePort }>
     | Message<typeof WORKLET_MESSAGES.RUNTIME_ASSETS, { dspWasm: ArrayBuffer }>
-    | Message<typeof WORKLET_MESSAGES.SET_FEATURES, { features: Features; workerFeaturesEnabled: boolean }>
+    | Message<typeof WORKLET_MESSAGES.SET_FEATURES, { features: WorkletFeatures; workerFeaturesEnabled: boolean }>
     | Message<typeof WORKLET_MESSAGES.OUTPUT, { output: Float32Array }>
     | Message<typeof WORKLET_MESSAGES.RESET, { telemetry?: boolean }>
     | Message<typeof WORKLET_MESSAGES.DESTROY>;
@@ -70,7 +70,7 @@ export type WorkerMessage =
               workletPort: MessagePort;
           }
       >
-    | Message<typeof WORKER_MESSAGES.SET_FEATURES, { features: Features }>
+    | Message<typeof WORKER_MESSAGES.SET_FEATURES, { features: WorkerFeatures }>
     | Message<typeof WORKER_MESSAGES.INPUT, { input: Float32Array }>
     | Message<typeof WORKER_MESSAGES.DESTROY>
     | Message<typeof WORKER_MESSAGES.RESET>;

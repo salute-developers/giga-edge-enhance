@@ -16,7 +16,7 @@ import { assert } from '../../utils/error';
 import { SpenchWrapper } from '../../utils/wrapper';
 import { getWorkerLogger } from '../../utils/logger';
 import { getWorkerTelemetry, WorkerTelemetry } from '../../utils/telemetry';
-import { Features } from '../../utils/common';
+import { WorkerFeatures } from '../../utils/common';
 import { SPENCH_FRAME_SIZE_SECONDS, TRANSPORT_SIZE_SECONDS, WASM_PATH } from '../../utils/constants';
 import RingBuffer from '../../utils/ringBuffer';
 
@@ -86,7 +86,7 @@ class SpenchWorker {
         logger.debug('context reset');
     }
 
-    setFeatures(features: Features): void {
+    setFeatures(features: WorkerFeatures): void {
         logger.debug(`setting features: ${JSON.stringify(features)}`);
         this.instance.clear();
 

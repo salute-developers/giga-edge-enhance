@@ -7,12 +7,17 @@ export type Models = {
     dereverberation: { full48k: ModelOrigin };
 };
 
-export type Features = Partial<{
+export type WorkerFeatures = {
     noiseCancellation: boolean | keyof Models['noiseCancellation'];
     dereverberation: boolean | keyof Models['dereverberation'];
+};
+
+export type WorkletFeatures = {
     normalization: boolean;
     echoCancellation: boolean;
-}>;
+};
+
+export type Features = WorkerFeatures & WorkletFeatures;
 
 export type Settings = {
     lowPerformanceWindowSeconds: number;
@@ -32,15 +37,25 @@ export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Setti
     };
 }
 
-export function areWorkerFeaturesEnabled(features: Features) {
-    return [features.noiseCancellation, features.dereverberation].some(Boolean);
+export function areWorkerFeaturesEnabled(features: Partial<Features>) {
+    return Object.values(getWorkerFeatures(features)).some(Boolean);
 }
 
-export function areWorkletFeaturesEnabled(features: Features) {
-    return [features.normalization, features.echoCancellation].some(Boolean);
+export function areWorkletFeaturesEnabled(features: Partial<Features>) {
+    return Object.values(getWorkletFeatures(features)).some(Boolean);
 }
 
-export type SharedFeatures = Pick<Features, 'normalization'>;
+export function getWorkerFeatures(features: Partial<Features> = {}): WorkerFeatures {
+    const { noiseCancellation = false, dereverberation = false } = features;
+
+    return { noiseCancellation, dereverberation };
+}
+
+export function getWorkletFeatures(features: Partial<Features> = {}): WorkletFeatures {
+    const { normalization = false, echoCancellation = false } = features;
+
+    return { normalization, echoCancellation };
+}
 
 export async function downloadFileAsBuffer(url: URL): Promise<[ArrayBuffer, number]> {
     const start = performance.now();

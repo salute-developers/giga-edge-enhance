@@ -59,7 +59,7 @@ class Loader {
         return this.#fullWorkerLoadPromise || (this.#fullWorkerLoadPromise = load());
     }
 
-    preload(features: Features): void {
+    preload(features: Partial<Features>): void {
         this.loadSpenchWorklet();
 
         if (features.normalization || features.echoCancellation) {

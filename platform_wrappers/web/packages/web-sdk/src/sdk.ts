@@ -8,7 +8,7 @@ import Loader, { LoadError } from './loader';
 type CreateSpenchParams = {
     logger?: ExternalLogger;
     sendMetric?: SendMetricFunction;
-    preloadFeatures?: Features;
+    preloadFeatures?: Partial<Features>;
     loggerVerbosity?: Verbosity;
     settings?: Partial<Settings>;
 };
@@ -69,7 +69,7 @@ class SpenchSDK {
         return instance;
     }
 
-    async createAudioNode(features?: Features): Promise<SpenchAudioNode | LoadError | SetFeaturesFailedError> {
+    async createAudioNode(features?: Partial<Features>): Promise<SpenchAudioNode | LoadError | SetFeaturesFailedError> {
         this.#loader.preload(features || {});
 
         const workletLoad = await this.#loader.loadSpenchWorklet();
