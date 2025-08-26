@@ -1,4 +1,5 @@
 import {
+    SPENCH_FRAME_SIZE_SECONDS,
     SPENCH_WORKLET_NAME,
     TRANSPORT_SIZE_SECONDS,
     WORKLET_OUTPUT_BUFFER_SECONDS,
@@ -28,6 +29,12 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
     readonly outputBuffer = new RingBuffer(Math.trunc(WORKLET_OUTPUT_BUFFER_SECONDS * sampleRate));
 
     readonly inputBuffer = new RingBuffer(Math.trunc(2 * TRANSPORT_SIZE_SECONDS * sampleRate));
+
+    readonly dspInputBuffer = new RingBuffer(Math.trunc(2 * SPENCH_FRAME_SIZE_SECONDS * sampleRate));
+
+    readonly dspLoopbackBuffer = new RingBuffer(Math.trunc(2 * SPENCH_FRAME_SIZE_SECONDS * sampleRate));
+
+    readonly dspOutputBuffer = new RingBuffer(Math.trunc(2 * SPENCH_FRAME_SIZE_SECONDS * sampleRate));
 
     logger = getWorkerLogger(this.controllerPort, 'verbose', '[worklet]');
 
@@ -78,10 +85,11 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
         this.timerTick();
 
         const virtualOutputs = outputs.map((channels) => channels.map((channel) => new Float32Array(channel.length)));
-        this.pass(inputs, virtualOutputs);
 
         if (this.isDspEnabled) {
-            this.processDsp(virtualOutputs, virtualOutputs);
+            this.processDsp(inputs, virtualOutputs);
+        } else {
+            this.pass(inputs, virtualOutputs);
         }
 
         if (this.areWorkerFeaturesEnabled) {
@@ -142,14 +150,28 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
 
     processDsp(inputs: Float32Array[][], outputs: Float32Array[][]) {
         assert(this.instance, 'dsp instance must be initialized before processing');
+        const frameSize = Math.ceil(SPENCH_FRAME_SIZE_SECONDS * sampleRate);
         const [input, loopback] = inputs;
         const [output] = outputs;
         const [inputChannel] = input;
         const [outputChannel] = output;
-        const [loopbackChannel] = loopback || [];
+        const [loopbackChannel = new Float32Array(inputChannel.length)] = loopback || [];
 
-        const result = this.instance.process(inputChannel, loopbackChannel);
-        outputChannel.set(result);
+        this.dspInputBuffer.push(inputChannel);
+        this.dspLoopbackBuffer.push(loopbackChannel);
+
+        if (this.dspInputBuffer.size >= frameSize) {
+            const inputFrame = new Float32Array(frameSize);
+            const loopbackFrame = new Float32Array(frameSize);
+            this.dspInputBuffer.pull(inputFrame, 0, frameSize);
+            this.dspLoopbackBuffer.pull(loopbackFrame, 0, frameSize);
+
+            this.dspOutputBuffer.push(this.instance.process(inputFrame, loopbackFrame));
+        }
+
+        if (this.dspOutputBuffer.size >= outputChannel.length) {
+            this.dspOutputBuffer.pull(outputChannel, 0, outputChannel.length);
+        }
     }
 
     pass(inputs: Float32Array[][], outputs: Float32Array[][]) {
