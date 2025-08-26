@@ -200,7 +200,7 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
             getPreloadedPackage(_remotePackageName: string, _remotePackageSize: number) {
                 return data;
             },
-            print: logger.info,
+            print: logger.debug,
             printErr: logger.error,
         });
     }

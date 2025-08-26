@@ -57,10 +57,7 @@ export function getWorkerLogger(
     verbosity: Verbosity,
     prefix = '',
 ): Logger {
-    const activeLevels = getActiveLogLevels(verbosity);
     const factory = (level: LogLevel): LoggingFunc => {
-        if (!activeLevels.includes(level)) return () => {};
-
         return (...data) =>
             port.postMessage({
                 type: CONTROLLER_MESSAGES.LOG,
