@@ -101,11 +101,11 @@ void SpenchDenoise::DestroyContext(SpenchContext<float>** ctx) {
 }
 
 uint64_t SpenchDenoise::GetContextId(const SpenchContext<float>* ctx) {
-  return ctx->m_id;
+  return ctx->id;
 }
 
 void SpenchDenoise::SetContextId(SpenchContext<float>* ctx, uint64_t id) {
-  ctx->m_id = id;
+  ctx->id = id;
 }
 
 SpenchRetCode SpenchDenoise::ProcessChunk(const std::vector<float>& chunk,

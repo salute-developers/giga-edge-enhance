@@ -7,20 +7,20 @@
 #include <filesystem>
 
 struct TestHandler {
-  std::unique_ptr<spench::BaseAudioHandler> m_handler;
+  std::unique_ptr<spench::BaseAudioHandler> handler;
 
-  const std::string m_kBase = "data/";
-  std::vector<float> m_wav_data;
+  const std::string kBase = "data/";
+  std::vector<float> wav_data;
 
  public:
-  TestHandler() : m_handler(nullptr) {}
+  TestHandler() : handler(nullptr) {}
   TestHandler& operator=(const TestHandler&) = delete;
   TestHandler(const TestHandler&) = delete;
   TestHandler(TestHandler&& orig)
-      : m_handler(std::move(orig.m_handler)),
-        m_wav_data(std::move(orig.m_wav_data)) {
-    orig.m_wav_data.clear();
-    orig.m_handler = nullptr;
+      : handler(std::move(orig.handler)),
+        wav_data(std::move(orig.wav_data)) {
+    orig.wav_data.clear();
+    orig.handler = nullptr;
   }
 
   template <class Handler, class NetReader>
@@ -43,37 +43,37 @@ TestHandler& InitHandlerFromYaml(std::string yaml) {
 }
 
   TestHandler& SetWav(const std::string& wav_path) {
-    std::string full_wav_path = m_kBase + "wavs/" + wav_path;
-    loadWavFx(full_wav_path.c_str(), m_wav_data);
+    std::string full_wav_path = kBase + "wavs/" + wav_path;
+    loadWavFx(full_wav_path.c_str(), wav_data);
     return *this;
   }
 
   TestHandler& LoadDataFromBin(const std::string& dump,
                                uint32_t step_size_samples,
                                std::vector<std::vector<float>>& output) {
-    std::string full_wav_path = m_kBase + "binary/" + dump;
+    std::string full_wav_path = kBase + "binary/" + dump;
     loadBin(full_wav_path.c_str(), step_size_samples, output);
     return *this;
   }
 
   TestHandler& LoadDataFromBin(const std::string& dump,
                                std::vector<float>& output) {
-    std::string full_wav_path = m_kBase + "binary/" + dump;
+    std::string full_wav_path = kBase + "binary/" + dump;
     loadBin(full_wav_path.c_str(), output);
     return *this;
   }
 
   TestHandler& LoadDataFromBin(const std::string& dump,
                                std::valarray<float>& output) {
-    std::string full_wav_path = m_kBase + "binary/" + dump;
+    std::string full_wav_path = kBase + "binary/" + dump;
     loadBin(full_wav_path.c_str(), output);
     return *this;
   }
 
   spench::DenoiserModelAdviser<float>* GetAdviser() {
-    if (auto* m_denoiser_handler =
-            dynamic_cast<spench::DenoiserAudioHandler*>(m_handler.get())) {
-      return m_denoiser_handler->adviser();
+    if (auto* denoiser_handler =
+            dynamic_cast<spench::DenoiserAudioHandler*>(handler.get())) {
+      return denoiser_handler->adviser();
     } else {
       return nullptr;
     }
@@ -84,14 +84,14 @@ TestHandler& InitHandlerFromYaml(std::string yaml) {
   TestHandler& initWith(Args&&... args) {
     static_assert(std::is_base_of_v<spench::BaseAudioHandler, Handler>,
                   "Handler must derive from BaseAudioHandler");
-    m_handler = std::make_unique<Handler>(
+    handler = std::make_unique<Handler>(
         std::make_unique<NetReader>(
             std::make_unique<Reader>(std::forward<Args>(args)...)));
     return *this;
   }
 
   [[nodiscard]] std::string cfgPath(const std::filesystem::path& rel) const {
-    std::filesystem::path base{m_kBase};
+    std::filesystem::path base{kBase};
     return (base / "config" / rel).string();
   }
 };
@@ -168,15 +168,15 @@ TEST_CASE("FAIL Run denoiser handler with error for incorrect input lengh [denoi
           "default_configuration_best_quality_onnx_16khz.yaml"));
 #endif
 
-  spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
+  spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
 
   const std::vector<float> kInput(128, 0.5);
   std::vector<float> output;
 
   SpenchRetCode ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx, kInput, output);
+      sheduler_test_env.handler->ProcessFrame(ctx, kInput, output);
   CHECK(ret_code == SpenchRetCode::ERR_INVALID_FRAME_SIZE);
-  sheduler_test_env.m_handler->DestroyContext(&ctx);
+  sheduler_test_env.handler->DestroyContext(&ctx);
 }
 
 TEST_CASE("SUCCEED Change number of engine threads [denoiser handler]") {
@@ -193,8 +193,8 @@ TEST_CASE("SUCCEED Change number of engine threads [denoiser handler]") {
 #endif
 
   const uint32_t kDefaultThreadsNum = 4;
-  CHECK(kDefaultThreadsNum == sheduler_test_env.m_handler->GetEngineThreadsNum());
-  REQUIRE_NOTHROW(sheduler_test_env.m_handler->ReloadConfig());
+  CHECK(kDefaultThreadsNum == sheduler_test_env.handler->GetEngineThreadsNum());
+  REQUIRE_NOTHROW(sheduler_test_env.handler->ReloadConfig());
 }
 
 TEST_CASE("SUCCEED Change number of engine threads [dereverberator handler]") {
@@ -211,8 +211,8 @@ TEST_CASE("SUCCEED Change number of engine threads [dereverberator handler]") {
 #endif
 
   const uint32_t kDefaultThreadsNum = 4;
-  CHECK(kDefaultThreadsNum == sheduler_test_env.m_handler->GetEngineThreadsNum());
-  REQUIRE_NOTHROW(sheduler_test_env.m_handler->ReloadConfig());
+  CHECK(kDefaultThreadsNum == sheduler_test_env.handler->GetEngineThreadsNum());
+  REQUIRE_NOTHROW(sheduler_test_env.handler->ReloadConfig());
 }
 
 TEST_CASE("SUCCEED Run dereverb with empty chunk with the model 48kHz [dereverberator handler]") {
@@ -226,7 +226,7 @@ TEST_CASE("SUCCEED Run dereverb with empty chunk with the model 48kHz [dereverbe
                                         spench::DereverbConfigReader>(
           "default_configuration_dereverberation_onnx_48khz.yaml"));
 
-  spench::SpenchContext<float>* ctx_ptr = handler_test_env.m_handler->CreateContext();
+  spench::SpenchContext<float>* ctx_ptr = handler_test_env.handler->CreateContext();
   spench::DereverbContext<float>* dereverb_ctx_ptr =
       dynamic_cast<spench::DereverbContext<float>*>(ctx_ptr);
   const std::vector<float> input1;
@@ -235,11 +235,11 @@ TEST_CASE("SUCCEED Run dereverb with empty chunk with the model 48kHz [dereverbe
   REQUIRE(output.size() != 0);
 
   SpenchRetCode ret_code =
-      handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+      handler_test_env.handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
   REQUIRE(ret_code == SpenchRetCode::SUCCESS);
 
   REQUIRE(output.size() == 0);
-  handler_test_env.m_handler->DestroyContext(&ctx_ptr);
+  handler_test_env.handler->DestroyContext(&ctx_ptr);
 #endif
 }
 
@@ -254,7 +254,7 @@ TEST_CASE("SUCCEED Run dereverb and check zero outputs with the model 48kHz [der
                                         spench::DereverbConfigReader>(
           "default_configuration_dereverberation_onnx_48khz.yaml"));
 
-  spench::SpenchContext<float>* ctx_ptr = handler_test_env.m_handler->CreateContext();
+  spench::SpenchContext<float>* ctx_ptr = handler_test_env.handler->CreateContext();
   spench::DereverbContext<float>* dereverb_ctx_ptr =
       dynamic_cast<spench::DereverbContext<float>*>(ctx_ptr);
   const uint16_t kInput_frame_size = 768;
@@ -263,30 +263,30 @@ TEST_CASE("SUCCEED Run dereverb and check zero outputs with the model 48kHz [der
   std::vector<float> output;
 
   SpenchRetCode ret_code =
-      handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+      handler_test_env.handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
   CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
 
   ret_code =
-      handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+      handler_test_env.handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   CHECK(output.size() == kInput_frame_size);
   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
 
   ret_code =
-      handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+      handler_test_env.handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   CHECK(output.size() == kInput_frame_size);
   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
 
   ret_code =
-      handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+      handler_test_env.handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   CHECK(output.size() == kInput_frame_size);
   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
-  handler_test_env.m_handler->DestroyContext(&ctx_ptr);
+  handler_test_env.handler->DestroyContext(&ctx_ptr);
 #endif
 }
 
@@ -308,7 +308,7 @@ model:
                                         spench::DereverbConfigReader>(
           std::string(yaml)));
 
-  spench::SpenchContext<float>* ctx_ptr = handler_test_env.m_handler->CreateContext();
+  spench::SpenchContext<float>* ctx_ptr = handler_test_env.handler->CreateContext();
   spench::DereverbContext<float>* dereverb_ctx_ptr =
       dynamic_cast<spench::DereverbContext<float>*>(ctx_ptr);
   const uint16_t kInput_frame_size = 768;
@@ -317,30 +317,30 @@ model:
   std::vector<float> output;
 
   SpenchRetCode ret_code =
-      handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+      handler_test_env.handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
   CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
 
   ret_code =
-      handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+      handler_test_env.handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   CHECK(output.size() == kInput_frame_size);
   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
 
   ret_code =
-      handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+      handler_test_env.handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   CHECK(output.size() == kInput_frame_size);
   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
 
   ret_code =
-      handler_test_env.m_handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
+      handler_test_env.handler->ProcessFrame(dereverb_ctx_ptr, input1, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   CHECK(output.size() == kInput_frame_size);
   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
-  handler_test_env.m_handler->DestroyContext(&ctx_ptr);
+  handler_test_env.handler->DestroyContext(&ctx_ptr);
 #endif
 }
 
@@ -357,7 +357,7 @@ TEST_CASE("SUCCEED Run denoise and check first non-zero output with the best qua
           "default_configuration_best_quality_onnx_16khz.yaml"));
 #endif
 
-  spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
+  spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
   spench::DenoiseContextQ<float>* ctx_q =
       dynamic_cast<spench::DenoiseContextQ<float>*>(ctx);
   uint16_t kInput_frame_size = 256;
@@ -365,24 +365,24 @@ TEST_CASE("SUCCEED Run denoise and check first non-zero output with the best qua
   std::vector<float> output;
 
   SpenchRetCode ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_q, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
   REQUIRE(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
 
   ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_q, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
   REQUIRE(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
 
   ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_q, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
   REQUIRE(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
 
   ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_q, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
   REQUIRE(ret_code == SpenchRetCode::SUCCESS);
-  REQUIRE(ctx_q->m_prev_features.size() == 3);
+  REQUIRE(ctx_q->prev_features.size() == 3);
   REQUIRE(output.size() == kInput_frame_size);
   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
-  sheduler_test_env.m_handler->DestroyContext(&ctx);
+  sheduler_test_env.handler->DestroyContext(&ctx);
 }
 
 TEST_CASE("SUCCEED Check finalize chunk for the best quality model "
@@ -399,18 +399,18 @@ TEST_CASE("SUCCEED Check finalize chunk for the best quality model "
           "default_configuration_best_quality_onnx_16khz.yaml"));
 #endif
 
-  spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
+  spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
 
   uint16_t kInput_frame_size = 256;
   std::vector<float> output;
 
   SpenchRetCode ret_code =
-      sheduler_test_env.m_handler->FinalizeInference(ctx, output);
+      sheduler_test_env.handler->FinalizeInference(ctx, output);
   CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
 
   REQUIRE(kInput_frame_size * 3 == output.size());
   REQUIRE(std::vector<float>(kInput_frame_size * 3, 0.0) == output);
-  sheduler_test_env.m_handler->DestroyContext(&ctx);
+  sheduler_test_env.handler->DestroyContext(&ctx);
 }
 
 TEST_CASE("SUCCEED Run denoise and check finalize chunk for the best quality model [denoiser handler]") {
@@ -426,7 +426,7 @@ TEST_CASE("SUCCEED Run denoise and check finalize chunk for the best quality mod
           "default_configuration_best_quality_onnx_16khz.yaml"));
 #endif
 
-  spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
+  spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
   spench::DenoiseContextQ<float>* ctx_q =
       dynamic_cast<spench::DenoiseContextQ<float>*>(ctx);
   uint16_t kInput_frame_size = 256;
@@ -434,31 +434,31 @@ TEST_CASE("SUCCEED Run denoise and check finalize chunk for the best quality mod
   std::vector<float> output;
 
   SpenchRetCode ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_q, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
   CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
 
   ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_q, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
   CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
 
   ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_q, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
   CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
 
   ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_q, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
   CHECK(output.size() == kInput_frame_size);
   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
 
   output.resize(0);
 
-  ret_code = sheduler_test_env.m_handler->FinalizeInference(ctx_q, output);
+  ret_code = sheduler_test_env.handler->FinalizeInference(ctx_q, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   REQUIRE(kInput_frame_size * 3 == output.size());
   REQUIRE(std::vector<float>(kInput_frame_size * 3, 0.0) != output);
-  sheduler_test_env.m_handler->DestroyContext(&ctx);
+  sheduler_test_env.handler->DestroyContext(&ctx);
 }
 
 TEST_CASE("SUCCEED Run denoise and check finalize chunk for the fast model [denoiser handler]") {
@@ -474,7 +474,7 @@ TEST_CASE("SUCCEED Run denoise and check finalize chunk for the fast model [deno
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
-  spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
+  spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
   spench::DenoiseContextF<float>* ctx_f =
       dynamic_cast<spench::DenoiseContextF<float>*>(ctx);
   uint16_t kInput_frame_size = 384;
@@ -482,25 +482,25 @@ TEST_CASE("SUCCEED Run denoise and check finalize chunk for the fast model [deno
   std::vector<float> output;
 
   SpenchRetCode ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_f, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_f, input1, output);
   CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
 
   ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_f, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_f, input1, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   CHECK(output.size() == kInput_frame_size);
   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
 
   ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_f, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_f, input1, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   CHECK(output.size() == kInput_frame_size);
   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
 
   ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_f, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_f, input1, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   CHECK(output.size() == kInput_frame_size);
@@ -508,12 +508,12 @@ TEST_CASE("SUCCEED Run denoise and check finalize chunk for the fast model [deno
 
   output.resize(0);
 
-  ret_code = sheduler_test_env.m_handler->FinalizeInference(ctx_f, output);
+  ret_code = sheduler_test_env.handler->FinalizeInference(ctx_f, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   REQUIRE(kInput_frame_size * 1 == output.size());
   REQUIRE(std::vector<float>(kInput_frame_size * 1, 0.0) != output);
-  sheduler_test_env.m_handler->DestroyContext(&ctx);
+  sheduler_test_env.handler->DestroyContext(&ctx);
 }
 
 TEST_CASE("SUCCEED Run denoise and check result with yaml string config [denoiser handler]") {
@@ -535,7 +535,7 @@ model:
           std::string(yaml)));
 #endif
 
-  spench::SpenchContext<float>* ctx = sheduler_test_env.m_handler->CreateContext();
+  spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
   spench::DenoiseContextF<float>* ctx_f =
       dynamic_cast<spench::DenoiseContextF<float>*>(ctx);
   uint16_t kInput_frame_size = 384;
@@ -543,25 +543,25 @@ model:
   std::vector<float> output;
 
   SpenchRetCode ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_f, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_f, input1, output);
   CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
 
   ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_f, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_f, input1, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   CHECK(output.size() == kInput_frame_size);
   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
 
   ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_f, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_f, input1, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   CHECK(output.size() == kInput_frame_size);
   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
 
   ret_code =
-      sheduler_test_env.m_handler->ProcessFrame(ctx_f, input1, output);
+      sheduler_test_env.handler->ProcessFrame(ctx_f, input1, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   CHECK(output.size() == kInput_frame_size);
@@ -569,12 +569,12 @@ model:
 
   output.resize(0);
 
-  ret_code = sheduler_test_env.m_handler->FinalizeInference(ctx_f, output);
+  ret_code = sheduler_test_env.handler->FinalizeInference(ctx_f, output);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   REQUIRE(kInput_frame_size * 1 == output.size());
   REQUIRE(std::vector<float>(kInput_frame_size * 1, 0.0) != output);
-  sheduler_test_env.m_handler->DestroyContext(&ctx);
+  sheduler_test_env.handler->DestroyContext(&ctx);
 }
 
 TEST_CASE("SUCCEED Run calcSnrEstimation with one chunk [denoiser handler]") {

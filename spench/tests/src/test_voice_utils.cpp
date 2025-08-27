@@ -8,52 +8,52 @@
 #include <spench/util/sound/range_control.h>
 
 struct TestVoiceUtils {
-  const std::string m_kBase = "data/";
+  const std::string kBase = "data/";
 
  public:
-  uint16_t m_chunk_size_ms = 16;
-  uint16_t m_stride_size_ms = 16;
-  uint32_t m_src_sample_rate = 16000;
-  uint32_t m_dst_sample_rate = 16000;
-  std::vector<float> m_src_wav_data;
-  std::vector<float> m_dst_wav_data;
+  uint16_t chunk_size_ms = 16;
+  uint16_t stride_size_ms = 16;
+  uint32_t src_sample_rate = 16000;
+  uint32_t dst_sample_rate = 16000;
+  std::vector<float> src_wav_data;
+  std::vector<float> dst_wav_data;
   TestVoiceUtils() {}
   TestVoiceUtils& operator=(const TestVoiceUtils&) = delete;
   TestVoiceUtils(const TestVoiceUtils&) = delete;
   TestVoiceUtils(TestVoiceUtils&& orig) :
-          m_chunk_size_ms(orig.m_chunk_size_ms),
-          m_stride_size_ms(orig.m_stride_size_ms),
-          m_src_sample_rate(orig.m_src_sample_rate),
-          m_dst_sample_rate(orig.m_dst_sample_rate),
-          m_src_wav_data(std::move(orig.m_src_wav_data)),
-          m_dst_wav_data(std::move(orig.m_dst_wav_data)) {
-    orig.m_src_wav_data.clear();
-    orig.m_dst_wav_data.clear();
+          chunk_size_ms(orig.chunk_size_ms),
+          stride_size_ms(orig.stride_size_ms),
+          src_sample_rate(orig.src_sample_rate),
+          dst_sample_rate(orig.dst_sample_rate),
+          src_wav_data(std::move(orig.src_wav_data)),
+          dst_wav_data(std::move(orig.dst_wav_data)) {
+    orig.src_wav_data.clear();
+    orig.dst_wav_data.clear();
   }
 
   TestVoiceUtils& Init(uint16_t chunk_size,
                        uint16_t stride_size,
                        uint64_t src_sr,
                        uint64_t dst_sr) {
-    m_chunk_size_ms = chunk_size;
-    m_stride_size_ms = stride_size;
-    m_src_sample_rate = src_sr;
-    m_dst_sample_rate = dst_sr;
+    chunk_size_ms = chunk_size;
+    stride_size_ms = stride_size;
+    src_sample_rate = src_sr;
+    dst_sample_rate = dst_sr;
     return *this;
   }
 
   TestVoiceUtils& SetWav(const std::string& wav_path, std::vector<float>& wav_file) {
-    std::string full_wav_path = m_kBase + "wavs/" + wav_path;
+    std::string full_wav_path = kBase + "wavs/" + wav_path;
     loadWavFx(full_wav_path.c_str(), wav_file);
     return *this;
   }
 
   TestVoiceUtils& SetSrcAudio(const std::string& wav_path) {
-    return SetWav(wav_path, m_src_wav_data);
+    return SetWav(wav_path, src_wav_data);
   }
 
   TestVoiceUtils& SetDstAudio(const std::string& wav_path) {
-    return SetWav(wav_path, m_dst_wav_data);
+    return SetWav(wav_path, dst_wav_data);
   }
 };
 
@@ -123,8 +123,8 @@ TEST_CASE("FAIL Create resampler with equal sample rates [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().
                                     Init(16, 16, 48000, 48000));
 
-  CHECK_THROWS_WITH(util::sound::BuildResampler(voice_utils.m_src_sample_rate,
-                                                voice_utils.m_dst_sample_rate, 1),
+  CHECK_THROWS_WITH(util::sound::BuildResampler(voice_utils.src_sample_rate,
+                                                voice_utils.dst_sample_rate, 1),
                     "BuildResampler: in_rate equals out_rate.");
 }
 
@@ -134,23 +134,23 @@ TEST_CASE("SUCCEED Run offline audio downsampling 48kHz -> 24kHz [sound]") {
                                      SetSrcAudio("test1_48_noised.wav").
                                      SetDstAudio("test1_24_noised.wav"));
   util::sound::ResampleWrapper resampler =
-                      util::sound::BuildResampler(voice_utils.m_src_sample_rate,
-                                                  voice_utils.m_dst_sample_rate, 1);
+                      util::sound::BuildResampler(voice_utils.src_sample_rate,
+                                                  voice_utils.dst_sample_rate, 1);
   std::vector<float> output_data = util::sound::ResampleVec(resampler,
-                                                            voice_utils.m_src_wav_data,
-                                                            voice_utils.m_src_sample_rate,
-                                                            voice_utils.m_dst_sample_rate);
+                                                            voice_utils.src_wav_data,
+                                                            voice_utils.src_sample_rate,
+                                                            voice_utils.dst_sample_rate);
   std::vector<float> ending_part_of_data = util::sound::FlushVec<float>(resampler);
 
   output_data.insert(end(output_data), begin(ending_part_of_data), end(ending_part_of_data));
 
-  if (output_data.size() >= voice_utils.m_dst_wav_data.size()) {
-    output_data.resize(voice_utils.m_dst_wav_data.size());
+  if (output_data.size() >= voice_utils.dst_wav_data.size()) {
+    output_data.resize(voice_utils.dst_wav_data.size());
   } else {
-    voice_utils.m_dst_wav_data.resize(output_data.size());
+    voice_utils.dst_wav_data.resize(output_data.size());
   }
 
-  IsVectorsClose(voice_utils.m_dst_wav_data, output_data, 0.003);
+  IsVectorsClose(voice_utils.dst_wav_data, output_data, 0.003);
 }
 
 TEST_CASE("SUCCEED Run offline audio upsampling 24kHz -> 48kHz [sound]") {
@@ -160,17 +160,17 @@ TEST_CASE("SUCCEED Run offline audio upsampling 24kHz -> 48kHz [sound]") {
                                      SetDstAudio("rec_noise_001_48k.wav"));
 
   util::sound::ResampleWrapper resampler =
-                      util::sound::BuildResampler(voice_utils.m_src_sample_rate,
-                                                  voice_utils.m_dst_sample_rate, 1);
+                      util::sound::BuildResampler(voice_utils.src_sample_rate,
+                                                  voice_utils.dst_sample_rate, 1);
   std::vector<float> output_data = util::sound::ResampleVec(resampler,
-                                                            voice_utils.m_src_wav_data,
-                                                            voice_utils.m_src_sample_rate,
-                                                            voice_utils.m_dst_sample_rate);
+                                                            voice_utils.src_wav_data,
+                                                            voice_utils.src_sample_rate,
+                                                            voice_utils.dst_sample_rate);
 
   std::vector<float> ending_part_of_data = util::sound::FlushVec<float>(resampler);
 
   output_data.insert(end(output_data), begin(ending_part_of_data), end(ending_part_of_data));
-  IsVectorsClose(voice_utils.m_dst_wav_data, output_data, 0.0001);
+  IsVectorsClose(voice_utils.dst_wav_data, output_data, 0.0001);
 }
 
 TEST_CASE("SUCCEED Run stream audio downsampling 48kHz -> 24kHz [sound]") {
@@ -185,25 +185,25 @@ TEST_CASE("SUCCEED Run stream audio downsampling 48kHz -> 24kHz [sound]") {
                                      SetDstAudio("test1_24_noised.wav"));
 
   util::sound::ResampleWrapper resampler =
-                      util::sound::BuildResampler(voice_utils.m_src_sample_rate,
-                                                  voice_utils.m_dst_sample_rate, 1);
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
+                      util::sound::BuildResampler(voice_utils.src_sample_rate,
+                                                  voice_utils.dst_sample_rate, 1);
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
 
-  auto dst_chunks = chunkWav<float>(voice_utils.m_dst_wav_data,
-                                    voice_utils.m_dst_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
+  auto dst_chunks = chunkWav<float>(voice_utils.dst_wav_data,
+                                    voice_utils.dst_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
   CHECK(src_chunks.size() == dst_chunks.size());
   std::vector<float> result;
   for (uint32_t i = 0; i < src_chunks.size(); ++i) {
     auto& s_chunk = src_chunks[i];
 
     std::vector<float> output_data = util::sound::ResampleVec(resampler, s_chunk,
-                                                              voice_utils.m_src_sample_rate,
-                                                              voice_utils.m_dst_sample_rate);
+                                                              voice_utils.src_sample_rate,
+                                                              voice_utils.dst_sample_rate);
     if (output_data.size() > 0) {
       result.insert(end(result), begin(output_data), end(output_data));
     }
@@ -212,13 +212,13 @@ TEST_CASE("SUCCEED Run stream audio downsampling 48kHz -> 24kHz [sound]") {
   std::vector<float> output_data = util::sound::FlushVec<float>(resampler);
   result.insert(end(result), begin(output_data), end(output_data));
 
-  if (result.size() >= voice_utils.m_dst_wav_data.size()) {
-    result.resize(voice_utils.m_dst_wav_data.size());
+  if (result.size() >= voice_utils.dst_wav_data.size()) {
+    result.resize(voice_utils.dst_wav_data.size());
   } else {
-    voice_utils.m_dst_wav_data.resize(result.size());
+    voice_utils.dst_wav_data.resize(result.size());
   }
 
-  IsVectorsClose(voice_utils.m_dst_wav_data, result, 0.0001);
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
 }
 
 TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 44.1kHz -> 24kHz [sound]") {
@@ -232,13 +232,13 @@ TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 44.1
                                      SetSrcAudio("test2_44_1_clean.wav").
                                      SetDstAudio("test2_24_clean.wav"));
 
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
-  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.m_src_sample_rate,
-                                                          voice_utils.m_dst_sample_rate,
-                                                          voice_utils.m_chunk_size_ms,
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
+  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                                                          voice_utils.dst_sample_rate,
+                                                          voice_utils.chunk_size_ms,
                                                           util::sound::TemplateType::INPUT);
 
   std::vector<float> result;
@@ -255,12 +255,12 @@ TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 44.1
                             input_sound_stream->FinalizeStream();
   result.insert(end(result), begin(output_data), end(output_data));
 
-  if (result.size() >= voice_utils.m_dst_wav_data.size()) {
-    result.resize(voice_utils.m_dst_wav_data.size());
+  if (result.size() >= voice_utils.dst_wav_data.size()) {
+    result.resize(voice_utils.dst_wav_data.size());
   } else {
-    voice_utils.m_dst_wav_data.resize(result.size());
+    voice_utils.dst_wav_data.resize(result.size());
   }
-  IsVectorsClose(voice_utils.m_dst_wav_data, result, 0.0001);
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
 }
 
 TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 32kHz -> 24kHz [sound]") {
@@ -274,13 +274,13 @@ TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 32kH
                                      SetSrcAudio("test3_32_noised.wav").
                                      SetDstAudio("test3_24_noised.wav"));
 
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
-  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.m_src_sample_rate,
-                                                          voice_utils.m_dst_sample_rate,
-                                                          voice_utils.m_chunk_size_ms,
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
+  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                                                          voice_utils.dst_sample_rate,
+                                                          voice_utils.chunk_size_ms,
                                                           util::sound::TemplateType::INPUT);
 
   std::vector<float> result;
@@ -297,12 +297,12 @@ TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 32kH
                             input_sound_stream->FinalizeStream();
   result.insert(end(result), begin(output_data), end(output_data));
 
-  if (result.size() >= voice_utils.m_dst_wav_data.size()) {
-    result.resize(voice_utils.m_dst_wav_data.size());
+  if (result.size() >= voice_utils.dst_wav_data.size()) {
+    result.resize(voice_utils.dst_wav_data.size());
   } else {
-    voice_utils.m_dst_wav_data.resize(result.size());
+    voice_utils.dst_wav_data.resize(result.size());
   }
-  IsVectorsClose(voice_utils.m_dst_wav_data, result, 0.0001);
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
 }
 
 TEST_CASE("SUCCEED Run stream audio upsampling 24kHz -> 48kHz [sound]") {
@@ -317,24 +317,24 @@ TEST_CASE("SUCCEED Run stream audio upsampling 24kHz -> 48kHz [sound]") {
                                      SetDstAudio("rec_noise_001_48k.wav"));
 
   util::sound::ResampleWrapper resampler =
-                      util::sound::BuildResampler(voice_utils.m_src_sample_rate,
-                                                  voice_utils.m_dst_sample_rate, 1);
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
+                      util::sound::BuildResampler(voice_utils.src_sample_rate,
+                                                  voice_utils.dst_sample_rate, 1);
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
 
-  auto dst_chunks = chunkWav<float>(voice_utils.m_dst_wav_data,
-                                    voice_utils.m_dst_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
+  auto dst_chunks = chunkWav<float>(voice_utils.dst_wav_data,
+                                    voice_utils.dst_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
   CHECK(src_chunks.size() == dst_chunks.size());
   std::vector<float> result;
   for (uint32_t i = 0; i < src_chunks.size(); ++i) {
     auto& s_chunk = src_chunks[i];
     std::vector<float> output_data = util::sound::ResampleVec(resampler, s_chunk,
-                                                              voice_utils.m_src_sample_rate,
-                                                              voice_utils.m_dst_sample_rate);
+                                                              voice_utils.src_sample_rate,
+                                                              voice_utils.dst_sample_rate);
     if (output_data.size() > 0) {
       result.insert(end(result), begin(output_data), end(output_data));
     }
@@ -343,13 +343,13 @@ TEST_CASE("SUCCEED Run stream audio upsampling 24kHz -> 48kHz [sound]") {
   std::vector<float> output_data = util::sound::FlushVec<float>(resampler);
   result.insert(end(result), begin(output_data), end(output_data));
 
-  if (result.size() >= voice_utils.m_dst_wav_data.size()) {
-    result.resize(voice_utils.m_dst_wav_data.size());
+  if (result.size() >= voice_utils.dst_wav_data.size()) {
+    result.resize(voice_utils.dst_wav_data.size());
   } else {
-    voice_utils.m_dst_wav_data.resize(result.size());
+    voice_utils.dst_wav_data.resize(result.size());
   }
 
-  IsVectorsClose(voice_utils.m_dst_wav_data, result, 0.0001);
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
 }
 
 TEST_CASE("SUCCESS Run stream audio upsampling via sound stream interface 24kHz -> 44.1kHz [sound]") {
@@ -363,13 +363,13 @@ TEST_CASE("SUCCESS Run stream audio upsampling via sound stream interface 24kHz 
                                      SetSrcAudio("test2_24_clean.wav").
                                      SetDstAudio("test2_44_1_upsampled_clean.wav"));
 
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
-  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.m_src_sample_rate,
-                                                          voice_utils.m_dst_sample_rate,
-                                                          voice_utils.m_chunk_size_ms,
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
+  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                                                          voice_utils.dst_sample_rate,
+                                                          voice_utils.chunk_size_ms,
                                                           util::sound::TemplateType::INPUT);
 
   std::vector<float> result;
@@ -385,12 +385,12 @@ TEST_CASE("SUCCESS Run stream audio upsampling via sound stream interface 24kHz 
                             input_sound_stream->FinalizeStream();
   result.insert(end(result), begin(output_data), end(output_data));
 
-  if (result.size() >= voice_utils.m_dst_wav_data.size()) {
-    result.resize(voice_utils.m_dst_wav_data.size());
+  if (result.size() >= voice_utils.dst_wav_data.size()) {
+    result.resize(voice_utils.dst_wav_data.size());
   } else {
-    voice_utils.m_dst_wav_data.resize(result.size());
+    voice_utils.dst_wav_data.resize(result.size());
   }
-  IsVectorsClose(voice_utils.m_dst_wav_data, result, 0.0001);
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
 }
 
 TEST_CASE("SUCCESS Run stream audio upsampling via sound stream interface 24kHz -> 32kHz [sound]") {
@@ -404,13 +404,13 @@ TEST_CASE("SUCCESS Run stream audio upsampling via sound stream interface 24kHz 
                                      SetSrcAudio("test3_24_noised.wav").
                                      SetDstAudio("test3_32_upsampled_noised.wav"));
 
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
-  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.m_src_sample_rate,
-                                                          voice_utils.m_dst_sample_rate,
-                                                          voice_utils.m_chunk_size_ms,
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
+  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                                                          voice_utils.dst_sample_rate,
+                                                          voice_utils.chunk_size_ms,
                                                           util::sound::TemplateType::INPUT);
 
   std::vector<float> result;
@@ -426,12 +426,12 @@ TEST_CASE("SUCCESS Run stream audio upsampling via sound stream interface 24kHz 
                             input_sound_stream->FinalizeStream();
   result.insert(end(result), begin(output_data), end(output_data));
 
-  if (result.size() >= voice_utils.m_dst_wav_data.size()) {
-    result.resize(voice_utils.m_dst_wav_data.size());
+  if (result.size() >= voice_utils.dst_wav_data.size()) {
+    result.resize(voice_utils.dst_wav_data.size());
   } else {
-    voice_utils.m_dst_wav_data.resize(result.size());
+    voice_utils.dst_wav_data.resize(result.size());
   }
-  IsVectorsClose(voice_utils.m_dst_wav_data, result, 0.0001);
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
 }
 
 TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 48kHz -> 24kHz [sound]") {
@@ -445,13 +445,13 @@ TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 48kH
                                      SetSrcAudio("test1_48_noised.wav").
                                      SetDstAudio("test1_24_noised.wav"));
 
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
-  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.m_src_sample_rate,
-                                                          voice_utils.m_dst_sample_rate,
-                                                          voice_utils.m_chunk_size_ms,
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
+  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                                                          voice_utils.dst_sample_rate,
+                                                          voice_utils.chunk_size_ms,
                                                           util::sound::TemplateType::INPUT);
 
   std::vector<float> result;
@@ -469,12 +469,12 @@ TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 48kH
                             input_sound_stream->FinalizeStream();
   result.insert(end(result), begin(output_data), end(output_data));
 
-  if (result.size() >= voice_utils.m_dst_wav_data.size()) {
-    result.resize(voice_utils.m_dst_wav_data.size());
+  if (result.size() >= voice_utils.dst_wav_data.size()) {
+    result.resize(voice_utils.dst_wav_data.size());
   } else {
-    voice_utils.m_dst_wav_data.resize(result.size());
+    voice_utils.dst_wav_data.resize(result.size());
   }
-  IsVectorsClose(voice_utils.m_dst_wav_data, result, 0.0001);
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
 }
 
 TEST_CASE("SUCCESS Run sound stream for audious with the equal sample rate [sound]") {
@@ -483,13 +483,13 @@ TEST_CASE("SUCCESS Run sound stream for audious with the equal sample rate [soun
                                      SetSrcAudio("test1_48_noised.wav").
                                      SetDstAudio("test1_48_noised.wav"));
 
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
-  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.m_src_sample_rate,
-                                                          voice_utils.m_dst_sample_rate,
-                                                          voice_utils.m_chunk_size_ms,
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
+  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                                                          voice_utils.dst_sample_rate,
+                                                          voice_utils.chunk_size_ms,
                                                           util::sound::TemplateType::INPUT);
 
   std::vector<float> result;
@@ -506,13 +506,13 @@ TEST_CASE("SUCCESS Run sound stream for audious with the equal sample rate [soun
 
   REQUIRE(output_data.size() == 0);
 
-  if (result.size() >= voice_utils.m_dst_wav_data.size()) {
-    result.resize(voice_utils.m_dst_wav_data.size());
+  if (result.size() >= voice_utils.dst_wav_data.size()) {
+    result.resize(voice_utils.dst_wav_data.size());
   } else {
-    voice_utils.m_dst_wav_data.resize(result.size());
+    voice_utils.dst_wav_data.resize(result.size());
   }
 
-  IsVectorsClose(voice_utils.m_dst_wav_data, result, 0.0001);
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
 }
 
 TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 48kHz -> 48kHz [sound]") {
@@ -526,20 +526,20 @@ TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 48
                                      SetSrcAudio("test1_48_noised.wav").
                                      SetDstAudio("test1_48_upsampled_noised.wav"));
 
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
   auto input_sound_stream =
-                        util::sound::BuildSoundStream<float>(voice_utils.m_src_sample_rate,
-                                                             voice_utils.m_dst_sample_rate / 2,
-                                                             voice_utils.m_chunk_size_ms,
+                        util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                                                             voice_utils.dst_sample_rate / 2,
+                                                             voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::INPUT);
 
   auto output_sound_stream =
-                        util::sound::BuildSoundStream<float>(voice_utils.m_dst_sample_rate / 2,
-                                                             voice_utils.m_src_sample_rate,
-                                                             voice_utils.m_chunk_size_ms,
+                        util::sound::BuildSoundStream<float>(voice_utils.dst_sample_rate / 2,
+                                                             voice_utils.src_sample_rate,
+                                                             voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::OUTPUT);
   std::vector<float> result;
   for (uint32_t i = 0; i < src_chunks.size(); ++i) {
@@ -560,12 +560,12 @@ TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 48
   resampled_data = output_sound_stream->FinalizeStream();
   result.insert(end(result), begin(resampled_data), end(resampled_data));
 
-  if (result.size() >= voice_utils.m_dst_wav_data.size()) {
-    result.resize(voice_utils.m_dst_wav_data.size());
+  if (result.size() >= voice_utils.dst_wav_data.size()) {
+    result.resize(voice_utils.dst_wav_data.size());
   } else {
-    voice_utils.m_dst_wav_data.resize(result.size());
+    voice_utils.dst_wav_data.resize(result.size());
   }
-  IsVectorsClose(voice_utils.m_dst_wav_data, result, 0.005);
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.005);
 }
 
 TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 44.1kHz -> 44.1kHz [sound]") {
@@ -580,20 +580,20 @@ TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 44
                                      SetSrcAudio("test2_44_1_clean.wav").
                                      SetDstAudio("test2_44_1_upsampled_clean.wav"));
 
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
   auto input_sound_stream =
-                        util::sound::BuildSoundStream<float>(voice_utils.m_src_sample_rate,
+                        util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
                                                              kAudio_model_sample_rate,
-                                                             voice_utils.m_chunk_size_ms,
+                                                             voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::INPUT);
 
   auto output_sound_stream =
                         util::sound::BuildSoundStream<float>(kAudio_model_sample_rate,
-                                                             voice_utils.m_src_sample_rate,
-                                                             voice_utils.m_chunk_size_ms,
+                                                             voice_utils.src_sample_rate,
+                                                             voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::OUTPUT);
   std::vector<float> result;
   for (uint32_t i = 0; i < src_chunks.size(); ++i) {
@@ -614,12 +614,12 @@ TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 44
   resampled_data = output_sound_stream->FinalizeStream();
   result.insert(end(result), begin(resampled_data), end(resampled_data));
 
-  if (result.size() >= voice_utils.m_dst_wav_data.size()) {
-    result.resize(voice_utils.m_dst_wav_data.size());
+  if (result.size() >= voice_utils.dst_wav_data.size()) {
+    result.resize(voice_utils.dst_wav_data.size());
   } else {
-    voice_utils.m_dst_wav_data.resize(result.size());
+    voice_utils.dst_wav_data.resize(result.size());
   }
-  IsVectorsClose(voice_utils.m_dst_wav_data, result, 0.005);
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.005);
 }
 
 TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 32kHz -> 32kHz [sound]") {
@@ -634,20 +634,20 @@ TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 32
                                      SetSrcAudio("test3_32_noised.wav").
                                      SetDstAudio("test3_32_upsampled_noised.wav"));
 
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
   auto input_sound_stream =
-                        util::sound::BuildSoundStream<float>(voice_utils.m_src_sample_rate,
+                        util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
                                                              kAudio_model_sample_rate,
-                                                             voice_utils.m_chunk_size_ms,
+                                                             voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::INPUT);
 
   auto output_sound_stream =
                         util::sound::BuildSoundStream<float>(kAudio_model_sample_rate,
-                                                             voice_utils.m_src_sample_rate,
-                                                             voice_utils.m_chunk_size_ms,
+                                                             voice_utils.src_sample_rate,
+                                                             voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::OUTPUT);
   std::vector<float> result;
   for (uint32_t i = 0; i < src_chunks.size(); ++i) {
@@ -668,13 +668,13 @@ TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 32
   resampled_data = output_sound_stream->FinalizeStream();
   result.insert(end(result), begin(resampled_data), end(resampled_data));
 
-  if (result.size() >= voice_utils.m_dst_wav_data.size()) {
-    result.resize(voice_utils.m_dst_wav_data.size());
+  if (result.size() >= voice_utils.dst_wav_data.size()) {
+    result.resize(voice_utils.dst_wav_data.size());
   } else {
-    voice_utils.m_dst_wav_data.resize(result.size());
+    voice_utils.dst_wav_data.resize(result.size());
   }
   // due to finalization error is a bit bigger
-  IsVectorsClose(voice_utils.m_dst_wav_data, result, 0.015);
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.015);
 }
 
 #else
@@ -690,14 +690,14 @@ TEST_CASE("FAIL Create input resampler [sound]") {
                                      SetSrcAudio("test2_44_1_clean.wav").
                                      SetDstAudio("test2_44_1_upsampled_clean.wav"));
 
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
 
-  CHECK_THROWS_WITH(util::sound::BuildSoundStream<float>(voice_utils.m_src_sample_rate,
+  CHECK_THROWS_WITH(util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
                                                              kAudio_model_sample_rate,
-                                                             voice_utils.m_chunk_size_ms,
+                                                             voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::INPUT),
                     std::string("SoundStream::SoundStream: Library built without resampling ability. Please ") +
                     std::string("use a sample rate that is supported by model!"));
@@ -715,14 +715,14 @@ TEST_CASE("FAIL Create output resampler [sound]") {
                                      SetSrcAudio("test2_44_1_clean.wav").
                                      SetDstAudio("test2_44_1_upsampled_clean.wav"));
 
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
 
-  CHECK_THROWS_WITH(util::sound::BuildSoundStream<float>(voice_utils.m_src_sample_rate,
+  CHECK_THROWS_WITH(util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
                                                              kAudio_model_sample_rate,
-                                                             voice_utils.m_chunk_size_ms,
+                                                             voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::OUTPUT),
                     std::string("SoundStream::SoundStream: Library built without resampling ability. Please ") +
                     std::string("use a sample rate that is supported by model!"));
@@ -740,20 +740,20 @@ TEST_CASE("SUCCESS Run sound stream without resampling [sound]") {
                                      SetSrcAudio("test1_24_noised.wav").
                                      SetDstAudio("test1_24_noised.wav"));
 
-  auto src_chunks = chunkWav<float>(voice_utils.m_src_wav_data,
-                                    voice_utils.m_src_sample_rate,
-                                    voice_utils.m_chunk_size_ms,
-                                    voice_utils.m_stride_size_ms);
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
   auto input_sound_stream =
-                        util::sound::BuildSoundStream<float>(voice_utils.m_src_sample_rate,
+                        util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
                                                              kAudio_model_sample_rate,
-                                                             voice_utils.m_chunk_size_ms,
+                                                             voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::INPUT);
 
   auto output_sound_stream =
                         util::sound::BuildSoundStream<float>(kAudio_model_sample_rate,
-                                                             voice_utils.m_src_sample_rate,
-                                                             voice_utils.m_chunk_size_ms,
+                                                             voice_utils.src_sample_rate,
+                                                             voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::OUTPUT);
 
   std::vector<float> result;
@@ -775,12 +775,12 @@ TEST_CASE("SUCCESS Run sound stream without resampling [sound]") {
   resampled_data = output_sound_stream->FinalizeStream();
   result.insert(end(result), begin(resampled_data), end(resampled_data));
 
-  if (result.size() >= voice_utils.m_dst_wav_data.size()) {
-    result.resize(voice_utils.m_dst_wav_data.size());
+  if (result.size() >= voice_utils.dst_wav_data.size()) {
+    result.resize(voice_utils.dst_wav_data.size());
   } else {
-    voice_utils.m_dst_wav_data.resize(result.size());
+    voice_utils.dst_wav_data.resize(result.size());
   }
   // due to finalization error is a bit bigger
-  IsVectorsClose(voice_utils.m_dst_wav_data, result, 0.0001);
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
 }
 #endif

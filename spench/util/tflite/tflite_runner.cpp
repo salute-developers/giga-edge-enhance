@@ -142,8 +142,8 @@ void BaseTfliteRunner::ResizeIfNeededInPlace(std::valarray<float>& to_check,
 }
 
 void BaseTfliteRunner::InitOutputTensors(spench::SpenchTaskData& data, uint32_t size) {
-  ResizeIfNeededInPlace(data.m_new_spectrogram.real, size / 2);
-  ResizeIfNeededInPlace(data.m_new_spectrogram.imag, size / 2);
+  ResizeIfNeededInPlace(data.new_spectrogram.real, size / 2);
+  ResizeIfNeededInPlace(data.new_spectrogram.imag, size / 2);
 }
 
 SpenchFTfliteRunner::SpenchFTfliteRunner(const YAML::Node& yaml_config,
@@ -162,7 +162,7 @@ template<typename T>
 void SpenchFTfliteRunner::WarmUp() {
   spench::SpenchTask dummy_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>());
-  dummy_task.m_data.m_context = ctx.get();
+  dummy_task.m_data.context = ctx.get();
 
   std::vector<T> dummy_mag(m_model_input_size[0], 0.0);
   std::vector<T> dummy_fb_h(m_model_input_size[1], 0.0);
@@ -191,16 +191,16 @@ void SpenchFTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
   uint32_t num_feats = m_model_inputs[0]->dims->data[1];
   uint32_t num_frames = m_model_inputs[0]->dims->data[2];
 
-  if (denoise_context->m_noisy_mag.size() == 0) {
+  if (denoise_context->noisy_mag.size() == 0) {
     // for the first frame of wav only
-    denoise_context->m_noisy_mag.resize(m_model_input_size[0]);
+    denoise_context->noisy_mag.resize(m_model_input_size[0]);
   } else {
     // for the next frames forget 1 frame out of num_frames (5) and move remaining to the left
     for (uint32_t frame_i = 1; frame_i < num_frames; ++frame_i) {
       for (uint32_t feat_i = 0; feat_i < num_feats; ++feat_i) {
         from = frame_i + feat_i * num_frames;
         to = (frame_i - 1) + feat_i * num_frames;
-        denoise_context->m_noisy_mag[to] = denoise_context->m_noisy_mag[from];
+        denoise_context->noisy_mag[to] = denoise_context->noisy_mag[from];
       }
     }
   }
@@ -208,47 +208,47 @@ void SpenchFTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
   // add new noisy_mag to the input
   for (uint32_t feat_i = 0; feat_i < num_feats; ++feat_i) {
     to = num_frames - 1 + feat_i * num_frames;
-    denoise_context->m_noisy_mag[to] = mag[feat_i];
+    denoise_context->noisy_mag[to] = mag[feat_i];
   }
 
-  ResizeIfNeededInPlace(denoise_context->m_noisy_mag, m_model_input_size[0]);  // noisy_mag_5
-  ResizeIfNeededInPlace(denoise_context->m_fullband_hidden, m_model_input_size[1]);  // fb_h
-  ResizeIfNeededInPlace(denoise_context->m_fullband_cell_state, m_model_input_size[2]);  // fb_c
-  ResizeIfNeededInPlace(denoise_context->m_prev_fb_out, m_model_input_size[3]);  // new_fb_out_5
+  ResizeIfNeededInPlace(denoise_context->noisy_mag, m_model_input_size[0]);  // noisy_mag_5
+  ResizeIfNeededInPlace(denoise_context->fullband_hidden, m_model_input_size[1]);  // fb_h
+  ResizeIfNeededInPlace(denoise_context->fullband_cell_state, m_model_input_size[2]);  // fb_c
+  ResizeIfNeededInPlace(denoise_context->prev_fb_out, m_model_input_size[3]);  // new_fb_out_5
 
-  inputs.push_back(&denoise_context->m_noisy_mag);
-  inputs.push_back(&denoise_context->m_fullband_hidden);
-  inputs.push_back(&denoise_context->m_fullband_cell_state);
-  inputs.push_back(&denoise_context->m_prev_fb_out);
+  inputs.push_back(&denoise_context->noisy_mag);
+  inputs.push_back(&denoise_context->fullband_hidden);
+  inputs.push_back(&denoise_context->fullband_cell_state);
+  inputs.push_back(&denoise_context->prev_fb_out);
 }
 
 template<typename T>
 void SpenchFTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
-  if (data.m_context == nullptr) {
+  if (data.context == nullptr) {
     throw("Context is not allocated!");
   }
-  spench::DenoiseContextF<T>* context = dynamic_cast<spench::DenoiseContextF<T>*>(data.m_context);
+  spench::DenoiseContextF<T>* context = dynamic_cast<spench::DenoiseContextF<T>*>(data.context);
 
   const T* const_output_ptr;
   for (uint16_t output_idx = 0; output_idx < m_model_output_size.size(); output_idx++) {
     const_output_ptr = tflite::GetTensorData<T>(m_model_outputs[output_idx]);
     switch (output_idx) {
       case 0:
-        context->m_fullband_hidden.assign(const_output_ptr,
-                                          const_output_ptr + context->m_fullband_hidden.size());
+        context->fullband_hidden.assign(const_output_ptr,
+                                          const_output_ptr + context->fullband_hidden.size());
         break;
       case 1:
-        context->m_fullband_cell_state.assign(const_output_ptr,
-                                              const_output_ptr + context->m_fullband_cell_state.size());
+        context->fullband_cell_state.assign(const_output_ptr,
+                                              const_output_ptr + context->fullband_cell_state.size());
         break;
       case 2:
-        context->m_prev_fb_out.assign(const_output_ptr,
-                                      const_output_ptr + context->m_prev_fb_out.size());
+        context->prev_fb_out.assign(const_output_ptr,
+                                      const_output_ptr + context->prev_fb_out.size());
         break;
       case 3:
         for (uint64_t i = 0; i < m_model_output_size[3]; i += 2) {
-          data.m_new_spectrogram.real[i / 2] = const_output_ptr[i];
-          data.m_new_spectrogram.imag[i / 2] = const_output_ptr[i + 1];
+          data.new_spectrogram.real[i / 2] = const_output_ptr[i];
+          data.new_spectrogram.imag[i / 2] = const_output_ptr[i + 1];
         }
         break;
       default:
@@ -260,23 +260,23 @@ void SpenchFTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
 }
 
 void SpenchFTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
-  if (denoise_task == nullptr || denoise_task->m_data.m_context == nullptr) {
+  if (denoise_task == nullptr || denoise_task->m_data.context == nullptr) {
     throw("Task data or context are not initialized!");
   }
-  if (denoise_task->m_data.m_input_spectrogram.size() == 0) {
+  if (denoise_task->m_data.input_spectrogram.size() == 0) {
     throw("Input spectrogram should be calculated before this step!");
   }
   auto& denoise_data = denoise_task->m_data;
-  auto& denoise_context = denoise_data.m_context;
-  if (denoise_context->m_prev_features.size() > m_model_params.m_network_input_ctx_len) {
-    denoise_context->m_prev_features.pop();
+  auto& denoise_context = denoise_data.context;
+  if (denoise_context->prev_features.size() > m_model_params.m_network_input_ctx_len) {
+    denoise_context->prev_features.pop();
   }
-  denoise_context->m_prev_features.push(denoise_data.m_input_spectrogram[0]);
+  denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
 
   if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
     std::vector<std::vector<float>*> inputs;
     std::vector<std::vector<float>> outputs;
-    std::vector<float> mag = denoise_data.m_input_spectrogram[0].getMagnitude();
+    std::vector<float> mag = denoise_data.input_spectrogram[0].getMagnitude();
     SpenchFTfliteRunner::PrepareInputInPlace(mag, inputs, denoise_context);
     SpenchFTfliteRunner::InitOutputTensors(denoise_data, m_model_output_size[3]);
 
@@ -286,11 +286,11 @@ void SpenchFTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
       ParseResults<float>(denoise_data);
     }
 
-    if (denoise_context->m_prev_spectrogram.real.size() == 0) {
-      denoise_data.m_enhanced_wav.resize(denoise_data.m_waveform.size() / 2);
-      std::fill_n(denoise_data.m_enhanced_wav.begin(), denoise_data.m_enhanced_wav.size(), 0.0);
+    if (denoise_context->prev_spectrogram.real.size() == 0) {
+      denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
+      std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
       denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
-    } else if (denoise_context->m_prev_features.size() > m_model_params.m_network_input_ctx_len + 1) {
+    } else if (denoise_context->prev_features.size() > m_model_params.m_network_input_ctx_len + 1) {
       throw("Incorrect number of previous states!");
     } else {
       denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
@@ -316,7 +316,7 @@ template<typename T>
 void SpenchQTfliteRunner::WarmUp() {
   spench::SpenchTask dummy_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>());
-  dummy_task.m_data.m_context = ctx.get();
+  dummy_task.m_data.context = ctx.get();
 
   std::vector<T> dummy_mag(m_model_input_size[0], 0.0);
   std::vector<T> dummy_fb_h(m_model_input_size[1], 0.0);
@@ -343,49 +343,49 @@ void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
   spench::DenoiseContextQ<float>* denoise_context =
                                      dynamic_cast<spench::DenoiseContextQ<float>*>(context);
 
-  ResizeIfNeededInPlace(denoise_context->m_fullband_hidden, m_model_input_size[1]);  // fb_h
-  ResizeIfNeededInPlace(denoise_context->m_fullband_cell_state, m_model_input_size[2]);  // fb_c
-  ResizeIfNeededInPlace(denoise_context->m_subband_hidden, m_model_input_size[3]);  // sb_h
-  ResizeIfNeededInPlace(denoise_context->m_subband_cell_state, m_model_input_size[4]);  // sb_c
+  ResizeIfNeededInPlace(denoise_context->fullband_hidden, m_model_input_size[1]);  // fb_h
+  ResizeIfNeededInPlace(denoise_context->fullband_cell_state, m_model_input_size[2]);  // fb_c
+  ResizeIfNeededInPlace(denoise_context->subband_hidden, m_model_input_size[3]);  // sb_h
+  ResizeIfNeededInPlace(denoise_context->subband_cell_state, m_model_input_size[4]);  // sb_c
 
   inputs.push_back(&mag);
-  inputs.push_back(&denoise_context->m_fullband_hidden);
-  inputs.push_back(&denoise_context->m_fullband_cell_state);
-  inputs.push_back(&denoise_context->m_subband_hidden);
-  inputs.push_back(&denoise_context->m_subband_cell_state);
+  inputs.push_back(&denoise_context->fullband_hidden);
+  inputs.push_back(&denoise_context->fullband_cell_state);
+  inputs.push_back(&denoise_context->subband_hidden);
+  inputs.push_back(&denoise_context->subband_cell_state);
 }
 
 template<typename T>
 void SpenchQTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
-  if (data.m_context == nullptr) {
+  if (data.context == nullptr) {
     throw("Context is not allocated!");
   }
-  spench::DenoiseContextQ<T>* context = dynamic_cast<spench::DenoiseContextQ<T>*>(data.m_context);
+  spench::DenoiseContextQ<T>* context = dynamic_cast<spench::DenoiseContextQ<T>*>(data.context);
 
   const T* const_output_ptr;
   for (uint16_t output_idx = 0; output_idx < m_model_output_size.size(); output_idx++) {
     const_output_ptr = tflite::GetTensorData<T>(m_model_outputs[output_idx]);
     switch (output_idx) {
       case 0:
-        context->m_fullband_hidden.assign(const_output_ptr,
-                                          const_output_ptr + context->m_fullband_hidden.size());
+        context->fullband_hidden.assign(const_output_ptr,
+                                          const_output_ptr + context->fullband_hidden.size());
         break;
       case 1:
-        context->m_fullband_cell_state.assign(const_output_ptr,
-                                              const_output_ptr + context->m_fullband_cell_state.size());
+        context->fullband_cell_state.assign(const_output_ptr,
+                                              const_output_ptr + context->fullband_cell_state.size());
         break;
       case 2:
-        context->m_subband_hidden.assign(const_output_ptr,
-                                         const_output_ptr + context->m_subband_hidden.size());
+        context->subband_hidden.assign(const_output_ptr,
+                                         const_output_ptr + context->subband_hidden.size());
         break;
       case 3:
-        context->m_subband_cell_state.assign(const_output_ptr,
-                                             const_output_ptr + context->m_subband_cell_state.size());
+        context->subband_cell_state.assign(const_output_ptr,
+                                             const_output_ptr + context->subband_cell_state.size());
         break;
       case 4:
         for (uint64_t i = 0; i < m_model_output_size[output_idx]; i += 2) {
-          data.m_new_spectrogram.real[i / 2] = const_output_ptr[i];
-          data.m_new_spectrogram.imag[i / 2] = const_output_ptr[i + 1];
+          data.new_spectrogram.real[i / 2] = const_output_ptr[i];
+          data.new_spectrogram.imag[i / 2] = const_output_ptr[i + 1];
         }
         break;
       default:
@@ -397,22 +397,22 @@ void SpenchQTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
 }
 
 void SpenchQTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
-  if (denoise_task == nullptr || denoise_task->m_data.m_context == nullptr) {
+  if (denoise_task == nullptr || denoise_task->m_data.context == nullptr) {
     throw("Task data or context are not initialized!");
   }
-  if (denoise_task->m_data.m_input_spectrogram.size() == 0) {
+  if (denoise_task->m_data.input_spectrogram.size() == 0) {
     throw("Input spectrogram should be calculated before this step!");
   }
   auto& denoise_data = denoise_task->m_data;
-  auto& denoise_context = denoise_data.m_context;
-  if (denoise_context->m_prev_features.size() > m_model_params.m_network_input_ctx_len) {
-    denoise_context->m_prev_features.pop();
+  auto& denoise_context = denoise_data.context;
+  if (denoise_context->prev_features.size() > m_model_params.m_network_input_ctx_len) {
+    denoise_context->prev_features.pop();
   }
 
   if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
     std::vector<std::vector<float>*> inputs;
     std::vector<std::vector<float>> outputs;
-    std::vector<float> mag = denoise_data.m_input_spectrogram[0].getMagnitude();
+    std::vector<float> mag = denoise_data.input_spectrogram[0].getMagnitude();
     SpenchQTfliteRunner::PrepareInputInPlace(mag, inputs, denoise_context);
     SpenchQTfliteRunner::InitOutputTensors(denoise_data, m_model_output_size[4]);
 
@@ -422,20 +422,20 @@ void SpenchQTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
       ParseResults<float>(denoise_data);
     }
 
-    if (denoise_context->m_prev_features.size() < m_model_params.m_network_input_ctx_len) {
-      denoise_data.m_enhanced_wav.resize(denoise_data.m_waveform.size() / 2);
-      std::fill_n(denoise_data.m_enhanced_wav.begin(), denoise_data.m_enhanced_wav.size(), 0.0);
+    if (denoise_context->prev_features.size() < m_model_params.m_network_input_ctx_len) {
+      denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
+      std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
       denoise_task->m_stage = spench::PipelineStage::SKIPPED_CHUNK;
-    } else if (denoise_context->m_prev_features.size() == m_model_params.m_network_input_ctx_len &&
-               denoise_context->m_prev_spectrogram.real.size() == 0) {
-      denoise_data.m_enhanced_wav.resize(denoise_data.m_waveform.size() / 2);
-      std::fill_n(denoise_data.m_enhanced_wav.begin(), denoise_data.m_enhanced_wav.size(), 0.0);
+    } else if (denoise_context->prev_features.size() == m_model_params.m_network_input_ctx_len &&
+               denoise_context->prev_spectrogram.real.size() == 0) {
+      denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
+      std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
       denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
     } else {
       denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
     }
 
-    denoise_context->m_prev_features.push(denoise_data.m_input_spectrogram[0]);
+    denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
   } else {
     throw("State is not appropriate");
   }

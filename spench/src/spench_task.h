@@ -24,13 +24,13 @@ enum PipelineStage {
 };
 
 struct SpenchTaskData {
-  SpenchTaskData() : m_context(nullptr) {}
-  SpenchContext<float>*             m_context;
-  std::vector<ComplexNumber<float>> m_input_spectrogram;
-  ComplexNumber<float>              m_new_spectrogram;
-  std::vector<float>                m_waveform;
-  std::vector<float>                m_enhanced_wav;
-  // std::string                               m_error_text;
+  SpenchTaskData() : context(nullptr) {}
+  SpenchContext<float>*             context;
+  std::vector<ComplexNumber<float>> input_spectrogram;
+  ComplexNumber<float>              new_spectrogram;
+  std::vector<float>                waveform;
+  std::vector<float>                enhanced_wav;
+  // std::string                               error_text;
 };
 
 class DenoiseModelParams {

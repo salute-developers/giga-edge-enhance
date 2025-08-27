@@ -57,44 +57,44 @@ struct ComplexNumber {
 
 template <typename T>
 struct StreamCurrentMetrics {
-  T m_speech_energy_avg{1e-3};
-  T m_noise_energy_avg{1e-3};
-  T m_e1_max{0.0};
+  T speech_energy_avg{1e-3};
+  T noise_energy_avg{1e-3};
+  T e1_max{0.0};
 };
 
 template <typename T>
 struct SpenchContext {
-  uint64_t m_id;
-  StreamCurrentMetrics<T> m_metrics;
-  StatInfo m_stat;
-  std::vector<T> m_prev_input_chunk;
-  std::queue<ComplexNumber<T>> m_prev_features;  // params.real_buf and params.imag_buf in python
-  ComplexNumber<T> m_prev_spectrogram;  // params.prev_out in python
-  std::unique_ptr<util::sound::ISoundStream<float, float>> m_input_sound_stream_ptr;
-  std::unique_ptr<util::sound::ISoundStream<float, float>> m_output_sound_stream_ptr;
+  uint64_t id;
+  StreamCurrentMetrics<T> metrics;
+  StatInfo stat;
+  std::vector<T> prev_input_chunk;
+  std::queue<ComplexNumber<T>> prev_features;  // params.real_buf and params.imag_buf in python
+  ComplexNumber<T> prev_spectrogram;  // params.prev_out in python
+  std::unique_ptr<util::sound::ISoundStream<float, float>> input_sound_stream_ptr;
+  std::unique_ptr<util::sound::ISoundStream<float, float>> output_sound_stream_ptr;
   virtual ~SpenchContext() = default;
 };
 
 template <typename T>
 struct DenoiseContextQ: public SpenchContext<T> {
-  std::vector<T> m_fullband_hidden;
-  std::vector<T> m_fullband_cell_state;
-  std::vector<T> m_subband_hidden;
-  std::vector<T> m_subband_cell_state;
+  std::vector<T> fullband_hidden;
+  std::vector<T> fullband_cell_state;
+  std::vector<T> subband_hidden;
+  std::vector<T> subband_cell_state;
 };
 
 template <typename T>
 struct DenoiseContextF: public SpenchContext<T> {
-  std::vector<T> m_fullband_hidden;
-  std::vector<T> m_fullband_cell_state;
-  std::vector<T> m_noisy_mag;
-  std::vector<T> m_prev_fb_out;
+  std::vector<T> fullband_hidden;
+  std::vector<T> fullband_cell_state;
+  std::vector<T> noisy_mag;
+  std::vector<T> prev_fb_out;
 };
 
 template <typename T>
 struct DereverbContext: public SpenchContext<T> {
-  std::vector<T> m_noisy_spec;
-  std::vector<T> m_prev_out;
+  std::vector<T> noisy_spec;
+  std::vector<T> prev_out;
   std::vector<T> phase;
 };
 }  // namespace spench

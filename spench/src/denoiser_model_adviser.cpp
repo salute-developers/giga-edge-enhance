@@ -34,18 +34,18 @@ T DenoiserModelAdviser<T>::calcSnrEstimation(const ComplexNumber<T>& input_spec,
     return static_cast<T>(0.0);
   }
 
-  metrics.m_e1_max = std::max(metrics.m_e1_max, static_cast<T>(E1));
+  metrics.e1_max = std::max(metrics.e1_max, static_cast<T>(E1));
 
-  if (E1 > static_cast<double>(metrics.m_e1_max) * this->m_snr_vad_threshold) {
-    metrics.m_speech_energy_avg = static_cast<T>(
-            (static_cast<double>(metrics.m_speech_energy_avg) * 0.95) + (E1 * 0.05));
+  if (E1 > static_cast<double>(metrics.e1_max) * this->m_snr_vad_threshold) {
+    metrics.speech_energy_avg = static_cast<T>(
+            (static_cast<double>(metrics.speech_energy_avg) * 0.95) + (E1 * 0.05));
   } else {
-    metrics.m_noise_energy_avg = static_cast<T>(
-            (static_cast<double>(metrics.m_noise_energy_avg) * 0.95) + (E2 * 0.05));
+    metrics.noise_energy_avg = static_cast<T>(
+            (static_cast<double>(metrics.noise_energy_avg) * 0.95) + (E2 * 0.05));
   }
 
-  double speech_energy = static_cast<double>(metrics.m_speech_energy_avg);
-  double noise_energy  = static_cast<double>(metrics.m_noise_energy_avg);
+  double speech_energy = static_cast<double>(metrics.speech_energy_avg);
+  double noise_energy  = static_cast<double>(metrics.noise_energy_avg);
 
   if (!std::isfinite(speech_energy) || !std::isfinite(noise_energy) || noise_energy <= 0.0) {
     spdlog::error("Invalid avg energies: speech = {}, noise = {}", speech_energy, noise_energy);
