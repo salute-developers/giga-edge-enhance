@@ -3,6 +3,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <cmath>
 #include "spench/src/spench_config_reader.h"
 
 #include "spench/util/echo/echo_canceler.h"
@@ -56,13 +57,13 @@ void StringConfigReader::load() {
   mergeYaml(m_params, userNode);
 }
 
-void DenoiserConfigReader::validate() const {
+void NetworkConfigReader::validate() const {
   spdlog::info("Yaml file reading: ");
 
   // Ensure we have a 'model' map
   const auto& model = lookup(m_params, {"model"});
   if (!model || !model.IsMap()) {
-    spdlog::critical("denoiser: missing required 'model' section");
+    spdlog::critical("network: missing required 'model' section");
     throw std::runtime_error("Missing model section");
   }
   // --- model.model_path (required, scalar string) ---
@@ -92,10 +93,10 @@ void DenoiserConfigReader::validate() const {
       }
     }
     if (n_inputs.size() == 0) {
-      spdlog::warn("denoiser: empty 'model.model_inputs'; using defaults");
+      spdlog::warn("network: empty 'model.model_inputs'; using defaults");
     }
   } else {
-    spdlog::warn("denoiser: missing 'model.model_inputs'; using defaults");
+    spdlog::warn("network: missing 'model.model_inputs'; using defaults");
   }
 
   // --- model.model_outputs (required, must be a sequence of scalars) ---
@@ -112,10 +113,10 @@ void DenoiserConfigReader::validate() const {
       }
     }
     if (n_outputs.size() == 0) {
-      spdlog::warn("denoiser: empty 'model.model_outputs'; using defaults");
+      spdlog::warn("network: empty 'model.model_outputs'; using defaults");
     }
   } else {
-    spdlog::warn("denoiser: missing 'model.model_outputs'; using defaults");
+    spdlog::warn("network: missing 'model.model_outputs'; using defaults");
   }
 
   // --- model_input_ctx_len (optional; support both nested and legacy top-level) ---
@@ -128,83 +129,101 @@ void DenoiserConfigReader::validate() const {
   }
 }
 
-
-std::string DenoiserConfigReader::modelPath() const {
+std::string NetworkConfigReader::modelPath() const {
   // safe after validate()
   return as<std::string>(lookup(m_params, {"model", "model_path"}));
 }
 
-std::vector<std::string> DenoiserConfigReader::modelInputs() const {
-  static const std::vector<std::string> kDefault{
-  #ifdef BUILD_TFLITE_ENGINE
-      "noisy_mag", "fb_h", "fb_c", "prev_fb_out"
-  #else
-      "noisy_mag_5", "fb_h.1", "fb_c.1", "prev_fb_out_5"
-  #endif
-  };
-
+std::vector<std::string> NetworkConfigReader::modelInputs() const {
   auto n = lookup(m_params, {"model", "model_inputs"});
   if (n && n.IsSequence() && n.size() > 0) {
     std::vector<std::string> out;
     out.reserve(n.size());
     for (const auto& item : n) {
       if (!item || !item.IsScalar())
-        return kDefault;  // bad element → use defaults
+        return defaultModelInputs();
       out.push_back(item.as<std::string>());
     }
     return out;
   }
-  return kDefault;  // missing/null/empty/not a sequence
+  return defaultModelInputs();
 }
 
-std::vector<std::string> DenoiserConfigReader::modelOutputs() const {
-  static const std::vector<std::string> kDefault{
-  #ifdef BUILD_TFLITE_ENGINE
-      "fb_h", "fb_c", "updated_fb_out", "out_mask"
-  #else
-      "fb_h", "fb_c", "new_fb_out_5", "model_out"
-  #endif
-  };
+std::vector<std::string> NetworkConfigReader::modelOutputs() const {
   auto n = lookup(m_params, {"model", "model_outputs"});
   if (n && n.IsSequence() && n.size() > 0) {
     std::vector<std::string> out;
     out.reserve(n.size());
     for (const auto& item : n) {
       if (!item || !item.IsScalar())
-        return kDefault;  // bad element → use defaults
+        return defaultModelOutputs();
       out.push_back(item.as<std::string>());
     }
     return out;
   }
-  return kDefault;  // missing/null/empty/not a sequence
+  return defaultModelOutputs();
 }
 
-uint32_t DenoiserConfigReader::samplingFreq() const {
+uint32_t NetworkConfigReader::samplingFreq() const {
   return as<uint32_t>(lookup(m_params, {"feature_params", "sampling_freq"}));
 }
 
-uint32_t DenoiserConfigReader::frameSizeMs() const {
+uint32_t NetworkConfigReader::frameSizeMs() const {
   return as<uint32_t>(lookup(m_params, {"feature_params", "frame_size_ms"}));
 }
 
-uint32_t DenoiserConfigReader::frameStrideMs() const {
+uint32_t NetworkConfigReader::frameStrideMs() const {
   return as<uint32_t>(lookup(m_params, {"feature_params", "frame_stride_ms"}));
 }
 
-std::string DenoiserConfigReader::windowType() const {
+std::string NetworkConfigReader::windowType() const {
   return as<std::string>(lookup(m_params, {"feature_params", "window_type"}));
 }
 
-bool DenoiserConfigReader::useGpu() const {
+bool NetworkConfigReader::useGpu() const {
   return as<bool>(lookup(m_params, {"inference", "gpu"}));
 }
 
-uint32_t DenoiserConfigReader::numThreads() const {
+uint32_t NetworkConfigReader::numThreads() const {
   return as<uint32_t>(lookup(m_params, {"inference", "engine_num_threads"}));
 }
 
-std::string DenoiserConfigReader::modelType() const {
+std::string NetworkConfigReader::modelType() const {
   return as<std::string>(lookup(m_params, {"inference", "model_type"}));
+}
+
+// -------------------- DenoiserConfigReader --------------------
+std::vector<std::string> DenoiserConfigReader::defaultModelInputs() const {
+#ifdef BUILD_TFLITE_ENGINE
+  return {"noisy_mag", "fb_h", "fb_c", "prev_fb_out"};
+#else
+  return {"noisy_mag_5", "fb_h.1", "fb_c.1", "prev_fb_out_5"};
+#endif
+}
+
+std::vector<std::string> DenoiserConfigReader::defaultModelOutputs() const {
+#ifdef BUILD_TFLITE_ENGINE
+  return {"fb_h", "fb_c", "updated_fb_out", "out_mask"};
+#else
+  return {"fb_h", "fb_c", "new_fb_out_5", "model_out"};
+#endif
+}
+
+// -------------------- DereverbConfigReader --------------------
+std::vector<std::string> DereverbConfigReader::defaultModelInputs() const {
+#ifdef BUILD_TFLITE_ENGINE
+  return {""};
+#else
+  return {"noisy_spec_5"};
+#endif
+}
+
+std::vector<std::string> DereverbConfigReader::defaultModelOutputs() const {
+#ifdef BUILD_TFLITE_ENGINE
+  return {""};
+#else
+  return {"model_out", "mu", "logvar"};
+#endif
 }
 
 void AecConfigReader::validate() const {

@@ -18,6 +18,23 @@ inference:
   engine_num_threads: 1
   model_type:        best_speed
 )";
+
+static constexpr char DefaultDereverbConfigYAML[] = R"(
+model:
+  model_path: ""
+  model_inputs:  ["noisy_spec_5"]
+  model_outputs: ["model_out", "mu", "logvar"]
+feature_params:
+  sampling_freq:    48000
+  frame_size_ms:    32
+  frame_stride_ms:  16
+  window_type:      hanning
+inference:
+  gpu:                false
+  engine_num_threads: 1
+  model_type:        remove_reverb
+)";
+
 #else
 static constexpr char DefaultDenoiserConfigYAML[] = R"(
 model:
@@ -34,13 +51,24 @@ inference:
   engine_num_threads: 1
   model_type:        best_speed
 )";
-#endif
 
 // Dereverb defaults
 static constexpr char DefaultDereverbConfigYAML[] = R"(
-dereverb:
-  # … your dereverb defaults here …
+model:
+  model_path: ""
+  model_inputs:  ["noisy_spec_5"]
+  model_outputs: ["model_out", "mu", "logvar"]
+feature_params:
+  sampling_freq:    48000
+  frame_size_ms:    32
+  frame_stride_ms:  16
+  window_type:      hanning
+inference:
+  gpu:                false
+  engine_num_threads: 1
+  model_type:        remove_reverb
 )";
+#endif
 
 // AEC defaults (as above)
 static constexpr char DefaultAecConfigYAML[] = R"(

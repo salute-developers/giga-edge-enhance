@@ -21,7 +21,7 @@ SpenchDenoise::SpenchDenoise(const char* config_file,
   spdlog::info("Create Spench denoiser from config file {}", config_file);
 }
 
-// YAML-snippet-based config constructor
+// YAML-based config constructor
 SpenchDenoise::SpenchDenoise(const std::string& yaml_str,
                              const char* password,
                              const char* checksum)

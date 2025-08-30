@@ -76,13 +76,24 @@ struct TestFixture {
     return *this;
   }
 
-  TestFixture& InitDereverberator(const std::string& config_name,
+  TestFixture& InitDereverberator(const std::filesystem::path& config_name,
                             const std::string& password = "",
                             const std::string& checksum = "") {
-    std::string config_path = m_kBase + "config/" + config_name;
-    m_dereverb = std::make_unique<spench::SpenchAudioDereverb>(config_path.c_str(),
-                                                               password.c_str(),
-                                                               checksum.c_str());
+    std::filesystem::path config_path = m_kBase + "config/";
+    config_path += config_name;
+    const std::string cfg = config_path.string();  // narrow on Windows
+    m_dereverb = std::make_unique<spench::SpenchAudioDereverb>(cfg.c_str(),
+                                                        password.c_str(),
+                                                        checksum.c_str());
+    return *this;
+  }
+
+  TestFixture& InitDereverberator(const std::string& yaml,
+                            const std::string& password = "",
+                            const std::string& checksum = "") {
+    m_dereverb = std::make_unique<spench::SpenchAudioDereverb>(yaml,
+                                                        password.c_str(),
+                                                        checksum.c_str());
     return *this;
   }
 
@@ -720,11 +731,11 @@ TEST_CASE("FAIL Run with password when the framework built without encryption [s
   #ifdef BUILD_TFLITE_ENGINE
     REQUIRE_THROWS_WITH(TestFixture().
       InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_encrypted_24khz.yaml"), "test"),
-      "Due to errors denoiser could not be created! ret_code: -8");
+      "Due to errors handler module could not be created! ret_code: -8");
   #else
     REQUIRE_THROWS_WITH(TestFixture().
       InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_encrypted_24khz.yaml"), "test"),
-      "Due to errors denoiser could not be created! ret_code: -8");
+      "Due to errors handler module could not be created! ret_code: -8");
   #endif
 }
 
@@ -734,13 +745,13 @@ TEST_CASE("FAIL Run with password and checksum when the framework built without 
       InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_lic_encrypted_24khz.yaml"),
                 "qwerty",
                 "Hhlr0ZEoL7KcTNoM9rbFVbpfN+k6yuamg3K2THn4K+I="),
-      "Due to errors denoiser could not be created! ret_code: -8");
+      "Due to errors handler module could not be created! ret_code: -8");
   #else
     REQUIRE_THROWS_WITH(TestFixture().
       InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_lic_encrypted_24khz.yaml"),
                 "qwerty",
                 "gGQdBounxW0kIBEURpYXmNxSAuWprxcMIvoMVQLRmpU="),
-      "Due to errors denoiser could not be created! ret_code: -8");
+      "Due to errors handler module could not be created! ret_code: -8");
   #endif
 }
 #endif
@@ -1025,12 +1036,64 @@ model:
 
 TEST_CASE("SUCCEED Run inference with the dereverb 48 kHz model with resampling from 44.1 kHz [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
-    // auto test_data = std::move(TestFixture().
-    //                            InitDereverberator("default_configuration_dereverberation_tflite_48khz.yaml").
-    //                            SetWav("reverb_with_noise_48khz.wav"));
+    // auto test_data =
+    //.     std::move(TestFixture().
+    //           InitDereverberator(std::filesystem::path("default_configuration_dereverberation_tflite_48khz.yaml")).
+    //           SetWav("reverb_with_noise_48khz.wav"));
   #else
-    auto test_data = std::move(TestFixture().
-                               InitDereverberator("default_configuration_dereverberation_onnx_48khz.yaml").
+  auto test_data =
+            std::move(TestFixture().
+                 InitDereverberator(std::filesystem::path("default_configuration_dereverberation_onnx_48khz.yaml")).
+                 SetWav("reverb_with_noise_44.1khz.wav"));
+
+  std::vector<float> prediction;
+  std::vector<float> reference_prediction;
+  SpenchRetCode ret_code;
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 100;
+  const uint32_t kAudio_dst_sample_rate = 44100;
+  const uint32_t kAudio_src_sample_rate = 44100;
+
+  spench::SpenchContext<float>* ctx = test_data.m_dereverb->CreateContext(kAudio_src_sample_rate,
+                                                                          kAudio_dst_sample_rate);
+
+  auto chunks = chunkWav<float>(test_data.m_wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+
+  loadWavFx("data/results/wavs/dereverb_with_noise_44.1khz.wav", reference_prediction);
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+
+    ret_code = test_data.m_dereverb->ProcessChunk(chunk, ret, ctx);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+  // remove context zeroes as reference does not include that
+  prediction.erase(prediction.begin(),
+                   prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
+  //
+  test_data.m_dereverb->DestroyContext(&ctx);
+  reference_prediction.resize(prediction.size());
+  // ToDo (artsokol) make a threshold smaller for new dereverb model
+  IsVectorsClose(reference_prediction, prediction, 0.4);
+  #endif
+}
+
+TEST_CASE("SUCCEED Run inference with the dereverb 48 kHz model with yaml string config [spench c++ api]") {
+  #ifdef BUILD_TFLITE_ENGINE
+
+  #else
+    static constexpr char yaml[] = R"(
+model:
+  model_path: data/models/dereverb_model_48khz.onnx)";
+  auto test_data = std::move(TestFixture().
+                               InitDereverberator(std::string(yaml)).
                                SetWav("reverb_with_noise_44.1khz.wav"));
 
   std::vector<float> prediction;
@@ -1706,13 +1769,15 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [
 
 TEST_CASE("SUCCEED Run inference with the dereverb 48 kHz model on a part of .wav file [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
-    // auto test_data = std::move(TestFixture().
-    //                            InitDereverberator("default_configuration_dereverberation_tflite_48khz.yaml").
-    //                            SetWav("reverb_with_noise_48khz.wav"));
+    // auto test_data =
+    //       std::move(TestFixture().
+    //            InitDereverberator(std::filesystem::path("default_configuration_dereverberation_tflite_48khz.yaml")).
+    //            SetWav("reverb_with_noise_48khz.wav"));
   #else
-    auto test_data = std::move(TestFixture().
-                               InitDereverberator("default_configuration_dereverberation_onnx_48khz.yaml").
-                               SetWav("reverb_with_noise_48khz.wav"));
+    auto test_data =
+            std::move(TestFixture().
+                InitDereverberator(std::filesystem::path("default_configuration_dereverberation_onnx_48khz.yaml")).
+                SetWav("reverb_with_noise_48khz.wav"));
 
   std::vector<float> prediction;
   std::vector<float> reference_prediction;

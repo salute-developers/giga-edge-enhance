@@ -43,6 +43,26 @@ struct DummyReader : public spench::ConfigReader {
   void load() override {}
 };
 
+struct MiniNetworkReader final : public spench::NetworkConfigReader {
+  using spench::NetworkConfigReader::NetworkConfigReader;
+
+  // Provide harmless defaults so the abstract base can be instantiated
+  std::vector<std::string> defaultModelInputs() const override {
+#ifdef BUILD_TFLITE_ENGINE
+    return {"in_tfl"};
+#else
+    return {"in_onnx"};
+#endif
+  }
+  std::vector<std::string> defaultModelOutputs() const override {
+#ifdef BUILD_TFLITE_ENGINE
+    return {"out_tfl"};
+#else
+    return {"out_onnx"};
+#endif
+  }
+};
+
 }  // namespace
 
 // ------------------------------------------------------------------------------
@@ -235,6 +255,220 @@ model: {}
   auto base = std::make_unique<spench::StringConfigReader>(yaml);
   spench::DenoiserConfigReader cfg(std::move(base));
   REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+}
+
+TEST_CASE("SUCCESS NetworkConfigReader accepts optional scalar model_input_ctx_len [network config reader]") {
+  const std::string yaml = R"(
+model:
+  model_path: "net.onnx"
+  model_input_ctx_len: 64
+)";
+
+  auto base = std::make_unique<spench::StringConfigReader>(yaml);
+  MiniNetworkReader cfg(std::move(base));
+  REQUIRE_NOTHROW(cfg.load());  // validate() is called inside load()
+}
+
+TEST_CASE("FAIL NetworkConfigReader missing 'model' section throws [network config reader]") {
+  const std::string yaml = R"(
+inference:
+  engine_num_threads: 2
+)";
+  auto base = std::make_unique<spench::StringConfigReader>(yaml);
+  MiniNetworkReader cfg(std::move(base));
+  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+}
+
+TEST_CASE("FAIL NetworkConfigReader missing or empty model_path throws [network config reader]") {
+  SECTION("model section present but model_path missing") {
+    const std::string yaml = R"(
+model: {}
+)";
+    auto base = std::make_unique<spench::StringConfigReader>(yaml);
+    MiniNetworkReader cfg(std::move(base));
+    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  }
+
+  SECTION("model_path is an empty string") {
+    const std::string yaml = R"(
+model:
+  model_path: ""
+)";
+    auto base = std::make_unique<spench::StringConfigReader>(yaml);
+    MiniNetworkReader cfg(std::move(base));
+    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  }
+}
+
+TEST_CASE("FAIL NetworkConfigReader inputs and outputs must be sequences of scalars [network config reader]") {
+  SECTION("model_inputs is not a sequence") {
+    const std::string yaml = R"(
+model:
+  model_path: "ok.onnx"
+  model_inputs: 123
+)";
+    auto base = std::make_unique<spench::StringConfigReader>(yaml);
+    MiniNetworkReader cfg(std::move(base));
+    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  }
+
+  SECTION("model_inputs contains a non-scalar item") {
+    const std::string yaml = R"(
+model:
+  model_path: "ok.onnx"
+  model_inputs: [foo, {bar: 1}]
+)";
+    auto base = std::make_unique<spench::StringConfigReader>(yaml);
+    MiniNetworkReader cfg(std::move(base));
+    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  }
+
+  SECTION("model_outputs is not a sequence") {
+    const std::string yaml = R"(
+model:
+  model_path: "ok.onnx"
+  model_outputs: true
+)";
+    auto base = std::make_unique<spench::StringConfigReader>(yaml);
+    MiniNetworkReader cfg(std::move(base));
+    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  }
+
+  SECTION("model_outputs contains a non-scalar item") {
+    const std::string yaml = R"(
+model:
+  model_path: "ok.onnx"
+  model_outputs: ["y", [1,2,3]]
+)";
+    auto base = std::make_unique<spench::StringConfigReader>(yaml);
+    MiniNetworkReader cfg(std::move(base));
+    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  }
+}
+
+TEST_CASE("FAIL NetworkConfigReader model_input_ctx_len must be a scalar when present [network config reader]") {
+  const std::string yaml = R"(
+model:
+  model_path: "ok.onnx"
+  model_input_ctx_len: { not: "scalar" }
+)";
+  auto base = std::make_unique<spench::StringConfigReader>(yaml);
+  MiniNetworkReader cfg(std::move(base));
+  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+}
+
+// ------------------------------------------------------------------------------
+// DereverbConfigReader
+// ------------------------------------------------------------------------------
+TEST_CASE("SUCCESS DereverbConfigReader getters return correct override and default values [dereverb config reader]") {
+  const std::string yaml = R"(
+model:
+  model_path: "derev.onnx"
+  model_inputs: ["x_in"]
+  model_outputs: ["y_out"]
+feature_params:
+  sampling_freq: 48000
+  frame_size_ms:   20
+  frame_stride_ms: 10
+  window_type:    "hamming"
+inference:
+  gpu:                true
+  engine_num_threads: 6
+  model_type:        "best_quality"
+)";
+
+  auto base = std::make_unique<spench::StringConfigReader>(yaml);
+  spench::DereverbConfigReader cfg(std::move(base));
+  REQUIRE_NOTHROW(cfg.load());
+
+  // Network-level getters
+  REQUIRE(cfg.modelPath()    == "derev.onnx");
+  REQUIRE(cfg.modelInputs()  == std::vector<std::string>({"x_in"}));
+  REQUIRE(cfg.modelOutputs() == std::vector<std::string>({"y_out"}));
+  REQUIRE(cfg.samplingFreq() == 48000u);
+  REQUIRE(cfg.frameSizeMs()  == 20u);
+  REQUIRE(cfg.frameStrideMs()== 10u);
+  REQUIRE(cfg.windowType()   == "hamming");
+  REQUIRE(cfg.useGpu()       == true);
+  REQUIRE(cfg.numThreads()   == 6u);
+  REQUIRE(cfg.modelType()    == "best_quality");
+}
+
+TEST_CASE("SUCCESS DereverbConfigReader uses defaults when optional fields are missing [dereverb config reader]") {
+  const std::string yaml = R"(
+model:
+  model_path: "only_derev.onnx"
+)";
+
+  auto base = std::make_unique<spench::StringConfigReader>(spench::DefaultDereverbConfigYAML, yaml);
+  spench::DereverbConfigReader cfg(std::move(base));
+  REQUIRE_NOTHROW(cfg.load());
+
+#ifdef BUILD_TFLITE_ENGINE
+  const std::vector<std::string> exp_in  = {"noisy_spec_5"};
+  const std::vector<std::string> exp_out = {"model_out", "mu", "logvar"};
+#else
+  const std::vector<std::string> exp_in  = {"noisy_spec_5"};
+  const std::vector<std::string> exp_out = {"model_out", "mu", "logvar"};
+#endif
+
+  REQUIRE(cfg.modelPath()    == "only_derev.onnx");
+  REQUIRE(cfg.modelInputs()  == exp_in);
+  REQUIRE(cfg.modelOutputs() == exp_out);
+
+  // Defaults inherited from the built-in YAML used by StringConfigReader
+  REQUIRE(cfg.samplingFreq() == 48000u);
+  REQUIRE(cfg.frameSizeMs()  == 32u);
+  REQUIRE(cfg.frameStrideMs()== 16u);
+  REQUIRE(cfg.windowType()   == "hanning");
+  REQUIRE(cfg.useGpu()       == false);
+  REQUIRE(cfg.numThreads()   == 1u);
+  REQUIRE(cfg.modelType()    == "remove_reverb");
+}
+
+TEST_CASE("FAIL DereverbConfigReader throws when model_path is missing or invalid [dereverb config reader]") {
+  SECTION("model section exists but is empty") {
+    const std::string yaml = R"(
+model: {}
+)";
+    auto base = std::make_unique<spench::StringConfigReader>(yaml);
+    spench::DereverbConfigReader cfg(std::move(base));
+    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  }
+
+  SECTION("model_path is empty") {
+    const std::string yaml = R"(
+model:
+  model_path: ""
+)";
+    auto base = std::make_unique<spench::StringConfigReader>(yaml);
+    spench::DereverbConfigReader cfg(std::move(base));
+    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  }
+}
+
+TEST_CASE("FAIL DereverbConfigReader validates structure of inputs/outputs [dereverb config reader]") {
+  SECTION("inputs is non-sequence") {
+    const std::string yaml = R"(
+model:
+  model_path: "ok.onnx"
+  model_inputs: {a: 1}
+)";
+    auto base = std::make_unique<spench::StringConfigReader>(yaml);
+    spench::DereverbConfigReader cfg(std::move(base));
+    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  }
+
+  SECTION("outputs contains a non-scalar item") {
+    const std::string yaml = R"(
+model:
+  model_path: "ok.onnx"
+  model_outputs: ["good", {bad: true}]
+)";
+    auto base = std::make_unique<spench::StringConfigReader>(yaml);
+    spench::DereverbConfigReader cfg(std::move(base));
+    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  }
 }
 
 TEST_CASE("SUCCESS AecConfigReader full override [aec config reader]") {

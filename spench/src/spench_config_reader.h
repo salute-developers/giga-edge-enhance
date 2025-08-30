@@ -90,23 +90,50 @@ class PipelineConfigReader : public ConfigReader {
   std::unique_ptr<ConfigReader> m_base;
 };
 
-class DenoiserConfigReader final: public PipelineConfigReader<DenoiserConfigReader> {
+class NetworkConfigReader : public PipelineConfigReader<NetworkConfigReader> {
  public:
-  explicit DenoiserConfigReader(std::unique_ptr<ConfigReader> base_reader)
-  : PipelineConfigReader<DenoiserConfigReader>(std::move(base_reader)) {}
+  using PipelineConfigReader<NetworkConfigReader>::PipelineConfigReader;
 
   void validate() const override;
+  std::string               modelPath()     const;
+  std::vector<std::string>  modelInputs()   const;
+  std::vector<std::string>  modelOutputs()  const;
+  uint32_t                  samplingFreq()  const;
+  uint32_t                  frameSizeMs()   const;
+  uint32_t                  frameStrideMs() const;
+  std::string               windowType()    const;
+  bool                      useGpu()        const;
+  uint32_t                  numThreads()    const;
+  std::string               modelType()     const;
 
-  std::string               modelPath()    const;
-  std::vector<std::string>  modelInputs()  const;
-  std::vector<std::string>  modelOutputs() const;
-  uint32_t                  samplingFreq() const;
-  uint32_t                  frameSizeMs()  const;
-  uint32_t                  frameStrideMs()const;
-  std::string               windowType()   const;
-  bool                      useGpu()       const;
-  uint32_t                  numThreads()   const;
-  std::string               modelType()    const;
+ protected:
+  virtual std::vector<std::string> defaultModelInputs()  const = 0;
+  virtual std::vector<std::string> defaultModelOutputs() const = 0;
+};
+
+// -------------------- Конкретные пайплайны --------------------
+class DenoiserConfigReader final : public NetworkConfigReader {
+ public:
+  using NetworkConfigReader::NetworkConfigReader;
+  void validate() const override {
+    NetworkConfigReader::validate();
+  }
+
+ protected:
+  std::vector<std::string> defaultModelInputs()  const override;
+  std::vector<std::string> defaultModelOutputs() const override;
+};
+
+class DereverbConfigReader final : public NetworkConfigReader {
+ public:
+  using NetworkConfigReader::NetworkConfigReader;
+  void validate() const override {
+    NetworkConfigReader::validate();
+  }
+
+ protected:
+  std::vector<std::string> defaultModelInputs()  const override;
+  std::vector<std::string> defaultModelOutputs() const override;
 };
 
 class AecConfigReader final : public PipelineConfigReader<AecConfigReader> {
