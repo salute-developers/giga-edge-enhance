@@ -1,5 +1,4 @@
 #include "spench/util/onnx/base_onnx_runner.h"
-#include <sstream>
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
 #include "spench/submodules/modelencryption/lib/include/crypto.h"
