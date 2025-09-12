@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 #include <limits>
-#include "contrib/yaml-cpp/yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "spench/src/spench_context.h"
 
 namespace spench {

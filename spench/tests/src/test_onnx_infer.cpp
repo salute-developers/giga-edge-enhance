@@ -1,6 +1,6 @@
 #include "spench/util/onnx/denoise_onnx_runner.h"
 #include "spench/util/onnx/dereverb_onnx_runner.h"
-#include "contrib/yaml-cpp/yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "tests/src/utils.h"
 #include <memory>
 #include <catch.hpp>

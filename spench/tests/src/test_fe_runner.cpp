@@ -1,4 +1,4 @@
-#include "contrib/yaml-cpp/yaml.h"
+#include <yaml-cpp/yaml.h>
 #include "spench/src/feature_extractor_runner.h"
 #include <memory>
 #include <catch.hpp>

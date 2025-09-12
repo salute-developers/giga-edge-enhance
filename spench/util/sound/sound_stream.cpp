@@ -141,9 +141,9 @@ std::unique_ptr<ISoundStream<T, T>> BuildSoundStream(uint32_t src_rate, uint32_t
   dst.channels = 1;
 
   if (template_type == TemplateType::INPUT) {
-    return std::move(BuildSoundStreamTIn<T>(src, dst));
+    return BuildSoundStreamTIn<T>(src, dst);
   } else if (template_type == TemplateType::OUTPUT) {
-    return std::move(BuildSoundStreamTOut<T>(src, dst));
+    return BuildSoundStreamTOut<T>(src, dst);
   } else {
     throw std::runtime_error("SoundStream::BuildSoundStream not able to fetch template type");
   }

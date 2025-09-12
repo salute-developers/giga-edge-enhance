@@ -1,7 +1,7 @@
 #include "spench/src/feature_extractor.h"
 
 #include "spench/src/feature_params.h"
-#include "contrib/yaml-cpp/yaml.h"
+#include <yaml-cpp/yaml.h>
 #include <spdlog/spdlog.h>
 #include <memory>
 #include <catch.hpp>

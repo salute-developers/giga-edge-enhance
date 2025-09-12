@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <string>
-#include "contrib/yaml-cpp/yaml.h"
+#include <yaml-cpp/yaml.h>
 
 namespace spench {
 namespace fe {
