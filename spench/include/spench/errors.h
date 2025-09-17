@@ -30,9 +30,13 @@ typedef enum SpenchRetCodeEnum {
    */
   RESAMPLING_OUTPUT_BUFFER_ACCUMULATION = 3,
   /**
+   *  \brief: A functionality is not implemented.
+   */
+  ERR_NOT_IMPLEMENTED = -16,
+  /**
    *  \brief: A common problem with Denoiser instance. Read detailes in error message.
    */
-  ERR_DENOISER_CREATE_AND_SETUP_PROBLEM = -15,
+  ERR_DENOISER_CREATE_AND_SETUP_PROBLEM,
   /**
    *  \brief: Invalid parameter passed to API. Doublecheck API requirements.
    */

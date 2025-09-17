@@ -136,6 +136,69 @@ class DereverbConfigReader final : public NetworkConfigReader {
   std::vector<std::string> defaultModelOutputs() const override;
 };
 
+class AudioProcessingYamlBlock {
+ public:
+  enum class Kind { Scalar, Sequence, Map };
+
+  struct Field {
+    const char* key;
+    Kind        kind;
+    bool        required;
+  };
+
+  static void validateSection(const YAML::Node& section,
+                              const std::string& section_name,
+                              std::initializer_list<Field> fields);
+};
+
+class ParamBlockView {
+ public:
+  ParamBlockView(const YAML::Node& root, std::string base, std::string block)
+      : m_root(root), m_base(std::move(base)), m_block(std::move(block)) {}
+
+  template<typename T>
+  T get(const char* key) const {
+    return as<T>(lookup(m_root, {m_base, m_block, key}));
+  }
+
+  YAML::Node node() const {
+    return lookup(m_root, {m_base, m_block});
+  }
+
+ private:
+  const YAML::Node& m_root;
+  std::string m_base;
+  std::string m_block;
+};
+
+template<typename T>
+T as(const YAML::Node& node);
+
+YAML::Node lookup(const YAML::Node& root,
+                  const std::initializer_list<std::string>& path);
+
+template<typename Derived>
+class PipelineConfigReader;
+
+class AudioProcessingReader final : public PipelineConfigReader<AudioProcessingReader> {
+ public:
+  explicit AudioProcessingReader(std::unique_ptr<ConfigReader> base_reader)
+      : PipelineConfigReader<AudioProcessingReader>(std::move(base_reader)) {}
+
+  void validate() const override;
+
+  // Universal typed getter
+  template<typename T>
+  T get(const char* block, const char* key) const {
+    return as<T>(lookup(m_params, {"sound_processing", block, key}));
+  }
+
+  // Optional helper to get a view on a whole block
+  ParamBlockView block(const std::string& name) const {
+    return ParamBlockView(m_params, "sound_processing", name);
+  }
+};
+
 class AecConfigReader final : public PipelineConfigReader<AecConfigReader> {
  public:
     explicit AecConfigReader(std::unique_ptr<ConfigReader> base_reader)

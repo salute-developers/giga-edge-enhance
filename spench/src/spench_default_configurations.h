@@ -82,8 +82,45 @@ echo_cancellation:
 )";
 
 // Normalizer defaults
-static constexpr char DefaultNormalizerConfigYAML[] = R"(
-normalization:
+static constexpr char DefaultAudioProcessingConfigYAML[] = R"(
+sound_processing:
+  range_ctrl:
+    sample_rate: 48000
+    target_level_db: -3.0
+    max_gain_db: 10
+    attack_time: 0.0
+    release_time: 300
+    hold_time: 5
+  auto_gain_ctrl:
+    target_level: 1
+    max_gain: 20.0
+    average_len: 6000
+    step_size_rise: 0.01
+    step_size_fall: 0.01
+  noise_gate_ctrl:
+    sample_rate: 48000
+    threshold: -15.0
+    attack_time: 0.05
+    release_time: 0.02
+    hold_time: 0.05
+  dynamic_range_compressor_ctrl:
+    sample_rate: 48000
+    threshold: -15.0
+    ratio: 5
+    knee_width: 0.0
+    attack_time: 0.01
+    release_time: 0.2
+  loudness_ctrl:
+    sample_rate: 48000
+    target_level_db: -23.0
+    bypass_time: 3.0
+    max_gain_db: 40
+  limiter_ctrl:
+    sample_rate: 48000
+    threshold: -3.0
+    knee_width: 0.0
+    attack_time: 0.0
+    release_time: 0.2
 )";
 
 }  // namespace spench

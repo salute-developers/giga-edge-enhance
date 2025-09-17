@@ -531,3 +531,146 @@ TEST_CASE("FAIL AecConfigReader missing section throws [aec config reader]") {
   spench::AecConfigReader cfg(std::move(base));
   REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
 }
+
+// ------------------------------------------------------------------------------
+// AudioProcessingReader
+// ------------------------------------------------------------------------------
+TEST_CASE("SUCCESS AudioProcessingReader generic getter returns defaults [audio processing reader]") {
+  auto base = std::make_unique<spench::StringConfigReader>(
+      spench::DefaultAudioProcessingConfigYAML, std::string{});
+  spench::AudioProcessingReader cfg(std::move(base));
+  REQUIRE_NOTHROW(cfg.load());
+
+  REQUIRE(cfg.get<uint32_t>("range_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg.get<float>("range_ctrl", "target_level_db") == Approx(-3.0f));
+  REQUIRE(cfg.get<float>("range_ctrl", "max_gain_db") == Approx(10.0f));
+  REQUIRE(cfg.get<float>("range_ctrl", "attack_time") == Approx(0.0f));
+  REQUIRE(cfg.get<float>("range_ctrl", "release_time") == Approx(300.0f));
+  REQUIRE(cfg.get<float>("range_ctrl", "hold_time") == Approx(5.0f));
+
+  REQUIRE(cfg.get<float>("auto_gain_ctrl", "target_level") == Approx(1.0f));
+  REQUIRE(cfg.get<float>("auto_gain_ctrl", "max_gain") == Approx(20.0f));
+  REQUIRE(cfg.get<uint32_t>("auto_gain_ctrl", "average_len") == 6000u);
+  REQUIRE(cfg.get<float>("auto_gain_ctrl", "step_size_rise") == Approx(0.01f));
+  REQUIRE(cfg.get<float>("auto_gain_ctrl", "step_size_fall") == Approx(0.01f));
+
+  REQUIRE(cfg.get<uint32_t>("noise_gate_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg.get<float>("noise_gate_ctrl", "threshold") == Approx(-15.0f));
+  REQUIRE(cfg.get<float>("noise_gate_ctrl", "attack_time") == Approx(0.05f));
+  REQUIRE(cfg.get<float>("noise_gate_ctrl", "release_time") == Approx(0.02f));
+  REQUIRE(cfg.get<float>("noise_gate_ctrl", "hold_time") == Approx(0.05f));
+
+  REQUIRE(cfg.get<uint32_t>("dynamic_range_compressor_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "threshold") == Approx(-15.0f));
+  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "ratio") == Approx(5.0f));
+  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "knee_width") == Approx(0.0f));
+  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "attack_time") == Approx(0.01f));
+  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "release_time") == Approx(0.2f));
+
+  REQUIRE(cfg.get<uint32_t>("loudness_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg.get<float>("loudness_ctrl", "target_level_db") == Approx(-23.0f));
+  REQUIRE(cfg.get<float>("loudness_ctrl", "bypass_time") == Approx(3.0f));
+  REQUIRE(cfg.get<float>("loudness_ctrl", "max_gain_db") == Approx(40.0f));
+
+  REQUIRE(cfg.get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg.get<float>("limiter_ctrl", "threshold") == Approx(-3.0f));
+  REQUIRE(cfg.get<float>("limiter_ctrl", "knee_width") == Approx(0.0f));
+  REQUIRE(cfg.get<float>("limiter_ctrl", "attack_time") == Approx(0.0f));
+  REQUIRE(cfg.get<float>("limiter_ctrl", "release_time") == Approx(0.2f));
+}
+
+TEST_CASE("SUCCESS AudioProcessingReader overrides some fields [audio processing reader]") {
+  const std::string override_yaml = R"(
+sound_processing:
+  loudness_ctrl:
+    bypass_time: 4.5
+  limiter_ctrl:
+    threshold: -1.5
+)";
+  auto base = std::make_unique<spench::StringConfigReader>(
+      spench::DefaultAudioProcessingConfigYAML, override_yaml);
+  spench::AudioProcessingReader cfg(std::move(base));
+  REQUIRE_NOTHROW(cfg.load());
+
+  REQUIRE(cfg.get<float>("loudness_ctrl", "bypass_time") == Approx(4.5f));
+  REQUIRE(cfg.get<float>("limiter_ctrl", "threshold") == Approx(-1.5f));
+  REQUIRE(cfg.get<uint32_t>("loudness_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg.get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
+}
+
+TEST_CASE("SUCCESS AudioProcessingReader ParamBlockView works [audio processing reader]") {
+  auto base = std::make_unique<spench::StringConfigReader>(
+      spench::DefaultAudioProcessingConfigYAML, std::string{});
+  spench::AudioProcessingReader cfg(std::move(base));
+  REQUIRE_NOTHROW(cfg.load());
+
+  auto ng = cfg.block("noise_gate_ctrl");
+  REQUIRE(ng.get<uint32_t>("sample_rate") == 48000u);
+  REQUIRE(ng.get<float>("threshold") == Approx(-15.0f));
+}
+
+TEST_CASE("FAIL AudioProcessingReader missing sound_processing section throws [audio processing reader]") {
+  auto base = std::make_unique<spench::StringConfigReader>("");  // empty
+  spench::AudioProcessingReader cfg(std::move(base));
+  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+}
+
+TEST_CASE("FAIL AudioProcessingReader detects non-scalar for required field [audio processing reader]") {
+  const std::string bad_yaml = R"(
+sound_processing:
+  range_ctrl:
+    sample_rate: [48000]
+    target_level_db: -3.0
+    max_gain_db: 10
+    attack_time: 0.0
+    release_time: 300
+    hold_time: 5
+  auto_gain_ctrl:
+    target_level: 1
+    max_gain: 20.0
+    average_len: 6000
+    step_size_rise: 0.01
+    step_size_fall: 0.01
+  noise_gate_ctrl:
+    sample_rate: 48000
+    threshold: -15.0
+    attack_time: 0.05
+    release_time: 0.02
+    hold_time: 0.05
+  dynamic_range_compressor_ctrl:
+    sample_rate: 48000
+    threshold: -15.0
+    ratio: 5
+    knee_width: 0.0
+    attack_time: 0.01
+    release_time: 0.2
+  loudness_ctrl:
+    sample_rate: 48000
+    target_level_db: -23.0
+    bypass_time: 3.0
+    max_gain_db: 40
+  limiter_ctrl:
+    sample_rate: 48000
+    threshold: -3.0
+    knee_width: 0.0
+    attack_time: 0.0
+    release_time: 0.2
+)";
+  auto base = std::make_unique<spench::StringConfigReader>(bad_yaml);
+  spench::AudioProcessingReader cfg(std::move(base));
+  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+}
+
+TEST_CASE("FAIL AudioProcessingReader missing required key in limiter_ctrl throws [audio processing reader]") {
+  const std::string bad_yaml = R"(
+sound_processing:
+  limiter_ctrl:
+    sample_rate: 48000
+    knee_width: 0.0
+    attack_time: 0.0
+    release_time: 0.2
+)";
+  auto base = std::make_unique<spench::StringConfigReader>(bad_yaml);
+  spench::AudioProcessingReader cfg(std::move(base));
+  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+}

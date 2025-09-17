@@ -1049,7 +1049,7 @@ TEST_CASE("SUCCESS StatCollector ignores missing values but matches reference [s
   }
 }
 
-TEST_CASE("SUCCESS StatCollector quantiles monotonic; constant input [stat]") {
+TEST_CASE("SUCCESS StatCollector quantiles monotonic constant input [stat]") {
   {
     const int n = 1000;
     util::sound::StatCollector col("const", 1, static_cast<double>(n),

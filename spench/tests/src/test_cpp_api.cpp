@@ -730,11 +730,11 @@ TEST_CASE("FAIL Run with password when the framework built without encryption [s
   #ifdef BUILD_TFLITE_ENGINE
     REQUIRE_THROWS_WITH(TestFixture().
       InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_encrypted_24khz.yaml"), "test"),
-      "Due to errors handler module could not be created! ret_code: -8");
+      "Due to errors a neural network handler module could not be created! ret_code: -8");
   #else
     REQUIRE_THROWS_WITH(TestFixture().
       InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_encrypted_24khz.yaml"), "test"),
-      "Due to errors handler module could not be created! ret_code: -8");
+      "Due to errors a neural network handler module could not be created! ret_code: -8");
   #endif
 }
 
@@ -744,13 +744,13 @@ TEST_CASE("FAIL Run with password and checksum when the framework built without 
       InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_lic_encrypted_24khz.yaml"),
                 "qwerty",
                 "Hhlr0ZEoL7KcTNoM9rbFVbpfN+k6yuamg3K2THn4K+I="),
-      "Due to errors handler module could not be created! ret_code: -8");
+      "Due to errors a neural network handler module could not be created! ret_code: -8");
   #else
     REQUIRE_THROWS_WITH(TestFixture().
       InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_lic_encrypted_24khz.yaml"),
                 "qwerty",
                 "gGQdBounxW0kIBEURpYXmNxSAuWprxcMIvoMVQLRmpU="),
-      "Due to errors handler module could not be created! ret_code: -8");
+      "Due to errors a neural network handler module could not be created! ret_code: -8");
   #endif
 }
 #endif

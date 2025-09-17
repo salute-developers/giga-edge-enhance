@@ -1,13 +1,13 @@
-#include "spench/src/denoiser_audio_handler.h"
+#include "spench/src/handler/denoiser_audio_handler.h"
+#include "spench/src/handler/dereverberator_audio_handler.h"
 #include "spench/src/denoiser_model_adviser.h"
-#include "spench/src/dereverberator_audio_handler.h"
 #include <catch.hpp>
 #include "tests/src/utils.h"
 #include <spench/errors.h>
 #include <filesystem>
 
 struct TestHandler {
-  std::unique_ptr<spench::BaseAudioHandler> handler;
+  std::unique_ptr<spench::NeuralNetworkAudioHandler> handler;
 
   const std::string kBase = "data/";
   std::vector<float> wav_data;
@@ -82,8 +82,8 @@ TestHandler& InitHandlerFromYaml(std::string yaml) {
  private:
   template <class Handler, class NetReader, class Reader, class... Args>
   TestHandler& initWith(Args&&... args) {
-    static_assert(std::is_base_of_v<spench::BaseAudioHandler, Handler>,
-                  "Handler must derive from BaseAudioHandler");
+    static_assert(std::is_base_of_v<spench::NeuralNetworkAudioHandler, Handler>,
+                  "Handler must derive from NeuralNetworkAudioHandler");
     handler = std::make_unique<Handler>(
         std::make_unique<NetReader>(
             std::make_unique<Reader>(std::forward<Args>(args)...)));

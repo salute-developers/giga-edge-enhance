@@ -226,6 +226,104 @@ std::vector<std::string> DereverbConfigReader::defaultModelOutputs() const {
 #endif
 }
 
+void AudioProcessingYamlBlock::validateSection(
+    const YAML::Node& section,
+    const std::string& section_name,
+    std::initializer_list<Field> fields) {
+  if (!section || !section.IsMap()) {
+    spdlog::critical("{}: missing or not a map", section_name);
+    throw std::runtime_error(section_name + ": missing or not a map");
+  }
+
+  for (const auto& f : fields) {
+    const auto n = section[f.key];
+    const std::string fq = section_name + "." + f.key;
+
+    if (!n || n.IsNull()) {
+      if (f.required) {
+        spdlog::critical("Config reading error. {} is missing", fq);
+        throw std::runtime_error("Config reading error. " + fq + " is missing");
+      } else {
+        continue;
+      }
+    }
+
+    if (f.kind == Kind::Scalar) {
+      if (!n.IsScalar()) {
+        spdlog::critical("Config reading error. {} is not a scalar!", fq);
+        throw std::runtime_error("Config reading error. " + fq + " is not a scalar!");
+      }
+    } else if (f.kind == Kind::Sequence) {
+      if (!n.IsSequence()) {
+        spdlog::critical("Config reading error. {} is not a sequence!", fq);
+        throw std::runtime_error("Config reading error. " + fq + " is not a sequence!");
+      }
+    } else if (f.kind == Kind::Map) {
+      if (!n.IsMap()) {
+        spdlog::critical("Config reading error. {} is not a map!", fq);
+        throw std::runtime_error("Config reading error. " + fq + " is not a map!");
+      }
+    }
+  }
+}
+
+void AudioProcessingReader::validate() const {
+  const auto& sp = lookup(m_params, {"sound_processing"});
+  if (!sp || !sp.IsMap()) {
+    spdlog::critical("sound_processing: missing required 'sound_processing' section");
+    throw std::runtime_error("Missing sound_processing section");
+  }
+
+  AudioProcessingYamlBlock::validateSection(
+      sp["range_ctrl"], "sound_processing.range_ctrl",
+      {{"sample_rate", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"target_level_db", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"max_gain_db", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"attack_time", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"release_time", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"hold_time", AudioProcessingYamlBlock::Kind::Scalar, true}});
+
+  AudioProcessingYamlBlock::validateSection(
+      sp["auto_gain_ctrl"], "sound_processing.auto_gain_ctrl",
+      {{"target_level", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"max_gain", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"average_len", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"step_size_rise", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"step_size_fall", AudioProcessingYamlBlock::Kind::Scalar, true}});
+
+  AudioProcessingYamlBlock::validateSection(
+      sp["noise_gate_ctrl"], "sound_processing.noise_gate_ctrl",
+      {{"sample_rate", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"threshold", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"attack_time", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"release_time", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"hold_time", AudioProcessingYamlBlock::Kind::Scalar, true}});
+
+  AudioProcessingYamlBlock::validateSection(
+      sp["dynamic_range_compressor_ctrl"], "sound_processing.dynamic_range_compressor_ctrl",
+      {{"sample_rate", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"threshold", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"ratio", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"knee_width", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"attack_time", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"release_time", AudioProcessingYamlBlock::Kind::Scalar, true}});
+
+  AudioProcessingYamlBlock::validateSection(
+      sp["loudness_ctrl"], "sound_processing.loudness_ctrl",
+      {{"sample_rate", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"target_level_db", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"bypass_time", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"max_gain_db", AudioProcessingYamlBlock::Kind::Scalar, true}});
+
+  AudioProcessingYamlBlock::validateSection(
+      sp["limiter_ctrl"], "sound_processing.limiter_ctrl",
+      {{"sample_rate", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"threshold", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"knee_width", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"attack_time", AudioProcessingYamlBlock::Kind::Scalar, true},
+       {"release_time", AudioProcessingYamlBlock::Kind::Scalar, true}});
+}
+
 void AecConfigReader::validate() const {
   auto echo = lookup(m_params, {"echo_cancellation"});
   if (!echo || !echo.IsMap()) {

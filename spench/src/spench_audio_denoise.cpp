@@ -1,7 +1,6 @@
 #include "spench/spench_audio_denoise.h"
 #include "spench/src/spench_task.h"
-#include "spench/src/base_audio_handler.h"
-#include "spench/src/denoiser_audio_handler.h"
+#include "spench/src/handler/denoiser_audio_handler.h"
 #include "spench/src/spench_logger.h"
 #include <memory>
 #include <spdlog/spdlog.h>

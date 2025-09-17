@@ -5,7 +5,7 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 #include "spench/src/spench_task.h"
-#include "spench/src/acoustic_echo_cancelation_handler.h"
+#include "spench/src/handler/acoustic_echo_cancelation_handler.h"
 #include "spench/src/spench_logger.h"
 
 namespace spench {
