@@ -22,7 +22,7 @@ void ConfigReader::mergeYaml(YAML::Node& dest, const YAML::Node &src) {
       if (child && child.IsMap() && val.IsMap()) {
           mergeYaml(child, val);
       } else {
-          child = val;
+        child = val;
       }
   }
 }
@@ -226,13 +226,13 @@ std::vector<std::string> DereverbConfigReader::defaultModelOutputs() const {
 #endif
 }
 
-void AudioProcessingYamlBlock::validateSection(
+void AudioProcessorConfigYamlBlock::validateSection(
     const YAML::Node& section,
     const std::string& section_name,
     std::initializer_list<Field> fields) {
   if (!section || !section.IsMap()) {
-    spdlog::critical("{}: missing or not a map", section_name);
-    throw std::runtime_error(section_name + ": missing or not a map");
+    spdlog::warn("{}: missing or not a map", section_name);
+    return;
   }
 
   for (const auto& f : fields) {
@@ -267,61 +267,161 @@ void AudioProcessingYamlBlock::validateSection(
   }
 }
 
-void AudioProcessingReader::validate() const {
+void AudioProcessorConfigReader::validate() const {
   const auto& sp = lookup(m_params, {"sound_processing"});
   if (!sp || !sp.IsMap()) {
     spdlog::critical("sound_processing: missing required 'sound_processing' section");
     throw std::runtime_error("Missing sound_processing section");
   }
 
-  AudioProcessingYamlBlock::validateSection(
+  AudioProcessorConfigYamlBlock::validateSection(
       sp["range_ctrl"], "sound_processing.range_ctrl",
-      {{"sample_rate", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"target_level_db", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"max_gain_db", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"attack_time", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"release_time", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"hold_time", AudioProcessingYamlBlock::Kind::Scalar, true}});
+      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"target_level_db", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"max_gain_db", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"attack_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"release_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"hold_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true}});
 
-  AudioProcessingYamlBlock::validateSection(
+  AudioProcessorConfigYamlBlock::validateSection(
       sp["auto_gain_ctrl"], "sound_processing.auto_gain_ctrl",
-      {{"target_level", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"max_gain", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"average_len", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"step_size_rise", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"step_size_fall", AudioProcessingYamlBlock::Kind::Scalar, true}});
+      {{"target_level", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"max_gain", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"average_len", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"step_size_rise", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"step_size_fall", AudioProcessorConfigYamlBlock::Kind::Scalar, true}});
 
-  AudioProcessingYamlBlock::validateSection(
+  AudioProcessorConfigYamlBlock::validateSection(
       sp["noise_gate_ctrl"], "sound_processing.noise_gate_ctrl",
-      {{"sample_rate", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"threshold", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"attack_time", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"release_time", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"hold_time", AudioProcessingYamlBlock::Kind::Scalar, true}});
+      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"threshold", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"attack_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"release_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"hold_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true}});
 
-  AudioProcessingYamlBlock::validateSection(
+  AudioProcessorConfigYamlBlock::validateSection(
       sp["dynamic_range_compressor_ctrl"], "sound_processing.dynamic_range_compressor_ctrl",
-      {{"sample_rate", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"threshold", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"ratio", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"knee_width", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"attack_time", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"release_time", AudioProcessingYamlBlock::Kind::Scalar, true}});
+      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"threshold", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"ratio", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"knee_width", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"attack_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"release_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true}});
 
-  AudioProcessingYamlBlock::validateSection(
+  AudioProcessorConfigYamlBlock::validateSection(
       sp["loudness_ctrl"], "sound_processing.loudness_ctrl",
-      {{"sample_rate", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"target_level_db", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"bypass_time", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"max_gain_db", AudioProcessingYamlBlock::Kind::Scalar, true}});
+      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"target_level_db", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"bypass_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"max_gain_db", AudioProcessorConfigYamlBlock::Kind::Scalar, true}});
 
-  AudioProcessingYamlBlock::validateSection(
+  AudioProcessorConfigYamlBlock::validateSection(
       sp["limiter_ctrl"], "sound_processing.limiter_ctrl",
-      {{"sample_rate", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"threshold", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"knee_width", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"attack_time", AudioProcessingYamlBlock::Kind::Scalar, true},
-       {"release_time", AudioProcessingYamlBlock::Kind::Scalar, true}});
+      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"threshold", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"knee_width", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"attack_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
+       {"release_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true}});
+
+  auto finite = [](double v) { return std::isfinite(v); };
+  auto ensure = [](bool cond, const std::string& what) {
+    if (!cond) {
+      spdlog::critical("Invalid value: {}", what);
+      throw std::runtime_error("Invalid value: " + what);
+    }
+  };
+
+  // RC
+  if (sp["range_ctrl"]) {
+    const auto sec = sp["range_ctrl"];
+    const auto sr = sec["sample_rate"].as<uint32_t>();
+    const auto tldb = sec["target_level_db"].as<double>();
+    const auto maxdb = sec["max_gain_db"].as<double>();
+    const auto at = sec["attack_time"].as<double>();
+    const auto rt = sec["release_time"].as<double>();
+    const auto ht = sec["hold_time"].as<double>();
+
+    ensure(sr <= 100000, "range_ctrl.sample_rate must be <= 100000");
+    ensure(finite(tldb), "range_ctrl.target_level_db must be finite");
+    ensure(finite(maxdb), "range_ctrl.max_gain_db must be finite");
+    ensure(at >= 0.0, "range_ctrl.attack_time must be >= 0");
+    ensure(rt >= 0.0, "range_ctrl.release_time must be >= 0");
+    ensure(ht >= 0.0, "range_ctrl.hold_time must be >= 0");
+  }
+
+  // AGC
+  if (sp["auto_gain_ctrl"]) {
+    const auto sec = sp["auto_gain_ctrl"];
+    const auto tl = sec["target_level"].as<double>();
+    const auto mg = sec["max_gain"].as<double>();
+    const auto al = sec["average_len"].as<uint32_t>();
+    const auto tr = sec["step_size_rise"].as<double>();
+    const auto tf = sec["step_size_fall"].as<double>();
+
+    ensure(tl > 0.0, "auto_gain_ctrl.target_level must be > 0");
+    ensure(mg > 0.0, "auto_gain_ctrl.max_gain must be > 0");
+    ensure(al > 0u, "auto_gain_ctrl.average_len must be > 0");
+    ensure(tr > 0.0, "auto_gain_ctrl.step_size_rise must be > 0");
+    ensure(tf > 0.0, "auto_gain_ctrl.step_size_fall must be > 0");
+  }
+
+  // NG
+  if (sp["noise_gate_ctrl"]) {
+    const auto sec = sp["noise_gate_ctrl"];
+    const auto sr = sec["sample_rate"].as<uint32_t>();
+    const auto th = sec["threshold"].as<double>();
+    const auto at = sec["attack_time"].as<double>();
+    const auto rt = sec["release_time"].as<double>();
+    const auto ht = sec["hold_time"].as<double>();
+
+    ensure(sr <= 100000, "noise_gate_ctrl.sample_rate must be <= 100000");
+    ensure(finite(th), "noise_gate_ctrl.threshold must be finite");
+    ensure(at > 0.0, "noise_gate_ctrl.attack_time must be > 0");
+    ensure(rt > 0.0, "noise_gate_ctrl.release_time must be > 0");
+    ensure(ht > 0.0, "noise_gate_ctrl.hold_time must be > 0");
+  }
+
+  // DRC
+  if (sp["dynamic_range_compressor_ctrl"]) {
+    const auto sec = sp["dynamic_range_compressor_ctrl"];
+    const auto sr = sec["sample_rate"].as<uint32_t>();
+    const auto th = sec["threshold"].as<double>();
+    const auto at = sec["attack_time"].as<double>();
+    const auto rt = sec["release_time"].as<double>();
+
+    ensure(sr <= 100000, "dynamic_range_compressor_ctrl.sample_rate must be <= 100000");
+    ensure(finite(th), "dynamic_range_compressor_ctrl.threshold must be finite");
+    ensure(at >= 0.0, "dynamic_range_compressor_ctrl.attack_time must be >= 0");
+    ensure(rt >= 0.0, "dynamic_range_compressor_ctrl.release_time must be >= 0");
+  }
+
+  // LC
+  if (sp["loudness_ctrl"]) {
+    const auto sec = sp["loudness_ctrl"];
+    const auto sr = sec["sample_rate"].as<uint32_t>();
+    const auto tldb = sec["target_level_db"].as<double>();
+    const auto bt = sec["bypass_time"].as<double>();
+    const auto mg = sec["max_gain_db"].as<double>();
+
+    ensure(sr <= 100000, "loudness_ctrl.sample_rate must be <= 100000");
+    ensure(finite(tldb), "loudness_ctrl.target_level_db must be finite");
+    ensure(finite(mg), "loudness_ctrl.max_gain_db must be finite");
+    ensure(bt >= 0.0, "loudness_ctrl.bypass_time must be >= 0");
+  }
+
+  // Limiter
+  if (sp["limiter_ctrl"]) {
+    const auto sec = sp["limiter_ctrl"];
+    const auto sr = sec["sample_rate"].as<uint32_t>();
+    const auto th = sec["threshold"].as<double>();
+    const auto at = sec["attack_time"].as<double>();
+    const auto rt = sec["release_time"].as<double>();
+
+    ensure(sr <= 100000, "limiter_ctrl.sample_rate must be <= 100000");
+    ensure(finite(th), "limiter_ctrl.threshold must be finite");
+    ensure(at >= 0.0, "limiter_ctrl.attack_time must be >= 0");
+    ensure(rt >= 0.0, "limiter_ctrl.release_time must be >= 0");
+  }
 }
 
 void AecConfigReader::validate() const {

@@ -2,6 +2,7 @@
 #include <catch.hpp>
 #include <spench.h>
 #include "spench/src/spench_task.h"
+#include "spench/src/spench_default_configurations.h"
 #include "tests/src/utils.h"
 #include <filesystem>
 #include <future> // NOLINT
@@ -96,9 +97,17 @@ struct TestFixture {
     return *this;
   }
 
-  TestFixture& InitAudioProcessor(const std::string& config_name) {
-    std::string config_path = kBase + "config/" + config_name;
-    dsp = std::make_unique<spench::SpenchAudioProcess>(config_path.c_str());
+  TestFixture& InitAudioProcessor(const std::filesystem::path& config_name) {
+    std::filesystem::path config_path = kBase + "config/";
+    config_path += config_name;
+    const std::string cfg = config_path.string();  // narrow on Windows
+
+    dsp = std::make_unique<spench::SpenchAudioProcess>(cfg.c_str());
+    return *this;
+  }
+
+  TestFixture& InitAudioProcessor(const std::string& yaml) {
+    dsp = std::make_unique<spench::SpenchAudioProcess>(yaml);
     return *this;
   }
 
@@ -1591,14 +1600,14 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed DRC parameters [spench c++ a
 
 TEST_CASE("FAIL Run AudioProcessing with incorrect config file [spench c++ api]") {
   REQUIRE_THROWS_WITH(TestFixture().
-                      InitAudioProcessor(std::string("config.json")),
-                      "Due to errors audio processing could not be created! ret_code: -10");
+                      InitAudioProcessor(std::filesystem::path("config.json")),
+                      "Due to errors an audio processing handler module could not be created! ret_code: -10");
 }
 
 TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [spench c++ api]") {
   auto test_data = std::move(TestFixture().
                              InitAudioProcessor(
-                                std::string("default_configuration_fast_tflite_rc_enabled_24khz.yaml")).
+                                std::filesystem::path("default_configuration_fast_tflite_rc_enabled_24khz.yaml")).
                              SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddRC();
@@ -1640,9 +1649,9 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [s
 
 TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [spench c++ api]") {
   auto test_data =
-              std::move(TestFixture().
-                        InitAudioProcessor(std::string("default_configuration_fast_tflite_agc_enabled_24khz.yaml")).
-                        SetWav("test1_48_noised.wav"));
+      std::move(TestFixture().
+                InitAudioProcessor(std::filesystem::path("default_configuration_fast_tflite_agc_enabled_24khz.yaml")).
+                SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddAGC();
   const uint32_t kChunk_size = 16;
@@ -1680,7 +1689,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [
 TEST_CASE("SUCCEED Run AudioProcessing with reading NG parameters from config [spench c++ api]") {
   auto test_data = std::move(TestFixture().
                              InitAudioProcessor(
-                                std::string("default_configuration_fast_tflite_rc_enabled_24khz.yaml")).
+                                std::filesystem::path("default_configuration_fast_tflite_rc_enabled_24khz.yaml")).
                              SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddNG();
@@ -1725,9 +1734,9 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading NG parameters from config [s
 
 TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [spench c++ api]") {
   auto test_data =
-                std::move(TestFixture().
-                          InitAudioProcessor(std::string("default_configuration_fast_tflite_agc_enabled_24khz.yaml")).
-                          SetWav("test1_48_noised.wav"));
+      std::move(TestFixture().
+                InitAudioProcessor(std::filesystem::path("default_configuration_fast_tflite_agc_enabled_24khz.yaml")).
+                SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddDRC();
   const uint32_t kChunk_size = 16;
@@ -1765,6 +1774,120 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [
                [](float& i) { return std::fabs(i) > 0.75; });
   REQUIRE(greater_than_0_75.size() == 0);
 }
+
+// -----------------------------------------------------------------------------
+// POSITIVE — YAML string accepted, chain can be built and used
+// -----------------------------------------------------------------------------
+TEST_CASE("SUCCESS AudioProcessing accepts YAML string and can process a small frame [spench c++ api]") {
+  const std::string yaml = spench::DefaultAudioProcessingConfigYAML;
+
+  // Construct from YAML string
+  auto fx = std::move(TestFixture().InitAudioProcessor(yaml));
+
+  // Build a small chain reading params from YAML
+  REQUIRE_NOTHROW(fx.dsp->AddRC());
+  REQUIRE_NOTHROW(fx.dsp->AddAGC());
+  REQUIRE_NOTHROW(fx.dsp->AddNG());
+  REQUIRE_NOTHROW(fx.dsp->AddDRC());
+  REQUIRE_NOTHROW(fx.dsp->AddLim());
+  REQUIRE_NOTHROW(fx.dsp->AddLC());
+
+  // One 16-ms frame @ 48 kHz
+  const uint32_t fs = 48000;
+  const uint32_t frame_len = fs * 16 / 1000;
+  std::vector<float> in(frame_len, 0.0f);
+  // add a tiny tone so it’s not all zeros
+  for (size_t i = 0; i < in.size(); ++i) {
+    in[i] = 0.1f * std::sin(2 * M_PI * 440.0 * static_cast<double>(i) / static_cast<double>(fs));
+  }
+
+  std::vector<float> out;
+  REQUIRE_NOTHROW(fx.dsp->ProcessChunk(in, out));
+  REQUIRE(out.size() == in.size());
+}
+
+// -----------------------------------------------------------------------------
+// NEGATIVE — structure/type validation (YAML string)
+// -----------------------------------------------------------------------------
+TEST_CASE("FAIL AudioProcessing YAML string non-scalar where scalar required throws [spench c++ api]") {
+  const std::string bad = R"(
+sound_processing:
+  range_ctrl:
+    sample_rate: [48000]        # must be scalar
+    target_level_db: -3.0
+    max_gain_db: 10
+    attack_time: 0.0
+    release_time: 300
+    hold_time: 5
+)";
+  REQUIRE_THROWS_AS(TestFixture().InitAudioProcessor(bad), std::runtime_error);
+}
+
+// -----------------------------------------------------------------------------
+// NEGATIVE — numeric/range validation (YAML string)
+// -----------------------------------------------------------------------------
+TEST_CASE("FAIL AudioProcessing YAML string: range_ctrl.sample_rate too large [spench c++ api]") {
+  const std::string bad = R"(
+sound_processing:
+  range_ctrl:
+    sample_rate: 200000
+)";
+  REQUIRE_THROWS_AS(TestFixture().InitAudioProcessor(bad), std::runtime_error);
+}
+
+TEST_CASE("FAIL AudioProcessing YAML string: auto_gain_ctrl.target_level <= 0 [spench c++ api]") {
+  const std::string bad = R"(
+sound_processing:
+  auto_gain_ctrl:
+    target_level: -0.02
+)";
+  REQUIRE_THROWS_AS(TestFixture().InitAudioProcessor(bad), std::runtime_error);
+}
+
+TEST_CASE("FAIL AudioProcessing YAML string: noise_gate_ctrl.attack_time <= 0 [spench c++ api]") {
+  const std::string bad = R"(
+sound_processing:
+  noise_gate_ctrl:
+    sample_rate: 48000
+    attack_time: -0.01
+)";
+  REQUIRE_THROWS_AS(TestFixture().InitAudioProcessor(bad), std::runtime_error);
+}
+
+TEST_CASE("FAIL AudioProcessing YAML string: drc.release_time <= 0 [spench c++ api]") {
+  const std::string bad = R"(
+sound_processing:
+  dynamic_range_compressor_ctrl:
+    sample_rate: 48000
+    threshold: -15.0
+    ratio: 5
+    knee_width: 0.0
+    attack_time: 0.01
+    release_time: -0.01
+)";
+  REQUIRE_THROWS_AS(TestFixture().InitAudioProcessor(bad), std::runtime_error);
+}
+
+TEST_CASE("FAIL AudioProcessing YAML string: loudness_ctrl.bypass_time <= 0 [spench c++ api]") {
+  const std::string bad = R"(
+sound_processing:
+  loudness_ctrl:
+    bypass_time: -0.01
+    max_gain_db: 40.0
+)";
+  REQUIRE_THROWS_AS(TestFixture().InitAudioProcessor(bad), std::runtime_error);
+}
+
+TEST_CASE("FAIL AudioProcessing YAML string: limiter_ctrl.threshold non-numeric [spench c++ api]") {
+  const std::string bad = R"(
+sound_processing:
+  limiter_ctrl:
+    sample_rate: 48000
+    threshold: abc
+)";
+  REQUIRE_THROWS(TestFixture().InitAudioProcessor(bad));
+}
+
 
 TEST_CASE("SUCCEED Run inference with the dereverb 48 kHz model on a part of .wav file [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE

@@ -2,6 +2,7 @@
 
 #include "spench/src/feature_params.h"
 #include "contrib/yaml-cpp/yaml.h"
+#include <spdlog/spdlog.h>
 #include <memory>
 #include <catch.hpp>
 #include <chrono> // NOLINT
@@ -138,10 +139,10 @@ TEST_CASE("SUCCEED Run 1000 STFT with dummy zero vector for speed measure (audio
   // t of STFT < 0.001 sec
   REQUIRE(static_cast<double>(tot) / (feature_extractor.kNattempts * 1000) < 0.001);
 
-  std::cout << "1000 STFT calculations for nFFT " << params.Nfft()
-            << " complete. Takes in total (sec): " << static_cast<double>(tot) / 1000
-            << " | and average (sec): " << static_cast<double>(tot) / (feature_extractor.kNattempts * 1000)
-            << std::endl;
+  spdlog::info("1000 STFT calculations for nFFT {} complete. Takes in total (sec): {} | and average (sec): {}",
+               params.Nfft(),
+               static_cast<double>(tot) / 1000,
+               static_cast<double>(tot) / (feature_extractor.kNattempts * 1000));
 }
 
 TEST_CASE("SUCCEED Run 1000 STFT with dummy zero vector for speed measure (audio 24kHz) [feature extractor]") {
@@ -163,10 +164,10 @@ TEST_CASE("SUCCEED Run 1000 STFT with dummy zero vector for speed measure (audio
   // t of STFT < 0.001 sec
   REQUIRE(static_cast<double>(tot) / (feature_extractor.kNattempts * 1000) < 0.001);
 
-  std::cout << "1000 STFT calculations for nFFT " << params.Nfft()
-            << " complete. Takes in total (sec): " << static_cast<double>(tot) / 1000
-            << " | and average (sec): " << static_cast<double>(tot) / (feature_extractor.kNattempts * 1000)
-            << std::endl;
+  spdlog::info("1000 STFT calculations for nFFT {} complete. Takes in total (sec): {} | and average (sec): {}",
+               params.Nfft(),
+               static_cast<double>(tot) / 1000,
+               static_cast<double>(tot) / (feature_extractor.kNattempts * 1000));
 }
 
 TEST_CASE("SUCCEED Run STFT with single real vector (audio 16kHz) [feature extractor]") {
@@ -463,10 +464,10 @@ TEST_CASE("SUCCEED Run 1000 iSTFT with dummy zero vector for speed measure (audi
   // t of STFT < 0.001 sec
   REQUIRE(static_cast<double>(tot) / (feature_extractor.kNattempts * 1000) < 0.001);
 
-  std::cout << "1000 iSTFT calculations for frame " << params.PowSpecFeatSz()
-            << " complete. Takes in total (sec): " << static_cast<double>(tot) / 1000
-            << " | and average (sec): " << static_cast<double>(tot) / (feature_extractor.kNattempts * 1000)
-            << std::endl;
+  spdlog::info("1000 iSTFT calculations for frame {} complete. Takes in total (sec): {} | and average (sec): {}",
+               params.PowSpecFeatSz(),
+               static_cast<double>(tot) / 1000,
+               static_cast<double>(tot) / (feature_extractor.kNattempts * 1000));
 }
 
 TEST_CASE("SUCCEED Run 1000 iSTFT with dummy zero vector for speed measure (audio 24kHz) [feature extractor]") {
@@ -492,10 +493,10 @@ TEST_CASE("SUCCEED Run 1000 iSTFT with dummy zero vector for speed measure (audi
   // t of STFT < 0.001 sec
   REQUIRE(static_cast<double>(tot) / (feature_extractor.kNattempts * 1000) < 0.001);
 
-  std::cout << "1000 iSTFT calculations for frame " << params.PowSpecFeatSz()
-            << " complete. Takes in total (sec): " << static_cast<double>(tot) / 1000
-            << " | and average (sec): " << static_cast<double>(tot) / (feature_extractor.kNattempts * 1000)
-            << std::endl;
+  spdlog::info("1000 iSTFT calculations for frame {} complete. Takes in total (sec): {} | and average (sec): {}",
+               params.PowSpecFeatSz(),
+               static_cast<double>(tot) / 1000,
+               static_cast<double>(tot) / (feature_extractor.kNattempts * 1000));
 }
 
 TEST_CASE("SUCCEED Run 10 iSTFT calculations with real data from .bin file (audio 16kHz) [feature extractor]") {

@@ -136,7 +136,7 @@ class DereverbConfigReader final : public NetworkConfigReader {
   std::vector<std::string> defaultModelOutputs() const override;
 };
 
-class AudioProcessingYamlBlock {
+class AudioProcessorConfigYamlBlock {
  public:
   enum class Kind { Scalar, Sequence, Map };
 
@@ -180,10 +180,10 @@ YAML::Node lookup(const YAML::Node& root,
 template<typename Derived>
 class PipelineConfigReader;
 
-class AudioProcessingReader final : public PipelineConfigReader<AudioProcessingReader> {
+class AudioProcessorConfigReader final : public PipelineConfigReader<AudioProcessorConfigReader> {
  public:
-  explicit AudioProcessingReader(std::unique_ptr<ConfigReader> base_reader)
-      : PipelineConfigReader<AudioProcessingReader>(std::move(base_reader)) {}
+  explicit AudioProcessorConfigReader(std::unique_ptr<ConfigReader> base_reader)
+      : PipelineConfigReader<AudioProcessorConfigReader>(std::move(base_reader)) {}
 
   void validate() const override;
 

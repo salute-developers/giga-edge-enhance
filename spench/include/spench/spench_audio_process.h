@@ -13,7 +13,7 @@
 
 namespace spench {
 
-class AudioProcessing;
+class AudioProcessorHandler;
 
 template <typename T>
 struct SpenchContext;
@@ -64,6 +64,15 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    */
   explicit SpenchAudioProcess(const char* config_file);
 
+  /**
+   *  \brief: Constructor which could take parameters for dsp objects from YAML string configuration.
+   *          All parameters are reading from config file when AGC, RC, etc are being
+   *          created.
+   *  \param config_file: A std::string with yaml formatted text.
+   *  \return: None
+   *  \ingroup group_cpp
+   */
+  explicit SpenchAudioProcess(const std::string& yaml_conf);
   /**
    *  \brief: Destructor.
    *  \return: None
@@ -236,6 +245,6 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
   std::vector<int16_t> process(const std::vector<int16_t>& in, std::vector<int16_t>& out);
 
 
-  std::unique_ptr<AudioProcessing> m_dsp;
+  std::unique_ptr<AudioProcessorHandler> m_dsp;
 };
 }  // namespace spench

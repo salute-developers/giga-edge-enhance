@@ -4,7 +4,6 @@
 #include <exception>
 #include <spdlog/spdlog.h>
 
-#include "spench/src/audio_processing.h"
 #include "spench/src/spench_logger.h"
 
 namespace spench {

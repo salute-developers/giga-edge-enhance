@@ -2,7 +2,7 @@
 #include <catch.hpp>
 #include <vector>
 #include <string>
-
+#include <spdlog/spdlog.h>
 #include "spench/util/tflite/tflite_runner.h"
 
 struct TestTfliteRunner {
@@ -366,10 +366,11 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
     auto ts_2 = std::chrono::steady_clock::now();
 
     auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-    std::cout << "24kHz fast model infer with " << num_threads << " threads completed: " <<
-                                          tot <<
-                                          " | " << static_cast<double>(tot) / nattempts <<
-                                          " ms per infer" << std::endl;
+
+    spdlog::info("24kHz fast model infer with {} threads completed: {} | {} ms per infer",
+               num_threads,
+               tot,
+               static_cast<double>(tot) / nattempts);
 
     for (uint16_t i = 0; i < data.denoiser_runner->m_model_input_size.size(); i++) {
       delete inputs[i];
@@ -505,10 +506,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a quality model 16kHz and with 
     auto ts_2 = std::chrono::steady_clock::now();
 
     auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-    std::cout << "24kHz quality model infer with " << num_threads << " threads completed: " <<
-                                          tot <<
-                                          " | " << static_cast<double>(tot) / nattempts <<
-                                          " ms per infer" << std::endl;
+    spdlog::info("24kHz quality model infer with  {} threads completed: {} | {} ms per infer",
+               num_threads,
+               tot,
+               static_cast<double>(tot) / nattempts);
 
     for (uint16_t i = 0; i < data.denoiser_runner->m_model_input_size.size(); i++) {
       delete inputs[i];

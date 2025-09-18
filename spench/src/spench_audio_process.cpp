@@ -1,25 +1,46 @@
 #include "spench/spench_audio_process.h"
+
 #include <limits>
 #include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <spdlog/spdlog.h>
+
 #include "spench/src/spench_task.h"
-#include "spench/src/audio_processing.h"
+#include "spench/src/handler/audio_processor_handler.h"
 #include "spench/src/spench_logger.h"
 
 namespace spench {
-SpenchAudioProcess::SpenchAudioProcess() {
-  m_dsp = std::make_unique<spench::AudioProcessing>();
+SpenchAudioProcess::SpenchAudioProcess()
+: m_dsp(nullptr) {
+  m_dsp = std::make_unique<spench::AudioProcessorHandler>(
+            std::make_unique<spench::AudioProcessorConfigReader>(
+              std::make_unique<spench::StringConfigReader>(spench::DefaultAudioProcessingConfigYAML, "")));
 }
 
-SpenchAudioProcess::SpenchAudioProcess(const char* config_file) {
-  auto cfg = std::string(config_file);
-  if (cfg.empty()) {
-    spdlog::info("SpenchAudioProcess input config is empty. Use default values");
-    m_dsp = std::make_unique<spench::AudioProcessing>();
+SpenchAudioProcess::SpenchAudioProcess(const char* config)
+: m_dsp(nullptr) {
+  std::string config_file(config);
+  if (!config_file.empty()) {
+    m_dsp = std::make_unique<spench::AudioProcessorHandler>(
+            std::make_unique<spench::AudioProcessorConfigReader>(std::make_unique<spench::FileConfigReader>(config)));
   } else {
-    m_dsp = std::make_unique<spench::AudioProcessing>(cfg);
+    spdlog::info("SpenchAudioProcess input config is empty. Use default values");
+    m_dsp = std::make_unique<spench::AudioProcessorHandler>(
+              std::make_unique<spench::AudioProcessorConfigReader>(
+                std::make_unique<spench::StringConfigReader>(spench::DefaultAudioProcessingConfigYAML, "")));
   }
+  spdlog::info("Create Spench audio processor from a configuration file");
+}
+
+SpenchAudioProcess::SpenchAudioProcess(const std::string& yaml_conf)
+: m_dsp(nullptr) {
+  m_dsp = std::make_unique<spench::AudioProcessorHandler>(
+              std::make_unique<spench::AudioProcessorConfigReader>(
+                  std::make_unique<spench::StringConfigReader>(spench::DefaultAudioProcessingConfigYAML, yaml_conf)));
+
+
+  spdlog::info("Create Spench audio processor from yaml string");
 }
 
 SpenchAudioProcess::~SpenchAudioProcess() {

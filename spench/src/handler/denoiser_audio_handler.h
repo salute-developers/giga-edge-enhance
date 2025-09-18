@@ -10,12 +10,6 @@
 #include "spench/src/denoiser_model_adviser.h"
 namespace spench {
 
-// template <typename T> class DenoiserModelAdviser;
-// namespace tools {
-//   void  MakeFirstInputFrame(const std::vector<float>& current_chunk,
-//                             std::vector<float>& frame);
-// }  // namespace tools
-
 class DenoiserAudioHandler : public NeuralNetworkAudioHandler {
  public:
   DenoiserAudioHandler() = delete;
