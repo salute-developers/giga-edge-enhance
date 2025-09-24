@@ -92,7 +92,7 @@ class DelayCompensator {
     }
 
     // the filter output is a smoothed estimate of the delay
-    auto est_offset = m_offset_flt->process({tau})[0];
+    auto est_offset = m_offset_flt->process(dsplib::arr_real{tau})[0];
 
     // don't change anything if the delay delta hasn't changed much.
     if (std::abs(est_offset - m_offset) > m_quantize) {
