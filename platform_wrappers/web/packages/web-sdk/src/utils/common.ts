@@ -22,6 +22,8 @@ export type Features = WorkerFeatures & WorkletFeatures;
 export type Settings = {
     lowPerformanceWindowSeconds: number;
     lowPerformanceMaxRefillTimes: number;
+    unstable_customNormalizationConfig?: string;
+    unstable_customAECConfig?: string;
 };
 
 export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Settings {

@@ -309,11 +309,15 @@ class SpenchWorkletProcessor extends AudioWorkletProcessor {
             this.instance.clear();
 
             if (features.echoCancellation) {
-                this.instance.addEchoCanceller();
+                const { unstable_customAECConfig: customConfig } = this.settings;
+
+                this.instance.addEchoCanceller(customConfig);
             }
 
             if (features.normalization) {
-                this.instance.addNormalizer();
+                const { unstable_customNormalizationConfig: customConfig } = this.settings;
+
+                this.instance.addNormalizer(customConfig);
             }
         }
     }

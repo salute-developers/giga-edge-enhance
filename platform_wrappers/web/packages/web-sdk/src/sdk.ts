@@ -69,7 +69,10 @@ class SpenchSDK {
         return instance;
     }
 
-    async createAudioNode(features?: Partial<Features>): Promise<SpenchAudioNode | LoadError | SetFeaturesFailedError> {
+    async createAudioNode(
+        features?: Partial<Features>,
+        settings?: Partial<Settings>,
+    ): Promise<SpenchAudioNode | LoadError | SetFeaturesFailedError> {
         this.#loader.preload(features || {});
 
         const workletLoad = await this.#loader.loadSpenchWorklet();
@@ -83,7 +86,7 @@ class SpenchSDK {
             ctx: this.#ctx,
             logger: this.#logger,
             telemetry: this.#telemetry,
-            settings: this.#settings,
+            settings: getSettingsWithDefaults({ ...this.#settings, ...(settings || {}) }),
         });
 
         if (!features) {

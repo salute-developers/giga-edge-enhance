@@ -2,8 +2,14 @@ import Spench, { MainModule as SpenchCore } from '../../lib/spench';
 import SpenchDsp, { MainModule as SpenchDSPCore } from '../../lib/spench.dsp';
 
 import { assert } from './error';
-import { FEATURE_SWITCH_CACHE_MILLISECONDS, HEAP_SIZE } from './constants';
+import {
+    FEATURE_SWITCH_CACHE_MILLISECONDS,
+    getDefaultAECConfig,
+    getDefaultNormalizationConfig,
+    HEAP_SIZE,
+} from './constants';
 import { Logger } from './logger';
+import getHashCode from './hash';
 
 interface AbstractPipelineElement {
     resetContext(): void;
@@ -121,20 +127,35 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
         return this.bridge.HEAPF32;
     }
 
-    addNormalizer(): void {
-        const key = 'normalizer';
+    addNormalizer(config?: string): void {
+        const hashCode = config ? getHashCode(config) : 'default';
+        const key = `normalizer-${hashCode}`;
         const cached = this.tryGetFromCache(key);
 
-        this.logger.debug('add normalizer to SpenchDSP Pipeline');
-        this.pipeline.push([key, cached || new this.bridge.AudioProcessPipelineElement(this.sampleRate, '')]);
+        this.logger.debug(
+            'add normalizer to SpenchDSP Pipeline.',
+            config ? `using custom config:\n${config}` : 'using default config',
+        );
+        this.pipeline.push([
+            key,
+            cached ||
+                new this.bridge.AudioProcessPipelineElement(config || getDefaultNormalizationConfig(this.sampleRate)),
+        ]);
     }
 
-    addEchoCanceller(): void {
-        const key = 'aec';
+    addEchoCanceller(config?: string): void {
+        const hashCode = config ? getHashCode(config) : 'default';
+        const key = `aec-${hashCode}`;
         const cached = this.tryGetFromCache(key);
 
-        this.logger.debug('add aec to SpenchDSP Pipeline');
-        this.pipeline.push([key, cached || new this.bridge.EchoCancelationElement(this.sampleRate, '')]);
+        this.logger.debug(
+            'add aec to SpenchDSP Pipeline',
+            config ? `using custom config:\n${config}` : 'using default config',
+        );
+        this.pipeline.push([
+            key,
+            cached || new this.bridge.EchoCancelationElement(config || getDefaultAECConfig(this.sampleRate)),
+        ]);
     }
 
     override pop() {

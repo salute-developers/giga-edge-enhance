@@ -33,3 +33,20 @@ export const WASM_PATH = {
         full48k: 'data/config/dereverb_vae_48khz_fp32.yaml',
     },
 } as const;
+
+export const getDefaultNormalizationConfig = (sampleRate: number) => `
+sound_processing:
+  loudness_ctrl:
+    sample_rate: ${sampleRate}
+  dynamic_range_compressor_ctrl:
+    sample_rate: ${sampleRate}
+  noise_gate_ctrl:
+    sample_rate: ${sampleRate}
+  limiter_ctrl:
+    sample_rate: ${sampleRate}
+`;
+
+export const getDefaultAECConfig = (sampleRate: number) => `
+echo_cancellation:
+  sample_rate: ${sampleRate}
+`;
