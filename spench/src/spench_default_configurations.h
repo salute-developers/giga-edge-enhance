@@ -99,22 +99,22 @@ sound_processing:
     step_size_fall: 0.01
   noise_gate_ctrl:
     sample_rate: 48000
-    threshold: -15.0
-    attack_time: 0.05
+    threshold: -40.0
+    attack_time: 0.01
     release_time: 0.02
     hold_time: 0.05
   dynamic_range_compressor_ctrl:
     sample_rate: 48000
-    threshold: -15.0
-    ratio: 5
+    threshold: -10.0
+    ratio: 20
     knee_width: 0.0
     attack_time: 0.01
     release_time: 0.2
   loudness_ctrl:
     sample_rate: 48000
-    target_level_db: -23.0
+    target_level_db: -15.0
     bypass_time: 3.0
-    max_gain_db: 40
+    max_gain_db: 30
   limiter_ctrl:
     sample_rate: 48000
     threshold: -3.0
