@@ -1346,9 +1346,14 @@ TEST_CASE("SUCCEED Run AudioProcessing with AGC default parameters [spench c++ a
   REQUIRE(greater_than_1.size() != 0);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with NG default parameters [spench c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing with cahnged threshold for NG [spench c++ api]") {
+  const char change[] = R"(
+sound_processing:
+  noise_gate_ctrl:
+    threshold: -15.0
+)";
   auto test_data = std::move(TestFixture().
-                             InitAudioProcessor().
+                             InitAudioProcessor(std::string(change)).
                              SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddNG();

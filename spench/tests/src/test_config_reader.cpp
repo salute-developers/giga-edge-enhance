@@ -555,22 +555,22 @@ TEST_CASE("SUCCESS AudioProcessorConfigReader generic getter returns defaults [a
   REQUIRE(cfg.get<float>("auto_gain_ctrl", "step_size_fall") == Approx(0.01f));
 
   REQUIRE(cfg.get<uint32_t>("noise_gate_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("noise_gate_ctrl", "threshold") == Approx(-15.0f));
-  REQUIRE(cfg.get<float>("noise_gate_ctrl", "attack_time") == Approx(0.05f));
+  REQUIRE(cfg.get<float>("noise_gate_ctrl", "threshold") == Approx(-40.0f));
+  REQUIRE(cfg.get<float>("noise_gate_ctrl", "attack_time") == Approx(0.01f));
   REQUIRE(cfg.get<float>("noise_gate_ctrl", "release_time") == Approx(0.02f));
   REQUIRE(cfg.get<float>("noise_gate_ctrl", "hold_time") == Approx(0.05f));
 
   REQUIRE(cfg.get<uint32_t>("dynamic_range_compressor_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "threshold") == Approx(-15.0f));
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "ratio") == Approx(5.0f));
+  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "threshold") == Approx(-10.0f));
+  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "ratio") == Approx(20.0f));
   REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "knee_width") == Approx(0.0f));
   REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "attack_time") == Approx(0.01f));
   REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "release_time") == Approx(0.2f));
 
   REQUIRE(cfg.get<uint32_t>("loudness_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("loudness_ctrl", "target_level_db") == Approx(-23.0f));
+  REQUIRE(cfg.get<float>("loudness_ctrl", "target_level_db") == Approx(-15.0f));
   REQUIRE(cfg.get<float>("loudness_ctrl", "bypass_time") == Approx(3.0f));
-  REQUIRE(cfg.get<float>("loudness_ctrl", "max_gain_db") == Approx(40.0f));
+  REQUIRE(cfg.get<float>("loudness_ctrl", "max_gain_db") == Approx(30.0f));
 
   REQUIRE(cfg.get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
   REQUIRE(cfg.get<float>("limiter_ctrl", "threshold") == Approx(-3.0f));
@@ -618,22 +618,22 @@ TEST_CASE("SUCCESS AudioProcessorConfigReader getters return defaults [audio pro
   REQUIRE(cfg.get<float>("auto_gain_ctrl", "step_size_fall") == Approx(0.01f));
 
   REQUIRE(cfg.get<uint32_t>("noise_gate_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("noise_gate_ctrl", "threshold") == Approx(-15.0f));
-  REQUIRE(cfg.get<float>("noise_gate_ctrl", "attack_time") == Approx(0.05f));
+  REQUIRE(cfg.get<float>("noise_gate_ctrl", "threshold") == Approx(-40.0f));
+  REQUIRE(cfg.get<float>("noise_gate_ctrl", "attack_time") == Approx(0.01f));
   REQUIRE(cfg.get<float>("noise_gate_ctrl", "release_time") == Approx(0.02f));
   REQUIRE(cfg.get<float>("noise_gate_ctrl", "hold_time") == Approx(0.05f));
 
   REQUIRE(cfg.get<uint32_t>("dynamic_range_compressor_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "threshold") == Approx(-15.0f));
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "ratio") == Approx(5.0f));
+  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "threshold") == Approx(-10.0f));
+  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "ratio") == Approx(20.0f));
   REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "knee_width") == Approx(0.0f));
   REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "attack_time") == Approx(0.01f));
   REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "release_time") == Approx(0.2f));
 
   REQUIRE(cfg.get<uint32_t>("loudness_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("loudness_ctrl", "target_level_db") == Approx(-23.0f));
+  REQUIRE(cfg.get<float>("loudness_ctrl", "target_level_db") == Approx(-15.0f));
   REQUIRE(cfg.get<float>("loudness_ctrl", "bypass_time") == Approx(3.0f));
-  REQUIRE(cfg.get<float>("loudness_ctrl", "max_gain_db") == Approx(40.0f));
+  REQUIRE(cfg.get<float>("loudness_ctrl", "max_gain_db") == Approx(30.0f));
 
   REQUIRE(cfg.get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
   REQUIRE(cfg.get<float>("limiter_ctrl", "threshold") == Approx(-3.0f));
@@ -650,7 +650,7 @@ TEST_CASE("SUCCESS AudioProcessorConfigReader ParamBlockView works [audio proces
 
   auto ng = cfg.block("noise_gate_ctrl");
   REQUIRE(ng.get<uint32_t>("sample_rate") == 48000u);
-  REQUIRE(ng.get<float>("threshold") == Approx(-15.0f));
+  REQUIRE(ng.get<float>("threshold") == Approx(-40.0f));
 }
 
 // ------------------------------------------------------------------------------
