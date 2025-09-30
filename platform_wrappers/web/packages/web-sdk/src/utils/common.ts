@@ -28,6 +28,7 @@ export type Settings = {
 
 export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Settings {
     return {
+        ...settings,
         lowPerformanceWindowSeconds:
             typeof settings.lowPerformanceWindowSeconds === 'number'
                 ? settings.lowPerformanceWindowSeconds
