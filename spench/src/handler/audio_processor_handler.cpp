@@ -144,8 +144,8 @@ void AudioProcLC::on_stats_window(
       m_stats_window_sec, st.longterm_max_lufs, st.longterm_min_lufs);
 }
 
-AudioProcessorHandler::AudioProcessorHandler(std::unique_ptr<ConfigReader> reader)
-    : BaseAudioHandler(std::move(reader)) {
+AudioProcessorHandler::AudioProcessorHandler(std::shared_ptr<AudioProcessorConfig> config)
+    : BaseAudioHandler(std::move(config)) {
   SpenchRetCode ret_code = Restart();
 
   if (ret_code != SpenchRetCode::SUCCESS) {
@@ -158,14 +158,6 @@ AudioProcessorHandler::AudioProcessorHandler(std::unique_ptr<ConfigReader> reade
 }
 
 SpenchRetCode AudioProcessorHandler::DoStart() {
-  try {
-    m_configReader->load();
-  } catch (const std::exception& e) {
-    spdlog::error("AudioProcessorHandler: {}", e.what());
-    return SpenchRetCode::ERR_CONF_FILE_INCOR_PATH;
-  } catch (...) {
-    return SpenchRetCode::ERR_CONF_FILE_INCOR_PATH;
-  }
   return SpenchRetCode::SUCCESS;
 }
 

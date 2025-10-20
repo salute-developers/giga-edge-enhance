@@ -7,7 +7,7 @@
 namespace spench {
 
 AudioEchoCancelationHandler::AudioEchoCancelationHandler()
-    : BaseAudioHandler(std::make_unique<StringConfigReader>(spench::DefaultAecConfigYAML, "")) {
+    : BaseAudioHandler(std::make_shared<AecConfig>()) {
   auto ret_code = Restart();  // run DoStart() after derived members are live
   if (ret_code != SpenchRetCode::SUCCESS) {
     spdlog::error("Failed to initialize EchoCanceler!  ret_code: {}",
@@ -17,8 +17,8 @@ AudioEchoCancelationHandler::AudioEchoCancelationHandler()
   }
 }
 
-AudioEchoCancelationHandler::AudioEchoCancelationHandler(std::unique_ptr<ConfigReader> reader)
-    : BaseAudioHandler(std::move(reader)) {
+AudioEchoCancelationHandler::AudioEchoCancelationHandler(std::shared_ptr<AecConfig> config)
+    : BaseAudioHandler(std::move(config)) {
   auto ret_code = Restart();
   if (ret_code != SpenchRetCode::SUCCESS) {
     spdlog::error("Failed to initialize EchoCanceler!  ret_code: {}",
@@ -30,10 +30,7 @@ AudioEchoCancelationHandler::AudioEchoCancelationHandler(std::unique_ptr<ConfigR
 
 SpenchRetCode AudioEchoCancelationHandler::DoStart() {
   try {
-    m_configReader->load();
-    spdlog::info("AudioEchoCancelationHandler loaded configuration");
-
-    auto* aec = dynamic_cast<spench::AecConfigReader*>(m_configReader.get());
+    auto* aec = dynamic_cast<spench::AecConfig*>(m_config.get());
     if (aec == nullptr) {
       spdlog::error("AEC config reader type mismatch");
       return SpenchRetCode::ERR_CONF_FILE_PROBLEM;
@@ -67,17 +64,17 @@ void AudioEchoCancelationHandler::DoStop() {
 }
 
 const uint32_t AudioEchoCancelationHandler::GetSampleRate() {
-  auto* aec = dynamic_cast<AecConfigReader*>(m_configReader.get());
+  auto* aec = dynamic_cast<AecConfig*>(m_config.get());
   return aec ? aec->sampleRate() : 0;
 }
 
 const uint16_t AudioEchoCancelationHandler::GetFilterLength() {
-  auto* aec = dynamic_cast<AecConfigReader*>(m_configReader.get());
+  auto* aec = dynamic_cast<AecConfig*>(m_config.get());
   return aec ? aec->filterLen() : 0;
 }
 
 const uint16_t AudioEchoCancelationHandler::GetFrameLength() {
-  auto* aec = dynamic_cast<AecConfigReader*>(m_configReader.get());
+  auto* aec = dynamic_cast<AecConfig*>(m_config.get());
   return aec ? aec->frameLen() : 0;
 }
 

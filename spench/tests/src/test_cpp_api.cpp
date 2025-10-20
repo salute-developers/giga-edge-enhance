@@ -1603,12 +1603,6 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed DRC parameters [spench c++ a
   REQUIRE(greater_than_0_75.size() != 0);
 }
 
-TEST_CASE("FAIL Run AudioProcessing with incorrect config file [spench c++ api]") {
-  REQUIRE_THROWS_WITH(TestFixture().
-                      InitAudioProcessor(std::filesystem::path("config.json")),
-                      "Due to errors an audio processing handler module could not be created! ret_code: -10");
-}
-
 TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [spench c++ api]") {
   auto test_data = std::move(TestFixture().
                              InitAudioProcessor(

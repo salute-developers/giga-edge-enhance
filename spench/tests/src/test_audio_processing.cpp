@@ -33,24 +33,21 @@ struct TestAudioProcessing {
 
   // Default init: use config reader with default settings.
   TestAudioProcessing& InitAudioProcessing() {
-    // Use default-constructed AudioProcessorConfigReader (no path).
-    auto reader = std::make_unique<spench::AudioProcessorConfigReader>(
-                          std::make_unique<spench::StringConfigReader>(spench::DefaultAudioProcessingConfigYAML, ""));
+    // Use default-constructed AudioProcessorConfig (no path).
+    auto reader = std::make_unique<spench::AudioProcessorConfig>();
     audio_proc = std::make_unique<spench::AudioProcessorHandler>(std::move(reader));
     return *this;
   }
 
   // Init with a specific YAML config file under data/config/.
   TestAudioProcessing& InitAudioProcessing(const std::string& yaml_conf) {
-    auto reader = std::make_unique<spench::AudioProcessorConfigReader>(
-                  std::make_unique<spench::StringConfigReader>(spench::DefaultAudioProcessingConfigYAML, yaml_conf));
+    auto reader = std::make_unique<spench::AudioProcessorConfig>(spench::StringConfigReader(yaml_conf));
     audio_proc = std::make_unique<spench::AudioProcessorHandler>(std::move(reader));
     return *this;
   }
 
   TestAudioProcessing& InitAudioProcessing(const std::filesystem::path& config_name) {
-    auto reader = std::make_unique<spench::AudioProcessorConfigReader>(
-                          std::make_unique<spench::FileConfigReader>(cfgPath(config_name)));
+    auto reader = std::make_unique<spench::AudioProcessorConfig>(spench::FileConfigReader(cfgPath(config_name)));
     audio_proc = std::make_unique<spench::AudioProcessorHandler>(std::move(reader));
     return *this;
   }
@@ -307,12 +304,6 @@ TEST_CASE("SUCCEED Create and run audio processing with RC specific parameters [
                std::back_inserter(greater_than_0_8),
                [](float& i) { return std::fabs(i) > 0.8; });
   REQUIRE(greater_than_0_8.size() == 0);
-}
-
-TEST_CASE("FAIL Run audio processing with incorrect config file name or parameters [audio processing handler]") {
-  REQUIRE_THROWS_WITH(TestAudioProcessing().
-                      InitAudioProcessing(std::filesystem::path("config.json")),
-                      "Due to errors an audio processing handler module could not be created! ret_code: -10");
 }
 
 TEST_CASE("SUCCEED Run audio processing with reading AGC parameters from config [audio processing handler]") {

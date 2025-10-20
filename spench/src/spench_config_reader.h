@@ -39,12 +39,32 @@ inline T as(const YAML::Node& node) {
   return node.as<T>();
 }
 
+static void mergeYaml(YAML::Node& dest, const YAML::Node &src) {
+  if (!src.IsMap()) {
+    return;
+  }
+  for (auto kv : src) {
+      const auto key = kv.first.as<std::string>();
+      const auto& val = kv.second;
+
+      YAML::Node child = dest[key];
+      if (child && child.IsMap() && val.IsMap()) {
+          mergeYaml(child, val);
+      } else {
+        child = val;
+      }
+  }
+}
+
 class ConfigReader {
  public:
+  ConfigReader(const ConfigReader&) = delete;
+  ConfigReader& operator=(const ConfigReader&) = delete;
+  ConfigReader(ConfigReader&&) = default;
+  ConfigReader& operator=(ConfigReader&&) = default;
+  ConfigReader() = default;
   virtual ~ConfigReader() = default;
-  virtual void load() = 0;
   inline const YAML::Node& params() const noexcept { return m_params; }
-  void mergeYaml(YAML::Node& dest, const YAML::Node& src);
 
  protected:
   YAML::Node m_params;
@@ -54,69 +74,56 @@ class ConfigReader {
 class FileConfigReader final : public ConfigReader {
  public:
   explicit FileConfigReader(std::string path);
-  void load() override;
-
- private:
-  std::string m_path;
 };
 
 //  Loads from an in-memory YAML string
 class StringConfigReader final : public ConfigReader {
  public:
   explicit StringConfigReader(std::string yaml);
-  StringConfigReader(const char* default_yaml, std::string override_yaml);
-  void load() override;
-
- private:
-  const char* m_default = nullptr;
-  std::string m_yaml;
 };
 
-template<typename Derived>
-class PipelineConfigReader : public ConfigReader {
+class PipelineConfig : public ConfigReader {
  public:
-  explicit PipelineConfigReader(std::unique_ptr<ConfigReader> base_reader)
-      : m_base(std::move(base_reader))
-  {}
+  explicit PipelineConfig(const ConfigReader& base_reader, std::string default_config) {
+    if (default_config.length()) {
+      m_params = YAML::Load(default_config);
+    }
 
-  void load() final {
-    m_base->load();
-    m_params = m_base->params();
-    validate();
+    mergeYaml(m_params, base_reader.params());
   }
 
  protected:
   virtual void validate() const = 0;
-  std::unique_ptr<ConfigReader> m_base;
 };
 
-class NetworkConfigReader : public PipelineConfigReader<NetworkConfigReader> {
+class NetworkConfig : public PipelineConfig {
  public:
-  using PipelineConfigReader<NetworkConfigReader>::PipelineConfigReader;
+  explicit NetworkConfig(const ConfigReader& base_reader, std::string default_config = "")
+      : PipelineConfig(base_reader, std::move(default_config)) {
+    validate();
+  }
 
   void validate() const override;
-  std::string               modelPath()     const;
-  std::vector<std::string>  modelInputs()   const;
-  std::vector<std::string>  modelOutputs()  const;
-  uint32_t                  samplingFreq()  const;
-  uint32_t                  frameSizeMs()   const;
-  uint32_t                  frameStrideMs() const;
-  std::string               windowType()    const;
-  bool                      useGpu()        const;
-  uint32_t                  numThreads()    const;
-  std::string               modelType()     const;
+  std::string                 modelPath()       const;
+  std::vector<std::string>    modelInputs()     const;
+  std::vector<std::string>    modelOutputs()    const;
+  uint32_t                    samplingFreq()    const;
+  uint32_t                    frameSizeMs()     const;
+  uint32_t                    frameStrideMs()   const;
+  std::string                 windowType()      const;
+  bool                        useGpu()          const;
+  uint32_t                    numThreads()      const;
+  std::string                 modelType()       const;
 
  protected:
   virtual std::vector<std::string> defaultModelInputs()  const = 0;
   virtual std::vector<std::string> defaultModelOutputs() const = 0;
 };
 
-// -------------------- Конкретные пайплайны --------------------
-class DenoiserConfigReader final : public NetworkConfigReader {
+class DenoiserConfig final : public NetworkConfig {
  public:
-  using NetworkConfigReader::NetworkConfigReader;
-  void validate() const override {
-    NetworkConfigReader::validate();
+  explicit DenoiserConfig(const ConfigReader& base_reader)
+      : NetworkConfig(base_reader, spench::DefaultDenoiserConfigYAML) {
   }
 
  protected:
@@ -124,11 +131,10 @@ class DenoiserConfigReader final : public NetworkConfigReader {
   std::vector<std::string> defaultModelOutputs() const override;
 };
 
-class DereverbConfigReader final : public NetworkConfigReader {
+class DereverbConfig final : public NetworkConfig {
  public:
-  using NetworkConfigReader::NetworkConfigReader;
-  void validate() const override {
-    NetworkConfigReader::validate();
+  explicit DereverbConfig(const ConfigReader& base_reader)
+      : NetworkConfig(base_reader, spench::DefaultDereverbConfigYAML) {
   }
 
  protected:
@@ -171,19 +177,16 @@ class ParamBlockView {
   std::string m_block;
 };
 
-template<typename T>
-T as(const YAML::Node& node);
-
-YAML::Node lookup(const YAML::Node& root,
-                  const std::initializer_list<std::string>& path);
-
-template<typename Derived>
-class PipelineConfigReader;
-
-class AudioProcessorConfigReader final : public PipelineConfigReader<AudioProcessorConfigReader> {
+class AudioProcessorConfig final : public PipelineConfig {
  public:
-  explicit AudioProcessorConfigReader(std::unique_ptr<ConfigReader> base_reader)
-      : PipelineConfigReader<AudioProcessorConfigReader>(std::move(base_reader)) {}
+  explicit AudioProcessorConfig()
+      : AudioProcessorConfig(StringConfigReader("")) {
+  }
+
+  explicit AudioProcessorConfig(const ConfigReader& base_reader)
+      : PipelineConfig(base_reader, spench::DefaultAudioProcessingConfigYAML) {
+    validate();
+  }
 
   void validate() const override;
 
@@ -199,11 +202,17 @@ class AudioProcessorConfigReader final : public PipelineConfigReader<AudioProces
   }
 };
 
-class AecConfigReader final : public PipelineConfigReader<AecConfigReader> {
+class AecConfig final : public PipelineConfig {
  public:
-    explicit AecConfigReader(std::unique_ptr<ConfigReader> base_reader)
-    : PipelineConfigReader<AecConfigReader>(std::move(base_reader)) {}
-    /// Ensure the `echo_cancellation` block exists and `type` is valid
+    explicit AecConfig()
+        : AecConfig(StringConfigReader("")) {
+    }
+
+    explicit AecConfig(const ConfigReader& base_reader)
+        : PipelineConfig(base_reader, spench::DefaultAecConfigYAML) {
+      validate();
+    }
+
     void validate() const override;
 
     // typed getters (with code-baked defaults):

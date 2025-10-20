@@ -10,54 +10,27 @@
 
 namespace spench {
 
-void ConfigReader::mergeYaml(YAML::Node& dest, const YAML::Node &src) {
-  if (!src.IsMap()) {
-    return;
-  }
-  for (auto kv : src) {
-      const auto key = kv.first.as<std::string>();
-      const auto& val = kv.second;
-
-      YAML::Node child = dest[key];
-      if (child && child.IsMap() && val.IsMap()) {
-          mergeYaml(child, val);
-      } else {
-        child = val;
-      }
-  }
-}
-
-FileConfigReader::FileConfigReader(std::string path)
-: m_path(std::move(path)) {}
-
-void FileConfigReader::load() {
+FileConfigReader::FileConfigReader(std::string path) {
   try {
-    m_params = YAML::LoadFile(m_path);
+    m_params = YAML::LoadFile(path);
   } catch (const YAML::Exception& e) {
-    spdlog::critical("FileConfigReader: cannot load or parse '{}': {}", m_path, e.what());
+    spdlog::critical("FileConfigReader: cannot load or parse '{}': {}", path, e.what());
     throw std::runtime_error(std::string("Config file load error: ") + e.what());
   }
 }
 
 // — StringConfigReader —
-StringConfigReader::StringConfigReader(std::string yaml)
-  : StringConfigReader(DefaultDenoiserConfigYAML, std::move(yaml))
-{}
-
-StringConfigReader::StringConfigReader(const char* default_yaml, std::string override_yaml)
-  : m_default(default_yaml), m_yaml(std::move(override_yaml))
-{}
-
-void StringConfigReader::load() {
-  // 1) load the chosen default blob
-  m_params = YAML::Load(m_default);
-  // 2) parse & merge the m_yaml
-  auto userNode = YAML::Load(m_yaml);
-  // 3) overlay it
-  mergeYaml(m_params, userNode);
+StringConfigReader::StringConfigReader(std::string yaml) {
+  try {
+    m_params = YAML::Load(yaml);
+  } catch (const YAML::Exception& e) {
+    spdlog::critical("StringConfigReader: cannot parse string: {}", e.what());
+    throw std::runtime_error(std::string("Config file load error: ") + e.what());
+  }
 }
 
-void NetworkConfigReader::validate() const {
+// — NetworkConfig —
+void NetworkConfig::validate() const {
   spdlog::info("Yaml file reading: ");
 
   // Ensure we have a 'model' map
@@ -129,12 +102,11 @@ void NetworkConfigReader::validate() const {
   }
 }
 
-std::string NetworkConfigReader::modelPath() const {
-  // safe after validate()
+std::string NetworkConfig::modelPath() const {
   return as<std::string>(lookup(m_params, {"model", "model_path"}));
 }
 
-std::vector<std::string> NetworkConfigReader::modelInputs() const {
+std::vector<std::string> NetworkConfig::modelInputs() const {
   auto n = lookup(m_params, {"model", "model_inputs"});
   if (n && n.IsSequence() && n.size() > 0) {
     std::vector<std::string> out;
@@ -149,7 +121,7 @@ std::vector<std::string> NetworkConfigReader::modelInputs() const {
   return defaultModelInputs();
 }
 
-std::vector<std::string> NetworkConfigReader::modelOutputs() const {
+std::vector<std::string> NetworkConfig::modelOutputs() const {
   auto n = lookup(m_params, {"model", "model_outputs"});
   if (n && n.IsSequence() && n.size() > 0) {
     std::vector<std::string> out;
@@ -164,36 +136,36 @@ std::vector<std::string> NetworkConfigReader::modelOutputs() const {
   return defaultModelOutputs();
 }
 
-uint32_t NetworkConfigReader::samplingFreq() const {
+uint32_t NetworkConfig::samplingFreq() const {
   return as<uint32_t>(lookup(m_params, {"feature_params", "sampling_freq"}));
 }
 
-uint32_t NetworkConfigReader::frameSizeMs() const {
+uint32_t NetworkConfig::frameSizeMs() const {
   return as<uint32_t>(lookup(m_params, {"feature_params", "frame_size_ms"}));
 }
 
-uint32_t NetworkConfigReader::frameStrideMs() const {
+uint32_t NetworkConfig::frameStrideMs() const {
   return as<uint32_t>(lookup(m_params, {"feature_params", "frame_stride_ms"}));
 }
 
-std::string NetworkConfigReader::windowType() const {
+std::string NetworkConfig::windowType() const {
   return as<std::string>(lookup(m_params, {"feature_params", "window_type"}));
 }
 
-bool NetworkConfigReader::useGpu() const {
+bool NetworkConfig::useGpu() const {
   return as<bool>(lookup(m_params, {"inference", "gpu"}));
 }
 
-uint32_t NetworkConfigReader::numThreads() const {
+uint32_t NetworkConfig::numThreads() const {
   return as<uint32_t>(lookup(m_params, {"inference", "engine_num_threads"}));
 }
 
-std::string NetworkConfigReader::modelType() const {
+std::string NetworkConfig::modelType() const {
   return as<std::string>(lookup(m_params, {"inference", "model_type"}));
 }
 
-// -------------------- DenoiserConfigReader --------------------
-std::vector<std::string> DenoiserConfigReader::defaultModelInputs() const {
+// -------------------- DenoiserConfig --------------------
+std::vector<std::string> DenoiserConfig::defaultModelInputs() const {
 #ifdef BUILD_TFLITE_ENGINE
   return {"noisy_mag", "fb_h", "fb_c", "prev_fb_out"};
 #else
@@ -201,7 +173,7 @@ std::vector<std::string> DenoiserConfigReader::defaultModelInputs() const {
 #endif
 }
 
-std::vector<std::string> DenoiserConfigReader::defaultModelOutputs() const {
+std::vector<std::string> DenoiserConfig::defaultModelOutputs() const {
 #ifdef BUILD_TFLITE_ENGINE
   return {"fb_h", "fb_c", "updated_fb_out", "out_mask"};
 #else
@@ -209,8 +181,8 @@ std::vector<std::string> DenoiserConfigReader::defaultModelOutputs() const {
 #endif
 }
 
-// -------------------- DereverbConfigReader --------------------
-std::vector<std::string> DereverbConfigReader::defaultModelInputs() const {
+// -------------------- DereverbConfig --------------------
+std::vector<std::string> DereverbConfig::defaultModelInputs() const {
 #ifdef BUILD_TFLITE_ENGINE
   return {""};
 #else
@@ -218,7 +190,7 @@ std::vector<std::string> DereverbConfigReader::defaultModelInputs() const {
 #endif
 }
 
-std::vector<std::string> DereverbConfigReader::defaultModelOutputs() const {
+std::vector<std::string> DereverbConfig::defaultModelOutputs() const {
 #ifdef BUILD_TFLITE_ENGINE
   return {""};
 #else
@@ -267,7 +239,8 @@ void AudioProcessorConfigYamlBlock::validateSection(
   }
 }
 
-void AudioProcessorConfigReader::validate() const {
+// AudioProcessorConfig
+void AudioProcessorConfig::validate() const {
   const auto& sp = lookup(m_params, {"sound_processing"});
   if (!sp || !sp.IsMap()) {
     spdlog::critical("sound_processing: missing required 'sound_processing' section");
@@ -424,7 +397,8 @@ void AudioProcessorConfigReader::validate() const {
   }
 }
 
-void AecConfigReader::validate() const {
+// AecConfig
+void AecConfig::validate() const {
   auto echo = lookup(m_params, {"echo_cancellation"});
   if (!echo || !echo.IsMap()) {
     spdlog::critical("AEC: missing 'echo_cancellation' section");
@@ -439,24 +413,24 @@ void AecConfigReader::validate() const {
   }
 }
 
-uint32_t AecConfigReader::sampleRate() const {
+uint32_t AecConfig::sampleRate() const {
   return as<uint32_t>(lookup(m_params, {"echo_cancellation", "sample_rate"}));
 }
 
-uint16_t AecConfigReader::filterLen() const {
+uint16_t AecConfig::filterLen() const {
   auto node = lookup(m_params, {"echo_cancellation", "filter_len"});
   return as<uint16_t>(lookup(m_params, {"echo_cancellation", "filter_len"}));
 }
 
-bool AecConfigReader::residualEchoSuppressionEnabled() const {
+bool AecConfig::residualEchoSuppressionEnabled() const {
   return as<bool>(lookup(m_params, {"echo_cancellation", "residual_echo_suppression_enabled"}));
 }
 
-bool AecConfigReader::delayCompensatorEnabled() const {
+bool AecConfig::delayCompensatorEnabled() const {
   return as<bool>(lookup(m_params, {"echo_cancellation", "delay_compensator_enabled"}));
 }
 
-uint16_t AecConfigReader::frameLen() const {
+uint16_t AecConfig::frameLen() const {
   // frame_len = round(sample_rate/1000 * chunk_len_ms)
   uint32_t sr = sampleRate();
   auto node     = lookup(m_params, {"echo_cancellation", "chunk_len_ms"});
@@ -465,7 +439,7 @@ uint16_t AecConfigReader::frameLen() const {
   return static_cast<uint16_t>(std::round(ppm * chunk_ms));
 }
 
-util::echo::EchoCancelerType AecConfigReader::type() const {
+util::echo::EchoCancelerType AecConfig::type() const {
   // we know validate() guaranteed "speex"
   return util::echo::EchoCancelerType::SPEEX;
 }

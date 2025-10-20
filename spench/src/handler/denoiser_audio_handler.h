@@ -16,9 +16,9 @@ class DenoiserAudioHandler : public NeuralNetworkAudioHandler {
   DenoiserAudioHandler& operator=(const DenoiserAudioHandler&) = delete;
   DenoiserAudioHandler(const DenoiserAudioHandler&) = delete;
 
-  explicit DenoiserAudioHandler(std::unique_ptr<ConfigReader> reader);
+  explicit DenoiserAudioHandler(std::shared_ptr<DenoiserConfig> config);
 
-  DenoiserAudioHandler(std::unique_ptr<ConfigReader> reader,
+  DenoiserAudioHandler(std::shared_ptr<DenoiserConfig> config,
                        const std::string& password,
                        const std::string& checksum);
 

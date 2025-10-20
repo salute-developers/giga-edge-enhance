@@ -25,20 +25,17 @@ struct TestHandler {
 
   template <class Handler, class NetReader>
   TestHandler& InitHandlerFromFile(const std::filesystem::path& rel_cfg) {
-    return initWith<Handler, NetReader, spench::FileConfigReader>(
-        cfgPath(rel_cfg));
+    return initWith<Handler, NetReader, spench::FileConfigReader>(cfgPath(rel_cfg));
   }
 
 template <class Handler, class NetReader>
 TestHandler& InitHandlerFromYaml(std::string yaml) {
-  if constexpr (std::is_same_v<NetReader, spench::DenoiserConfigReader>) {
-    return initWith<Handler, NetReader, spench::StringConfigReader>(
-        spench::DefaultDenoiserConfigYAML, std::move(yaml));
+  if constexpr (std::is_same_v<NetReader, spench::DenoiserConfig>) {
+    return initWith<Handler, NetReader, spench::StringConfigReader>(yaml);
   } else {
-    static_assert(std::is_same_v<NetReader, spench::DereverbConfigReader>,
+    static_assert(std::is_same_v<NetReader, spench::DereverbConfig>,
                   "Unsupported NetReader");
-    return initWith<Handler, NetReader, spench::StringConfigReader>(
-        spench::DefaultDereverbConfigYAML, std::move(yaml));
+    return initWith<Handler, NetReader, spench::StringConfigReader>(yaml);
   }
 }
 
@@ -85,8 +82,7 @@ TestHandler& InitHandlerFromYaml(std::string yaml) {
     static_assert(std::is_base_of_v<spench::NeuralNetworkAudioHandler, Handler>,
                   "Handler must derive from NeuralNetworkAudioHandler");
     handler = std::make_unique<Handler>(
-        std::make_unique<NetReader>(
-            std::make_unique<Reader>(std::forward<Args>(args)...)));
+        std::make_shared<NetReader>(Reader(std::forward<Args>(args)...)));
     return *this;
   }
 
@@ -99,7 +95,7 @@ TestHandler& InitHandlerFromYaml(std::string yaml) {
 TEST_CASE("FAIL Run denoiser handler with exception from fe runner [denoiser handler]") {
   REQUIRE_THROWS_WITH(
       (TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                         spench::DenoiserConfigReader>(
+                                         spench::DenoiserConfig>(
           "test_configuration_with_incorrect_sampling_freq.yaml")),
       "Config reading error. Sampling frequency is not a scalar!");
 }
@@ -107,7 +103,7 @@ TEST_CASE("FAIL Run denoiser handler with exception from fe runner [denoiser han
 TEST_CASE("FAIL Run denoiser handler with exception from inference runner [denoiser handler]") {
   REQUIRE_THROWS_WITH(
       (TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                         spench::DenoiserConfigReader>(
+                                         spench::DenoiserConfig>(
           "test_configuration_with_incorrect_model_path.yaml")),
       "Config reading error. Model path parameter is not a single string!");
 }
@@ -115,7 +111,7 @@ TEST_CASE("FAIL Run denoiser handler with exception from inference runner [denoi
 TEST_CASE("FAIL Run denoiser handler with exception for incorrect config path [denoiser handler]") {
   REQUIRE_THROWS_WITH(
       (TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                         spench::DenoiserConfigReader>(
+                                         spench::DenoiserConfig>(
           "config.json")),
       "Config file load error: bad file: data/config/config.json");
 }
@@ -123,7 +119,7 @@ TEST_CASE("FAIL Run denoiser handler with exception for incorrect config path [d
 TEST_CASE("FAIL Run dereverberator handler with exception from fe runner [dereverberator handler]") {
   REQUIRE_THROWS_WITH(
       (TestHandler().InitHandlerFromFile<spench::DereverberatorAudioHandler,
-                                         spench::DereverbConfigReader>(
+                                         spench::DereverbConfig>(
           "test_configuration_with_incorrect_sampling_freq.yaml")),
       "Config reading error. Sampling frequency is not a scalar!");
 }
@@ -131,7 +127,7 @@ TEST_CASE("FAIL Run dereverberator handler with exception from fe runner [dereve
 TEST_CASE("FAIL Run dereverberator handler with exception from inference runner [dereverberator handler]") {
   REQUIRE_THROWS_WITH(
       (TestHandler().InitHandlerFromFile<spench::DereverberatorAudioHandler,
-                                         spench::DereverbConfigReader>(
+                                         spench::DereverbConfig>(
           "test_configuration_with_incorrect_model_path.yaml")),
       "Config reading error. Model path parameter is not a single string!");
 }
@@ -139,7 +135,7 @@ TEST_CASE("FAIL Run dereverberator handler with exception from inference runner 
 TEST_CASE("FAIL Run dereverberator handler with exception for incorrect config path [dereverberator handler]") {
   REQUIRE_THROWS_WITH(
       (TestHandler().InitHandlerFromFile<spench::DereverberatorAudioHandler,
-                                         spench::DereverbConfigReader>(
+                                         spench::DereverbConfig>(
           "config.json")),
       "Config file load error: bad file: data/config/config.json");
 }
@@ -159,12 +155,12 @@ TEST_CASE("FAIL Run denoiser handler with error for incorrect input lengh [denoi
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_best_quality_tflite_16khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_best_quality_onnx_16khz.yaml"));
 #endif
 
@@ -183,12 +179,12 @@ TEST_CASE("SUCCEED Change number of engine threads [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_best_quality_tflite_16khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_best_quality_onnx_16khz.yaml"));
 #endif
 
@@ -201,12 +197,12 @@ TEST_CASE("SUCCEED Change number of engine threads [dereverberator handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DereverberatorAudioHandler,
-                                        spench::DereverbConfigReader>(
+                                        spench::DereverbConfig>(
           "default_configuration_best_quality_tflite_16khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DereverberatorAudioHandler,
-                                        spench::DereverbConfigReader>(
+                                        spench::DereverbConfig>(
           "default_configuration_best_quality_onnx_16khz.yaml"));
 #endif
 
@@ -223,7 +219,7 @@ TEST_CASE("SUCCEED Run dereverb with empty chunk with the model 48kHz [dereverbe
 #else
   auto handler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DereverberatorAudioHandler,
-                                        spench::DereverbConfigReader>(
+                                        spench::DereverbConfig>(
           "default_configuration_dereverberation_onnx_48khz.yaml"));
 
   spench::SpenchContext<float>* ctx_ptr = handler_test_env.handler->CreateContext();
@@ -251,7 +247,7 @@ TEST_CASE("SUCCEED Run dereverb and check zero outputs with the model 48kHz [der
 #else
   auto handler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DereverberatorAudioHandler,
-                                        spench::DereverbConfigReader>(
+                                        spench::DereverbConfig>(
           "default_configuration_dereverberation_onnx_48khz.yaml"));
 
   spench::SpenchContext<float>* ctx_ptr = handler_test_env.handler->CreateContext();
@@ -298,14 +294,14 @@ TEST_CASE("SUCCEED Run dereverb with yaml string config [dereverberator handler]
 //   auto handler_test_env =
 //       std::move(TestHandler().
 //           InitHandlerFromYaml<spench::DereverberatorAudioHandler,
-//                               spench::DereverbConfigReader>(std::string(yaml)));
+//                               spench::DereverbConfig>(std::string(yaml)));
 #else
     static constexpr char yaml[] = R"(
 model:
   model_path: data/models/dereverb_model_48khz.onnx)";
   auto handler_test_env = std::move(
       TestHandler().InitHandlerFromYaml<spench::DereverberatorAudioHandler,
-                                        spench::DereverbConfigReader>(
+                                        spench::DereverbConfig>(
           std::string(yaml)));
 
   spench::SpenchContext<float>* ctx_ptr = handler_test_env.handler->CreateContext();
@@ -348,12 +344,12 @@ TEST_CASE("SUCCEED Run denoise and check first non-zero output with the best qua
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_best_quality_tflite_16khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_best_quality_onnx_16khz.yaml"));
 #endif
 
@@ -390,12 +386,12 @@ TEST_CASE("SUCCEED Check finalize chunk for the best quality model "
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_best_quality_tflite_16khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_best_quality_onnx_16khz.yaml"));
 #endif
 
@@ -417,12 +413,12 @@ TEST_CASE("SUCCEED Run denoise and check finalize chunk for the best quality mod
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_best_quality_tflite_16khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_best_quality_onnx_16khz.yaml"));
 #endif
 
@@ -465,12 +461,12 @@ TEST_CASE("SUCCEED Run denoise and check finalize chunk for the fast model [deno
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_tflite_24khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
@@ -523,7 +519,7 @@ model:
   model_path: data/models/fast_model_24khz.tflite)";
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromYaml<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           std::string(yaml)));
 #else
   static constexpr char yaml[] = R"(
@@ -531,7 +527,7 @@ model:
   model_path: data/models/fast_model_24khz.onnx)";
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromYaml<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           std::string(yaml)));
 #endif
 
@@ -581,12 +577,12 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with one chunk [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_tflite_24khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
@@ -625,12 +621,12 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with dumped recording [denoiser handler
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_tflite_24khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
@@ -670,12 +666,12 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with zero recording [denoiser handler]"
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_tflite_24khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
@@ -704,12 +700,12 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with empty recording [denoiser handler]
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_tflite_24khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
@@ -738,12 +734,12 @@ TEST_CASE("FAIL calcSnrEstimation with overflow values [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_tflite_24khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
@@ -764,12 +760,12 @@ TEST_CASE("FAIL calcSnrEstimation with NaN in input [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_tflite_24khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
@@ -790,12 +786,12 @@ TEST_CASE("FAIL calcSnrEstimation with mismatched input sizes [denoiser handler]
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_tflite_24khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
@@ -815,12 +811,12 @@ TEST_CASE("FAIL calcSnrEstimation with mostly zeros [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_tflite_24khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
@@ -843,12 +839,12 @@ TEST_CASE("FAIL calcSnrEstimation with empty complex numbers [denoiser handler]"
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_tflite_24khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
@@ -868,12 +864,12 @@ TEST_CASE("FAIL calcSnrEstimation with mismatched real/imag sizes [denoiser hand
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_tflite_24khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
@@ -900,12 +896,12 @@ TEST_CASE("SUCCEED calcSnrEstimation with exit from practical range [denoiser ha
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_tflite_24khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
@@ -932,12 +928,12 @@ TEST_CASE("FAIL averageSnrDb with no input values [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_tflite_24khz.yaml"));
 #else
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-                                        spench::DenoiserConfigReader>(
+                                        spench::DenoiserConfig>(
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 

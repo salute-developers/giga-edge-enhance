@@ -15,17 +15,17 @@ namespace spench {
 
 class BaseAudioHandler {
  protected:
-  std::unique_ptr<spench::ConfigReader> m_configReader;
+  std::shared_ptr<spench::PipelineConfig> m_config;
 
-  // ToDo(artsokol): remove and use reader directly
-  const YAML::Node& params() { return m_configReader->params(); }
+  // ToDo(artsokol): remove and use config directly
+  const YAML::Node& params() { return m_config->params(); }
 
  public:
   BaseAudioHandler() = delete;
   BaseAudioHandler& operator=(const BaseAudioHandler&) = delete;
   BaseAudioHandler(const BaseAudioHandler&) = delete;
 
-  explicit BaseAudioHandler(std::unique_ptr<ConfigReader> reader);
+  explicit BaseAudioHandler(std::shared_ptr<PipelineConfig> config);
   BaseAudioHandler(BaseAudioHandler&& orig_handler) noexcept;
 
   virtual ~BaseAudioHandler();

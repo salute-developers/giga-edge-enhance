@@ -13,8 +13,8 @@ SpenchDenoise::SpenchDenoise(const char* config_file,
                              const char* checksum)
 : ISpenchSequencer(),
   m_handler(std::make_unique<DenoiserAudioHandler>(
-                              std::make_unique<spench::DenoiserConfigReader>(
-                                std::make_unique<FileConfigReader>(std::string(config_file))),
+                              std::make_shared<spench::DenoiserConfig>(
+                                FileConfigReader(std::string(config_file))),
                               std::string(password),
                               std::string(checksum))) {
   spdlog::info("Create Spench denoiser from config file {}", config_file);
@@ -26,8 +26,8 @@ SpenchDenoise::SpenchDenoise(const std::string& yaml_str,
                              const char* checksum)
 : ISpenchSequencer(),
   m_handler(std::make_unique<DenoiserAudioHandler>(
-                              std::make_unique<spench::DenoiserConfigReader>(
-                                std::make_unique<StringConfigReader>(yaml_str)),
+                              std::make_shared<spench::DenoiserConfig>(
+                                StringConfigReader(yaml_str)),
                               password,
                               checksum)) {
   spdlog::info("Create Spench denoiser from YAML string config");

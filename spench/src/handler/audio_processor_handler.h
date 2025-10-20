@@ -417,7 +417,7 @@ class AudioProcessorHandler : public BaseAudioHandler {
   AudioProcessorHandler& operator=(const AudioProcessorHandler&) = delete;
   AudioProcessorHandler(const AudioProcessorHandler&) = delete;
 
-  explicit AudioProcessorHandler(std::unique_ptr<ConfigReader> reader);
+  explicit AudioProcessorHandler(std::shared_ptr<AudioProcessorConfig> config);
 
   // Convenience API stays
   std::vector<float>& process(const std::vector<float>& in, std::vector<float>& out);

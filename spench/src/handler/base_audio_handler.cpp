@@ -21,8 +21,8 @@ SpenchRetCode BaseAudioHandler::ProcessFrame(struct spench::SpenchContext<float>
   return ProcessFrame(ctx, mic_frame, out);
 }
 
-BaseAudioHandler::BaseAudioHandler(std::unique_ptr<ConfigReader> reader)
-    : m_configReader(std::move(reader)) {
+BaseAudioHandler::BaseAudioHandler(std::shared_ptr<PipelineConfig> config)
+    : m_config(std::move(config)) {
   SpenchRetCode ret_code = Start();
   if (ret_code != SpenchRetCode::SUCCESS) {
     spdlog::error("Handler could not be created! {}",
@@ -33,7 +33,7 @@ BaseAudioHandler::BaseAudioHandler(std::unique_ptr<ConfigReader> reader)
 }
 
 BaseAudioHandler::BaseAudioHandler(BaseAudioHandler&& orig_handler) noexcept
-    : m_configReader(std::move(orig_handler.m_configReader)) {}
+    : m_config(std::move(orig_handler.m_config)) {}
 
 BaseAudioHandler::~BaseAudioHandler() { Stop(); }
 

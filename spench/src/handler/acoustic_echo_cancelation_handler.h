@@ -20,7 +20,7 @@ class AudioEchoCancelationHandler : public BaseAudioHandler {
   AudioEchoCancelationHandler(AudioEchoCancelationHandler&& orig) noexcept
       : BaseAudioHandler(std::move(orig)), m_canceler(std::move(orig.m_canceler)) {}
 
-  explicit AudioEchoCancelationHandler(std::unique_ptr<ConfigReader> reader);
+  explicit AudioEchoCancelationHandler(std::shared_ptr<AecConfig> config);
 
   // Convenience API preserved
   void Process(const std::vector<float>& mic, const std::vector<float>& lbk, std::vector<float>& out);

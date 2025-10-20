@@ -23,8 +23,8 @@ class NeuralNetworkAudioHandler : public BaseAudioHandler {
   NeuralNetworkAudioHandler& operator=(const NeuralNetworkAudioHandler&) = delete;
   NeuralNetworkAudioHandler(const NeuralNetworkAudioHandler&) = delete;
 
-  explicit NeuralNetworkAudioHandler(std::unique_ptr<ConfigReader> reader);
-  NeuralNetworkAudioHandler(std::unique_ptr<ConfigReader> reader,
+  explicit NeuralNetworkAudioHandler(std::shared_ptr<NetworkConfig> config);
+  NeuralNetworkAudioHandler(std::shared_ptr<NetworkConfig> config,
                             const std::string& password,
                             const std::string& checksum);
   NeuralNetworkAudioHandler(NeuralNetworkAudioHandler&& orig) noexcept;

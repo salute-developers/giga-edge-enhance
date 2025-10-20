@@ -40,11 +40,10 @@ struct TempYamlFile {
 
 // A minimal concrete reader so we can call mergeYaml(...)
 struct DummyReader : public spench::ConfigReader {
-  void load() override {}
 };
 
-struct MiniNetworkReader final : public spench::NetworkConfigReader {
-  using spench::NetworkConfigReader::NetworkConfigReader;
+struct MiniNetworkReader final : public spench::NetworkConfig {
+  using spench::NetworkConfig::NetworkConfig;
 
   // Provide harmless defaults so the abstract base can be instantiated
   std::vector<std::string> defaultModelInputs() const override {
@@ -69,8 +68,6 @@ struct MiniNetworkReader final : public spench::NetworkConfigReader {
 // mergeYaml
 // ------------------------------------------------------------------------------
 TEST_CASE("SUCCESS mergeYaml deep-merges maps and overrides scalars/sequences [config reader]") {
-  DummyReader r;
-
   YAML::Node dest = YAML::Load(R"(
 a:
   b: 1
@@ -86,7 +83,7 @@ d: [3, 4]
 e: 7
 )");
 
-  r.mergeYaml(dest, src);
+  spench::mergeYaml(dest, src);
 
   REQUIRE(dest["a"]["b"].as<int>() == 10);      // overridden
   REQUIRE(dest["a"]["c"].as<int>() == 2);       // preserved
@@ -98,17 +95,15 @@ e: 7
 }
 
 TEST_CASE("SUCCESS mergeYaml with non-map source is a no-op [config reader]") {
-  DummyReader r;
-
   YAML::Node dest1 = YAML::Load("{ a: 1, b: { c: 2 } }");
   const YAML::Node src_scalar = YAML::Load("42");
-  r.mergeYaml(dest1, src_scalar);
+  spench::mergeYaml(dest1, src_scalar);
   REQUIRE(dest1["a"].as<int>() == 1);
   REQUIRE(dest1["b"]["c"].as<int>() == 2);
 
   YAML::Node dest2 = YAML::Load("{ k: [1,2,3] }");
   const YAML::Node src_seq = YAML::Load("[4,5,6]");
-  r.mergeYaml(dest2, src_seq);
+  spench::mergeYaml(dest2, src_seq);
   REQUIRE(dest2["k"].IsSequence());
   REQUIRE(dest2["k"].size() == 3);
   REQUIRE(dest2["k"][0].as<int>() == 1);
@@ -117,8 +112,8 @@ TEST_CASE("SUCCESS mergeYaml with non-map source is a no-op [config reader]") {
 // ------------------------------------------------------------------------------
 // StringConfigReader
 // ------------------------------------------------------------------------------
-TEST_CASE("SUCCESS StringConfigReader merges overrides and keeps built-in defaults [config reader]") {
-  const std::string override_yaml = R"(
+TEST_CASE("SUCCESS StringConfigReader reads from string [config reader]") {
+  const std::string yaml = R"(
 model:
   model_path: "my_model.onnx"
   model_inputs: [in1, in2]
@@ -130,10 +125,10 @@ extra_section:
   flag: true
 )";
 
-  spench::StringConfigReader reader(override_yaml);
-  REQUIRE_NOTHROW(reader.load());
+  std::unique_ptr<spench::StringConfigReader> reader;
+  REQUIRE_NOTHROW(reader = std::make_unique<spench::StringConfigReader>(yaml));
 
-  const YAML::Node& p = reader.params();
+  const YAML::Node& p = reader->params();
   // Overridden by snippet
   REQUIRE(p["model"]["model_path"].as<std::string>() == "my_model.onnx");
   REQUIRE(p["inference"]["engine_num_threads"].as<int>() == 4);
@@ -141,18 +136,14 @@ extra_section:
   REQUIRE(p["model"]["model_inputs"].IsSequence());
   REQUIRE(p["model"]["model_inputs"].size() == 2);
 
-  // Defaults intact
-  REQUIRE(p["inference"]["model_type"].as<std::string>() == "best_speed");
-  REQUIRE(p["inference"]["gpu"].as<bool>() == false);
-
   // New sections carried over
   REQUIRE(p["extra_section"]["flag"].as<bool>() == true);
 }
 
 TEST_CASE("FAIL StringConfigReader throws on malformed YAML", "[config reader]") {
   const std::string bad_yaml = "model: [in1, in2\n";  // missing ]
-  spench::StringConfigReader reader(bad_yaml);
-  REQUIRE_THROWS_AS(reader.load(), YAML::ParserException);
+  std::unique_ptr<spench::StringConfigReader> reader;
+  REQUIRE_THROWS_AS(reader = std::make_unique<spench::StringConfigReader>(bad_yaml), std::runtime_error);
 }
 
 // ------------------------------------------------------------------------------
@@ -167,10 +158,10 @@ inference:
 )";
 
   TempYamlFile tmp(file_yaml);
-  spench::FileConfigReader reader(tmp.path);
-  REQUIRE_NOTHROW(reader.load());
+  std::unique_ptr<spench::FileConfigReader> reader;
+  REQUIRE_NOTHROW(reader = std::make_unique<spench::FileConfigReader>(tmp.path));
 
-  const YAML::Node& p = reader.params();
+  const YAML::Node& p = reader->params();
   REQUIRE(p["model"]["model_path"].as<std::string>() == "file_model.onnx");
   REQUIRE(p["inference"]["engine_num_threads"].as<int>() == 8);
 
@@ -180,20 +171,20 @@ inference:
 }
 
 TEST_CASE("FAIL FileConfigReader throws if file missing [config reader]") {
-  spench::FileConfigReader reader("/does/not/exist.yaml");
-  REQUIRE_THROWS(reader.load());
+  std::unique_ptr<spench::FileConfigReader> reader;
+  REQUIRE_THROWS(reader = std::make_unique<spench::FileConfigReader>("/does/not/exist.yaml"));
 }
 
 TEST_CASE("FAIL FileConfigReader throws on malformed YAML in file [config reader]") {
   TempYamlFile tmp("inference: [1, 2\n");  // bad YAML
-  spench::FileConfigReader reader(tmp.path);
-  REQUIRE_THROWS_AS(reader.load(), std::runtime_error);
+  std::unique_ptr<spench::FileConfigReader> reader;
+  REQUIRE_THROWS_AS(reader = std::make_unique<spench::FileConfigReader>(tmp.path), std::runtime_error);
 }
 
 // ------------------------------------------------------------------------------
-// DenoiserConfigReader
+// DenoiserConfig
 // ------------------------------------------------------------------------------
-TEST_CASE("SUCCESS DenoiserConfigReader getters return correct override and default values [denoiser config reader]") {
+TEST_CASE("SUCCESS DenoiserConfig getters return correct override and default values [denoiser config reader]") {
   const std::string yaml = R"(
 model:
   model_path: "mod.onnx"
@@ -210,9 +201,9 @@ inference:
   model_type:        "best_quality"
 )";
 
-  auto base = std::make_unique<spench::StringConfigReader>(yaml);
-  spench::DenoiserConfigReader cfg(std::move(base));
-  REQUIRE_NOTHROW(cfg.load());
+  auto base = spench::StringConfigReader("");
+  REQUIRE_NOTHROW(base = spench::StringConfigReader(yaml));
+  spench::DenoiserConfig cfg(base);
 
   REQUIRE(cfg.modelPath()    == "mod.onnx");
   REQUIRE(cfg.modelInputs()  == std::vector<std::string>({"i1", "i2"}));
@@ -226,15 +217,15 @@ inference:
   REQUIRE(cfg.modelType()    == "best_quality");
 }
 
-TEST_CASE("SUCCESS DenoiserConfigReader uses defaults when fields are missing [denoiser config reader]") {
+TEST_CASE("SUCCESS DenoiserConfig uses defaults when fields are missing [denoiser config reader]") {
   const std::string yaml = R"(
 model:
   model_path: "onlypath.onnx"
 )";
 
-  auto base = std::make_unique<spench::StringConfigReader>(yaml);
-  spench::DenoiserConfigReader cfg(std::move(base));
-  REQUIRE_NOTHROW(cfg.load());
+  auto base = spench::StringConfigReader("");
+  REQUIRE_NOTHROW(base = spench::StringConfigReader(yaml));
+  spench::DenoiserConfig cfg(base);
 
   REQUIRE(cfg.modelPath()    == "onlypath.onnx");
   REQUIRE(cfg.modelInputs().size() == 4);
@@ -248,45 +239,45 @@ model:
   REQUIRE(cfg.modelType()    == "best_speed");
 }
 
-TEST_CASE("SUCCESS DenoiserConfigReader throws if model_path is missing [denoiser config reader]") {
+TEST_CASE("SUCCESS DenoiserConfig throws if model_path is missing [denoiser config reader]") {
   const std::string yaml = R"(
 model: {}
 )";
-  auto base = std::make_unique<spench::StringConfigReader>(yaml);
-  spench::DenoiserConfigReader cfg(std::move(base));
-  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  auto base = spench::StringConfigReader(yaml);
+  std::unique_ptr<spench::DenoiserConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<spench::DenoiserConfig>(base), std::runtime_error);
 }
 
-TEST_CASE("SUCCESS NetworkConfigReader accepts optional scalar model_input_ctx_len [network config reader]") {
+TEST_CASE("SUCCESS NetworkConfig accepts optional scalar model_input_ctx_len [network config reader]") {
   const std::string yaml = R"(
 model:
   model_path: "net.onnx"
   model_input_ctx_len: 64
 )";
 
-  auto base = std::make_unique<spench::StringConfigReader>(yaml);
-  MiniNetworkReader cfg(std::move(base));
-  REQUIRE_NOTHROW(cfg.load());  // validate() is called inside load()
+  auto base = spench::StringConfigReader(yaml);
+  std::unique_ptr<MiniNetworkReader> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<MiniNetworkReader>(base));
 }
 
-TEST_CASE("FAIL NetworkConfigReader missing 'model' section throws [network config reader]") {
+TEST_CASE("FAIL NetworkConfig missing 'model' section throws [network config reader]") {
   const std::string yaml = R"(
 inference:
   engine_num_threads: 2
 )";
-  auto base = std::make_unique<spench::StringConfigReader>(yaml);
-  MiniNetworkReader cfg(std::move(base));
-  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  auto base = spench::StringConfigReader(yaml);
+  std::unique_ptr<MiniNetworkReader> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
 }
 
-TEST_CASE("FAIL NetworkConfigReader missing or empty model_path throws [network config reader]") {
+TEST_CASE("FAIL NetworkConfig missing or empty model_path throws [network config reader]") {
   SECTION("model section present but model_path missing") {
     const std::string yaml = R"(
 model: {}
 )";
-    auto base = std::make_unique<spench::StringConfigReader>(yaml);
-    MiniNetworkReader cfg(std::move(base));
-    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+    auto base = spench::StringConfigReader(yaml);
+    std::unique_ptr<MiniNetworkReader> cfg;
+    REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
   }
 
   SECTION("model_path is an empty string") {
@@ -294,22 +285,22 @@ model: {}
 model:
   model_path: ""
 )";
-    auto base = std::make_unique<spench::StringConfigReader>(yaml);
-    MiniNetworkReader cfg(std::move(base));
-    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+    auto base = spench::StringConfigReader(yaml);
+    std::unique_ptr<MiniNetworkReader> cfg;
+    REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
   }
 }
 
-TEST_CASE("FAIL NetworkConfigReader inputs and outputs must be sequences of scalars [network config reader]") {
+TEST_CASE("FAIL NetworkConfig inputs and outputs must be sequences of scalars [network config reader]") {
   SECTION("model_inputs is not a sequence") {
     const std::string yaml = R"(
 model:
   model_path: "ok.onnx"
   model_inputs: 123
 )";
-    auto base = std::make_unique<spench::StringConfigReader>(yaml);
-    MiniNetworkReader cfg(std::move(base));
-    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+    auto base = spench::StringConfigReader(yaml);
+    std::unique_ptr<MiniNetworkReader> cfg;
+    REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
   }
 
   SECTION("model_inputs contains a non-scalar item") {
@@ -318,9 +309,9 @@ model:
   model_path: "ok.onnx"
   model_inputs: [foo, {bar: 1}]
 )";
-    auto base = std::make_unique<spench::StringConfigReader>(yaml);
-    MiniNetworkReader cfg(std::move(base));
-    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+    auto base = spench::StringConfigReader(yaml);
+    std::unique_ptr<MiniNetworkReader> cfg;
+    REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
   }
 
   SECTION("model_outputs is not a sequence") {
@@ -329,9 +320,9 @@ model:
   model_path: "ok.onnx"
   model_outputs: true
 )";
-    auto base = std::make_unique<spench::StringConfigReader>(yaml);
-    MiniNetworkReader cfg(std::move(base));
-    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+    auto base = spench::StringConfigReader(yaml);
+    std::unique_ptr<MiniNetworkReader> cfg;
+    REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
   }
 
   SECTION("model_outputs contains a non-scalar item") {
@@ -340,27 +331,27 @@ model:
   model_path: "ok.onnx"
   model_outputs: ["y", [1,2,3]]
 )";
-    auto base = std::make_unique<spench::StringConfigReader>(yaml);
-    MiniNetworkReader cfg(std::move(base));
-    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+    auto base = spench::StringConfigReader(yaml);
+    std::unique_ptr<MiniNetworkReader> cfg;
+    REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
   }
 }
 
-TEST_CASE("FAIL NetworkConfigReader model_input_ctx_len must be a scalar when present [network config reader]") {
+TEST_CASE("FAIL NetworkConfig model_input_ctx_len must be a scalar when present [network config reader]") {
   const std::string yaml = R"(
 model:
   model_path: "ok.onnx"
   model_input_ctx_len: { not: "scalar" }
 )";
-  auto base = std::make_unique<spench::StringConfigReader>(yaml);
-  MiniNetworkReader cfg(std::move(base));
-  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  auto base = spench::StringConfigReader(yaml);
+  std::unique_ptr<MiniNetworkReader> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
 }
 
 // ------------------------------------------------------------------------------
-// DereverbConfigReader
+// DereverbConfig
 // ------------------------------------------------------------------------------
-TEST_CASE("SUCCESS DereverbConfigReader getters return correct override and default values [dereverb config reader]") {
+TEST_CASE("SUCCESS DereverbConfig getters return correct override and default values [dereverb config reader]") {
   const std::string yaml = R"(
 model:
   model_path: "derev.onnx"
@@ -377,32 +368,32 @@ inference:
   model_type:        "best_quality"
 )";
 
-  auto base = std::make_unique<spench::StringConfigReader>(yaml);
-  spench::DereverbConfigReader cfg(std::move(base));
-  REQUIRE_NOTHROW(cfg.load());
+  auto base = spench::StringConfigReader(yaml);
+  std::unique_ptr<MiniNetworkReader> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<MiniNetworkReader>(base));
 
   // Network-level getters
-  REQUIRE(cfg.modelPath()    == "derev.onnx");
-  REQUIRE(cfg.modelInputs()  == std::vector<std::string>({"x_in"}));
-  REQUIRE(cfg.modelOutputs() == std::vector<std::string>({"y_out"}));
-  REQUIRE(cfg.samplingFreq() == 48000u);
-  REQUIRE(cfg.frameSizeMs()  == 20u);
-  REQUIRE(cfg.frameStrideMs()== 10u);
-  REQUIRE(cfg.windowType()   == "hamming");
-  REQUIRE(cfg.useGpu()       == true);
-  REQUIRE(cfg.numThreads()   == 6u);
-  REQUIRE(cfg.modelType()    == "best_quality");
+  REQUIRE(cfg->modelPath()    == "derev.onnx");
+  REQUIRE(cfg->modelInputs()  == std::vector<std::string>({"x_in"}));
+  REQUIRE(cfg->modelOutputs() == std::vector<std::string>({"y_out"}));
+  REQUIRE(cfg->samplingFreq() == 48000u);
+  REQUIRE(cfg->frameSizeMs()  == 20u);
+  REQUIRE(cfg->frameStrideMs()== 10u);
+  REQUIRE(cfg->windowType()   == "hamming");
+  REQUIRE(cfg->useGpu()       == true);
+  REQUIRE(cfg->numThreads()   == 6u);
+  REQUIRE(cfg->modelType()    == "best_quality");
 }
 
-TEST_CASE("SUCCESS DereverbConfigReader uses defaults when optional fields are missing [dereverb config reader]") {
+TEST_CASE("SUCCESS DereverbConfig uses defaults when optional fields are missing [dereverb config reader]") {
   const std::string yaml = R"(
 model:
   model_path: "only_derev.onnx"
 )";
 
-  auto base = std::make_unique<spench::StringConfigReader>(spench::DefaultDereverbConfigYAML, yaml);
-  spench::DereverbConfigReader cfg(std::move(base));
-  REQUIRE_NOTHROW(cfg.load());
+  auto base = spench::StringConfigReader(yaml);
+  std::unique_ptr<spench::DereverbConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<spench::DereverbConfig>(base));
 
 #ifdef BUILD_TFLITE_ENGINE
   const std::vector<std::string> exp_in  = {"noisy_spec_5"};
@@ -412,28 +403,28 @@ model:
   const std::vector<std::string> exp_out = {"model_out", "mu", "logvar"};
 #endif
 
-  REQUIRE(cfg.modelPath()    == "only_derev.onnx");
-  REQUIRE(cfg.modelInputs()  == exp_in);
-  REQUIRE(cfg.modelOutputs() == exp_out);
+  REQUIRE(cfg->modelPath()    == "only_derev.onnx");
+  REQUIRE(cfg->modelInputs()  == exp_in);
+  REQUIRE(cfg->modelOutputs() == exp_out);
 
   // Defaults inherited from the built-in YAML used by StringConfigReader
-  REQUIRE(cfg.samplingFreq() == 48000u);
-  REQUIRE(cfg.frameSizeMs()  == 32u);
-  REQUIRE(cfg.frameStrideMs()== 16u);
-  REQUIRE(cfg.windowType()   == "hanning");
-  REQUIRE(cfg.useGpu()       == false);
-  REQUIRE(cfg.numThreads()   == 1u);
-  REQUIRE(cfg.modelType()    == "remove_reverb");
+  REQUIRE(cfg->samplingFreq() == 48000u);
+  REQUIRE(cfg->frameSizeMs()  == 32u);
+  REQUIRE(cfg->frameStrideMs()== 16u);
+  REQUIRE(cfg->windowType()   == "hanning");
+  REQUIRE(cfg->useGpu()       == false);
+  REQUIRE(cfg->numThreads()   == 1u);
+  REQUIRE(cfg->modelType()    == "remove_reverb");
 }
 
-TEST_CASE("FAIL DereverbConfigReader throws when model_path is missing or invalid [dereverb config reader]") {
+TEST_CASE("FAIL DereverbConfig throws when model_path is missing or invalid [dereverb config reader]") {
   SECTION("model section exists but is empty") {
     const std::string yaml = R"(
 model: {}
 )";
-    auto base = std::make_unique<spench::StringConfigReader>(yaml);
-    spench::DereverbConfigReader cfg(std::move(base));
-    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+    auto base = spench::StringConfigReader(yaml);
+    std::unique_ptr<spench::DereverbConfig> cfg;
+    REQUIRE_THROWS_AS(cfg = std::make_unique<spench::DereverbConfig>(base), std::runtime_error);
   }
 
   SECTION("model_path is empty") {
@@ -441,22 +432,22 @@ model: {}
 model:
   model_path: ""
 )";
-    auto base = std::make_unique<spench::StringConfigReader>(yaml);
-    spench::DereverbConfigReader cfg(std::move(base));
-    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+    auto base = spench::StringConfigReader(yaml);
+    std::unique_ptr<spench::DereverbConfig> cfg;
+    REQUIRE_THROWS_AS(cfg = std::make_unique<spench::DereverbConfig>(base), std::runtime_error);
   }
 }
 
-TEST_CASE("FAIL DereverbConfigReader validates structure of inputs/outputs [dereverb config reader]") {
+TEST_CASE("FAIL DereverbConfig validates structure of inputs/outputs [dereverb config reader]") {
   SECTION("inputs is non-sequence") {
     const std::string yaml = R"(
 model:
   model_path: "ok.onnx"
   model_inputs: {a: 1}
 )";
-    auto base = std::make_unique<spench::StringConfigReader>(yaml);
-    spench::DereverbConfigReader cfg(std::move(base));
-    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+    auto base = spench::StringConfigReader(yaml);
+    std::unique_ptr<spench::DereverbConfig> cfg;
+    REQUIRE_THROWS_AS(cfg = std::make_unique<spench::DereverbConfig>(base), std::runtime_error);
   }
 
   SECTION("outputs contains a non-scalar item") {
@@ -465,13 +456,13 @@ model:
   model_path: "ok.onnx"
   model_outputs: ["good", {bad: true}]
 )";
-    auto base = std::make_unique<spench::StringConfigReader>(yaml);
-    spench::DereverbConfigReader cfg(std::move(base));
-    REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+    auto base = spench::StringConfigReader(yaml);
+    std::unique_ptr<spench::DereverbConfig> cfg;
+    REQUIRE_THROWS_AS(cfg = std::make_unique<spench::DereverbConfig>(base), std::runtime_error);
   }
 }
 
-TEST_CASE("SUCCESS AecConfigReader full override [aec config reader]") {
+TEST_CASE("SUCCESS AecConfig full override [aec config reader]") {
   const std::string yaml = R"(
 echo_cancellation:
   sample_rate: 44100
@@ -482,104 +473,94 @@ echo_cancellation:
   type: speex
 )";
 
-  auto base = std::make_unique<spench::StringConfigReader>(spench::DefaultAecConfigYAML, yaml);
-  spench::AecConfigReader cfg(std::move(base));
-  REQUIRE_NOTHROW(cfg.load());
-  REQUIRE_NOTHROW(cfg.validate());
+  auto base = spench::StringConfigReader(yaml);
+  std::unique_ptr<spench::AecConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<spench::AecConfig>(base));
 
-  REQUIRE(cfg.sampleRate()                       == 44100u);
-  REQUIRE(cfg.filterLen()                        == 2048u);
-  REQUIRE(cfg.residualEchoSuppressionEnabled()   == false);
-  REQUIRE(cfg.delayCompensatorEnabled()          == false);
-  REQUIRE(cfg.frameLen()                         == uint16_t(std::round(44.1f*32)));
-  REQUIRE(cfg.type()                             == util::echo::EchoCancelerType::SPEEX);
+  REQUIRE(cfg->sampleRate()                       == 44100u);
+  REQUIRE(cfg->filterLen()                        == 2048u);
+  REQUIRE(cfg->residualEchoSuppressionEnabled()   == false);
+  REQUIRE(cfg->delayCompensatorEnabled()          == false);
+  REQUIRE(cfg->frameLen()                         == uint16_t(std::round(44.1f*32)));
+  REQUIRE(cfg->type()                             == util::echo::EchoCancelerType::SPEEX);
 }
 
-TEST_CASE("SUCCESS AecConfigReader partial override uses defaults [aec config reader]") {
+TEST_CASE("SUCCESS AecConfig partial override uses defaults [aec config reader]") {
   const std::string yaml = R"(
 echo_cancellation:
   sample_rate: 32000
 )";
 
-  auto base = std::make_unique<spench::StringConfigReader>(spench::DefaultAecConfigYAML, yaml);
-  spench::AecConfigReader cfg(std::move(base));
-  REQUIRE_NOTHROW(cfg.load());
-  REQUIRE_NOTHROW(cfg.validate());
+  auto base = spench::StringConfigReader(yaml);
+  std::unique_ptr<spench::AecConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<spench::AecConfig>(base));
 
-  REQUIRE(cfg.sampleRate()                       == 32000u);
-  REQUIRE(cfg.filterLen()                        == 4096u);
-  REQUIRE(cfg.residualEchoSuppressionEnabled()   == true);
-  REQUIRE(cfg.delayCompensatorEnabled()          == true);
+  REQUIRE(cfg->sampleRate()                       == 32000u);
+  REQUIRE(cfg->filterLen()                        == 4096u);
+  REQUIRE(cfg->residualEchoSuppressionEnabled()   == true);
+  REQUIRE(cfg->delayCompensatorEnabled()          == true);
   // default chunk_len_ms=16 → frameLen = round(32 * 16) = 512
-  REQUIRE(cfg.frameLen()                         == 512u);
-  REQUIRE(cfg.type()                             == util::echo::EchoCancelerType::SPEEX);
+  REQUIRE(cfg->frameLen()                         == 512u);
+  REQUIRE(cfg->type()                             == util::echo::EchoCancelerType::SPEEX);
 }
 
-TEST_CASE("FAIL AecConfigReader invalid type throws [aec config reader]") {
+TEST_CASE("FAIL AecConfig invalid type throws [aec config reader]") {
   const std::string yaml = R"(
 echo_cancellation:
   type: unknown
 )";
 
-  auto base = std::make_unique<spench::StringConfigReader>(spench::DefaultAecConfigYAML, yaml);
-  spench::AecConfigReader cfg(std::move(base));
-  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
-}
-
-TEST_CASE("FAIL AecConfigReader missing section throws [aec config reader]") {
-  auto base = std::make_unique<spench::StringConfigReader>("");  // empty
-  spench::AecConfigReader cfg(std::move(base));
-  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  auto base = spench::StringConfigReader(yaml);
+  std::unique_ptr<spench::AecConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<spench::AecConfig>(base), std::runtime_error);
 }
 
 // ------------------------------------------------------------------------------
-// AudioProcessorConfigReader
+// AudioProcessorConfig
 // ------------------------------------------------------------------------------
-TEST_CASE("SUCCESS AudioProcessorConfigReader generic getter returns defaults [audio processing reader]") {
-  auto base = std::make_unique<spench::StringConfigReader>(
-      spench::DefaultAudioProcessingConfigYAML, std::string{});
-  spench::AudioProcessorConfigReader cfg(std::move(base));
-  REQUIRE_NOTHROW(cfg.load());
+TEST_CASE("SUCCESS AudioProcessorConfig generic getter returns defaults [audio processing reader]") {
+  std::unique_ptr<spench::AudioProcessorConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<spench::AudioProcessorConfig>());
 
-  REQUIRE(cfg.get<uint32_t>("range_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("range_ctrl", "target_level_db") == Approx(-3.0f));
-  REQUIRE(cfg.get<float>("range_ctrl", "max_gain_db") == Approx(10.0f));
-  REQUIRE(cfg.get<float>("range_ctrl", "attack_time") == Approx(0.0f));
-  REQUIRE(cfg.get<float>("range_ctrl", "release_time") == Approx(300.0f));
-  REQUIRE(cfg.get<float>("range_ctrl", "hold_time") == Approx(5.0f));
+  REQUIRE(cfg->get<uint32_t>("range_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg->get<float>("range_ctrl", "target_level_db") == Approx(-3.0f));
+  REQUIRE(cfg->get<float>("range_ctrl", "max_gain_db") == Approx(10.0f));
+  REQUIRE(cfg->get<float>("range_ctrl", "attack_time") == Approx(0.0f));
+  REQUIRE(cfg->get<float>("range_ctrl", "release_time") == Approx(300.0f));
+  REQUIRE(cfg->get<float>("range_ctrl", "hold_time") == Approx(5.0f));
 
-  REQUIRE(cfg.get<float>("auto_gain_ctrl", "target_level") == Approx(1.0f));
-  REQUIRE(cfg.get<float>("auto_gain_ctrl", "max_gain") == Approx(20.0f));
-  REQUIRE(cfg.get<uint32_t>("auto_gain_ctrl", "average_len") == 6000u);
-  REQUIRE(cfg.get<float>("auto_gain_ctrl", "step_size_rise") == Approx(0.01f));
-  REQUIRE(cfg.get<float>("auto_gain_ctrl", "step_size_fall") == Approx(0.01f));
+  REQUIRE(cfg->get<float>("auto_gain_ctrl", "target_level") == Approx(1.0f));
+  REQUIRE(cfg->get<float>("auto_gain_ctrl", "max_gain") == Approx(20.0f));
+  REQUIRE(cfg->get<uint32_t>("auto_gain_ctrl", "average_len") == 6000u);
+  REQUIRE(cfg->get<float>("auto_gain_ctrl", "step_size_rise") == Approx(0.01f));
+  REQUIRE(cfg->get<float>("auto_gain_ctrl", "step_size_fall") == Approx(0.01f));
 
-  REQUIRE(cfg.get<uint32_t>("noise_gate_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("noise_gate_ctrl", "threshold") == Approx(-40.0f));
-  REQUIRE(cfg.get<float>("noise_gate_ctrl", "attack_time") == Approx(0.01f));
-  REQUIRE(cfg.get<float>("noise_gate_ctrl", "release_time") == Approx(0.02f));
-  REQUIRE(cfg.get<float>("noise_gate_ctrl", "hold_time") == Approx(0.05f));
+  REQUIRE(cfg->get<uint32_t>("noise_gate_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg->get<float>("noise_gate_ctrl", "threshold") == Approx(-40.0f));
+  REQUIRE(cfg->get<float>("noise_gate_ctrl", "attack_time") == Approx(0.01f));
+  REQUIRE(cfg->get<float>("noise_gate_ctrl", "release_time") == Approx(0.02f));
+  REQUIRE(cfg->get<float>("noise_gate_ctrl", "hold_time") == Approx(0.05f));
 
-  REQUIRE(cfg.get<uint32_t>("dynamic_range_compressor_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "threshold") == Approx(-10.0f));
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "ratio") == Approx(20.0f));
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "knee_width") == Approx(0.0f));
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "attack_time") == Approx(0.01f));
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "release_time") == Approx(0.2f));
+  REQUIRE(cfg->get<uint32_t>("dynamic_range_compressor_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg->get<float>("dynamic_range_compressor_ctrl", "threshold") == Approx(-10.0f));
+  REQUIRE(cfg->get<float>("dynamic_range_compressor_ctrl", "ratio") == Approx(20.0f));
+  REQUIRE(cfg->get<float>("dynamic_range_compressor_ctrl", "knee_width") == Approx(0.0f));
+  REQUIRE(cfg->get<float>("dynamic_range_compressor_ctrl", "attack_time") == Approx(0.01f));
+  REQUIRE(cfg->get<float>("dynamic_range_compressor_ctrl", "release_time") == Approx(0.2f));
 
-  REQUIRE(cfg.get<uint32_t>("loudness_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("loudness_ctrl", "target_level_db") == Approx(-15.0f));
-  REQUIRE(cfg.get<float>("loudness_ctrl", "bypass_time") == Approx(3.0f));
-  REQUIRE(cfg.get<float>("loudness_ctrl", "max_gain_db") == Approx(30.0f));
+  REQUIRE(cfg->get<uint32_t>("loudness_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg->get<float>("loudness_ctrl", "target_level_db") == Approx(-15.0f));
+  REQUIRE(cfg->get<float>("loudness_ctrl", "bypass_time") == Approx(3.0f));
+  REQUIRE(cfg->get<float>("loudness_ctrl", "max_gain_db") == Approx(30.0f));
 
-  REQUIRE(cfg.get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("limiter_ctrl", "threshold") == Approx(-3.0f));
-  REQUIRE(cfg.get<float>("limiter_ctrl", "knee_width") == Approx(0.0f));
-  REQUIRE(cfg.get<float>("limiter_ctrl", "attack_time") == Approx(0.0f));
-  REQUIRE(cfg.get<float>("limiter_ctrl", "release_time") == Approx(0.2f));
+  REQUIRE(cfg->get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg->get<float>("limiter_ctrl", "threshold") == Approx(-3.0f));
+  REQUIRE(cfg->get<float>("limiter_ctrl", "knee_width") == Approx(0.0f));
+  REQUIRE(cfg->get<float>("limiter_ctrl", "attack_time") == Approx(0.0f));
+  REQUIRE(cfg->get<float>("limiter_ctrl", "release_time") == Approx(0.2f));
 }
 
-TEST_CASE("SUCCESS AudioProcessorConfigReader overrides some fields [audio processing reader]") {
+TEST_CASE("SUCCESS AudioProcessorConfig overrides some fields [audio processing reader]") {
   const std::string override_yaml = R"(
 sound_processing:
   loudness_ctrl:
@@ -587,82 +568,69 @@ sound_processing:
   limiter_ctrl:
     threshold: -1.5
 )";
-  auto base = std::make_unique<spench::StringConfigReader>(
-      spench::DefaultAudioProcessingConfigYAML, override_yaml);
-  spench::AudioProcessorConfigReader cfg(std::move(base));
-  REQUIRE_NOTHROW(cfg.load());
 
-  REQUIRE(cfg.get<float>("loudness_ctrl", "bypass_time") == Approx(4.5f));
-  REQUIRE(cfg.get<float>("limiter_ctrl", "threshold") == Approx(-1.5f));
-  REQUIRE(cfg.get<uint32_t>("loudness_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
+  auto base = spench::StringConfigReader(override_yaml);
+  std::unique_ptr<spench::AudioProcessorConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<spench::AudioProcessorConfig>(base));
+
+  REQUIRE(cfg->get<float>("loudness_ctrl", "bypass_time") == Approx(4.5f));
+  REQUIRE(cfg->get<float>("limiter_ctrl", "threshold") == Approx(-1.5f));
+  REQUIRE(cfg->get<uint32_t>("loudness_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg->get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
 }
 
-TEST_CASE("SUCCESS AudioProcessorConfigReader getters return defaults [audio processing reader]") {
-  auto base = std::make_unique<spench::StringConfigReader>(
-      spench::DefaultAudioProcessingConfigYAML, std::string{});
-  spench::AudioProcessorConfigReader cfg(std::move(base));
-  REQUIRE_NOTHROW(cfg.load());
+TEST_CASE("SUCCESS AudioProcessorConfig getters return defaults [audio processing reader]") {
+  std::unique_ptr<spench::AudioProcessorConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<spench::AudioProcessorConfig>());
 
-  REQUIRE(cfg.get<uint32_t>("range_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("range_ctrl", "target_level_db") == Approx(-3.0f));
-  REQUIRE(cfg.get<float>("range_ctrl", "max_gain_db") == Approx(10.0f));
-  REQUIRE(cfg.get<float>("range_ctrl", "attack_time") == Approx(0.0f));
-  REQUIRE(cfg.get<float>("range_ctrl", "release_time") == Approx(300.0f));
-  REQUIRE(cfg.get<float>("range_ctrl", "hold_time") == Approx(5.0f));
+  REQUIRE(cfg->get<uint32_t>("range_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg->get<float>("range_ctrl", "target_level_db") == Approx(-3.0f));
+  REQUIRE(cfg->get<float>("range_ctrl", "max_gain_db") == Approx(10.0f));
+  REQUIRE(cfg->get<float>("range_ctrl", "attack_time") == Approx(0.0f));
+  REQUIRE(cfg->get<float>("range_ctrl", "release_time") == Approx(300.0f));
+  REQUIRE(cfg->get<float>("range_ctrl", "hold_time") == Approx(5.0f));
 
-  REQUIRE(cfg.get<float>("auto_gain_ctrl", "target_level") == Approx(1.0f));
-  REQUIRE(cfg.get<float>("auto_gain_ctrl", "max_gain") == Approx(20.0f));
-  REQUIRE(cfg.get<uint32_t>("auto_gain_ctrl", "average_len") == 6000u);
-  REQUIRE(cfg.get<float>("auto_gain_ctrl", "step_size_rise") == Approx(0.01f));
-  REQUIRE(cfg.get<float>("auto_gain_ctrl", "step_size_fall") == Approx(0.01f));
+  REQUIRE(cfg->get<float>("auto_gain_ctrl", "target_level") == Approx(1.0f));
+  REQUIRE(cfg->get<float>("auto_gain_ctrl", "max_gain") == Approx(20.0f));
+  REQUIRE(cfg->get<uint32_t>("auto_gain_ctrl", "average_len") == 6000u);
+  REQUIRE(cfg->get<float>("auto_gain_ctrl", "step_size_rise") == Approx(0.01f));
+  REQUIRE(cfg->get<float>("auto_gain_ctrl", "step_size_fall") == Approx(0.01f));
 
-  REQUIRE(cfg.get<uint32_t>("noise_gate_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("noise_gate_ctrl", "threshold") == Approx(-40.0f));
-  REQUIRE(cfg.get<float>("noise_gate_ctrl", "attack_time") == Approx(0.01f));
-  REQUIRE(cfg.get<float>("noise_gate_ctrl", "release_time") == Approx(0.02f));
-  REQUIRE(cfg.get<float>("noise_gate_ctrl", "hold_time") == Approx(0.05f));
+  REQUIRE(cfg->get<uint32_t>("noise_gate_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg->get<float>("noise_gate_ctrl", "threshold") == Approx(-40.0f));
+  REQUIRE(cfg->get<float>("noise_gate_ctrl", "attack_time") == Approx(0.01f));
+  REQUIRE(cfg->get<float>("noise_gate_ctrl", "release_time") == Approx(0.02f));
+  REQUIRE(cfg->get<float>("noise_gate_ctrl", "hold_time") == Approx(0.05f));
 
-  REQUIRE(cfg.get<uint32_t>("dynamic_range_compressor_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "threshold") == Approx(-10.0f));
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "ratio") == Approx(20.0f));
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "knee_width") == Approx(0.0f));
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "attack_time") == Approx(0.01f));
-  REQUIRE(cfg.get<float>("dynamic_range_compressor_ctrl", "release_time") == Approx(0.2f));
+  REQUIRE(cfg->get<uint32_t>("dynamic_range_compressor_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg->get<float>("dynamic_range_compressor_ctrl", "threshold") == Approx(-10.0f));
+  REQUIRE(cfg->get<float>("dynamic_range_compressor_ctrl", "ratio") == Approx(20.0f));
+  REQUIRE(cfg->get<float>("dynamic_range_compressor_ctrl", "knee_width") == Approx(0.0f));
+  REQUIRE(cfg->get<float>("dynamic_range_compressor_ctrl", "attack_time") == Approx(0.01f));
+  REQUIRE(cfg->get<float>("dynamic_range_compressor_ctrl", "release_time") == Approx(0.2f));
 
-  REQUIRE(cfg.get<uint32_t>("loudness_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("loudness_ctrl", "target_level_db") == Approx(-15.0f));
-  REQUIRE(cfg.get<float>("loudness_ctrl", "bypass_time") == Approx(3.0f));
-  REQUIRE(cfg.get<float>("loudness_ctrl", "max_gain_db") == Approx(30.0f));
+  REQUIRE(cfg->get<uint32_t>("loudness_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg->get<float>("loudness_ctrl", "target_level_db") == Approx(-15.0f));
+  REQUIRE(cfg->get<float>("loudness_ctrl", "bypass_time") == Approx(3.0f));
+  REQUIRE(cfg->get<float>("loudness_ctrl", "max_gain_db") == Approx(30.0f));
 
-  REQUIRE(cfg.get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg.get<float>("limiter_ctrl", "threshold") == Approx(-3.0f));
-  REQUIRE(cfg.get<float>("limiter_ctrl", "knee_width") == Approx(0.0f));
-  REQUIRE(cfg.get<float>("limiter_ctrl", "attack_time") == Approx(0.0f));
-  REQUIRE(cfg.get<float>("limiter_ctrl", "release_time") == Approx(0.2f));
+  REQUIRE(cfg->get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg->get<float>("limiter_ctrl", "threshold") == Approx(-3.0f));
+  REQUIRE(cfg->get<float>("limiter_ctrl", "knee_width") == Approx(0.0f));
+  REQUIRE(cfg->get<float>("limiter_ctrl", "attack_time") == Approx(0.0f));
+  REQUIRE(cfg->get<float>("limiter_ctrl", "release_time") == Approx(0.2f));
 }
 
-TEST_CASE("SUCCESS AudioProcessorConfigReader ParamBlockView works [audio processing reader]") {
-  auto base = std::make_unique<spench::StringConfigReader>(
-      spench::DefaultAudioProcessingConfigYAML, std::string{});
-  spench::AudioProcessorConfigReader cfg(std::move(base));
-  REQUIRE_NOTHROW(cfg.load());
+TEST_CASE("SUCCESS AudioProcessorConfig ParamBlockView works [audio processing reader]") {
+  std::unique_ptr<spench::AudioProcessorConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<spench::AudioProcessorConfig>());
 
-  auto ng = cfg.block("noise_gate_ctrl");
+  auto ng = cfg->block("noise_gate_ctrl");
   REQUIRE(ng.get<uint32_t>("sample_rate") == 48000u);
   REQUIRE(ng.get<float>("threshold") == Approx(-40.0f));
 }
 
-// ------------------------------------------------------------------------------
-// FAIL structure/type
-// ------------------------------------------------------------------------------
-TEST_CASE("FAIL AudioProcessorConfigReader missing sound_processing section throws [audio processing reader]") {
-  auto base = std::make_unique<spench::StringConfigReader>("");  // empty
-  spench::AudioProcessorConfigReader cfg(std::move(base));
-  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
-}
-
-TEST_CASE("FAIL AudioProcessorConfigReader detects non-scalar for required field [audio processing reader]") {
+TEST_CASE("FAIL AudioProcessorConfig detects non-scalar for required field [audio processing reader]") {
   const std::string bad_yaml = R"(
 sound_processing:
   range_ctrl:
@@ -703,12 +671,12 @@ sound_processing:
     attack_time: 0.0
     release_time: 0.2
 )";
-  auto base = std::make_unique<spench::StringConfigReader>(bad_yaml);
-  spench::AudioProcessorConfigReader cfg(std::move(base));
-  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  auto base = spench::StringConfigReader(bad_yaml);
+  std::unique_ptr<spench::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<spench::AudioProcessorConfig>(base), std::runtime_error);
 }
 
-TEST_CASE("FAIL AudioProcessorConfigReader missing required key in limiter_ctrl throws [audio processing reader]") {
+TEST_CASE("SUCCESS AudioProcessorConfig defaults missing key in limiter_ctrl [audio processing reader]") {
   const std::string bad_yaml = R"(
 sound_processing:
   limiter_ctrl:
@@ -717,77 +685,79 @@ sound_processing:
     attack_time: 0.0
     release_time: 0.2
 )";
-  auto base = std::make_unique<spench::StringConfigReader>(bad_yaml);
-  spench::AudioProcessorConfigReader cfg(std::move(base));
-  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+  auto base = spench::StringConfigReader(bad_yaml);
+  std::unique_ptr<spench::AudioProcessorConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<spench::AudioProcessorConfig>(base));
+
+  REQUIRE(cfg->get<float>("limiter_ctrl", "threshold") == Approx(-3.0f));
 }
 
 // ------------------------------------------------------------------------------
 // FAIL value/range
 // ------------------------------------------------------------------------------
-TEST_CASE("FAIL AudioProcessorConfigReader RC invalid sample_rate [audio processing reader]") {
-  auto base = std::make_unique<spench::StringConfigReader>(
-      spench::DefaultAudioProcessingConfigYAML, R"(
+TEST_CASE("FAIL AudioProcessorConfig RC invalid sample_rate [audio processing reader]") {
+  const std::string bad_yaml = R"(
 sound_processing:
   range_ctrl:
     sample_rate: 200000
-)");
-  spench::AudioProcessorConfigReader cfg(std::move(base));
-  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+)";
+  auto base = spench::StringConfigReader(bad_yaml);
+  std::unique_ptr<spench::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<spench::AudioProcessorConfig>(base), std::runtime_error);
 }
 
-TEST_CASE("FAIL AudioProcessorConfigReader AGC non-positive target_level [audio processing reader]") {
-  auto base = std::make_unique<spench::StringConfigReader>(
-      spench::DefaultAudioProcessingConfigYAML, R"(
+TEST_CASE("FAIL AudioProcessorConfig AGC non-positive target_level [audio processing reader]") {
+  const std::string bad_yaml = R"(
 sound_processing:
   auto_gain_ctrl:
     target_level: -0.01
-)");
-  spench::AudioProcessorConfigReader cfg(std::move(base));
-  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+)";
+  auto base = spench::StringConfigReader(bad_yaml);
+  std::unique_ptr<spench::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<spench::AudioProcessorConfig>(base), std::runtime_error);
 }
 
-TEST_CASE("FAIL AudioProcessorConfigReader NG non-positive times [audio processing reader]") {
-  auto base = std::make_unique<spench::StringConfigReader>(
-      spench::DefaultAudioProcessingConfigYAML, R"(
+TEST_CASE("FAIL AudioProcessorConfig NG non-positive times [audio processing reader]") {
+  const std::string bad_yaml = R"(
 sound_processing:
   noise_gate_ctrl:
     attack_time: -0.01
-)");
-  spench::AudioProcessorConfigReader cfg(std::move(base));
-  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+)";
+  auto base = spench::StringConfigReader(bad_yaml);
+  std::unique_ptr<spench::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<spench::AudioProcessorConfig>(base), std::runtime_error);
 }
 
-TEST_CASE("FAIL AudioProcessorConfigReader DRC non-positive release [audio processing reader]") {
-  auto base = std::make_unique<spench::StringConfigReader>(
-      spench::DefaultAudioProcessingConfigYAML, R"(
+TEST_CASE("FAIL AudioProcessorConfig DRC non-positive release [audio processing reader]") {
+  const std::string bad_yaml = R"(
 sound_processing:
   dynamic_range_compressor_ctrl:
     release_time: -0.01
-)");
-  spench::AudioProcessorConfigReader cfg(std::move(base));
-  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+)";
+  auto base = spench::StringConfigReader(bad_yaml);
+  std::unique_ptr<spench::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<spench::AudioProcessorConfig>(base), std::runtime_error);
 }
 
-TEST_CASE("FAIL AudioProcessorConfigReader LC non-positive bypass_time [audio processing reader]") {
-  auto base = std::make_unique<spench::StringConfigReader>(
-      spench::DefaultAudioProcessingConfigYAML, R"(
+TEST_CASE("FAIL AudioProcessorConfig LC non-positive bypass_time [audio processing reader]") {
+  const std::string bad_yaml = R"(
 sound_processing:
   loudness_ctrl:
     bypass_time: -0.01
-)");
-  spench::AudioProcessorConfigReader cfg(std::move(base));
-  REQUIRE_THROWS_AS(cfg.load(), std::runtime_error);
+)";
+  auto base = spench::StringConfigReader(bad_yaml);
+  std::unique_ptr<spench::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<spench::AudioProcessorConfig>(base), std::runtime_error);
 }
 
-TEST_CASE("FAIL AudioProcessorConfigReader Limiter threshold not numeric [audio processing reader]") {
+TEST_CASE("FAIL AudioProcessorConfig Limiter threshold not numeric [audio processing reader]") {
   // Scalar but not numeric → YAML::BadConversion during validation → rethrown as runtime_error by load()
-  auto base = std::make_unique<spench::StringConfigReader>(
-      spench::DefaultAudioProcessingConfigYAML, R"(
+  const std::string bad_yaml = R"(
 sound_processing:
   limiter_ctrl:
     threshold: abc
-)");
-  spench::AudioProcessorConfigReader cfg(std::move(base));
-  REQUIRE_THROWS(cfg.load());
+)";
+  auto base = spench::StringConfigReader(bad_yaml);
+  std::unique_ptr<spench::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<spench::AudioProcessorConfig>(base), std::runtime_error);
 }

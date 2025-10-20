@@ -6,15 +6,15 @@
 
 namespace spench {
 
-DenoiserAudioHandler::DenoiserAudioHandler(std::unique_ptr<ConfigReader> reader):
-                                  DenoiserAudioHandler(std::move(reader), "", "") {}
+DenoiserAudioHandler::DenoiserAudioHandler(std::shared_ptr<DenoiserConfig> config):
+                                  DenoiserAudioHandler(std::move(config), "", "") {}
 
-DenoiserAudioHandler::DenoiserAudioHandler(std::unique_ptr<ConfigReader> reader,
+DenoiserAudioHandler::DenoiserAudioHandler(std::shared_ptr<DenoiserConfig> config,
                                           const std::string& password,
                                           const std::string& checksum):
-                                          NeuralNetworkAudioHandler(std::move(reader), password, checksum),
+                                          NeuralNetworkAudioHandler(std::move(config), password, checksum),
                                           m_adviser(nullptr) {
-  float frame_shift_ms = dynamic_cast<spench::DenoiserConfigReader*>(m_configReader.get())->frameStrideMs();
+  float frame_shift_ms = dynamic_cast<spench::DenoiserConfig*>(m_config.get())->frameStrideMs();
   static constexpr float window_duration_ms = 1000 * 5;
   m_adviser = std::make_unique<DenoiserModelAdviser<float>>(window_duration_ms, frame_shift_ms);
 }
@@ -27,10 +27,10 @@ SpenchContext<float>* DenoiserAudioHandler::CreateContext(uint32_t input_sample_
                                     dynamic_cast<SpenchContext<float>*>(new DenoiseContextQ<float>()):
                                     dynamic_cast<SpenchContext<float>*>(new DenoiseContextF<float>());
   if (input_sample_rate == 0) {
-    input_sample_rate = dynamic_cast<spench::DenoiserConfigReader*>(m_configReader.get())->samplingFreq();
+    input_sample_rate = dynamic_cast<spench::DenoiserConfig*>(m_config.get())->samplingFreq();
   }
   if (output_sample_rate == 0) {
-    output_sample_rate = dynamic_cast<spench::DenoiserConfigReader*>(m_configReader.get())->samplingFreq();
+    output_sample_rate = dynamic_cast<spench::DenoiserConfig*>(m_config.get())->samplingFreq();
   }
 
   SpenchRetCode ret_code = InitAudioStreams(ctx, input_sample_rate, output_sample_rate);
@@ -55,16 +55,16 @@ SpenchRetCode DenoiserAudioHandler::InitAudioStreams(SpenchContext<float>* ctx,
       if (!ctx->input_sound_stream_ptr) {
         ctx->input_sound_stream_ptr =
                   util::sound::BuildSoundStream<float>(input_sample_rate,
-                              dynamic_cast<spench::DenoiserConfigReader*>(m_configReader.get())->samplingFreq(),
-                              dynamic_cast<spench::DenoiserConfigReader*>(m_configReader.get())->frameStrideMs(),
+                              dynamic_cast<spench::DenoiserConfig*>(m_config.get())->samplingFreq(),
+                              dynamic_cast<spench::DenoiserConfig*>(m_config.get())->frameStrideMs(),
                                                        util::sound::TemplateType::INPUT);
       }
       if (!ctx->output_sound_stream_ptr) {
         ctx->output_sound_stream_ptr =
           util::sound::BuildSoundStream<float>(
-                                dynamic_cast<spench::DenoiserConfigReader*>(m_configReader.get())->samplingFreq(),
+                                dynamic_cast<spench::DenoiserConfig*>(m_config.get())->samplingFreq(),
                                 output_sample_rate,
-                                dynamic_cast<spench::DenoiserConfigReader*>(m_configReader.get())->frameStrideMs(),
+                                dynamic_cast<spench::DenoiserConfig*>(m_config.get())->frameStrideMs(),
                                 util::sound::TemplateType::OUTPUT);
       }
     } catch(const std::exception& e) {

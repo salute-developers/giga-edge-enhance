@@ -8,13 +8,13 @@
 
 namespace spench {
 
-NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::unique_ptr<ConfigReader> reader)
-    : NeuralNetworkAudioHandler(std::move(reader), "", "") {}
+NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::shared_ptr<NetworkConfig> config)
+    : NeuralNetworkAudioHandler(std::move(config), "", "") {}
 
-NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::unique_ptr<ConfigReader> reader,
+NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::shared_ptr<NetworkConfig> config,
                                                      const std::string& password,
                                                      const std::string& checksum)
-    : BaseAudioHandler(std::move(reader)),
+    : BaseAudioHandler(std::move(config)),
       m_feature_extractor_runner_ptr(nullptr),
       m_inference_runner_ptr(nullptr),
       m_enc_password(password),
@@ -66,9 +66,6 @@ uint64_t NeuralNetworkAudioHandler::GetInputFrameSize() {
 SpenchRetCode NeuralNetworkAudioHandler::DoStart() {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
 
-  // Load/refresh config before launching resources.
-  m_configReader->load();
-
   ret_code = LaunchFeatureExtractorRunner();
   if (ret_code != SpenchRetCode::SUCCESS) {
     return ret_code;
@@ -103,8 +100,8 @@ SpenchRetCode NeuralNetworkAudioHandler::LaunchInferenceRunner() {
   try {
     if (!m_inference_runner_ptr) {
       m_inference_runner_ptr = std::unique_ptr<spench::InferenceRunner>(
-          new spench::InferenceRunner(params()["model"],
-                                      params()["inference"]["model_type"].as<std::string>(""),
+        new spench::InferenceRunner(params()["model"],
+                                    params()["inference"]["model_type"].as<std::string>(""),
                                       m_enc_password,
                                       m_lic_checksum,
                                       inference_engine_threads,

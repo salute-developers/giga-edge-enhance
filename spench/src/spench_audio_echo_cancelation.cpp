@@ -14,12 +14,11 @@ SpenchAudioEchoCancelation::SpenchAudioEchoCancelation(const char* config) : m_a
   std::string config_file(config);
   if (!config_file.empty() && std::filesystem::exists(config_file)) {
     m_aec = std::make_unique<spench::AudioEchoCancelationHandler>(
-            std::make_unique<spench::AecConfigReader>(std::make_unique<spench::FileConfigReader>(config)));
+            std::make_shared<spench::AecConfig>(spench::FileConfigReader(config)));
   } else if (config_file.empty()) {
     spdlog::info("SpenchAudioEchoCancelation input config is empty. Use default values");
     m_aec = std::make_unique<spench::AudioEchoCancelationHandler>(
-                std::make_unique<spench::AecConfigReader>(
-                  std::make_unique<spench::StringConfigReader>(spench::DefaultAecConfigYAML, "")));
+                std::make_shared<spench::AecConfig>());
   } else {
     spdlog::error("Invalid or missing config file.");
     throw std::invalid_argument("Invalid or missing config file.");
@@ -30,8 +29,7 @@ SpenchAudioEchoCancelation::SpenchAudioEchoCancelation(const char* config) : m_a
 SpenchAudioEchoCancelation::SpenchAudioEchoCancelation(const std::string& yaml_conf)
 : m_aec(nullptr) {
   m_aec = std::make_unique<spench::AudioEchoCancelationHandler>(
-            std::make_unique<spench::AecConfigReader>(
-              std::make_unique<spench::StringConfigReader>(spench::DefaultAecConfigYAML, yaml_conf)));
+            std::make_shared<spench::AecConfig>(spench::StringConfigReader(yaml_conf)));
 
   spdlog::info("Create Spench echo cancelation from yaml string");
 }
