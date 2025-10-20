@@ -104,34 +104,37 @@ struct TestOnnxRunner {
                              const std::string& password = "",
                              const std::string& checksum = "") {
     std::string file_path = kBase + "config/" + yaml_config_name;
-    YAML::Node node = YAML::LoadFile(file_path);
-    bool on_gpu = node["inference"]["gpu"].as<bool>(false);
-    std::string model_type = node["inference"]["model_type"].as<std::string>("best_speed");
+    auto reader = spench::FileConfigReader(file_path);
+    bool on_gpu = reader.params()["inference"]["gpu"].as<bool>(false);
+    std::string model_type = reader.params()["inference"]["model_type"].as<std::string>("best_speed");
 
     if (model_type == "best_quality") {
+      auto config = std::make_shared<spench::DenoiserConfig>(reader);
       spench_model_runner =
                 std::unique_ptr<util::onnx::BaseOnnxRunner>(
-                                            new util::onnx::SpenchQOnnxRunner(node["model"],
+                                            new util::onnx::SpenchQOnnxRunner(config,
                                                                               password,
                                                                               checksum,
                                                                               on_gpu));
     } else if (model_type == "best_speed") {
+      auto config = std::make_shared<spench::DenoiserConfig>(reader);
       spench_model_runner =
                 std::unique_ptr<util::onnx::BaseOnnxRunner>(
-                                            new util::onnx::SpenchFOnnxRunner(node["model"],
+                                            new util::onnx::SpenchFOnnxRunner(config,
                                                                               password,
                                                                               checksum,
                                                                               on_gpu));
     } else if (model_type == "remove_reverb") {
+      auto config = std::make_shared<spench::DereverbConfig>(reader);
       spench_model_runner =
                 std::unique_ptr<util::onnx::BaseOnnxRunner>(
-                                            new util::onnx::SpenchDereverbOnnxRunner(node["model"],
+                                            new util::onnx::SpenchDereverbOnnxRunner(config,
                                                                               password,
                                                                               checksum,
                                                                               on_gpu));
     }
-    frame_size_ms = node["feature_params"]["frame_size_ms"].as<uint16_t>(16);
-    sample_rate = node["feature_params"]["sampling_freq"].as<uint64_t>(16000);
+    frame_size_ms = reader.params()["feature_params"]["frame_size_ms"].as<uint16_t>(16);
+    sample_rate = reader.params()["feature_params"]["sampling_freq"].as<uint64_t>(16000);
     return *this;
   }
 
@@ -1041,7 +1044,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a dereverb model 48kHz and with
 TEST_CASE("FAIL Read config for Inference Runner with incorrect model path [onnx runner]") {
   CHECK_THROWS_WITH(TestOnnxRunner()
       .InitRunner("test_configuration_with_incorrect_model_path.yaml"),
-                                            "Config reading error!");
+                                            "Config reading error. Model path parameter is not a single string!");
 }
 
 TEST_CASE("FAIL Read config for Inference Runner with not existed model path [onnx runner]") {

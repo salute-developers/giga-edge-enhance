@@ -33,6 +33,18 @@ SpenchDenoise::SpenchDenoise(const std::string& yaml_str,
   spdlog::info("Create Spench denoiser from YAML string config");
 }
 
+// PackedModelReader-based constructor
+SpenchDenoise::SpenchDenoise(std::shared_ptr<spench::PackedModelReader> bundle,
+                             const char* password,
+                             const char* checksum)
+: ISpenchSequencer(),
+  m_handler(std::make_unique<DenoiserAudioHandler>(
+                              std::make_shared<spench::DenoiserConfig>(bundle),
+                              password,
+                              checksum)) {
+  spdlog::info("Create Spench denoiser from packed model");
+}
+
 SpenchDenoise::SpenchDenoise(SpenchDenoise&& orig) noexcept : ISpenchSequencer()
                                                             , m_handler(std::move(orig.m_handler)) {
 //  orig.m_handler is now nullptr

@@ -2,14 +2,15 @@
 
 namespace spench {
 
-InferenceRunner::InferenceRunner(const YAML::Node& model_config,
-                                const std::string& model_type,
+InferenceRunner::InferenceRunner(std::shared_ptr<spench::NetworkConfig> config,
                                 const std::string& password,
                                 const std::string& checksum,
                                 uint32_t inference_engine_threads,
                                 bool gpu) {
-  m_model_type = StringToModelTypeEnum(model_type);
+  m_model_type = StringToModelTypeEnum(config->params()["inference"]["model_type"].as<std::string>(""));
 #ifdef BUILD_TFLITE_ENGINE
+  auto model_config = config->params()["model"];
+
   if (m_model_type == ModelType::DENOISER_BEST_QUALITY) {
     m_engine_runner_ptr =
                     std::make_unique<util::tf_lite::SpenchQTfliteRunner>(model_config,
@@ -27,20 +28,20 @@ InferenceRunner::InferenceRunner(const YAML::Node& model_config,
   }
 #else
   if (m_model_type == ModelType::DENOISER_BEST_QUALITY) {
-    m_engine_runner_ptr = std::make_unique<util::onnx::SpenchQOnnxRunner>(model_config,
+    m_engine_runner_ptr = std::make_unique<util::onnx::SpenchQOnnxRunner>(config,
                                                                           password,
                                                                           checksum,
                                                                           inference_engine_threads,
                                                                           gpu);
   } else if (m_model_type == ModelType::DENOISER_BEST_SPEED) {
-    m_engine_runner_ptr = std::make_unique<util::onnx::SpenchFOnnxRunner>(model_config,
+    m_engine_runner_ptr = std::make_unique<util::onnx::SpenchFOnnxRunner>(config,
                                                                           password,
                                                                           checksum,
                                                                           inference_engine_threads,
                                                                           gpu);
   } else {
     m_engine_runner_ptr =
-                    std::make_unique<util::onnx::SpenchDereverbOnnxRunner>(model_config,
+                    std::make_unique<util::onnx::SpenchDereverbOnnxRunner>(config,
                                                                            password,
                                                                            checksum,
                                                                            inference_engine_threads,

@@ -4,6 +4,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include "spench/packed_model.h"
 #include "spench/src/spench_default_configurations.h"
 
 namespace YAML { class Node; class ParserException; }
@@ -114,16 +115,28 @@ class NetworkConfig : public PipelineConfig {
   bool                        useGpu()          const;
   uint32_t                    numThreads()      const;
   std::string                 modelType()       const;
+  bool                        isModelBundled()  const;
+  const std::vector<uint8_t>& getModel()        const;
 
  protected:
+  NetworkConfig(std::shared_ptr<spench::PackedModelReader> bundle, std::string default_config)
+      : PipelineConfig(StringConfigReader(bundle->getConfig()), default_config), bundle(bundle) {
+  }
+
   virtual std::vector<std::string> defaultModelInputs()  const = 0;
   virtual std::vector<std::string> defaultModelOutputs() const = 0;
+
+  std::shared_ptr<spench::PackedModelReader> bundle = nullptr;
 };
 
 class DenoiserConfig final : public NetworkConfig {
  public:
   explicit DenoiserConfig(const ConfigReader& base_reader)
       : NetworkConfig(base_reader, spench::DefaultDenoiserConfigYAML) {
+  }
+
+  explicit DenoiserConfig(std::shared_ptr<spench::PackedModelReader> bundle)
+      : NetworkConfig(bundle, spench::DefaultDenoiserConfigYAML) {
   }
 
  protected:
@@ -135,6 +148,10 @@ class DereverbConfig final : public NetworkConfig {
  public:
   explicit DereverbConfig(const ConfigReader& base_reader)
       : NetworkConfig(base_reader, spench::DefaultDereverbConfigYAML) {
+  }
+
+  explicit DereverbConfig(std::shared_ptr<spench::PackedModelReader> bundle)
+      : NetworkConfig(bundle, spench::DefaultDereverbConfigYAML) {
   }
 
  protected:

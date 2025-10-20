@@ -76,6 +76,15 @@ struct TestFixture {
     return *this;
   }
 
+  TestFixture& InitDenoiser(std::shared_ptr<spench::PackedModelReader> bundle,
+                            const std::string& password = "",
+                            const std::string& checksum = "") {
+    denoiser = std::make_unique<spench::SpenchDenoise>(bundle,
+                                                        password.c_str(),
+                                                        checksum.c_str());
+    return *this;
+  }
+
   TestFixture& InitDereverberator(const std::filesystem::path& config_name,
                             const std::string& password = "",
                             const std::string& checksum = "") {
@@ -92,6 +101,15 @@ struct TestFixture {
                             const std::string& password = "",
                             const std::string& checksum = "") {
     dereverb = std::make_unique<spench::SpenchAudioDereverb>(yaml,
+                                                        password.c_str(),
+                                                        checksum.c_str());
+    return *this;
+  }
+
+  TestFixture& InitDereverberator(std::shared_ptr<spench::PackedModelReader> bundle,
+                            const std::string& password = "",
+                            const std::string& checksum = "") {
+    dereverb = std::make_unique<spench::SpenchAudioDereverb>(bundle,
                                                         password.c_str(),
                                                         checksum.c_str());
     return *this;
@@ -135,6 +153,14 @@ struct TestFixture {
     return *this;
   }
 };
+
+static std::vector<uint8_t> read_file(const std::filesystem::path& p) {
+  std::ifstream in(p, std::ios::binary);
+  if (!in)
+    throw std::runtime_error("cannot open file: " + p.string());
+  return std::vector<uint8_t>(std::istreambuf_iterator<char>(in),
+                              std::istreambuf_iterator<char>());
+}
 
 TEST_CASE("SUCCEED Convert pcm to float point [spench c++ api]") {
   std::vector<int16_t> pcm16 = {0, 32767, -32768, 2000, -5000};
@@ -1042,6 +1068,61 @@ model:
   test_data.denoiser->DestroyContext(&ctx);
 }
 
+#ifdef BUILD_ONNX_ENGINE
+TEST_CASE("SUCCEED Run inference with the packed fast 24 kHz denoiser model [spench c++ api]") {
+  auto bundle = std::make_shared<spench::PackedModelReader>(read_file("data/models/packed_fast_model.spench"));
+  auto test_data = std::move(TestFixture().
+                              InitDenoiser(bundle).
+                              SetWav("test1_48_noised.wav"));
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 100;
+  const uint32_t kAudio_src_sample_rate = 48000;
+  const uint32_t kAudio_dst_sample_rate = 48000;
+  const uint32_t kTotal_size = kChunk_size * kChunks_to_compare
+                                           * kAudio_dst_sample_rate / 1000;
+  SpenchRetCode ret_code;
+  std::vector<float> prediction;
+  std::vector<float> reference;
+  spench::SpenchContext<float>* ctx =
+                          test_data.denoiser->CreateContext(kAudio_src_sample_rate,
+                                                              kAudio_dst_sample_rate);
+
+  auto chunks = chunkWav<float>(test_data.wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  loadWavFx("data/results/wavs/test1_48_enhanced_upsampled.wav", reference);
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
+    if (ret_code >= SpenchRetCode::SUCCESS) {
+      prediction.insert(prediction.end(), ret.begin(), ret.end());
+    }
+  }
+  // remove context zeroes as reference does not include that
+  prediction.erase(prediction.begin(),
+                   prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
+  //
+  std::vector<float> ret;
+  ret_code = test_data.denoiser->GetFinalChunk(ret, ctx);
+
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+  REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
+
+  prediction.insert(prediction.end(), ret.begin(), ret.end());
+
+  reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
+  prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
+
+  IsVectorsClose(reference, prediction, 0.03);
+  test_data.denoiser->DestroyContext(&ctx);
+}
+#endif
+
 TEST_CASE("SUCCEED Run inference with the dereverb 48 kHz model with resampling from 44.1 kHz [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
     // auto test_data =
@@ -1142,6 +1223,53 @@ model:
   IsVectorsClose(reference_prediction, prediction, 0.4);
   #endif
 }
+
+#ifdef BUILD_ONNX_ENGINE
+TEST_CASE("SUCCEED Run inference with packed 48 kHz dereverb model [spench c++ api]") {
+  auto bundle = std::make_shared<spench::PackedModelReader>(read_file("data/models/packed_dereverb_model.spench"));
+  auto test_data = std::move(TestFixture().
+                  InitDereverberator(bundle).
+                  SetWav("reverb_with_noise_44.1khz.wav"));
+
+  std::vector<float> prediction;
+  std::vector<float> reference_prediction;
+  SpenchRetCode ret_code;
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 100;
+  const uint32_t kAudio_dst_sample_rate = 44100;
+  const uint32_t kAudio_src_sample_rate = 44100;
+
+  spench::SpenchContext<float>* ctx = test_data.dereverb->CreateContext(kAudio_src_sample_rate,
+                                                                          kAudio_dst_sample_rate);
+
+  auto chunks = chunkWav<float>(test_data.wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+
+  loadWavFx("data/results/wavs/dereverb_with_noise_44.1khz.wav", reference_prediction);
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+
+    ret_code = test_data.dereverb->ProcessChunk(chunk, ret, ctx);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+  // remove context zeroes as reference does not include that
+  prediction.erase(prediction.begin(),
+                   prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
+  //
+  test_data.dereverb->DestroyContext(&ctx);
+  reference_prediction.resize(prediction.size());
+  // ToDo (artsokol) make a threshold smaller for new dereverb model
+  IsVectorsClose(reference_prediction, prediction, 0.4);
+}
+#endif
+
 #else
 TEST_CASE("FAIL Run inference with the fast 24 kHz model with input resampling [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE

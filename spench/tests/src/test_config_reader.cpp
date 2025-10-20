@@ -6,7 +6,7 @@
 #include <string>
 
 #include "spench/src/spench_config_reader.h"
-
+#include "spench/src/packed_model_internal.h"
 #include "spench/util/echo/echo_canceler.h"
 
 namespace fs = std::filesystem;
@@ -760,4 +760,22 @@ sound_processing:
   auto base = spench::StringConfigReader(bad_yaml);
   std::unique_ptr<spench::AudioProcessorConfig> cfg;
   REQUIRE_THROWS_AS(cfg = std::make_unique<spench::AudioProcessorConfig>(base), std::runtime_error);
+}
+
+TEST_CASE("SUCCESS NetworkConfig constructed from bundled model uses bundle [network config]") {
+  // Config that would normally reference a model file
+  const std::string cfg = "model:\n  model_bundled: true\n";
+  const std::vector<uint8_t> model_data = {0xAA, 0xBB, 0xCC};
+
+  // Create packed bundle with bundled flag
+  std::vector<uint8_t> packed = spench::util::write_packed_model(cfg, model_data);
+  auto bundle = std::make_shared<spench::PackedModelReader>(packed);
+
+  // Construct NetworkConfig with bundle
+  spench::DenoiserConfig denoiser(bundle);
+
+  // Validate that model path is ignored and model data comes from bundle
+  REQUIRE(denoiser.modelPath().empty());
+  REQUIRE(denoiser.getModel() == model_data);
+  REQUIRE(denoiser.isModelBundled());
 }

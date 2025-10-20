@@ -9,6 +9,7 @@
 #include "spench/util/onnx/onnx_env.h"
 #include "spench/src/spench_task.h"
 #include "spench/src/spench_context.h"
+#include "spench/src/spench_config_reader.h"
 
 namespace util {
 namespace onnx {
@@ -27,7 +28,7 @@ class BaseOnnxRunner {
 
   BaseOnnxRunner(const std::vector<std::string>& inputs,
                  const std::vector<std::string>& outputs,
-                 const std::string& model_path,
+                 const std::shared_ptr<spench::NetworkConfig> config,
                  const std::string& password,
                  const std::string& checksum,
                  const uint32_t num_threads,
@@ -55,7 +56,7 @@ class BaseOnnxRunner {
 
   void ValidateModel(const std::vector<std::string>& input_names,
                      const std::vector<std::string>& output_names);
-  void InitModel(const std::string& model_path,
+  void InitModel(const std::shared_ptr<spench::NetworkConfig> config,
                  const std::string& password,
                  const std::string& checksum,
                  const uint32_t num_threads,

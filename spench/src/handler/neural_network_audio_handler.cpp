@@ -100,12 +100,11 @@ SpenchRetCode NeuralNetworkAudioHandler::LaunchInferenceRunner() {
   try {
     if (!m_inference_runner_ptr) {
       m_inference_runner_ptr = std::unique_ptr<spench::InferenceRunner>(
-        new spench::InferenceRunner(params()["model"],
-                                    params()["inference"]["model_type"].as<std::string>(""),
-                                      m_enc_password,
-                                      m_lic_checksum,
-                                      inference_engine_threads,
-                                      false));
+        new spench::InferenceRunner(std::dynamic_pointer_cast<spench::NetworkConfig>(m_config),
+                                    m_enc_password,
+                                    m_lic_checksum,
+                                    inference_engine_threads,
+                                    false));
     }
   } catch (const std::exception& e) {
     spdlog::error("{}", e.what());

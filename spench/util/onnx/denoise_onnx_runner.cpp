@@ -7,13 +7,13 @@
 namespace util {
 namespace onnx {
 
-SpenchQOnnxRunner::SpenchQOnnxRunner(const YAML::Node& yaml_config,
+SpenchQOnnxRunner::SpenchQOnnxRunner(const std::shared_ptr<spench::NetworkConfig> config,
                                      const std::string& password,
                                      const std::string& checksum,
                                      uint32_t inference_engine_threads,
                                      bool on_gpu) {
-    ReadConfig(yaml_config);
-    InitModel(m_model_params.m_model_path, password, checksum, inference_engine_threads, on_gpu);
+    ReadConfig(config->params()["model"]);
+    InitModel(config, password, checksum, inference_engine_threads, on_gpu);
     ValidateModel(m_model_params.m_model_inputs, m_model_params.m_model_outputs);
     WarmUp<float>();
 }
@@ -86,13 +86,13 @@ void SpenchQOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
   }
 }
 
-SpenchFOnnxRunner::SpenchFOnnxRunner(const YAML::Node& yaml_config,
+SpenchFOnnxRunner::SpenchFOnnxRunner(const std::shared_ptr<spench::NetworkConfig> config,
                                      const std::string& password,
                                      const std::string& checksum,
                                      uint32_t inference_engine_threads,
                                      bool on_gpu) {
-    ReadConfig(yaml_config);
-    InitModel(m_model_params.m_model_path, password, checksum, inference_engine_threads, on_gpu);
+    ReadConfig(config->params()["model"]);
+    InitModel(config, password, checksum, inference_engine_threads, on_gpu);
     ValidateModel(m_model_params.m_model_inputs, m_model_params.m_model_outputs);
     WarmUp<float>();
 }

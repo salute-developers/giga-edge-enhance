@@ -12,14 +12,13 @@ BaseOnnxRunner::BaseOnnxRunner()
 
 BaseOnnxRunner::BaseOnnxRunner(const std::vector<std::string>& inputs,
                                const std::vector<std::string>& outputs,
-                               const std::string& model_path,
+                               const std::shared_ptr<spench::NetworkConfig> config,
                                const std::string& password,
                                const std::string& checksum,
                                const uint32_t num_threads,
                                bool gpu)
     : m_run_options_ptr(std::make_unique<Ort::RunOptions>(nullptr)) {
-
-  InitModel(model_path, password,
+  InitModel(config, password,
             checksum, num_threads,
             gpu);
   ValidateModel(inputs, outputs);
@@ -36,7 +35,7 @@ BaseOnnxRunner::~BaseOnnxRunner() {
   m_run_options_ptr.reset();
 }
 
-void BaseOnnxRunner::InitModel(const std::string& model_path,
+void BaseOnnxRunner::InitModel(const std::shared_ptr<spench::NetworkConfig> config,
                                const std::string& password,
                                const std::string& checksum,
                                const uint32_t num_threads,
@@ -51,13 +50,21 @@ void BaseOnnxRunner::InitModel(const std::string& model_path,
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
           modelencryption::Decryptor decryptor;
           modelencryption::Hasher hasher;
+          std::vector<uint8_t> modelData;
 
           std::unique_ptr<modelencryption::Checksum> license_checksum = nullptr;
           if (!checksum.empty()) {
             license_checksum.reset(new modelencryption::Checksum(hasher.DeserializeChecksum(checksum.c_str())));
           }
-          std::vector<uint8_t> modelData =
-                              decryptor.DecryptFile(model_path, modelencryption::Key(password), license_checksum.get());
+          if (config->isModelBundled()) {
+            modelData = decryptor.DecryptArray(config->getModel(),
+                                                modelencryption::Key(password),
+                                                license_checksum.get());
+          } else {
+            modelData = decryptor.DecryptFile(config->modelPath(),
+                                              modelencryption::Key(password),
+                                              license_checksum.get());
+          }
 
           m_session_ptr = std::make_unique<Ort::Session>(util::onnx::GetOrtEnv(),
                                                          modelData.data(),
@@ -67,9 +74,17 @@ void BaseOnnxRunner::InitModel(const std::string& model_path,
           throw OnnxValidationException("Password must be empty or library should be built with encryption support");
 #endif
         } else {
-          m_session_ptr = std::make_unique<Ort::Session>(util::onnx::GetOrtEnv(),
-                                                         model_path.c_str(),
-                                                         session_options);
+          if (config->isModelBundled()) {
+            const auto& modelData = config->getModel();
+            m_session_ptr = std::make_unique<Ort::Session>(util::onnx::GetOrtEnv(),
+                                                            modelData.data(),
+                                                            modelData.size(),
+                                                            session_options);
+          } else {
+            m_session_ptr = std::make_unique<Ort::Session>(util::onnx::GetOrtEnv(),
+                                                            config->modelPath().c_str(),
+                                                            session_options);
+          }
         }
       }
     } catch (const std::exception& ex) {
@@ -83,7 +98,9 @@ void BaseOnnxRunner::InitModel(const std::string& model_path,
     const auto& session_options = GetOrtSessionOptionsGpu(num_threads, false);
     try {
       if (m_session_ptr == nullptr) {
-        m_session_ptr = std::make_unique<Ort::Session>(util::onnx::GetOrtEnv(), model_path.c_str(), session_options);
+        m_session_ptr = std::make_unique<Ort::Session>(util::onnx::GetOrtEnv(),
+                                                        config->modelPath().c_str(),
+                                                        session_options);
       }
     } catch (...) {
       throw OnnxValidationException("Model reading error. File does not exist!");

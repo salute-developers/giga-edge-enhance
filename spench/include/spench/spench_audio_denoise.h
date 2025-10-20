@@ -10,6 +10,7 @@
 
 #include "spench/export.h"
 #include "spench/spench_sequencer.h"
+#include "spench/packed_model.h"
 
 namespace spench {
 
@@ -52,6 +53,22 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
    *  \ingroup group_cpp
    */
   explicit SpenchDenoise(const std::string& yaml_str, const char* password = "", const char* checksum = "");
+
+  /**
+   *  \brief: Constructor which loads model from packed model reader.
+   *          If no password provided it considers that model is not encrypted.
+   *  \param bundle: A PackedModelReader instance.
+   *  \param password: A pointer to string with password for a model decryption.
+   *                   Could be empty, if a model was not encrypted.
+   *  \param checksum: A pointer to string with licence checksum for a model decryption.
+   *                   Could be empty, if a model was not encrypted or was not involved
+   *                   licencing.
+   *  \return: None
+   *  \ingroup group_cpp
+   */
+  explicit SpenchDenoise(std::shared_ptr<spench::PackedModelReader> bundle,
+                          const char* password = "",
+                          const char* checksum = "");
 
   /**
    *  \brief: Destructor.

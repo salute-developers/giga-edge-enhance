@@ -41,17 +41,22 @@ void NetworkConfig::validate() const {
   }
   // --- model.model_path (required, scalar string) ---
   const auto& n_path = model["model_path"];
+  const auto model_bundled = isModelBundled();
 
-  if (!n_path || n_path.Type() != YAML::NodeType::Scalar) {
+  if (!model_bundled && (!n_path || n_path.Type() != YAML::NodeType::Scalar)) {
     spdlog::critical("Config reading error. Model path parameter is not a single string!");
     throw std::runtime_error("Config reading error. Model path parameter is not a single string!");
   }
-  if (n_path.as<std::string>().empty()) {
+  if (!model_bundled && n_path.as<std::string>().empty()) {
     spdlog::critical("denoiser: missing required 'model.model_path'");
     throw std::runtime_error("Missing model.model_path");
   }
 
-  spdlog::info("Model path {}", n_path.as<std::string>());
+  if (model_bundled) {
+    spdlog::info("Model is bundled");
+  } else {
+    spdlog::info("Model path {}", n_path.as<std::string>());
+  }
   // --- model.model_inputs (optional, must be a sequence of scalars) ---
   const auto& n_inputs = model["model_inputs"];
   if (n_inputs && !n_inputs.IsNull()) {
@@ -103,6 +108,10 @@ void NetworkConfig::validate() const {
 }
 
 std::string NetworkConfig::modelPath() const {
+  if (isModelBundled()) {
+    return "";
+  }
+
   return as<std::string>(lookup(m_params, {"model", "model_path"}));
 }
 
@@ -162,6 +171,19 @@ uint32_t NetworkConfig::numThreads() const {
 
 std::string NetworkConfig::modelType() const {
   return as<std::string>(lookup(m_params, {"inference", "model_type"}));
+}
+
+bool NetworkConfig::isModelBundled() const {
+  const auto& model = lookup(m_params, {"model"});
+  return model["model_bundled"] && model["model_bundled"].as<bool>();
+}
+
+const std::vector<uint8_t>& NetworkConfig::getModel() const {
+  if (!isModelBundled() || bundle == nullptr) {
+    throw std::runtime_error("the model is not bundled or not present");
+  }
+
+  return bundle->getModel();
 }
 
 // -------------------- DenoiserConfig --------------------

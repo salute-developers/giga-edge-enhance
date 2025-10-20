@@ -12,6 +12,7 @@
 
 #include "spench/src/spench_task.h"
 #include "spench/src/spench_context.h"
+#include "spench/src/spench_config_reader.h"
 
 namespace spench {
 
@@ -26,8 +27,7 @@ class InferenceRunner {
   InferenceRunner& operator=(const InferenceRunner&) = delete;
   InferenceRunner(const InferenceRunner&) = delete;
 
-  InferenceRunner(const YAML::Node& yaml_config,
-                  const std::string& model_type,
+  InferenceRunner(std::shared_ptr<spench::NetworkConfig> config,
                   const std::string& password,
                   const std::string& checksum,
                   uint32_t inference_engine_threads,

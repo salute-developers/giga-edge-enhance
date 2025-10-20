@@ -49,7 +49,7 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
  public:
   SpenchQOnnxRunner() = delete;
   virtual ~SpenchQOnnxRunner() = default;
-  explicit SpenchQOnnxRunner(const YAML::Node& yaml_config,
+  explicit SpenchQOnnxRunner(const std::shared_ptr<spench::NetworkConfig> config,
                              const std::string& password,
                              const std::string& checksum,
                              uint32_t inference_engine_threads = 1,
@@ -118,7 +118,7 @@ class SpenchFOnnxRunner: public BaseOnnxRunner {
  public:
   SpenchFOnnxRunner() = delete;
   virtual ~SpenchFOnnxRunner() = default;
-  explicit SpenchFOnnxRunner(const YAML::Node& yaml_config,
+  explicit SpenchFOnnxRunner(const std::shared_ptr<spench::NetworkConfig> config,
                              const std::string& password,
                              const std::string& checksum,
                              uint32_t inference_engine_threads = 1,
