@@ -253,6 +253,11 @@ TEST_CASE("SUCCESS NetworkConfig accepts optional scalar model_input_ctx_len [ne
 model:
   model_path: "net.onnx"
   model_input_ctx_len: 64
+feature_params:
+  sampling_freq:    24000
+  frame_size_ms:    32
+  frame_stride_ms:  16
+  window_type:      hanning
 )";
 
   auto base = spench::StringConfigReader(yaml);
@@ -264,6 +269,17 @@ TEST_CASE("FAIL NetworkConfig missing 'model' section throws [network config rea
   const std::string yaml = R"(
 inference:
   engine_num_threads: 2
+)";
+  auto base = spench::StringConfigReader(yaml);
+  std::unique_ptr<MiniNetworkReader> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
+}
+
+TEST_CASE("FAIL NetworkConfig missing 'feature_params' section throws [network config reader]") {
+  const std::string yaml = R"(
+model:
+  model_path: "net.onnx"
+  model_input_ctx_len: 64
 )";
   auto base = spench::StringConfigReader(yaml);
   std::unique_ptr<MiniNetworkReader> cfg;

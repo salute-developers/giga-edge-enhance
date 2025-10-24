@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <exception>
 #include <spdlog/spdlog.h>
-
+#include <spench/src/spench_config_reader.h>
 #include "spench/src/spench_logger.h"
 
 namespace spench {
@@ -44,16 +44,7 @@ NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(NeuralNetworkAudioHandler&&
 NeuralNetworkAudioHandler::~NeuralNetworkAudioHandler() = default;
 
 uint32_t NeuralNetworkAudioHandler::GetEngineThreadsNum() {
-  uint32_t result = 1;
-  if (params()["inference"]["engine_num_threads"] &&
-      !params()["inference"]["engine_num_threads"].IsNull()) {
-    if (params()["inference"]["engine_num_threads"].Type() != YAML::NodeType::Scalar) {
-      throw std::runtime_error(
-          "Config reading error. Number of threads must be an unsigned integer");
-    }
-    result = params()["inference"]["engine_num_threads"].as<uint32_t>(1);
-  }
-  return result;
+  return std::dynamic_pointer_cast<spench::NetworkConfig>(m_config)->numThreads();
 }
 
 uint64_t NeuralNetworkAudioHandler::GetModelSampleRate() {
@@ -85,7 +76,7 @@ SpenchRetCode NeuralNetworkAudioHandler::LaunchFeatureExtractorRunner() {
   try {
     if (!m_feature_extractor_runner_ptr) {
       m_feature_extractor_runner_ptr = std::unique_ptr<spench::FeatureExtractorRunner>(
-          new spench::FeatureExtractorRunner(params()["feature_params"]));
+          new spench::FeatureExtractorRunner(std::dynamic_pointer_cast<spench::NetworkConfig>(m_config)));
     }
   } catch (const std::exception& e) {
     spdlog::error("{}", e.what());

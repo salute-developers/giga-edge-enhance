@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <spdlog/spdlog.h>
-#include <yaml-cpp/yaml.h>
 #include "spench/src/handler/acoustic_echo_cancelation_handler.h"
 #include "spench/src/spench_logger.h"
 

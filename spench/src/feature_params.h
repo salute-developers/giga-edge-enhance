@@ -3,9 +3,10 @@
 #include <cmath>
 #include <cstdint>
 #include <string>
-#include <yaml-cpp/yaml.h>
+#include <memory>
 
 namespace spench {
+class NetworkConfig;
 namespace fe {
 namespace fft {
 using buffer_type = float;
@@ -36,63 +37,34 @@ class FeatureParams {
   WindowType window_type = WindowType::HANNING;
 
   FeatureParams() = default;
-  explicit FeatureParams(const YAML::Node& yaml_config) {
-    ReadFeatureParamsNode(yaml_config);
+  explicit FeatureParams(std::shared_ptr<spench::NetworkConfig> config) {
+    ReadFeatureParamsNode(config);
   }
 
-  void ReadFeatureParamsNode(const YAML::Node& yaml_config) {
-    if (yaml_config["sampling_freq"] && !yaml_config["sampling_freq"].IsNull()) {
-      if (yaml_config["sampling_freq"].Type() != YAML::NodeType::Scalar) {
-        throw("Config reading error. Sampling frequency is not a scalar!");
-      }
-      sampling_freq = yaml_config["sampling_freq"].as<uint32_t>();
-    }
+  void ReadFeatureParamsNode(std::shared_ptr<spench::NetworkConfig> config);
 
-    if (yaml_config["frame_size_ms"] && !yaml_config["frame_size_ms"].IsNull()) {
-      if (yaml_config["frame_size_ms"].Type() != YAML::NodeType::Scalar) {
-        throw("Config reading error. Frame size is not a scalar!");
-      }
-      frame_size_ms = yaml_config["frame_size_ms"].as<uint32_t>();
-    }
-
-    if (yaml_config["frame_stride_ms"] && !yaml_config["frame_stride_ms"].IsNull()) {
-      if (yaml_config["frame_stride_ms"].Type() != YAML::NodeType::Scalar) {
-        throw("Config reading error. Window hop length is not a scalar!");
-      }
-      frame_stride_ms = yaml_config["frame_stride_ms"].as<uint32_t>();
-    }
-
-    if (yaml_config["window_type"] && !yaml_config["window_type"].IsNull()) {
-      if (yaml_config["window_type"].Type() != YAML::NodeType::Scalar) {
-        throw("Config reading error. Window type is not a single string!");
-      }
-      std::string window = yaml_config["window_type"].as<std::string>();
-      window_type = StringToWindowTypeEnum(window);
-    }
-  }
-
-  uint64_t NumFrameSizeSamples() const {
+  inline uint64_t NumFrameSizeSamples() const {
     return static_cast<uint64_t>(round(1e-3 * frame_size_ms * sampling_freq));
   }
 
-  uint64_t NumFrameStrideSamples() const {
+  inline uint64_t NumFrameStrideSamples() const {
     return static_cast<uint64_t>(round(1e-3 * frame_stride_ms * sampling_freq));
   }
 
-  uint64_t Nfft() const {
+  inline uint64_t Nfft() const {
     int64_t nsamples = NumFrameSizeSamples();
     return (nsamples > 0) ? static_cast<uint64_t>(nsamples) : static_cast<int64_t>(0);
   }
 
-  uint64_t FilterFreqResponseLen() const {
+  inline uint64_t FilterFreqResponseLen() const {
     return (Nfft() >> 1) + 1;
   }
 
-  uint64_t PowSpecFeatSz() const {
+  inline uint64_t PowSpecFeatSz() const {
     return FilterFreqResponseLen();
   }
 
-  uint64_t NumFrames(uint64_t in_size) const {
+  inline uint64_t NumFrames(uint64_t in_size) const {
     auto frame_size = NumFrameSizeSamples();
     auto frame_stride = NumFrameStrideSamples();
     if (frame_stride <= 0 || in_size < frame_size) {
@@ -103,15 +75,7 @@ class FeatureParams {
   }
 
  private:
-  WindowType StringToWindowTypeEnum(const std::string& window) {
-    if (window == "hanning") {
-      return WindowType::HANNING;
-    }
-    if (window == "hamming") {
-      return WindowType::HAMMING;
-    }
-    throw std::invalid_argument("Window type must be in [\"hanning\", \"hamming\"]");
-  }
+  WindowType StringToWindowTypeEnum(const std::string& window);
 };
 }  // namespace fe
 }  // namespace spench

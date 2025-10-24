@@ -3,8 +3,6 @@
 #include <vector>
 #include <memory>
 
-#include <yaml-cpp/yaml.h>
-
 #include "contrib/ctpl/ctpl_stl.h"
 #include "spench/src/feature_params.h"
 #include "spench/src/spench_task.h"
@@ -12,19 +10,19 @@
 
 namespace spench {
 
-class FeatureExtractorRunner /*: public ASRDAGRunner*/ {
+class FeatureExtractorRunner {
  public:
   FeatureExtractorRunner() = delete;
   FeatureExtractorRunner& operator=(const FeatureExtractorRunner&) = delete;
   FeatureExtractorRunner(const FeatureExtractorRunner&) = delete;
 
-  explicit FeatureExtractorRunner(const YAML::Node& yaml_config) {
-    ReadConfig(yaml_config);
+  explicit FeatureExtractorRunner(std::shared_ptr<spench::NetworkConfig> config) {
+    ReadConfig(config);
     m_feature_extractor_ptr =
           std::unique_ptr<spench::fe::FeatureExtractor<float>>(new spench::fe::FeatureExtractor<float>(m_params));
     WarmUp();
   }
-  void ReadConfig(const YAML::Node& yaml_config);
+  void ReadConfig(std::shared_ptr<spench::NetworkConfig> config);
 
   ~FeatureExtractorRunner() /*override*/ = default;
 

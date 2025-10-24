@@ -1,4 +1,5 @@
 #include <yaml-cpp/yaml.h>
+#include "spench/src/spench_config_reader.h"
 #include "spench/src/feature_extractor_runner.h"
 #include <memory>
 #include <catch.hpp>
@@ -8,6 +9,7 @@
 
 struct TestFERunner {
   std::unique_ptr<spench::FeatureExtractorRunner> fe_runner_ptr;
+  std::shared_ptr<spench::DenoiserConfig> cfg_ptr;
   const std::size_t kNattempts = 1000;
   std::vector<float> wav_data;
   const std::string kBase = "data/";
@@ -60,11 +62,17 @@ struct TestFERunner {
     return YAML::LoadFile(file_path);
   }
 
+  void InitYAMLReader(const std::string& yaml_config_name) {
+    std::string file_path = kBase + "config/" + yaml_config_name;
+    cfg_ptr = std::make_shared<spench::DenoiserConfig>(spench::FileConfigReader(file_path));
+    // return YAML::LoadFile(file_path);
+  }
+
   TestFERunner& InitFERunner(const std::string& yaml_config_name) {
-    auto config = GetYAML(yaml_config_name);
+    InitYAMLReader(yaml_config_name);
     fe_runner_ptr =
               std::unique_ptr<spench::FeatureExtractorRunner>
-              (new spench::FeatureExtractorRunner(config["feature_params"]));
+              (new spench::FeatureExtractorRunner(cfg_ptr));
     return *this;
   }
 };
@@ -163,44 +171,24 @@ TEST_CASE("SUCCEED Read config for runner with modified .yaml file and check val
   REQUIRE(test_data.fe_runner_ptr.get()->GetFrameSizeMs() == 40);
 }
 
-// TEST_CASE("FAIL Read config for runner with incorrect sampling frequency value [fe runner]") {
-//   auto test_data = std::move(TestFERunner().
-//                                      InitFERunner("default_configuration_best_quality_onnx_16khz.yaml").
-//                                      SetWav("rec_noise_001_16k.wav"));
+TEST_CASE("FAIL Read config for runner with incorrect sampling frequency value [fe runner]") {
+  CHECK_THROWS(TestFERunner().InitFERunner("test_configuration_with_incorrect_sampling_freq.yaml"));
+}
 
-//   YAML::Node config = test_data.GetYAML("test_configuration_with_incorrect_sampling_freq.yaml");
-//   CHECK_THROWS(test_data.fe_runner_ptr.get()->ReadConfig(config["feature_params"]));
-// }
+TEST_CASE("FAIL Read config for runner with incorrect frame size value [fe runner]") {
+  CHECK_THROWS_WITH(TestFERunner().InitFERunner("test_configuration_with_incorrect_frame_size.yaml"),
+                                                "Config reading error. Frame size is not a scalar!");
+}
 
-// TEST_CASE("FAIL Read config for runner with incorrect frame size value [fe runner]") {
-//   auto test_data = std::move(TestFERunner().
-//                                      InitFERunner("default_configuration_best_quality_onnx_16khz.yaml").
-//                                      SetWav("rec_noise_001_16k.wav"));
+TEST_CASE("FAIL Read config for runner with incorrect window hop value [fe runner]") {
+  CHECK_THROWS_WITH(TestFERunner().InitFERunner("test_configuration_with_incorrect_window_hop.yaml"),
+                                          "Config reading error. Frame size stide is not a scalar!");
+}
 
-//   YAML::Node config = test_data.GetYAML("test_configuration_with_incorrect_frame_size.yaml");
-//   CHECK_THROWS_WITH(test_data.fe_runner_ptr.get()->ReadConfig(config["feature_params"]),
-//                                                 "Config reading error. Frame size is not a scalar!");
-// }
-
-// TEST_CASE("FAIL Read config for runner with incorrect window hop value [fe runner]") {
-//   auto test_data = std::move(TestFERunner().
-//                                      InitFERunner("default_configuration_best_quality_onnx_16khz.yaml").
-//                                      SetWav("rec_noise_001_16k.wav"));
-
-//   YAML::Node config = test_data.GetYAML("test_configuration_with_incorrect_window_hop.yaml");
-//   CHECK_THROWS_WITH(test_data.fe_runner_ptr.get()->ReadConfig(config["feature_params"]),
-//                                          "Config reading error. Window hop length is not a scalar!");
-// }
-
-// TEST_CASE("FAIL Read config for runner with incorrect window type value [fe runner]") {
-//   auto test_data = std::move(TestFERunner().
-//                                      InitFERunner("default_configuration_best_quality_onnx_16khz.yaml").
-//                                      SetWav("rec_noise_001_16k.wav"));
-
-//   YAML::Node config = test_data.GetYAML("test_configuration_with_incorrect_window_type.yaml");
-//   CHECK_THROWS_WITH(test_data.fe_runner_ptr.get()->ReadConfig(config["feature_params"]),
-//                                          "Window type must be in [\"hanning\", \"hamming\"]");
-// }
+TEST_CASE("FAIL Read config for runner with incorrect window type value [fe runner]") {
+  CHECK_THROWS_WITH(TestFERunner().InitFERunner("test_configuration_with_incorrect_window_type.yaml"),
+                                                  "Window type must be in [\"hanning\", \"hamming\"]");
+}
 
 // TEST_CASE("SUCCEED Launch runner with configuration read from .yaml config (audio 16kHz) [fe runner]") {
 //   auto test_data = std::move(TestFERunner().
