@@ -3,6 +3,7 @@
 #include <speex/speex_echo.h>
 #include <speex/speex_preprocess.h>
 
+#include <chrono>  //NOLINT
 #include <cmath>
 #include <memory>
 #include <stdexcept>
@@ -11,12 +12,15 @@
 
 #include "spench/util/echo/delay_compensator.h"
 #include "spench/util/echo/echo_canceler.h"
-
+#include "spench/util/sound/loudness_meter.h"
 
 namespace util::echo {
 
 constexpr int ECHO_SUPPRESS = -60;
 constexpr int ECHO_SUPPRESS_ACTIVE = -10;
+constexpr int ECHO_SUPPRESS_PREMUTE = -30;
+constexpr int LBK_ACTIVE_THRESHOLD = -30;
+constexpr int INT16_SCALE = 32767;
 
 using SpeexEchoStatePtr = std::shared_ptr<SpeexEchoState>;
 
@@ -54,12 +58,58 @@ class SpeexPreprocess {
   const size_t m_frame_size;
 };
 
+
+class PreMuter {
+ public:
+  explicit PreMuter(int32_t fs, float threshold_db = -30, float suppress_db = -30, float time = 1)
+      : m_threshold_db{threshold_db}, m_target{dsplib::db2mag(suppress_db)} {
+    m_steps = std::round((time * fs) / 1000);
+    m_loudm = std::make_unique<sound::LoudnessMeter>(fs);
+  }
+
+  float process(const std::vector<float>& sig) {
+    bool active = false;
+    if (m_loudm) {
+      const auto state = m_loudm->update(sig);
+      active = (state.short_term > m_threshold_db);
+    }
+
+    // smooth gain values
+    if (active) {
+      m_gain = (m_gain * 0.1) + (m_target * 0.9);
+      m_steps -= sig.size();
+    } else {
+      m_gain = (m_gain * 0.1) + 0.9;
+    }
+
+    // release module
+    if (m_loudm && m_steps <= 0) {
+      m_loudm.reset();
+      m_steps = 0;
+    }
+
+    return m_gain;
+  }
+
+ private:
+  const float m_threshold_db{0};
+  const float m_target{1.0};
+  float m_gain{1.0};
+  int32_t m_steps{0};
+  std::unique_ptr<sound::LoudnessMeter> m_loudm;
+};
+
 class SpeexEchoCanceler : public IEchoCanceler {
  public:
   explicit SpeexEchoCanceler(const EchoCancelerConfig& config) : m_cfg{config} {
     std::string speex_error("Speex echo canceler error! ");
     if (config.num_mic != 1 || config.num_lbk != 1) {
       throw std::runtime_error(speex_error + std::string("Only single mic and lbk supported."));
+    }
+
+    if (config.echo_premute > 0) {
+      m_premute = std::make_unique<PreMuter>(config.sample_rate, LBK_ACTIVE_THRESHOLD, ECHO_SUPPRESS_PREMUTE,
+                                             config.echo_premute);
     }
 
     auto state = speex_echo_state_init_mc(config.frame_len, config.filter_len, config.num_mic, config.num_lbk);
@@ -106,19 +156,25 @@ class SpeexEchoCanceler : public IEchoCanceler {
     }
 
     for (size_t i = 0; i < n; ++i) {
-      m_mic16[i] = std::round(tmic[i] * 32767);
-      m_lbk16[i] = std::round(tlbk[i] * 32767);
+      m_mic16[i] = std::round(tmic[i] * INT16_SCALE);
+      m_lbk16[i] = std::round(tlbk[i] * INT16_SCALE);
     }
 
     speex_echo_cancellation(m_echo.get(), m_mic16.data(), m_lbk16.data(), m_out16.data());
 
-    // preprocessing
+    // residual echo suppression
     if (m_pproc) {
       m_pproc->Process(m_out16);
     }
 
+    // premute result (only with active lbk channel)
+    float gain = 1.0F / INT16_SCALE;
+    if (m_premute) {
+      gain *= m_premute->process(lbk);
+    }
+
     for (size_t i = 0; i < n; ++i) {
-      out[i] = m_out16[i] * (1 / 32767.0F);
+      out[i] = m_out16[i] * gain;
     }
   }
 
@@ -134,6 +190,7 @@ class SpeexEchoCanceler : public IEchoCanceler {
   std::vector<spx_int16_t> m_out16;
   std::unique_ptr<DelayCompensator> m_dcomp;
   std::unique_ptr<SpeexPreprocess> m_pproc;
+  std::unique_ptr<PreMuter> m_premute;
 };
 
 }  // namespace util::echo

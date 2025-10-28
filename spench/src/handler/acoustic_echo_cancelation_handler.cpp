@@ -43,6 +43,7 @@ SpenchRetCode AudioEchoCancelationHandler::DoStart() {
                      .SetType(aec->type())
                      .SetResidualEchoSuppression(aec->residualEchoSuppressionEnabled())
                      .SetDelayCompensator(aec->delayCompensatorEnabled())
+                     .SetEchoPreMute(aec->echoPremute())
                      .Create();
 
     if (!m_canceler) {

@@ -467,6 +467,7 @@ TEST_CASE("SUCCESS AecConfig full override [aec config reader]") {
 echo_cancellation:
   sample_rate: 44100
   filter_len: 2048
+  echo_premute_ms: 1
   residual_echo_suppression_enabled: false
   delay_compensator_enabled: false
   chunk_len_ms: 32
@@ -479,6 +480,7 @@ echo_cancellation:
 
   REQUIRE(cfg->sampleRate()                       == 44100u);
   REQUIRE(cfg->filterLen()                        == 2048u);
+  REQUIRE(cfg->echoPremute()                      == 1u);
   REQUIRE(cfg->residualEchoSuppressionEnabled()   == false);
   REQUIRE(cfg->delayCompensatorEnabled()          == false);
   REQUIRE(cfg->frameLen()                         == uint16_t(std::round(44.1f*32)));
@@ -497,6 +499,7 @@ echo_cancellation:
 
   REQUIRE(cfg->sampleRate()                       == 32000u);
   REQUIRE(cfg->filterLen()                        == 4096u);
+  REQUIRE(cfg->echoPremute()                      == 3u);
   REQUIRE(cfg->residualEchoSuppressionEnabled()   == true);
   REQUIRE(cfg->delayCompensatorEnabled()          == true);
   // default chunk_len_ms=16 → frameLen = round(32 * 16) = 512

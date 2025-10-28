@@ -78,6 +78,7 @@ echo_cancellation:
   chunk_len_ms:                      16
   residual_echo_suppression_enabled: true
   delay_compensator_enabled:         true
+  echo_premute_ms:                   3
   type:                              speex
 )";
 

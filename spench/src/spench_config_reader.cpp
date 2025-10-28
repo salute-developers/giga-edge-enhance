@@ -452,6 +452,10 @@ bool AecConfig::delayCompensatorEnabled() const {
   return as<bool>(lookup(m_params, {"echo_cancellation", "delay_compensator_enabled"}));
 }
 
+uint16_t AecConfig::echoPremute() const {
+  return as<uint16_t>(lookup(m_params, {"echo_cancellation", "echo_premute_ms"}));
+}
+
 uint16_t AecConfig::frameLen() const {
   // frame_len = round(sample_rate/1000 * chunk_len_ms)
   uint32_t sr = sampleRate();

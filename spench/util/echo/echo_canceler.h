@@ -19,6 +19,7 @@ struct EchoCancelerConfig {
   EchoCancelerType type{EchoCancelerType::SPEEX};
   bool delay_compensator{false};  ///< delay compensator between microphone and speaker
   bool echo_suppression{false};   ///< residual echo suppression status
+  float echo_premute{0};          ///< mute first seconds of echo signal in mic (waiting AEC adaptation)
 };
 
 class IEchoCanceler {
@@ -61,6 +62,7 @@ class EchoCancelerBuilder {
   EchoCancelerBuilder& SetFrameLen(uint16_t len);
   EchoCancelerBuilder& SetDelayCompensator(bool enabled);
   EchoCancelerBuilder& SetResidualEchoSuppression(bool enabled);
+  EchoCancelerBuilder& SetEchoPreMute(float premute_sec);
   std::unique_ptr<IEchoCanceler> Create();
 
  private:

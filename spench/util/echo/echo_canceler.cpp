@@ -49,6 +49,11 @@ EchoCancelerBuilder& EchoCancelerBuilder::SetResidualEchoSuppression(bool enable
   return *this;
 }
 
+EchoCancelerBuilder& EchoCancelerBuilder::SetEchoPreMute(float premute_sec) {
+  m_cfg.echo_premute = premute_sec;
+  return *this;
+}
+
 std::unique_ptr<IEchoCanceler> EchoCancelerBuilder::Create() {
   // TODO(yulis): add more config checks
 
