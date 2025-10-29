@@ -105,18 +105,19 @@ class NetworkConfig : public PipelineConfig {
   }
 
   void validate() const override;
-  std::string                 modelPath()       const;
-  std::vector<std::string>    modelInputs()     const;
-  std::vector<std::string>    modelOutputs()    const;
-  uint32_t                    samplingFreq()    const;
-  uint32_t                    frameSizeMs()     const;
-  uint32_t                    frameStrideMs()   const;
-  std::string                 windowType()      const;
-  bool                        useGpu()          const;
-  uint32_t                    numThreads()      const;
-  std::string                 modelType()       const;
-  bool                        isModelBundled()  const;
-  const std::vector<uint8_t>& getModel()        const;
+  std::string                 modelPath()        const;
+  std::vector<std::string>    modelInputs()      const;
+  std::vector<std::string>    modelOutputs()     const;
+  uint32_t                    samplingFreq()     const;
+  uint32_t                    frameSizeMs()      const;
+  uint32_t                    frameStrideMs()    const;
+  std::string                 windowType()       const;
+  bool                        useGpu()           const;
+  bool                        skipZeroedChunks() const;
+  uint32_t                    numThreads()       const;
+  std::string                 modelType()        const;
+  bool                        isModelBundled()   const;
+  const std::vector<uint8_t>& getModel()         const;
 
  protected:
   NetworkConfig(std::shared_ptr<spench::PackedModelReader> bundle, std::string default_config)

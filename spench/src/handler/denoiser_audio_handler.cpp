@@ -147,6 +147,9 @@ SpenchRetCode DenoiserAudioHandler::ProcessFrame(struct spench::SpenchContext<fl
   if (input_audio_frame.empty()) {
     enhanced_audio_frame.clear();
     return ret_code;
+  } else if (m_skip_zero_chunk && IsZeroedVector(input_audio_frame)) {
+    enhanced_audio_frame = input_audio_frame;
+    return ret_code;
   }
 
   std::vector<float> resampled_input_result;
@@ -286,4 +289,5 @@ StatInfo DenoiserAudioHandler::GetStatInfo(const struct spench::SpenchContext<fl
     return StatInfo();
   }
 }
+
 }  // namespace spench

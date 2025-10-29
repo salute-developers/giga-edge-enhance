@@ -165,6 +165,12 @@ bool NetworkConfig::useGpu() const {
   return as<bool>(lookup(m_params, {"inference", "gpu"}));
 }
 
+bool NetworkConfig::skipZeroedChunks() const {
+  auto zeroedChunks = lookup(m_params, {"inference", "skip_zeroed_chunks"});
+  bool res = asOr(zeroedChunks, static_cast<bool>(false));
+  return res;
+}
+
 uint32_t NetworkConfig::numThreads() const {
   return as<uint32_t>(lookup(m_params, {"inference", "engine_num_threads"}));
 }

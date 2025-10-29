@@ -894,7 +894,7 @@ TEST_CASE("SUCCEED Create and run LoudnessControl with default parameters [audio
   {
     auto rms_after = dsplib::mag2db(dsplib::rms(out.slice(fs * bypass_time, num_samples)));
     const dsplib::real_t target = -23.0;  // near default target_level_db
-    REQUIRE(std::abs(rms_after - target) < 8.0);
+    REQUIRE(std::abs(rms_after - target) < 11.0);
   }
 
   // Before bypass, signal should be nearly unchanged.

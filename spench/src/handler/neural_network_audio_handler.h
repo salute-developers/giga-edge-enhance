@@ -17,6 +17,7 @@ class NeuralNetworkAudioHandler : public BaseAudioHandler {
   std::unique_ptr<spench::InferenceRunner> m_inference_runner_ptr;
   std::string m_enc_password;
   std::string m_lic_checksum;
+  bool m_skip_zero_chunk = false;
 
  public:
   NeuralNetworkAudioHandler() = delete;
@@ -58,6 +59,8 @@ class NeuralNetworkAudioHandler : public BaseAudioHandler {
 
   // Still abstract here; concrete handlers implement the algorithm.
   virtual SpenchRetCode InferFrame(std::unique_ptr<spench::SpenchTask>& task_ptr) = 0;
+
+  bool IsZeroedVector(const std::vector<float>& v, float epsilon = 0.0f) noexcept;
 };
 
 namespace tools {

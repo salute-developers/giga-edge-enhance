@@ -70,7 +70,7 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
                                      m_model_input_shapes[0].end(),
                                      1,
                                      std::multiplies<uint64_t>());
-    std::vector<T> mag(multi, 0.0);
+    std::vector<T> mag(multi, 1e-4);
     PrepareInputInPlace(mag, inputs, dummy_task.m_data.context);
 
     BaseOnnxRunner::WarmUp<T>(inputs);
@@ -140,7 +140,7 @@ class SpenchFOnnxRunner: public BaseOnnxRunner {
     // batch_size * num_features (for example 1 * 385)
     uint64_t multi = m_model_input_shapes[0][0] * m_model_input_shapes[0][1];
 
-    std::vector<T> dummy_mag(multi, 0.0);
+    std::vector<T> dummy_mag(multi, 1e-4);
     PrepareInputInPlace(dummy_mag, inputs, dummy_task.m_data.context);
     InitOutputTensors(dummy_task.m_data);
     BaseOnnxRunner::WarmUp<T>(inputs);

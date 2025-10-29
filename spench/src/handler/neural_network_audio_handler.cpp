@@ -31,6 +31,7 @@ NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::shared_ptr<NetworkConf
     throw std::runtime_error("A neural network handler module creation failed. ret_code=" +
                              std::to_string(static_cast<int32_t>(ret_code)));
   }
+  m_skip_zero_chunk = dynamic_cast<spench::NetworkConfig*>(m_config.get())->skipZeroedChunks();
 }
 
 NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(NeuralNetworkAudioHandler&& orig) noexcept
@@ -111,6 +112,17 @@ SpenchRetCode NeuralNetworkAudioHandler::LaunchInferenceRunner() {
     ret_code = SpenchRetCode::ERR_MODEL_START_PROBLEM;
   }
   return ret_code;
+}
+
+bool NeuralNetworkAudioHandler::IsZeroedVector(const std::vector<float>& v, float eps) noexcept {
+  const size_t n = v.size();
+  for (size_t i = 0; i < n; ++i) {
+    float ax = std::fabs(v[i]);
+    if (ax > eps || !std::isfinite(ax)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 namespace tools {
