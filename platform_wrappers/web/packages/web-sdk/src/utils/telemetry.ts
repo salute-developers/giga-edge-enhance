@@ -22,6 +22,7 @@ export type SendMetricFunction = <T extends keyof MetricNameToPayloadMap>(
 
 export type Telemetry = {
     enabled: boolean;
+    currentMeanProcessTime: number | undefined;
     sendMetric: SendMetricFunction;
 };
 
@@ -29,12 +30,14 @@ export type Telemetry = {
 export function createTelemetry(sendMetric?: SendMetricFunction): Telemetry {
     return {
         enabled: Boolean(sendMetric),
+        currentMeanProcessTime: undefined,
         sendMetric: sendMetric || (() => {}),
     };
 }
 
 export type WorkerTelemetry = {
     enabled: boolean;
+    sendMetric: SendMetricFunction;
     recordFrameProcessTime(time: number): void;
     recordMeanFrameProcessTime(time: number): void;
     flush(): void;
@@ -49,7 +52,10 @@ type WorkletTelemetry = {
     stop(time: number): void;
 };
 
-export function getWorkerTelemetry(enabled: boolean, port: CustomPort<any, ControllerMessage>): WorkerTelemetry {
+export function getWorkerTelemetry(
+    enabled: boolean,
+    port: Pick<CustomPort<any, ControllerMessage>, 'postMessage'>,
+): WorkerTelemetry {
     let times = [] as number[];
     let currentMeanProcessTime = 0;
     let currentMeanProcessTimeCount = 0;
@@ -70,11 +76,7 @@ export function getWorkerTelemetry(enabled: boolean, port: CustomPort<any, Contr
             currentMeanProcessTime += (time - currentMeanProcessTime) / currentMeanProcessTimeCount;
 
             if (currentMeanProcessTimeCount >= MEAN_PROCESS_TIME_COUNT) {
-                port.postMessage({
-                    type: CONTROLLER_MESSAGES.TELEMETRY,
-                    metricName: 'currentMeanProcessTime',
-                    value: currentMeanProcessTime,
-                });
+                this.sendMetric('currentMeanProcessTime', currentMeanProcessTime);
 
                 currentMeanProcessTime = 0;
                 currentMeanProcessTimeCount = 0;
@@ -85,12 +87,15 @@ export function getWorkerTelemetry(enabled: boolean, port: CustomPort<any, Contr
                 return;
             }
 
+            this.sendMetric('frameProcessTimeRaw', times);
+            times = [];
+        },
+        sendMetric(metricName, value) {
             port.postMessage({
                 type: CONTROLLER_MESSAGES.TELEMETRY,
-                metricName: 'frameProcessTimeRaw',
-                value: times,
+                metricName,
+                value,
             });
-            times = [];
         },
     };
 }

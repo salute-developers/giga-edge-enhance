@@ -10,6 +10,8 @@ export const DEFAULT_LP_WINDOW_SECONDS = 1;
 
 export const DEFAULT_LP_MAX_REFILL_TIMES = 3;
 
+export const DEFAULT_FETCH_RETRIES = 2;
+
 export const LP_CAUSE_THRESHOLD = 13;
 
 export const MEAN_PROCESS_TIME_COUNT = 60;

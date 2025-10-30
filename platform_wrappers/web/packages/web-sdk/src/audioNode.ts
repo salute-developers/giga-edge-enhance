@@ -11,14 +11,14 @@ import {
     WorkletMessage,
 } from './utils/ipc';
 import {
-    areWorkerFeaturesEnabled,
-    areWorkletFeaturesEnabled,
+    areMainFeaturesEnabled,
+    areDspFeaturesEnabled,
     Features,
-    getWorkerFeatures,
-    getWorkletFeatures,
+    getDspFeatures,
     Settings,
-    WorkerFeatures,
-    WorkletFeatures,
+    DspFeatures,
+    areDspFeaturesChanged,
+    areMainFeaturesChanged,
 } from './utils/common';
 import { LP_CAUSE_THRESHOLD, SPENCH_WORKLET_NAME } from './utils/constants';
 import SpenchWorker from './worker';
@@ -96,8 +96,6 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
 
     #isDspLoaded = false;
 
-    #currentMeanProcessTime: number | undefined;
-
     #setFeaturesLock: Promise<void> | undefined;
 
     #initStartTime = performance.now();
@@ -117,6 +115,10 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         this.#init();
     }
 
+    get features(): Features {
+        return this.#features;
+    }
+
     get #port(): WorkletPort {
         return super.port;
     }
@@ -132,25 +134,19 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
             Object.entries(features).filter(([, value]) => value !== undefined),
         );
         this.#logger.info('Setting Spench features:', filteredFeatures);
-        this.#loader.preload(filteredFeatures);
 
         const mixed: Features = {
             ...this.#features,
             ...filteredFeatures,
         };
-
         let res;
 
-        // Incremental start (to speed up dsp start)
-        if (areWorkerFeaturesEnabled(mixed) && areWorkletFeaturesEnabled(mixed) && !this.#workerPort) {
-            this.#logger.debug('Starting DSP features first to speed up loading');
-            const workletFeatures = getWorkletFeatures(mixed);
-
-            res = await this.#setFeatures({ ...workletFeatures, ...getWorkerFeatures() });
-
-            if (!(res instanceof SpenchError)) {
-                res = await this.#setFeatures(mixed);
+        if (this.#settings.dspOnAudioThread) {
+            if (areMainFeaturesEnabled(mixed)) {
+                this.#logger.warn('Main features are not available when dspOnAudioThread is enabled');
             }
+
+            res = await this.#setDspWorkletFeatures(mixed);
         } else {
             res = await this.#setFeatures(mixed);
         }
@@ -189,25 +185,17 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
     }
 
     async #setFeatures(features: Features): Promise<void | LoadError | SetFeaturesFailedError> {
-        const loadResult = await Promise.all([this.#loadWorkletFeatures(features), this.#loadWorkerFeatures(features)]);
-        const err = loadResult.find((r) => r instanceof SpenchError);
-        const previousFeatures = { ...this.#features };
-
-        if (err instanceof SpenchError) {
-            return err;
-        }
-
+        const workerFeaturesEnabled = areMainFeaturesEnabled(features) || areDspFeaturesEnabled(features);
         const workerSetResult = await this.#setWorkerFeatures(features);
 
         if (workerSetResult instanceof SpenchError) {
             return workerSetResult;
         }
 
-        const workletSetResult = await this.#setWorkletFeatures(features, previousFeatures);
-
-        if (workletSetResult instanceof SpenchError) {
-            return workletSetResult;
-        }
+        this.#port.postMessage({
+            type: WORKLET_MESSAGES.SET_FEATURES,
+            workerFeaturesEnabled,
+        });
 
         if (!this.#initialized && (this.#features.noiseCancellation || this.#features.dereverberation)) {
             this.#initialized = true;
@@ -215,118 +203,124 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         }
     }
 
-    async #setWorkletFeatures(features: Features, previousFeatures: Features): Promise<void | SetFeaturesFailedError> {
-        const workerFeaturesEnabled = areWorkerFeaturesEnabled(features);
-        const shouldToggleWorkerFeatures = workerFeaturesEnabled !== areWorkerFeaturesEnabled(previousFeatures);
-        const areWorkletFeaturesChanged = [
-            this.#features.normalization !== features.normalization,
-            this.#features.echoCancellation !== features.echoCancellation,
-        ].some(Boolean);
-        const workletFeatures = getWorkletFeatures(features);
+    async #setDspWorkletFeatures(features: DspFeatures): Promise<void | LoadError | SetFeaturesFailedError> {
+        if (!areDspFeaturesChanged(this.#features, features)) {
+            return;
+        }
 
-        if (areWorkletFeaturesChanged || shouldToggleWorkerFeatures) {
-            this.#logger.debug('Applying Worklet features:', workletFeatures);
-            this.#port.postMessage({
-                type: WORKLET_MESSAGES.SET_FEATURES,
-                features: workletFeatures,
-                workerFeaturesEnabled,
-            });
+        let dspWasm;
 
-            const res = await new Promise<void | SetFeaturesFailedError>((resolve) => {
-                const handler = (ev: MessageEvent<ControllerMessage>) => {
-                    switch (ev.data.type) {
-                        case CONTROLLER_MESSAGES.SET_FEATURES_OK:
-                            this.#logger.debug('Worklet features applied');
-                            this.#features = {
-                                ...this.#features,
-                                ...workletFeatures,
-                            };
-                            resolve();
+        if (!this.#isDspLoaded) {
+            dspWasm = await this.#loader.loadDSPWasm();
 
-                            break;
-                        case CONTROLLER_MESSAGES.SET_FEATURES_FAIL:
-                            const { error } = ev.data;
+            if (dspWasm instanceof LoadError) {
+                return dspWasm;
+            }
 
-                            this.#logger.error('Worklet features not applied', error);
-                            resolve(new SetFeaturesFailedError(error));
+            this.#isDspLoaded = true;
+        }
 
-                            break;
-                        default:
-                            return;
-                    }
+        const dspFeatures = getDspFeatures(features);
+        this.#logger.debug('Applying DSP Worklet features:', dspFeatures);
+        this.#port.postMessage({
+            type: WORKLET_MESSAGES.SET_FEATURES,
+            features: dspFeatures,
+            dspWasm,
+            workerFeaturesEnabled: false,
+        });
 
-                    this.#port.removeEventListener('message', handler);
+        return new Promise<void | SetFeaturesFailedError>((resolve) => {
+            const handler = (ev: MessageEvent<ControllerMessage>) => {
+                if (ev.data.type !== CONTROLLER_MESSAGES.SET_FEATURES_RESULT) {
+                    return;
+                }
+
+                const {
+                    errors: [error],
+                    features: resultFeatures,
+                } = ev.data;
+
+                this.#features = {
+                    ...this.#features,
+                    ...resultFeatures,
                 };
 
-                this.#port.addEventListener('message', handler);
-            });
+                if (error) {
+                    this.#logger.error('DSP worklet features not applied', error);
+                    resolve(new SetFeaturesFailedError(error));
+                } else {
+                    this.#logger.debug('DSP worklet features applied');
+                    resolve();
+                }
 
-            if (res instanceof SetFeaturesFailedError) {
-                return res;
-            }
-        }
+                this.#port.removeEventListener('message', handler);
+            };
+
+            this.#port.addEventListener('message', handler);
+        });
     }
 
-    async #setWorkerFeatures(features: WorkerFeatures): Promise<void | SetFeaturesFailedError> {
-        const areWorkerFeaturesChanged = [
-            this.#features.noiseCancellation !== features.noiseCancellation,
-            this.#features.dereverberation !== features.dereverberation,
-        ].some(Boolean);
-        const workerFeatures = getWorkerFeatures(features);
+    async #setWorkerFeatures(features: Features): Promise<void | LoadError | SetFeaturesFailedError> {
+        const areFeaturesChanged =
+            areMainFeaturesChanged(this.#features, features) || areDspFeaturesChanged(this.#features, features);
 
-        if (areWorkerFeaturesChanged) {
-            this.#logger.debug('Applying Worker features:', workerFeatures);
-            this.#workerPort!.postMessage({ type: WORKER_MESSAGES.SET_FEATURES, features: workerFeatures });
+        if (!areFeaturesChanged) {
+            return;
+        }
 
-            const res = await new Promise<void | SetFeaturesFailedError>((resolve) => {
-                const handler = (ev: MessageEvent<ControllerMessage>) => {
-                    switch (ev.data.type) {
-                        case CONTROLLER_MESSAGES.SET_FEATURES_OK:
-                            this.#logger.debug('Worker features applied');
-                            this.#features = {
-                                ...this.#features,
-                                ...workerFeatures,
-                            };
-                            resolve();
+        const workerInitResult = await this.#loadWorker();
 
-                            break;
-                        case CONTROLLER_MESSAGES.SET_FEATURES_FAIL:
-                            const { error } = ev.data;
+        if (workerInitResult instanceof LoadError) {
+            return workerInitResult;
+        }
 
-                            this.#logger.error('Worker features not applied', error);
-                            resolve(new SetFeaturesFailedError(error));
+        this.#logger.debug('Applying features:', features);
+        this.#workerPort!.postMessage({ type: WORKER_MESSAGES.SET_FEATURES, features });
 
-                            break;
-                        default:
-                            return;
-                    }
+        return new Promise<void | LoadError | SetFeaturesFailedError>((resolve) => {
+            const handler = (ev: MessageEvent<ControllerMessage>) => {
+                if (ev.data.type !== CONTROLLER_MESSAGES.SET_FEATURES_RESULT) {
+                    return;
+                }
 
-                    this.#workerPort!.removeEventListener('message', handler);
+                const { errors, features: resultFeatures } = ev.data;
+
+                this.#features = {
+                    ...this.#features,
+                    ...resultFeatures,
                 };
 
-                this.#workerPort!.addEventListener('message', handler);
-            });
+                if (errors.length) {
+                    this.#logger.error(
+                        'Errors while setting features: ',
+                        errors.join('\n'),
+                        '\n\nApplied features: ',
+                        resultFeatures,
+                    );
+                }
 
-            if (res instanceof SetFeaturesFailedError) {
-                return res;
-            }
-        }
+                const loadError = errors.find((e) => e.name === 'LoadError');
+                const criticalError = errors.find((e) => e.name !== 'LoadError');
+
+                if (criticalError) {
+                    resolve(new SetFeaturesFailedError(criticalError));
+                } else if (loadError) {
+                    resolve(new LoadError(loadError));
+                } else {
+                    this.#logger.debug('Features applied', resultFeatures);
+                    resolve();
+                }
+
+                this.#workerPort!.removeEventListener('message', handler);
+            };
+
+            this.#workerPort!.addEventListener('message', handler);
+        });
     }
 
     #handleCommonMessage(event: MessageEvent<ControllerMessage>): boolean {
         switch (event.data.type) {
-            case CONTROLLER_MESSAGES.TELEMETRY:
-                if (event.data.metricName === 'currentMeanProcessTime') {
-                    this.#currentMeanProcessTime = event.data.value as number;
-
-                    return true;
-                }
-
-                this.#telemetry?.sendMetric(event.data.metricName, event.data.value);
-
-                return true;
-            case CONTROLLER_MESSAGES.SET_FEATURES_OK:
-            case CONTROLLER_MESSAGES.SET_FEATURES_FAIL:
+            case CONTROLLER_MESSAGES.SET_FEATURES_RESULT:
                 return true;
             default:
         }
@@ -334,36 +328,9 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         return false;
     }
 
-    async #loadWorkletFeatures(features: WorkletFeatures): Promise<void | LoadError> {
-        if (this.#isDspLoaded) return;
-
-        const workletFeaturesEnabled = areWorkletFeaturesEnabled(features);
-
-        if (!workletFeaturesEnabled) return;
-
-        const dspWasm = await this.#loader.loadDSPWasm();
-
-        if (dspWasm instanceof LoadError) {
-            return dspWasm;
-        }
-
-        this.#port.postMessage(
-            {
-                type: WORKLET_MESSAGES.RUNTIME_ASSETS,
-                dspWasm,
-            },
-            [dspWasm],
-        );
-
-        this.#isDspLoaded = true;
-    }
-
-    async #loadWorkerFeatures(features: WorkerFeatures): Promise<void | LoadError> {
+    async #loadWorker(): Promise<void | LoadError> {
         if (this.#workerPort) return;
 
-        const workerFeaturesEnabled = areWorkerFeaturesEnabled(features);
-
-        if (!workerFeaturesEnabled) return;
         this.#initStartTime = performance.now();
 
         const { sampleRate } = super.context;
@@ -404,6 +371,10 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
                 this.#logger[event.data.level](...event.data.data);
 
                 return;
+            case CONTROLLER_MESSAGES.TELEMETRY:
+                this.#telemetry?.sendMetric(event.data.metricName, event.data.value);
+
+                return;
             case CONTROLLER_MESSAGES.ERROR:
                 const { error } = event.data;
                 this.#handleError(new SpenchError(error));
@@ -411,13 +382,17 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
                 return;
             case CONTROLLER_MESSAGES.LOW_PERFORMANCE:
                 const potentialCause: LowPerformanceCause =
-                    this.#currentMeanProcessTime === undefined
+                    this.#telemetry.currentMeanProcessTime === undefined
                         ? 'unknown'
-                        : this.#currentMeanProcessTime > LP_CAUSE_THRESHOLD
+                        : this.#telemetry.currentMeanProcessTime > LP_CAUSE_THRESHOLD
                           ? 'inference'
                           : 'transport';
 
-                if (!super.dispatchEvent(new LowPerformanceEvent(potentialCause, this.#currentMeanProcessTime))) {
+                if (
+                    !super.dispatchEvent(
+                        new LowPerformanceEvent(potentialCause, this.#telemetry.currentMeanProcessTime),
+                    )
+                ) {
                     this.#handleLowPerformance();
                 }
 

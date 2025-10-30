@@ -1,22 +1,22 @@
 class RingBuffer {
-    readonly buffer: Float32Array;
+    protected readonly buffer: Float32Array;
 
-    writeIndex = 0;
+    protected writeIndex = 0;
 
-    readIndex = 0;
+    protected readIndex = 0;
 
-    #size = 0;
+    protected currentSize = 0;
 
     constructor(capacity: number) {
         this.buffer = new Float32Array(capacity);
     }
 
     get size(): number {
-        return this.#size;
+        return this.currentSize;
     }
 
     clear(): void {
-        this.#size = 0;
+        this.currentSize = 0;
         this.readIndex = 0;
         this.writeIndex = 0;
     }
@@ -33,18 +33,18 @@ class RingBuffer {
 
         let overflow = false;
 
-        if (this.#size + size > this.buffer.length) {
+        if (this.currentSize + size > this.buffer.length) {
             overflow = true;
             this.readIndex = (this.readIndex + size) % this.buffer.length;
         } else {
-            this.#size += size;
+            this.currentSize += size;
         }
 
         return overflow;
     }
 
     pull(output: Float32Array, startIndex: number, size: number): boolean {
-        if (this.#size >= size) {
+        if (this.currentSize >= size) {
             let written = 0;
 
             while (size - written > 0) {
@@ -57,7 +57,7 @@ class RingBuffer {
                 this.readIndex = (this.readIndex + currentChunkSize) % this.buffer.length;
             }
 
-            this.#size -= size;
+            this.currentSize -= size;
 
             return true;
         }

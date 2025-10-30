@@ -83,8 +83,23 @@ const spenchWorkletConfigFactory = (mode) => {
     };
 };
 
+const spenchWorkletDspConfigFactory = (mode) => {
+    const baseConfig = baseConfigFactory(mode);
+
+    return {
+        ...baseConfig,
+        entry: {
+            'spench-worklet-dsp': './src/workers/worklet/dsp.ts',
+        },
+        output: {
+            ...baseConfig.output,
+            globalObject: 'AudioWorkletGlobalScope',
+        },
+    };
+};
+
 module.exports = (env, argv) => {
     const { mode } = argv;
 
-    return [spenchWorkletConfigFactory(mode), spenchWorkerConfigFactory(mode)];
+    return [spenchWorkletConfigFactory(mode), spenchWorkerConfigFactory(mode), spenchWorkletDspConfigFactory(mode)];
 };

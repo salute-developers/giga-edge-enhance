@@ -1,112 +1,122 @@
 import SpenchError from './utils/error';
-import { downloadFileAsBuffer, retry, Features, copyArrayBuffer } from './utils/common';
+import { downloadFileAsBuffer, retry, Features, copyArrayBuffer, Settings } from './utils/common';
 import { Logger } from './utils/logger';
 import { Telemetry } from './utils/telemetry';
 import SpenchWorker from './worker';
+import { dataUrl, wasmDspUrl, wasmUrl, workletDspUrl, workletUrl } from './utils/resources';
 
 export class LoadError extends SpenchError {}
 
 class Loader {
-    #wasmLoadPromise: Promise<ArrayBuffer | LoadError> | undefined;
+    static #wasmPreloadPromise: Promise<void> | undefined;
 
-    #dspWasmLoadPromise: Promise<ArrayBuffer | LoadError> | undefined;
+    static #dataPreloadPromise: Promise<void> | undefined;
 
-    #dataLoadPromise: Promise<ArrayBuffer | LoadError> | undefined;
+    static #dspWasmPreloadPromise: Promise<void> | undefined;
 
-    #preloadedWorker: SpenchWorker | LoadError | undefined;
+    static #dspWasmLoadPromise: Promise<ArrayBuffer | LoadError> | undefined;
 
-    #workletLoadPromise: Promise<void | LoadError> | undefined;
+    preloadedWorker: SpenchWorker | LoadError | undefined;
 
-    #fullWorkerLoadPromise: Promise<SpenchWorker | LoadError> | undefined;
+    workletLoadPromise: Promise<void | LoadError> | undefined;
+
+    dspWorkletLoadPromise: Promise<void | LoadError> | undefined;
 
     constructor(
         private ctx: AudioContext,
         private logger: Logger,
         private telemetry: Telemetry,
+        private settings: Settings,
     ) {}
 
-    loadWorker() {
+    static #preloadWasm(): Promise<void> {
         const load = async () => {
-            this.logger.debug('loading Spench worker');
-            const wasmPromise = retry(() => this.#loadWasm());
-            const dataPromise = retry(() => this.#loadModelsData());
-            const workerPromise = retry(() => this.#createWorker());
+            try {
+                const response = await fetch(wasmUrl, { priority: 'low' });
 
-            const res = await Promise.all([wasmPromise, dataPromise, workerPromise]);
-
-            for (const r of res) {
-                if (r instanceof Error) {
-                    this.#fullWorkerLoadPromise = undefined;
-
-                    return new LoadError(r);
+                if (!response.ok) {
+                    throw new Error();
                 }
+            } catch {
+                Loader.#wasmPreloadPromise = undefined;
             }
-
-            const [wasm, data, worker] = res as [ArrayBuffer, ArrayBuffer, SpenchWorker];
-
-            worker.init(wasm, data);
-
-            this.logger.debug('loading Spench worker finished');
-            // Can't reuse ArrayBuffer as it's transferred to the different context
-            // Also binaries are quite big, so we rely on the browser cache
-            this.#wasmLoadPromise = undefined;
-            this.#dataLoadPromise = undefined;
-            this.#preloadedWorker = undefined;
-
-            return worker;
         };
 
-        return this.#fullWorkerLoadPromise || (this.#fullWorkerLoadPromise = load());
+        return Loader.#wasmPreloadPromise || (Loader.#wasmPreloadPromise = load());
     }
 
-    preload(features: Partial<Features>): void {
-        this.loadSpenchWorklet();
+    static #preloadModelsData(): Promise<void> {
+        const load = async () => {
+            try {
+                const response = await fetch(dataUrl, { priority: 'low' });
+
+                if (!response.ok) {
+                    throw new Error();
+                }
+            } catch {
+                Loader.#dataPreloadPromise = undefined;
+            }
+        };
+
+        return Loader.#dataPreloadPromise || (Loader.#dataPreloadPromise = load());
+    }
+
+    static #preloadDspWasm(): Promise<void> {
+        const load = async () => {
+            try {
+                const response = await fetch(wasmDspUrl, { priority: 'low' });
+
+                if (!response.ok) {
+                    throw new Error();
+                }
+            } catch {
+                Loader.#dspWasmPreloadPromise = undefined;
+            }
+        };
+
+        return Loader.#dspWasmPreloadPromise || (Loader.#dspWasmPreloadPromise = load());
+    }
+
+    preload(features: Partial<Features>, settings: Settings): void {
+        this.loadSpenchWorklet(settings);
 
         if (features.normalization || features.echoCancellation) {
-            this.loadDSPWasm();
+            if (settings.dspOnAudioThread) {
+                this.loadDSPWasm(true);
+            } else {
+                Loader.#preloadDspWasm();
+            }
+
+            if (!settings.dspOnAudioThread) {
+                this.loadWorker(true);
+            }
         }
 
         if (features.noiseCancellation || features.dereverberation) {
-            this.loadWorker();
+            Loader.#preloadWasm();
+            Loader.#preloadModelsData();
+            this.loadWorker(true);
         }
     }
 
-    loadSpenchWorklet() {
-        const load = async (): Promise<void | LoadError> => {
-            try {
-                this.logger.debug('loading Spench worklet');
-                await this.ctx.audioWorklet.addModule(
-                    new URL('../dist/workers/spench-worklet.min.js', import.meta.url),
-                );
-            } catch {
-                this.#workletLoadPromise = undefined;
-
-                return new LoadError();
-            }
-
-            this.logger.debug('loading Spench worklet finished');
-        };
-
-        return retry(
-            () => this.#workletLoadPromise || (this.#workletLoadPromise = load()),
-        ) as Promise<void | LoadError>;
-    }
-
-    async loadDSPWasm(): Promise<ArrayBuffer | LoadError> {
+    async loadDSPWasm(preload = false): Promise<ArrayBuffer | LoadError> {
         const load = async () => {
             try {
-                const [buffer, time] = await downloadFileAsBuffer(new URL('../bin/spench.dsp.wasm', import.meta.url));
+                const [buffer, time] = await downloadFileAsBuffer(wasmDspUrl, preload);
                 this.telemetry.sendMetric('wasmDSPDownloadTime', time);
 
                 return buffer;
             } catch (e) {
-                this.#dspWasmLoadPromise = undefined;
+                Loader.#dspWasmLoadPromise = undefined;
 
                 return new LoadError(e);
             }
         };
 
-        const res = await retry(() => this.#dspWasmLoadPromise || (this.#dspWasmLoadPromise = load()));
+        const res = await retry(
+            () => Loader.#dspWasmLoadPromise || (Loader.#dspWasmLoadPromise = load()),
+            preload ? 0 : this.settings.fetchRetries,
+        );
 
         if (res instanceof ArrayBuffer) {
             // Make sure AB not transfered
@@ -116,54 +126,70 @@ class Loader {
         return res as LoadError;
     }
 
-    #loadWasm(): Promise<ArrayBuffer | LoadError> {
-        const load = async () => {
-            try {
-                const [buffer, time] = await downloadFileAsBuffer(new URL('../bin/spench.wasm', import.meta.url));
-                this.telemetry.sendMetric('wasmDownloadTime', time);
-
-                return buffer;
-            } catch (e) {
-                this.#wasmLoadPromise = undefined;
-
-                return new LoadError(e);
-            }
-        };
-
-        return this.#wasmLoadPromise || (this.#wasmLoadPromise = load());
-    }
-
-    #loadModelsData(): Promise<ArrayBuffer | LoadError> {
-        const load = async () => {
-            try {
-                const [buffer, time] = await downloadFileAsBuffer(new URL('../bin/spench.data', import.meta.url));
-                this.telemetry.sendMetric('modelsDataDownloadTime', time);
-
-                return buffer;
-            } catch (e) {
-                this.#dataLoadPromise = undefined;
-
-                return new LoadError(e);
-            }
-        };
-
-        return this.#dataLoadPromise || (this.#dataLoadPromise = load());
-    }
-
-    async #createWorker(): Promise<SpenchWorker | LoadError> {
-        if (this.#preloadedWorker instanceof Worker) {
-            return this.#preloadedWorker;
+    async loadWorker(preload = false): Promise<SpenchWorker | LoadError> {
+        if (this.preloadedWorker instanceof Worker) {
+            return this.preloadedWorker;
         }
 
         const load = () => {
             try {
-                return new SpenchWorker(this.logger, this.telemetry);
+                return new SpenchWorker(this.logger, this.telemetry, this.settings);
             } catch (e) {
                 return new LoadError(e);
             }
         };
 
-        return (this.#preloadedWorker = load());
+        return retry(async () => (this.preloadedWorker = load()), preload ? 0 : this.settings.fetchRetries) as Promise<
+            SpenchWorker | LoadError
+        >;
+    }
+
+    loadSpenchWorklet(settings: Settings): Promise<void | LoadError> {
+        if (settings.dspOnAudioThread) {
+            return this.#loadSpenchDspWorklet();
+        }
+
+        return this.#loadSpenchWorklet();
+    }
+
+    #loadSpenchWorklet(preload = false): Promise<void | LoadError> {
+        const load = async (): Promise<void | LoadError> => {
+            try {
+                this.logger.debug('loading Spench worklet');
+                await this.ctx.audioWorklet.addModule(workletUrl);
+            } catch (e) {
+                this.workletLoadPromise = undefined;
+
+                return new LoadError(e);
+            }
+
+            this.logger.debug('loading Spench worklet finished');
+        };
+
+        return retry(
+            () => this.workletLoadPromise || (this.workletLoadPromise = load()),
+            preload ? 0 : this.settings.fetchRetries,
+        ) as Promise<void | LoadError>;
+    }
+
+    #loadSpenchDspWorklet(): Promise<void | LoadError> {
+        const load = async (): Promise<void | LoadError> => {
+            try {
+                this.logger.debug('loading Spench DSP worklet');
+                await this.ctx.audioWorklet.addModule(workletDspUrl);
+            } catch (e) {
+                this.dspWorkletLoadPromise = undefined;
+
+                return new LoadError(e);
+            }
+
+            this.logger.debug('loading Spench DSP worklet finished');
+        };
+
+        return retry(
+            () => this.dspWorkletLoadPromise || (this.dspWorkletLoadPromise = load()),
+            this.settings.fetchRetries,
+        ) as Promise<void | LoadError>;
     }
 }
 

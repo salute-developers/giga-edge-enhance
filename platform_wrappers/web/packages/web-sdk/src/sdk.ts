@@ -29,7 +29,7 @@ class SpenchSDK {
         this.#logger = logger;
         this.#telemetry = telemetry;
         this.#settings = settings;
-        this.#loader = new Loader(ctx, logger, this.#telemetry);
+        this.#loader = new Loader(ctx, logger, telemetry, settings);
     }
 
     static isEnvironmentSupported(): boolean {
@@ -53,7 +53,7 @@ class SpenchSDK {
         const instance = new SpenchSDK(ctx, logger, telemetry, settings);
 
         if (preloadFeatures) {
-            instance.#loader.preload(preloadFeatures);
+            instance.#loader.preload(preloadFeatures, settings);
         }
 
         logger.info(
@@ -71,11 +71,12 @@ class SpenchSDK {
 
     async createAudioNode(
         features?: Partial<Features>,
-        settings?: Partial<Settings>,
+        rawSettings?: Partial<Settings>,
     ): Promise<SpenchAudioNode | LoadError | SetFeaturesFailedError> {
-        this.#loader.preload(features || {});
+        const settings = getSettingsWithDefaults({ ...this.#settings, ...(rawSettings || {}) });
+        this.#loader.preload(features || {}, settings);
 
-        const workletLoad = await this.#loader.loadSpenchWorklet();
+        const workletLoad = await this.#loader.loadSpenchWorklet(settings);
 
         if (workletLoad instanceof LoadError) {
             return workletLoad;
@@ -86,7 +87,7 @@ class SpenchSDK {
             ctx: this.#ctx,
             logger: this.#logger,
             telemetry: this.#telemetry,
-            settings: getSettingsWithDefaults({ ...this.#settings, ...(settings || {}) }),
+            settings,
         });
 
         if (!features) {

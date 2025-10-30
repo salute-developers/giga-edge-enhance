@@ -11,6 +11,8 @@ import {
 import { Logger } from './utils/logger';
 import { assert } from './utils/error';
 import { Telemetry } from './utils/telemetry';
+import { dataUrl, wasmDspUrl, wasmUrl, workerUrl } from './utils/resources';
+import { Settings } from './utils/common';
 
 let currentWorkerNumber = 0;
 
@@ -46,10 +48,26 @@ class SpenchWorker extends Worker implements ISpenchWorker {
     constructor(
         protected readonly logger: Logger,
         protected readonly telemetry: Telemetry,
+        settings: Settings,
     ) {
-        // Don't allow the bundler to process prepared worker
-        const url = new URL('../dist/workers/spench-worker.min.js', import.meta.url);
-        super(url);
+        super(workerUrl);
+        const resources = {
+            wasmUrl,
+            wasmDspUrl,
+            dataUrl,
+        };
+        logger.debug(resources);
+        this.postMessage({
+            type: SELF_WORKER_MESSAGES.INIT,
+            resources,
+            verbosity: this.logger.verbosity,
+            isTelemetryEnabled: telemetry.enabled,
+            settings,
+        });
+
+        this.addEventListener('message', this.#handleMessage);
+        this.addEventListener('error', this.#handleError);
+
         this.logger.debug(`worker #${this.workerNumber} created`);
     }
 
@@ -97,28 +115,22 @@ class SpenchWorker extends Worker implements ISpenchWorker {
         this.logger.debug(`worker #${this.workerNumber} destroyed`);
     }
 
-    init(wasm: ArrayBuffer, data: ArrayBuffer): void {
-        this.postMessage(
-            {
-                type: SELF_WORKER_MESSAGES.INIT,
-                wasm,
-                data,
-                verbosity: this.logger.verbosity,
-                isTelemetryEnabled: this.telemetry.enabled,
-            },
-            [wasm, data],
-        );
-
-        this.addEventListener('message', this.#handleMessage);
-        this.addEventListener('error', this.#handleError);
-    }
-
     #handleMessage = (event: MessageEvent<ControllerMessage>) => {
         switch (event.data.type) {
             case CONTROLLER_MESSAGES.LOG:
                 this.logger[event.data.level](...event.data.data);
 
                 return;
+            case CONTROLLER_MESSAGES.TELEMETRY:
+                if (event.data.metricName === 'currentMeanProcessTime') {
+                    this.telemetry.currentMeanProcessTime = event.data.value as number;
+
+                    return true;
+                }
+
+                this.telemetry.sendMetric(event.data.metricName, event.data.value);
+
+                return true;
             default:
         }
 
