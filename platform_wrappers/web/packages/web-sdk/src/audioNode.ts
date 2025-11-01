@@ -335,6 +335,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
 
         const { sampleRate } = super.context;
         const worker = await this.#loader.loadWorker();
+        this.#loader.preloadedWorker = undefined;
 
         if (worker instanceof LoadError) {
             return worker;
