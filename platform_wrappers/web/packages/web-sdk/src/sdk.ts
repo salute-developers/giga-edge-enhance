@@ -3,6 +3,7 @@ import { SetFeaturesFailedError, SpenchAudioNode, SpenchAudioNodeImpl } from './
 import { Features, getSettingsWithDefaults, Settings } from './utils/common';
 import createLogger, { ExternalLogger, Logger, Verbosity } from './utils/logger';
 import { createTelemetry, Telemetry, SendMetricFunction } from './utils/telemetry';
+import { LIB_VERSION } from './utils/version';
 import Loader, { LoadError } from './loader';
 
 type CreateSpenchParams = {
@@ -57,7 +58,7 @@ class SpenchSDK {
         }
 
         logger.info(
-            'SpenchSDK created.',
+            `SpenchSDK v${LIB_VERSION} created.`,
             `Logger verbosity: ${loggerVerbosity}, ${!externalLogger ? 'not ' : ''}connected with external logger.`,
             Object.keys(preloadFeatures || {}).length > 0
                 ? `Preloading features: ${JSON.stringify(preloadFeatures)}.`
