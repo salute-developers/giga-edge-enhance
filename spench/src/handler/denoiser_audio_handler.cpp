@@ -143,7 +143,8 @@ SpenchRetCode DenoiserAudioHandler::ProcessFrame(struct spench::SpenchContext<fl
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   std::unique_ptr<spench::SpenchTask> task_ptr(new spench::SpenchTask());
   task_ptr->m_data.context = ctx;
-
+  static constexpr double delay_warn_ms = 300.0;
+  static constexpr double warn_interval_ms = 30000.0;  // 30 seconds
   if (input_audio_frame.empty()) {
     enhanced_audio_frame.clear();
     return ret_code;
@@ -156,6 +157,14 @@ SpenchRetCode DenoiserAudioHandler::ProcessFrame(struct spench::SpenchContext<fl
   try {
     resampled_input_result =
           task_ptr->m_data.context->input_sound_stream_ptr->ReadChunk(input_audio_frame);
+    // --- NEW: warn on input-stream accumulated delay ---
+    double in_delay_ms = 0.0;
+    if (task_ptr->m_data.context->input_sound_stream_ptr->ShouldWarnDelay(delay_warn_ms,
+                                                                          warn_interval_ms,
+                                                                          &in_delay_ms)) {
+      spdlog::warn("Input sound_stream accumulated delay {:.2f} ms exceeds {:.0f} ms",
+                 in_delay_ms, delay_warn_ms);
+    }
     if (resampled_input_result.size() == 0) {
       spdlog::debug("Buffer accumulation for input resampling");
       ret_code = SpenchRetCode::RESAMPLING_INPUT_BUFFER_ACCUMULATION;
@@ -192,7 +201,14 @@ SpenchRetCode DenoiserAudioHandler::ProcessFrame(struct spench::SpenchContext<fl
     try {
       auto result =
             task_ptr->m_data.context->output_sound_stream_ptr->ReadChunk(task_ptr->m_data.enhanced_wav);
-
+      // --- NEW: warn on output-stream accumulated delay ---
+      double out_delay_ms = 0.0;
+      if (task_ptr->m_data.context->output_sound_stream_ptr->ShouldWarnDelay(delay_warn_ms,
+                                                                             warn_interval_ms,
+                                                                             &out_delay_ms)) {
+        spdlog::warn("Output sound_stream accumulated delay {:.2f} ms exceeds {:.0f} ms",
+                    out_delay_ms, delay_warn_ms);
+      }
       if (result.size() != 0) {
         enhanced_audio_frame.resize(0);
         std::copy(result.begin(), result.end(), back_inserter(enhanced_audio_frame));

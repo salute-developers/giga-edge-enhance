@@ -154,6 +154,7 @@ struct TestFixture {
   }
 };
 
+#ifdef BUILD_ONNX_ENGINE
 static std::vector<uint8_t> read_file(const std::filesystem::path& p) {
   std::ifstream in(p, std::ios::binary);
   if (!in)
@@ -161,6 +162,7 @@ static std::vector<uint8_t> read_file(const std::filesystem::path& p) {
   return std::vector<uint8_t>(std::istreambuf_iterator<char>(in),
                               std::istreambuf_iterator<char>());
 }
+#endif
 
 TEST_CASE("SUCCEED Convert pcm to float point [spench c++ api]") {
   std::vector<int16_t> pcm16 = {0, 32767, -32768, 2000, -5000};

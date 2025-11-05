@@ -18,16 +18,30 @@ ResampleWrapper BuildResampler(size_t in_rate, size_t out_rate, size_t channels)
     throw std::runtime_error("BuildResampler: in_rate equals out_rate.");
   }
   soxr_error_t err;
+
+  // Enable VR (variable-rate) only if 44100 Hz is involved (either side).
+  const bool use_vr = (in_rate == 44100 || out_rate == 44100);
+  soxr_quality_spec_t q_spec = soxr_quality_spec(SOXR_VHQ, use_vr ? SOXR_VR : 0x00);
+
   soxr* resampler_state = soxr_create(
       in_rate, out_rate, channels,        /* Input rate, output rate, # of channels. */
       &err,                               /* To report any error during creation. */
-      NULL, NULL, NULL);                  /* Use configuration defaults.*/
+      NULL,                               /* io spec    */
+      // pass NULL to keep library defaults when not VR
+      use_vr ? &q_spec : NULL,            /* quality    */
+      NULL);                              /* runtime    */
 
   if (err || !resampler_state) {
     throw std::runtime_error(std::string("BuildResampler: failed to create resampler: ") +
                              std::string(soxr_strerror(err)));
   }
   return ResampleWrapper(resampler_state);
+}
+
+bool SetResamplerIoRatio(const ResampleWrapper& resampler_state, double io_ratio) {
+  if (!resampler_state) return false;
+  soxr_error_t err = soxr_set_io_ratio(resampler_state.get(), io_ratio, 0.0);
+  return err == 0;
 }
 
 template <typename T>
@@ -83,39 +97,8 @@ std::vector<T> FlushVec(const ResampleWrapper& resampler_state) {
 
   err = soxr_process(resampler_state.get(), NULL, 0, NULL, resampled.data(), resampled.size(), &out_len);
   if (err) {
-    throw std::runtime_error("ResampleVec: speex internal error occured!");
+    throw std::runtime_error("ResampleVec: soxr internal error occurred!");
   }
-  if (resampled.size() != static_cast<size_t>(out_len)) {
-    resampled.resize(out_len);
-  }
-  return resampled;
-}
-
-template <typename T>
-std::vector<T> ResampleVecRT(const std::vector<T>& v, const size_t in_rate,
-                           const size_t out_rate) {
-  double ratio = 0;
-  size_t out_len = 1;
-  size_t input_len = 0;
-  std::vector<T> resampled;
-  if (in_rate < out_rate) {
-    ratio = static_cast<double>(out_rate) / static_cast<double>(in_rate);
-    resampled = std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) * ratio) + 1);
-  } else {
-    ratio = static_cast<double>(in_rate) / static_cast<double>(out_rate);
-    resampled = (in_rate % out_rate == 0) ?
-                            std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) / ratio)):
-                            std::vector<T>(static_cast<size_t>(static_cast<double>(v.size()) / ratio) + 1);
-  }
-  soxr_error_t err;
-  soxr_quality_spec_t q_spec = soxr_quality_spec(SOXR_MQ, 0x00);
-  err = soxr_oneshot(in_rate, out_rate, 1, v.data(), v.size(), &input_len,
-                     resampled.data(), resampled.size(), &out_len,
-                     NULL, &q_spec, NULL);
-  if (err) {
-    throw std::runtime_error("Error during soxr process");
-  }
-
   if (resampled.size() != static_cast<size_t>(out_len)) {
     resampled.resize(out_len);
   }
@@ -127,7 +110,5 @@ std::vector<T> ResampleVecRT(const std::vector<T>& v, const size_t in_rate,
 
 template std::vector<float> util::sound::ResampleVec(const util::sound::ResampleWrapper& resampler_state,
                                                            const std::vector<float>& v, const size_t in_rate,
-                                                           const size_t out_rate);
-template std::vector<float> util::sound::ResampleVecRT(const std::vector<float>& v, const size_t in_rate,
                                                            const size_t out_rate);
 template std::vector<float> util::sound::FlushVec(const util::sound::ResampleWrapper& resampler_state);

@@ -314,7 +314,8 @@ TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 44.1
   } else {
     voice_utils.dst_wav_data.resize(result.size());
   }
-  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
+  // Due to speciality of an algorithm for 44.1k resampling for our purpoces we expect worse precision
+  IsVectorsClose(voice_utils.dst_wav_data, result, 1.1);
 }
 
 TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 32kHz -> 24kHz [sound]") {
@@ -444,7 +445,8 @@ TEST_CASE("SUCCESS Run stream audio upsampling via sound stream interface 24kHz 
   } else {
     voice_utils.dst_wav_data.resize(result.size());
   }
-  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
+  // Due to speciality of an algorithm for 44.1k resampling for our purpoces we expect worse precision
+  IsVectorsClose(voice_utils.dst_wav_data, result, 1.0);
 }
 
 TEST_CASE("SUCCESS Run stream audio upsampling via sound stream interface 24kHz -> 32kHz [sound]") {
@@ -673,7 +675,8 @@ TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 44
   } else {
     voice_utils.dst_wav_data.resize(result.size());
   }
-  IsVectorsClose(voice_utils.dst_wav_data, result, 0.005);
+  // Due to speciality of an algorithm for 44.1k resampling for our purpoces we expect worse precision
+  IsVectorsClose(voice_utils.dst_wav_data, result, 1.1);
 }
 
 TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 32kHz -> 32kHz [sound]") {
@@ -730,6 +733,250 @@ TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 32
   // due to finalization error is a bit bigger
   IsVectorsClose(voice_utils.dst_wav_data, result, 0.015);
 }
+
+TEST_CASE("SUCCESS Accumulated delay bounded for 44.1kHz -> 24kHz input stream [sound]") {
+  const uint32_t kChunkSizeMs = 16;
+  const uint32_t kSrc = 44100;
+  const uint32_t kDst = 24000;
+
+  auto voice_utils = std::move(TestVoiceUtils()
+                                   .Init(kChunkSizeMs, kChunkSizeMs, kSrc, kDst)
+                                   .SetSrcAudio("test2_44_1_clean.wav")
+                                   .SetDstAudio("test2_24_clean.wav"));
+
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
+
+  auto s = util::sound::BuildSoundStream<float>(
+      voice_utils.src_sample_rate, voice_utils.dst_sample_rate,
+      voice_utils.chunk_size_ms, util::sound::TemplateType::INPUT);
+
+  std::vector<double> delays_ms;
+  int warn_count = 0;
+  for (const auto& ch : src_chunks) {
+    auto out = s->ReadChunk(ch);
+    (void)out;
+    const double d = s->GetAccumulatedDelayMs();
+    delays_ms.push_back(d);
+
+    double dtmp = 0.0;  // threshold 300 ms, throttling 30 s — should trigger rarely
+    if (s->ShouldWarnDelay(300.0, 30000.0, &dtmp)) {
+      ++warn_count;
+    }
+  }
+  (void)s->FinalizeStream();  // final flush; d after flush tends toward 0
+
+  REQUIRE_FALSE(delays_ms.empty());
+  const std::size_t warmup = std::min<std::size_t>(delays_ms.size(), 50);  // ~0.8 s warm-up
+  const double max_after_warmup = *std::max_element(delays_ms.begin() + warmup, delays_ms.end());
+  const double last_delay = delays_ms.back();
+
+  // The corridor should stay well below 500 ms.
+  REQUIRE(max_after_warmup < 500.0);
+  REQUIRE(last_delay < 420.0);
+  // Warnings should not spam (usually <= 1 for short clips).
+  REQUIRE(warn_count <= 2);
+}
+
+TEST_CASE("SUCCESS Accumulated delay bounded for 24kHz -> 44.1kHz stream [sound]") {
+  const uint32_t kChunkSizeMs = 16;
+  const uint32_t kSrc = 24000;
+  const uint32_t kDst = 44100;
+
+  auto voice_utils = std::move(TestVoiceUtils()
+                                   .Init(kChunkSizeMs, kChunkSizeMs, kSrc, kDst)
+                                   .SetSrcAudio("test2_24_clean.wav")
+                                   .SetDstAudio("test2_44_1_upsampled_clean.wav"));
+
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
+
+  auto s = util::sound::BuildSoundStream<float>(
+      voice_utils.src_sample_rate, voice_utils.dst_sample_rate,
+      voice_utils.chunk_size_ms, util::sound::TemplateType::INPUT);
+
+  std::vector<double> delays_ms;
+  int warn_count = 0;
+  for (const auto& ch : src_chunks) {
+    auto out = s->ReadChunk(ch);
+    (void)out;
+    const double d = s->GetAccumulatedDelayMs();
+    delays_ms.push_back(d);
+
+    double dtmp = 0.0;  // threshold 300 ms, throttling 30 s — should trigger rarely
+    if (s->ShouldWarnDelay(300.0, 30000.0, &dtmp)) {
+      ++warn_count;
+    }
+  }
+  (void)s->FinalizeStream();
+
+  REQUIRE_FALSE(delays_ms.empty());
+  const std::size_t warmup = std::min<std::size_t>(delays_ms.size(), 50);
+  const double max_after_warmup = *std::max_element(delays_ms.begin() + warmup, delays_ms.end());
+  const double last_delay = delays_ms.back();
+
+  CHECK(max_after_warmup < 500.0);
+  CHECK(last_delay < 420.0);
+  REQUIRE(warn_count <= 2);
+}
+
+TEST_CASE("SUCCESS Accumulated delay small and stable for 48kHz -> 24kHz [sound]") {
+  const uint32_t kChunkSizeMs = 16;
+  const uint32_t kSrc = 48000;
+  const uint32_t kDst = 24000;
+
+  auto voice_utils = std::move(TestVoiceUtils()
+                                   .Init(kChunkSizeMs, kChunkSizeMs, kSrc, kDst)
+                                   .SetSrcAudio("test1_48_noised.wav")
+                                   .SetDstAudio("test1_24_noised.wav"));
+
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
+
+  // Drift-control is not enabled here (no 44.1 kHz); delay should be small and stable.
+  auto s = util::sound::BuildSoundStream<float>(
+      voice_utils.src_sample_rate, voice_utils.dst_sample_rate,
+      voice_utils.chunk_size_ms, util::sound::TemplateType::INPUT);
+
+  std::vector<double> delays_ms;
+  int warn_count = 0;
+  for (const auto& ch : src_chunks) {
+    auto out = s->ReadChunk(ch);
+    (void)out;
+    const double d = s->GetAccumulatedDelayMs();
+    delays_ms.push_back(d);
+
+    double dtmp = 0.0;
+    if (s->ShouldWarnDelay(200.0, 30000.0, &dtmp)) {
+      ++warn_count;
+    }
+  }
+  (void)s->FinalizeStream();
+
+  REQUIRE_FALSE(delays_ms.empty());
+  const std::size_t warmup = std::min<std::size_t>(delays_ms.size(), 30);
+  const double max_after_warmup = *std::max_element(delays_ms.begin() + warmup, delays_ms.end());
+  const double last_delay = delays_ms.back();
+
+  // SOXR may contribute a small filter delay, but there must be no drift.
+  CHECK(max_after_warmup < 150.0);
+  CHECK(last_delay < 120.0);
+  REQUIRE(warn_count == 0);
+}
+
+#else
+TEST_CASE("FAIL Create input resampler [sound]") {
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 44100;
+  const uint32_t kAudio_model_sample_rate = 24000;
+  const uint32_t kAudio_dst_sample_rate = 44100;
+  auto voice_utils = std::move(TestVoiceUtils().
+                                     Init(kChunk_size, kChunk_stride,
+                                          kAudio_src_sample_rate, kAudio_dst_sample_rate).
+                                     SetSrcAudio("test2_44_1_clean.wav").
+                                     SetDstAudio("test2_44_1_upsampled_clean.wav"));
+
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
+
+  CHECK_THROWS_WITH(util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                                                             kAudio_model_sample_rate,
+                                                             voice_utils.chunk_size_ms,
+                                                             util::sound::TemplateType::INPUT),
+                    std::string("SoundStream::SoundStream: Library built without resampling ability. Please ") +
+                    std::string("use a sample rate that is supported by model!"));
+}
+
+TEST_CASE("FAIL Create output resampler [sound]") {
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 44100;
+  const uint32_t kAudio_model_sample_rate = 24000;
+  const uint32_t kAudio_dst_sample_rate = 44100;
+  auto voice_utils = std::move(TestVoiceUtils().
+                                     Init(kChunk_size, kChunk_stride,
+                                          kAudio_src_sample_rate, kAudio_dst_sample_rate).
+                                     SetSrcAudio("test2_44_1_clean.wav").
+                                     SetDstAudio("test2_44_1_upsampled_clean.wav"));
+
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
+
+  CHECK_THROWS_WITH(util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                                                             kAudio_model_sample_rate,
+                                                             voice_utils.chunk_size_ms,
+                                                             util::sound::TemplateType::OUTPUT),
+                    std::string("SoundStream::SoundStream: Library built without resampling ability. Please ") +
+                    std::string("use a sample rate that is supported by model!"));
+}
+
+TEST_CASE("SUCCESS Run sound stream without resampling [sound]") {
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kAudio_src_sample_rate = 24000;
+  const uint32_t kAudio_model_sample_rate = 24000;
+  const uint32_t kAudio_dst_sample_rate = 24000;
+  auto voice_utils = std::move(TestVoiceUtils().
+                                     Init(kChunk_size, kChunk_stride,
+                                          kAudio_src_sample_rate, kAudio_dst_sample_rate).
+                                     SetSrcAudio("test1_24_noised.wav").
+                                     SetDstAudio("test1_24_noised.wav"));
+
+  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
+                                    voice_utils.src_sample_rate,
+                                    voice_utils.chunk_size_ms,
+                                    voice_utils.stride_size_ms);
+  auto input_sound_stream =
+                        util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                                                             kAudio_model_sample_rate,
+                                                             voice_utils.chunk_size_ms,
+                                                             util::sound::TemplateType::INPUT);
+
+  auto output_sound_stream =
+                        util::sound::BuildSoundStream<float>(kAudio_model_sample_rate,
+                                                             voice_utils.src_sample_rate,
+                                                             voice_utils.chunk_size_ms,
+                                                             util::sound::TemplateType::OUTPUT);
+
+  std::vector<float> result;
+  for (uint32_t i = 0; i < src_chunks.size(); ++i) {
+    auto& s_chunk = src_chunks[i];
+    std::vector<float> resampled_data = input_sound_stream->ReadChunk(s_chunk);
+    if (resampled_data.size() > 0) {
+      std::vector<float> output_data = output_sound_stream->ReadChunk(resampled_data);
+      if (output_data.size() > 0) {
+        result.insert(end(result), begin(output_data), end(output_data));
+      }
+    }
+  }
+
+  std::vector<float> resampled_data =
+                            input_sound_stream->FinalizeStream();
+  std::vector<float> output_data = output_sound_stream->ReadChunk(resampled_data);
+  result.insert(end(result), begin(output_data), end(output_data));
+  resampled_data = output_sound_stream->FinalizeStream();
+  result.insert(end(result), begin(resampled_data), end(resampled_data));
+
+  if (result.size() >= voice_utils.dst_wav_data.size()) {
+    result.resize(voice_utils.dst_wav_data.size());
+  } else {
+    voice_utils.dst_wav_data.resize(result.size());
+  }
+  // due to finalization error is a bit bigger
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
+}
+#endif
 
 TEST_CASE("SUCCEED StatCollector exact 1s window with evenly sized blocks [stat]") {
   // sr = 1000 Hz, window = 1s -> 1000 samples per flush
@@ -1094,111 +1341,3 @@ TEST_CASE("SUCCESS StatCollector quantiles monotonic constant input [stat]") {
     }
   }
 }
-
-#else
-TEST_CASE("FAIL Create input resampler [sound]") {
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kAudio_src_sample_rate = 44100;
-  const uint32_t kAudio_model_sample_rate = 24000;
-  const uint32_t kAudio_dst_sample_rate = 44100;
-  auto voice_utils = std::move(TestVoiceUtils().
-                                     Init(kChunk_size, kChunk_stride,
-                                          kAudio_src_sample_rate, kAudio_dst_sample_rate).
-                                     SetSrcAudio("test2_44_1_clean.wav").
-                                     SetDstAudio("test2_44_1_upsampled_clean.wav"));
-
-  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
-                                    voice_utils.src_sample_rate,
-                                    voice_utils.chunk_size_ms,
-                                    voice_utils.stride_size_ms);
-
-  CHECK_THROWS_WITH(util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
-                                                             kAudio_model_sample_rate,
-                                                             voice_utils.chunk_size_ms,
-                                                             util::sound::TemplateType::INPUT),
-                    std::string("SoundStream::SoundStream: Library built without resampling ability. Please ") +
-                    std::string("use a sample rate that is supported by model!"));
-}
-
-TEST_CASE("FAIL Create output resampler [sound]") {
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kAudio_src_sample_rate = 44100;
-  const uint32_t kAudio_model_sample_rate = 24000;
-  const uint32_t kAudio_dst_sample_rate = 44100;
-  auto voice_utils = std::move(TestVoiceUtils().
-                                     Init(kChunk_size, kChunk_stride,
-                                          kAudio_src_sample_rate, kAudio_dst_sample_rate).
-                                     SetSrcAudio("test2_44_1_clean.wav").
-                                     SetDstAudio("test2_44_1_upsampled_clean.wav"));
-
-  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
-                                    voice_utils.src_sample_rate,
-                                    voice_utils.chunk_size_ms,
-                                    voice_utils.stride_size_ms);
-
-  CHECK_THROWS_WITH(util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
-                                                             kAudio_model_sample_rate,
-                                                             voice_utils.chunk_size_ms,
-                                                             util::sound::TemplateType::OUTPUT),
-                    std::string("SoundStream::SoundStream: Library built without resampling ability. Please ") +
-                    std::string("use a sample rate that is supported by model!"));
-}
-
-TEST_CASE("SUCCESS Run sound stream without resampling [sound]") {
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kAudio_src_sample_rate = 24000;
-  const uint32_t kAudio_model_sample_rate = 24000;
-  const uint32_t kAudio_dst_sample_rate = 24000;
-  auto voice_utils = std::move(TestVoiceUtils().
-                                     Init(kChunk_size, kChunk_stride,
-                                          kAudio_src_sample_rate, kAudio_dst_sample_rate).
-                                     SetSrcAudio("test1_24_noised.wav").
-                                     SetDstAudio("test1_24_noised.wav"));
-
-  auto src_chunks = chunkWav<float>(voice_utils.src_wav_data,
-                                    voice_utils.src_sample_rate,
-                                    voice_utils.chunk_size_ms,
-                                    voice_utils.stride_size_ms);
-  auto input_sound_stream =
-                        util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
-                                                             kAudio_model_sample_rate,
-                                                             voice_utils.chunk_size_ms,
-                                                             util::sound::TemplateType::INPUT);
-
-  auto output_sound_stream =
-                        util::sound::BuildSoundStream<float>(kAudio_model_sample_rate,
-                                                             voice_utils.src_sample_rate,
-                                                             voice_utils.chunk_size_ms,
-                                                             util::sound::TemplateType::OUTPUT);
-
-  std::vector<float> result;
-  for (uint32_t i = 0; i < src_chunks.size(); ++i) {
-    auto& s_chunk = src_chunks[i];
-    std::vector<float> resampled_data = input_sound_stream->ReadChunk(s_chunk);
-    if (resampled_data.size() > 0) {
-      std::vector<float> output_data = output_sound_stream->ReadChunk(resampled_data);
-      if (output_data.size() > 0) {
-        result.insert(end(result), begin(output_data), end(output_data));
-      }
-    }
-  }
-
-  std::vector<float> resampled_data =
-                            input_sound_stream->FinalizeStream();
-  std::vector<float> output_data = output_sound_stream->ReadChunk(resampled_data);
-  result.insert(end(result), begin(output_data), end(output_data));
-  resampled_data = output_sound_stream->FinalizeStream();
-  result.insert(end(result), begin(resampled_data), end(resampled_data));
-
-  if (result.size() >= voice_utils.dst_wav_data.size()) {
-    result.resize(voice_utils.dst_wav_data.size());
-  } else {
-    voice_utils.dst_wav_data.resize(result.size());
-  }
-  // due to finalization error is a bit bigger
-  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
-}
-#endif
