@@ -1,15 +1,13 @@
-import { downloadFileAsBuffer, retry, Settings } from '../../utils/common';
+import { downloadFileAsBuffer, ModelKey, retry, Settings } from '../../utils/common';
 import { WorkerTelemetry } from '../../utils/telemetry';
 import { ResourceUrls } from '../../utils/ipc';
 import SpenchError from '../../utils/error';
 
 export class LoadError extends SpenchError {}
 
+export class ModelNotFoundError extends SpenchError {}
+
 class Loader {
-    wasmLoadPromise: Promise<ArrayBuffer | LoadError> | undefined;
-
-    dataLoadPromise: Promise<ArrayBuffer | LoadError> | undefined;
-
     constructor(
         protected resourceUrls: ResourceUrls,
         protected telemetry: WorkerTelemetry,
@@ -17,27 +15,52 @@ class Loader {
     ) {}
 
     loadWasm(): Promise<ArrayBuffer | LoadError> {
-        return (this.wasmLoadPromise =
-            this.wasmLoadPromise || this.loadResource(this.resourceUrls.wasmUrl, 'wasmDownloadTime'));
+        return this.loadResource(this.resourceUrls.wasmUrl, 'wasmDownloadTime');
     }
 
     loadDSPWasm(): Promise<ArrayBuffer | LoadError> {
         return this.loadResource(this.resourceUrls.wasmDspUrl, 'wasmDSPDownloadTime');
     }
 
-    loadModelsData(): Promise<ArrayBuffer | LoadError> {
-        return (this.dataLoadPromise =
-            this.dataLoadPromise || this.loadResource(this.resourceUrls.dataUrl, 'modelsDataDownloadTime'));
+    async loadNoiseCancellationModel(type: ModelKey): Promise<ArrayBuffer | ModelNotFoundError | LoadError> {
+        const resource = this.resourceUrls.models?.noiseCancellation?.[type];
+
+        if (!resource) {
+            return new ModelNotFoundError(`Noise cancellation model not found for type ${type}`);
+        }
+
+        if (resource instanceof ArrayBuffer) {
+            return resource;
+        }
+
+        return this.loadResource(resource);
     }
 
-    protected loadResource(
+    async loadDereverberationModel(type: ModelKey): Promise<ArrayBuffer | ModelNotFoundError | LoadError> {
+        const resource = this.resourceUrls.models?.dereverberation?.[type];
+
+        if (!resource) {
+            return new ModelNotFoundError(`Dereverberation model not found for type ${type}`);
+        }
+
+        if (resource instanceof ArrayBuffer) {
+            return resource;
+        }
+
+        return this.loadResource(resource);
+    }
+
+    loadResource(
         url: string,
-        metricName: Parameters<WorkerTelemetry['sendMetric']>[0],
+        metricName?: Parameters<WorkerTelemetry['sendMetric']>[0],
     ): Promise<ArrayBuffer | LoadError> {
         const load = async () => {
             try {
                 const [buffer, time] = await downloadFileAsBuffer(url);
-                this.telemetry.sendMetric(metricName, time);
+
+                if (metricName) {
+                    this.telemetry.sendMetric(metricName, time);
+                }
 
                 return buffer;
             } catch (e) {

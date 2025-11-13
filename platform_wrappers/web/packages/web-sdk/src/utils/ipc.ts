@@ -1,7 +1,8 @@
+import { ErrorObject } from 'serialize-error';
+
 import { MetricNameToPayloadMap } from './telemetry';
-import { Settings, DspFeatures, Features } from './common';
+import { Settings, DspFeatures, Features, ModelsTmpl } from './common';
 import { LogLevel, Verbosity } from './logger';
-import SpenchError from './error';
 
 export type Message<N, D = unknown> = D & {
     type: N;
@@ -42,7 +43,11 @@ export const SELF_WORKER_MESSAGES = {
     DESTROY: 'destroy',
 } as const;
 
-export type ResourceUrls = { wasmUrl: string; wasmDspUrl: string; dataUrl: string };
+export type ResourceUrls = {
+    wasmUrl: string;
+    wasmDspUrl: string;
+    models: ModelsTmpl<string | ArrayBuffer> | undefined;
+};
 
 export type SelfWorkerMessage =
     | Message<
@@ -78,7 +83,7 @@ export type WorkerMessage =
               workletPort: MessagePort;
           }
       >
-    | Message<typeof WORKER_MESSAGES.SET_FEATURES, { features: Features }>
+    | Message<typeof WORKER_MESSAGES.SET_FEATURES, { features: Features<ModelsTmpl> }>
     | Message<typeof WORKER_MESSAGES.INPUT, { input: Float32Array; loopback: Float32Array }>
     | Message<typeof WORKER_MESSAGES.DESTROY>
     | Message<typeof WORKER_MESSAGES.RESET>;
@@ -87,8 +92,11 @@ export type LogMessage = Message<typeof CONTROLLER_MESSAGES.LOG, { level: LogLev
 
 export type ControllerMessage<T extends keyof MetricNameToPayloadMap = keyof MetricNameToPayloadMap> =
     | LogMessage
-    | Message<typeof CONTROLLER_MESSAGES.SET_FEATURES_RESULT, { errors: SpenchError[]; features: Partial<Features> }>
-    | Message<typeof CONTROLLER_MESSAGES.ERROR, { error: Error }>
+    | Message<
+          typeof CONTROLLER_MESSAGES.SET_FEATURES_RESULT,
+          { errors: ErrorObject[]; features: Partial<Features<ModelsTmpl>> }
+      >
+    | Message<typeof CONTROLLER_MESSAGES.ERROR, { error: ErrorObject }>
     | Message<typeof CONTROLLER_MESSAGES.TELEMETRY, { metricName: T; value: MetricNameToPayloadMap[T] }>
     | Message<typeof CONTROLLER_MESSAGES.LOW_PERFORMANCE>;
 

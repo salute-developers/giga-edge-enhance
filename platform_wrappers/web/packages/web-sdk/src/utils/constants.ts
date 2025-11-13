@@ -25,16 +25,7 @@ export const TELEMETRY_FRAME_TIME_MAX_COUNT = 300;
 
 export const SPENCH_WORKLET_NAME = 'spench-processor';
 
-// TODO serialize model and load from the SDK
-export const WASM_PATH = {
-    denoiser: {
-        full24k: 'data/config/mobile_group8_hybrid_loss_fp32.yaml',
-        lite24k: 'data/config/fast_model_int8.yaml',
-    },
-    dereverb: {
-        full48k: 'data/config/dereverb_vae_48khz_fp32.yaml',
-    },
-} as const;
+export const SPENCH_DSP_WORKLET_NAME = 'spench-dsp-processor';
 
 export const getDefaultNormalizationConfig = (sampleRate: number) => `
 sound_processing:

@@ -1,3 +1,5 @@
+import { serializeError } from 'serialize-error';
+
 import {
     TRANSPORT_SIZE_SECONDS,
     WORKLET_OUTPUT_BUFFER_SECONDS,
@@ -87,7 +89,7 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
 
             return true;
         } catch (e) {
-            this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.ERROR, error: e as Error });
+            this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.ERROR, error: serializeError(e as Error) });
 
             return false;
         }
@@ -197,7 +199,10 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
             try {
                 return fn.apply(this, args);
             } catch (e) {
-                origThis.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.ERROR, error: e as Error });
+                origThis.controllerPort.postMessage({
+                    type: CONTROLLER_MESSAGES.ERROR,
+                    error: serializeError(e as Error),
+                });
             }
         } as T;
     };

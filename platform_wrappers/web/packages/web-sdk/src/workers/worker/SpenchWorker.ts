@@ -1,5 +1,7 @@
 /* eslint-disable no-restricted-globals */
 
+import { serializeError } from 'serialize-error';
+
 import {
     WORKER_MESSAGES,
     WORKLET_MESSAGES,
@@ -13,7 +15,6 @@ import {
     ControllerMessage,
 } from '../../utils/ipc';
 import SpenchError, { assert } from '../../utils/error';
-import { SpenchDspWrapper, SpenchWrapper } from '../../utils/wrapper';
 import { getWorkerLogger, Logger } from '../../utils/logger';
 import { getWorkerTelemetry, WorkerTelemetry } from '../../utils/telemetry';
 import {
@@ -22,14 +23,14 @@ import {
     DspFeatures,
     Features,
     MainFeatures,
+    ModelsTmpl,
     Settings,
 } from '../../utils/common';
-import { SPENCH_FRAME_SIZE_SECONDS, TRANSPORT_SIZE_SECONDS, WASM_PATH } from '../../utils/constants';
+import { SPENCH_FRAME_SIZE_SECONDS, TRANSPORT_SIZE_SECONDS } from '../../utils/constants';
 import RingBuffer from '../../utils/ringBuffer';
 
 import Loader, { LoadError } from './loader';
-
-export class InternalError extends SpenchError {}
+import { InternalError, SpenchDspWrapper, SpenchWrapper } from './wrapper';
 
 interface SpenchWorkerGlobalScope extends DedicatedWorkerGlobalScope {
     onmessage: ((this: SpenchWorkerGlobalScope, event: MessageEvent<SelfWorkerMessage>) => void) | null;
@@ -107,7 +108,7 @@ export class SpenchWorker {
         shared.logger.debug('context reset');
     }
 
-    async setFeatures(features: Features): Promise<void> {
+    async setFeatures(features: Features<ModelsTmpl>): Promise<void> {
         shared.logger.debug(`Setting features: ${JSON.stringify(features)}`);
 
         const [mainResult, dspResult] = await Promise.all([
@@ -131,54 +132,48 @@ export class SpenchWorker {
 
         this.controllerPort.postMessage({
             type: CONTROLLER_MESSAGES.SET_FEATURES_RESULT,
-            errors,
+            errors: errors.map((err) => serializeError(err)),
             features: resultFeatures,
         });
     }
 
-    async setMainFeatures(features: MainFeatures): Promise<void | LoadError | InternalError> {
+    async setMainFeatures(features: MainFeatures<ModelsTmpl>): Promise<void | LoadError | InternalError> {
         if (!this.instance) {
             if (!areMainFeaturesEnabled(features)) {
                 return;
             }
+            const instance = await SpenchWrapper.create({
+                sampleRate: this.sampleRate,
+                logger: shared.logger,
+                loader: shared.loader!,
+            });
 
-            const [wasm, data] = await Promise.all([shared.loader!.loadWasm(), shared.loader!.loadModelsData()]);
-
-            if (wasm instanceof LoadError) {
-                return wasm;
+            if (instance instanceof SpenchError) {
+                return instance;
             }
 
-            if (data instanceof Error) {
-                return data;
-            }
+            this.instance = instance;
+        }
 
-            // don't need these anymore
-            shared.loader!.dataLoadPromise = undefined;
-            shared.loader!.wasmLoadPromise = undefined;
+        this.instance.clear();
 
-            try {
-                this.instance = new SpenchWrapper(wasm, data, this.sampleRate, shared.logger);
-            } catch (e) {
-                return new InternalError(e);
+        if (features.dereverberation) {
+            assert(typeof features.dereverberation === 'string', 'dereverberation model type must be specified');
+            const result = await this.instance.addDereverberator(features.dereverberation);
+
+            if (result instanceof SpenchError) {
+                return result;
             }
         }
 
-        try {
-            this.instance.clear();
+        if (features.noiseCancellation) {
+            shared.logger.debug('Setting noiseCancellation');
+            assert(typeof features.noiseCancellation === 'string', 'noise cancellation model type must be specified');
+            const result = await this.instance.addNoiseCanceller(features.noiseCancellation);
 
-            if (features.dereverberation) {
-                const model = features.dereverberation === true ? 'full48k' : features.dereverberation;
-                this.instance.addDereverberator(WASM_PATH.dereverb[model]);
+            if (result instanceof SpenchError) {
+                return result;
             }
-
-            if (features.noiseCancellation) {
-                const model = features.noiseCancellation === true ? 'full24k' : features.noiseCancellation;
-                this.instance.addDenoiser(WASM_PATH.denoiser[model]);
-            }
-        } catch (e) {
-            this.mainFeaturesEnabled = false;
-
-            return new InternalError(e);
         }
 
         this.mainFeaturesEnabled = areMainFeaturesEnabled(features);
@@ -190,37 +185,39 @@ export class SpenchWorker {
                 return;
             }
 
-            const wasm = await shared.loader!.loadDSPWasm();
+            const instance = await SpenchDspWrapper.create({
+                sampleRate: this.sampleRate,
+                logger: shared.logger,
+                loader: shared.loader!,
+            });
 
-            if (wasm instanceof Error) {
-                return wasm;
+            if (instance instanceof SpenchError) {
+                return instance;
             }
 
-            try {
-                this.dspInstance = new SpenchDspWrapper(wasm, this.sampleRate, shared.logger);
-            } catch (e) {
-                return new InternalError(e);
+            this.dspInstance = instance;
+        }
+
+        this.dspInstance.clear();
+
+        if (features.echoCancellation) {
+            const { unstable_customAECConfig: customConfig } = shared.settings!;
+
+            const result = this.dspInstance.addEchoCanceller(customConfig);
+
+            if (result instanceof SpenchError) {
+                return result;
             }
         }
 
-        try {
-            this.dspInstance.clear();
+        if (features.normalization) {
+            const { unstable_customNormalizationConfig: customConfig } = shared.settings!;
 
-            if (features.echoCancellation) {
-                const { unstable_customAECConfig: customConfig } = shared.settings!;
+            const result = this.dspInstance.addNormalizer(customConfig);
 
-                this.dspInstance.addEchoCanceller(customConfig);
+            if (result instanceof SpenchError) {
+                return result;
             }
-
-            if (features.normalization) {
-                const { unstable_customNormalizationConfig: customConfig } = shared.settings!;
-
-                this.dspInstance.addNormalizer(customConfig);
-            }
-        } catch (e) {
-            this.dspFeaturesEnabled = false;
-
-            return new InternalError(e);
         }
 
         this.dspFeaturesEnabled = areDspFeaturesEnabled(features);
@@ -234,7 +231,10 @@ export class SpenchWorker {
             try {
                 return fn.apply(this, args);
             } catch (e) {
-                origThis.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.ERROR, error: e as Error });
+                origThis.controllerPort.postMessage({
+                    type: CONTROLLER_MESSAGES.ERROR,
+                    error: serializeError(e as Error),
+                });
             }
         } as T;
     };

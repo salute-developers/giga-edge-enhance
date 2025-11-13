@@ -1,36 +1,38 @@
 import SpenchError from './utils/error';
 import { SetFeaturesFailedError, SpenchAudioNode, SpenchAudioNodeImpl } from './audioNode';
-import { Features, getSettingsWithDefaults, Settings } from './utils/common';
+import { Features, getSettingsWithDefaults, ModelsTmpl, Settings } from './utils/common';
 import createLogger, { ExternalLogger, Logger, Verbosity } from './utils/logger';
 import { createTelemetry, Telemetry, SendMetricFunction } from './utils/telemetry';
 import { LIB_VERSION } from './utils/version';
 import Loader, { LoadError } from './loader';
+import { DEFAULT_MODELS } from './utils/resources';
 
-type CreateSpenchParams = {
+type CreateSpenchParams<M extends ModelsTmpl> = {
     logger?: ExternalLogger;
     sendMetric?: SendMetricFunction;
-    preloadFeatures?: Partial<Features>;
+    preloadFeatures?: Partial<Features<M>>;
     loggerVerbosity?: Verbosity;
+    models?: M;
     settings?: Partial<Settings>;
 };
 
-class SpenchSDK {
+class SpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
     #ctx: AudioContext;
 
     #logger: Logger;
 
     #telemetry: Telemetry;
 
-    #loader: Loader;
+    #loader: Loader<M>;
 
     #settings: Settings;
 
-    protected constructor(ctx: AudioContext, logger: Logger, telemetry: Telemetry, settings: Settings) {
+    protected constructor(ctx: AudioContext, logger: Logger, telemetry: Telemetry, settings: Settings, models?: M) {
         this.#ctx = ctx;
         this.#logger = logger;
         this.#telemetry = telemetry;
         this.#settings = settings;
-        this.#loader = new Loader(ctx, logger, telemetry, settings);
+        this.#loader = new Loader(ctx, logger, telemetry, settings, models);
     }
 
     static isEnvironmentSupported(): boolean {
@@ -38,20 +40,22 @@ class SpenchSDK {
         return true;
     }
 
-    static create(
+    // eslint-disable-next-line no-shadow
+    static create<M extends ModelsTmpl = typeof DEFAULT_MODELS>(
         ctx: AudioContext,
         {
             loggerVerbosity = 'normal',
             logger: externalLogger,
             preloadFeatures,
             sendMetric,
+            models = DEFAULT_MODELS as any,
             settings: rawSettings,
-        }: CreateSpenchParams = {},
-    ): SpenchSDK {
+        }: CreateSpenchParams<M> = {},
+    ): SpenchSDK<M> {
         const logger = createLogger(loggerVerbosity, externalLogger);
         const telemetry = createTelemetry(sendMetric);
         const settings = getSettingsWithDefaults(rawSettings);
-        const instance = new SpenchSDK(ctx, logger, telemetry, settings);
+        const instance = new SpenchSDK(ctx, logger, telemetry, settings, models);
 
         if (preloadFeatures) {
             instance.#loader.preload(preloadFeatures, settings);
@@ -71,9 +75,9 @@ class SpenchSDK {
     }
 
     async createAudioNode(
-        features?: Partial<Features>,
+        features?: Partial<Features<M>>,
         rawSettings?: Partial<Settings>,
-    ): Promise<SpenchAudioNode | LoadError | SetFeaturesFailedError> {
+    ): Promise<SpenchAudioNode<M> | LoadError | SetFeaturesFailedError> {
         const settings = getSettingsWithDefaults({ ...this.#settings, ...(rawSettings || {}) });
         this.#loader.preload(features || {}, settings);
 
@@ -83,7 +87,7 @@ class SpenchSDK {
             return workletLoad;
         }
 
-        const node = new SpenchAudioNodeImpl({
+        const node = new SpenchAudioNodeImpl<M>({
             loader: this.#loader,
             ctx: this.#ctx,
             logger: this.#logger,

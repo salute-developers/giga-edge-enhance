@@ -1,20 +1,44 @@
 import SpenchError from './utils/error';
-import { downloadFileAsBuffer, retry, Features, copyArrayBuffer, Settings } from './utils/common';
+import {
+    downloadFileAsBuffer,
+    retry,
+    Features,
+    copyArrayBuffer,
+    Settings,
+    ModelsTmpl,
+    getDspFeatures,
+    getMainFeatures,
+    MainFeatures,
+    ModelKey,
+} from './utils/common';
 import { Logger } from './utils/logger';
 import { Telemetry } from './utils/telemetry';
 import SpenchWorker from './worker';
-import { dataUrl, wasmDspUrl, wasmUrl, workletDspUrl, workletUrl } from './utils/resources';
+import { WASM_DSP_URL, WASM_URL } from './utils/resources';
 
 export class LoadError extends SpenchError {}
 
-class Loader {
-    static #wasmPreloadPromise: Promise<void> | undefined;
+async function preloadResource(url: string | URL): Promise<void> {
+    const response = await fetch(url, { priority: 'low' });
 
-    static #dataPreloadPromise: Promise<void> | undefined;
+    if (!response.ok) {
+        throw new Error();
+    }
+}
 
-    static #dspWasmPreloadPromise: Promise<void> | undefined;
+const WORKLET_URL = new URL('../dist/workers/spench-worklet.min.js', import.meta.url);
+const WORKLET_DSP_URL = new URL('../dist/workers/spench-worklet-dsp.min.js', import.meta.url);
 
-    static #dspWasmLoadPromise: Promise<ArrayBuffer | LoadError> | undefined;
+class Loader<M extends ModelsTmpl> {
+    protected static wasmPreloadPromise: Promise<void> | undefined;
+
+    protected static dataPreloadPromise: Promise<void> | undefined;
+
+    protected static dspWasmPreloadPromise: Promise<void> | undefined;
+
+    protected static dspWasmLoadPromise: Promise<ArrayBuffer | LoadError> | undefined;
+
+    protected static modelsLoadPromiseMap: Map<string, Promise<void>> = new Map();
 
     preloadedWorker: SpenchWorker | LoadError | undefined;
 
@@ -23,68 +47,82 @@ class Loader {
     dspWorkletLoadPromise: Promise<void | LoadError> | undefined;
 
     constructor(
-        private ctx: AudioContext,
-        private logger: Logger,
-        private telemetry: Telemetry,
-        private settings: Settings,
+        protected ctx: AudioContext,
+        protected logger: Logger,
+        protected telemetry: Telemetry,
+        protected settings: Settings,
+        public readonly models: M | undefined,
     ) {}
 
-    static #preloadWasm(): Promise<void> {
+    protected static preloadWasm(): Promise<void> {
         const load = async () => {
             try {
-                const response = await fetch(wasmUrl, { priority: 'low' });
-
-                if (!response.ok) {
-                    throw new Error();
-                }
+                await preloadResource(WASM_URL);
             } catch {
-                Loader.#wasmPreloadPromise = undefined;
+                Loader.wasmPreloadPromise = undefined;
             }
         };
 
-        return Loader.#wasmPreloadPromise || (Loader.#wasmPreloadPromise = load());
+        return Loader.wasmPreloadPromise || (Loader.wasmPreloadPromise = load());
     }
 
-    static #preloadModelsData(): Promise<void> {
+    protected static preloadDspWasm(): Promise<void> {
         const load = async () => {
             try {
-                const response = await fetch(dataUrl, { priority: 'low' });
-
-                if (!response.ok) {
-                    throw new Error();
-                }
+                await preloadResource(WASM_DSP_URL);
             } catch {
-                Loader.#dataPreloadPromise = undefined;
+                Loader.dspWasmPreloadPromise = undefined;
             }
         };
 
-        return Loader.#dataPreloadPromise || (Loader.#dataPreloadPromise = load());
+        return Loader.dspWasmPreloadPromise || (Loader.dspWasmPreloadPromise = load());
     }
 
-    static #preloadDspWasm(): Promise<void> {
-        const load = async () => {
-            try {
-                const response = await fetch(wasmDspUrl, { priority: 'low' });
+    // eslint-disable-next-line no-shadow
+    protected static async preloadModels<M extends ModelsTmpl>(
+        features: Partial<Features<M>>,
+        models?: M,
+    ): Promise<void> {
+        if (!models) {
+            return;
+        }
 
-                if (!response.ok) {
-                    throw new Error();
+        const filteredFeatures = Object.entries(getMainFeatures(features)).filter(
+            ([, value]) => typeof value === 'string',
+        ) as [keyof MainFeatures<M>, ModelKey][];
+
+        const preloadRequests = filteredFeatures
+            .map(([feature, modelType]) => models[feature]?.[modelType])
+            .filter((value) => typeof value === 'string' || value instanceof URL)
+            .map(async (url) => {
+                const urlString = typeof url === 'string' ? url : url.href;
+
+                if (Loader.modelsLoadPromiseMap.get(urlString)) {
+                    return;
                 }
-            } catch {
-                Loader.#dspWasmPreloadPromise = undefined;
-            }
-        };
+                const req = preloadResource(url);
+                Loader.modelsLoadPromiseMap.set(urlString, req);
 
-        return Loader.#dspWasmPreloadPromise || (Loader.#dspWasmPreloadPromise = load());
+                try {
+                    await req;
+                } catch {
+                    Loader.modelsLoadPromiseMap.delete(urlString);
+                }
+
+                return req;
+            });
+
+        await Promise.all(preloadRequests);
     }
 
-    preload(features: Partial<Features>, settings: Settings): void {
+    preload(features: Partial<Features<M>>, settings: Settings = this.settings): void {
         this.loadSpenchWorklet(settings);
 
-        if (features.normalization || features.echoCancellation) {
+        if (Object.values(getDspFeatures(features)).some(Boolean)) {
             if (settings.dspOnAudioThread) {
                 this.loadDSPWasm(true);
             } else {
-                Loader.#preloadDspWasm();
+                Loader.preloadDspWasm();
             }
 
             if (!settings.dspOnAudioThread) {
@@ -92,9 +130,9 @@ class Loader {
             }
         }
 
-        if (features.noiseCancellation || features.dereverberation) {
-            Loader.#preloadWasm();
-            Loader.#preloadModelsData();
+        if (Object.values(getMainFeatures(features)).some(Boolean)) {
+            Loader.preloadWasm();
+            Loader.preloadModels(features, this.models);
             this.loadWorker(true);
         }
     }
@@ -102,19 +140,19 @@ class Loader {
     async loadDSPWasm(preload = false): Promise<ArrayBuffer | LoadError> {
         const load = async () => {
             try {
-                const [buffer, time] = await downloadFileAsBuffer(wasmDspUrl, preload);
+                const [buffer, time] = await downloadFileAsBuffer(WASM_DSP_URL, preload);
                 this.telemetry.sendMetric('wasmDSPDownloadTime', time);
 
                 return buffer;
             } catch (e) {
-                Loader.#dspWasmLoadPromise = undefined;
+                Loader.dspWasmLoadPromise = undefined;
 
                 return new LoadError(e);
             }
         };
 
         const res = await retry(
-            () => Loader.#dspWasmLoadPromise || (Loader.#dspWasmLoadPromise = load()),
+            () => Loader.dspWasmLoadPromise || (Loader.dspWasmLoadPromise = load()),
             preload ? 0 : this.settings.fetchRetries,
         );
 
@@ -133,7 +171,7 @@ class Loader {
 
         const load = () => {
             try {
-                return new SpenchWorker(this.logger, this.telemetry, this.settings);
+                return new SpenchWorker(this.logger, this.telemetry, this.settings, this.models);
             } catch (e) {
                 return new LoadError(e);
             }
@@ -156,9 +194,10 @@ class Loader {
         const load = async (): Promise<void | LoadError> => {
             try {
                 this.logger.debug('loading Spench worklet');
-                await this.ctx.audioWorklet.addModule(workletUrl);
+                await this.ctx.audioWorklet.addModule(WORKLET_URL);
             } catch (e) {
                 this.workletLoadPromise = undefined;
+                this.logger.debug(e, (e as Error).message, (e as Error).stack, (e as Error).name, WORKLET_URL);
 
                 return new LoadError(e);
             }
@@ -176,7 +215,7 @@ class Loader {
         const load = async (): Promise<void | LoadError> => {
             try {
                 this.logger.debug('loading Spench DSP worklet');
-                await this.ctx.audioWorklet.addModule(workletDspUrl);
+                await this.ctx.audioWorklet.addModule(WORKLET_DSP_URL);
             } catch (e) {
                 this.dspWorkletLoadPromise = undefined;
 

@@ -1,10 +1,12 @@
+import { serializeError } from 'serialize-error';
+
 import { SPENCH_FRAME_SIZE_SECONDS } from '../../utils/constants';
 import RingBuffer from '../../utils/ringBuffer';
 import SpenchError, { assert } from '../../utils/error';
 import { CONTROLLER_MESSAGES, WORKLET_MESSAGES, WorkletMessage } from '../../utils/ipc';
-import { SpenchDspWorkletWrapper } from '../../utils/wrapper';
 import { areDspFeaturesEnabled, DspFeatures } from '../../utils/common';
 
+import { SpenchDspWorkletWrapper } from './wrapper';
 import { SpenchBaseWorkletProcessor } from './SpenchBaseWorkletProcessor';
 
 class InternalError extends SpenchError {}
@@ -63,7 +65,7 @@ export class SpenchDspWorkletProcessor extends SpenchBaseWorkletProcessor {
 
                 this.controllerPort.postMessage({
                     type: CONTROLLER_MESSAGES.SET_FEATURES_RESULT,
-                    errors: res instanceof InternalError ? [res] : [],
+                    errors: res instanceof InternalError ? [serializeError(res)] : [],
                     features:
                         res instanceof InternalError ? { normalization: false, echoCancellation: false } : features!,
                 });

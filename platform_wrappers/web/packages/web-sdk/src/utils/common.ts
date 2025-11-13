@@ -1,15 +1,14 @@
 import { DEFAULT_FETCH_RETRIES, DEFAULT_LP_MAX_REFILL_TIMES, DEFAULT_LP_WINDOW_SECONDS } from './constants';
 
-type ModelOrigin = string;
+export type ModelKey = 'lite24k' | 'full24k' | 'lite48k' | 'full48k';
 
-export type Models = {
-    noiseCancellation: { full24k: ModelOrigin; lite24k: ModelOrigin };
-    dereverberation: { full48k: ModelOrigin };
-};
+export type ModelValue = string | URL | ArrayBuffer;
 
-export type MainFeatures = {
-    noiseCancellation: boolean | keyof Models['noiseCancellation'];
-    dereverberation: boolean | keyof Models['dereverberation'];
+export type ModelsTmpl<V = ModelValue> = Partial<Record<keyof MainFeatures<any>, Partial<Record<ModelKey, V>>>>;
+
+export type MainFeatures<M extends ModelsTmpl> = {
+    noiseCancellation: boolean | keyof M['noiseCancellation'];
+    dereverberation: boolean | keyof M['dereverberation'];
 };
 
 export type DspFeatures = {
@@ -17,7 +16,7 @@ export type DspFeatures = {
     echoCancellation: boolean;
 };
 
-export type Features = MainFeatures & DspFeatures;
+export type Features<M extends ModelsTmpl> = MainFeatures<M> & DspFeatures;
 
 export type Settings = {
     lowPerformanceWindowSeconds: number;
@@ -44,24 +43,27 @@ export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Setti
     };
 }
 
-export function areMainFeaturesEnabled(features: Partial<Features>) {
+export function areMainFeaturesEnabled<M extends ModelsTmpl>(features: Partial<MainFeatures<M>>) {
     return Object.values(getMainFeatures(features)).some(Boolean);
 }
 
-export function areDspFeaturesEnabled(features: Partial<Features>) {
+export function areDspFeaturesEnabled(features: Partial<DspFeatures>) {
     return Object.values(getDspFeatures(features)).some(Boolean);
 }
 
-export function areMainFeaturesChanged(features: Partial<Features>, newFeatures: Partial<Features>) {
+export function areMainFeaturesChanged<M extends ModelsTmpl>(
+    features: Partial<MainFeatures<M>>,
+    newFeatures: Partial<MainFeatures<M>>,
+) {
     const mainFeatures = getMainFeatures(features);
     const newMainFeatures = getMainFeatures(newFeatures);
 
-    return (Object.keys(mainFeatures) as (keyof MainFeatures)[]).some((feature) => {
+    return (Object.keys(mainFeatures) as (keyof MainFeatures<M>)[]).some((feature) => {
         return mainFeatures[feature] !== newMainFeatures[feature];
     });
 }
 
-export function areDspFeaturesChanged(features: Partial<Features>, newFeatures: Partial<Features>) {
+export function areDspFeaturesChanged(features: Partial<DspFeatures>, newFeatures: Partial<DspFeatures>) {
     const dspFeatures = getDspFeatures(features);
     const newDspFeatures = getDspFeatures(newFeatures);
 
@@ -70,16 +72,37 @@ export function areDspFeaturesChanged(features: Partial<Features>, newFeatures: 
     });
 }
 
-export function getMainFeatures(features: Partial<Features> = {}): MainFeatures {
+export function getMainFeatures<M extends ModelsTmpl>(features: Partial<MainFeatures<M>> = {}): MainFeatures<M> {
     const { noiseCancellation = false, dereverberation = false } = features;
 
     return { noiseCancellation, dereverberation };
 }
 
-export function getDspFeatures(features: Partial<Features> = {}): DspFeatures {
+export function getDspFeatures(features: Partial<DspFeatures> = {}): DspFeatures {
     const { normalization = false, echoCancellation = false } = features;
 
     return { normalization, echoCancellation };
+}
+
+const modelTypeLoadOrder = ['lite24k', 'full24k', 'lite24k', 'full48k'] as const;
+export function getDefaultNoiseCancellationModel(models: ModelsTmpl | undefined): ModelKey {
+    for (const type of modelTypeLoadOrder) {
+        if (models?.noiseCancellation?.[type]) {
+            return type;
+        }
+    }
+
+    return 'lite24k';
+}
+
+export function getDefaultDereverberationModel(models: ModelsTmpl | undefined): ModelKey {
+    for (const type of modelTypeLoadOrder) {
+        if (models?.dereverberation?.[type]) {
+            return type;
+        }
+    }
+
+    return 'lite24k';
 }
 
 export async function downloadFileAsBuffer(

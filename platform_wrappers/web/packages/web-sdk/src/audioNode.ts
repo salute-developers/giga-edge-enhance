@@ -1,3 +1,5 @@
+import { deserializeError } from 'serialize-error';
+
 import { Logger } from './utils/logger';
 import { Telemetry } from './utils/telemetry';
 import SpenchError, { assert } from './utils/error';
@@ -19,8 +21,12 @@ import {
     DspFeatures,
     areDspFeaturesChanged,
     areMainFeaturesChanged,
+    ModelsTmpl,
+    getDefaultNoiseCancellationModel,
+    getDefaultDereverberationModel,
+    getMainFeatures,
 } from './utils/common';
-import { LP_CAUSE_THRESHOLD, SPENCH_WORKLET_NAME } from './utils/constants';
+import { LP_CAUSE_THRESHOLD, SPENCH_DSP_WORKLET_NAME, SPENCH_WORKLET_NAME } from './utils/constants';
 import SpenchWorker from './worker';
 import Loader, { LoadError } from './loader';
 import Deferred from './utils/deferred';
@@ -46,42 +52,42 @@ interface SpenchAudioNodeEventMap {
 type WorkletPort = CustomPort<ControllerMessage, WorkletMessage>;
 type WorkerPort = CustomPort<ControllerMessage, WorkerMessage>;
 
-export interface SpenchAudioNode extends AudioWorkletNode {
-    setFeatures(features: Partial<Features>): Promise<void | LoadError | SetFeaturesFailedError>;
+export interface SpenchAudioNode<M extends ModelsTmpl> extends AudioWorkletNode {
+    setFeatures(features: Partial<Features<M>>): Promise<void | LoadError | SetFeaturesFailedError>;
     reset(): void;
     destroy(): void;
 
     addEventListener<K extends keyof SpenchAudioNodeEventMap>(
         type: K,
-        listener: (this: SpenchAudioNode, ev: SpenchAudioNodeEventMap[K]) => any,
+        listener: (this: SpenchAudioNode<M>, ev: SpenchAudioNodeEventMap[K]) => any,
         options?: boolean | AddEventListenerOptions,
     ): void;
 
     removeEventListener<K extends keyof SpenchAudioNodeEventMap>(
         type: K,
-        listener: (this: SpenchAudioNode, ev: SpenchAudioNodeEventMap[K]) => any,
+        listener: (this: SpenchAudioNode<M>, ev: SpenchAudioNodeEventMap[K]) => any,
         options?: boolean | EventListenerOptions,
     ): void;
 }
 
-interface SpenchAudioNodeCtorParams {
+interface SpenchAudioNodeCtorParams<M extends ModelsTmpl> {
     logger: Logger;
     ctx: AudioContext;
-    loader: Loader;
+    loader: Loader<M>;
     telemetry: Telemetry;
     settings: Settings;
 }
 
-export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudioNode {
+export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode implements SpenchAudioNode<M> {
     readonly #logger: Logger;
 
-    readonly #loader: Loader;
+    readonly #loader: Loader<M>;
 
     readonly #settings: Settings;
 
     readonly #telemetry: Telemetry;
 
-    #features: Features = {
+    #features: Features<M> = {
         normalization: false,
         echoCancellation: false,
         noiseCancellation: false,
@@ -100,8 +106,8 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
 
     #initStartTime = performance.now();
 
-    constructor({ ctx, logger, telemetry, loader, settings }: SpenchAudioNodeCtorParams) {
-        super(ctx, SPENCH_WORKLET_NAME, {
+    constructor({ ctx, logger, telemetry, loader, settings }: SpenchAudioNodeCtorParams<M>) {
+        super(ctx, settings.dspOnAudioThread ? SPENCH_DSP_WORKLET_NAME : SPENCH_WORKLET_NAME, {
             numberOfInputs: 2,
             numberOfOutputs: 1,
             outputChannelCount: [1],
@@ -115,7 +121,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         this.#init();
     }
 
-    get features(): Features {
+    get features(): Features<M> {
         return this.#features;
     }
 
@@ -123,19 +129,32 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         return super.port;
     }
 
-    async setFeatures(features: Partial<Features>): Promise<void | LoadError | SetFeaturesFailedError> {
+    async setFeatures(features: Partial<Features<M>>): Promise<void | LoadError | SetFeaturesFailedError> {
         if (this.#setFeaturesLock) {
             return this.#setFeaturesLock.then(() => this.setFeatures(features));
         }
         const { promise, resolve } = new Deferred<void>();
         this.#setFeaturesLock = promise;
+        this.#initStartTime = performance.now();
 
         const filteredFeatures = Object.fromEntries(
-            Object.entries(features).filter(([, value]) => value !== undefined),
+            Object.entries(features)
+                .filter(([, value]) => value !== undefined)
+                .map(([key, value]) => {
+                    if (key === 'noiseCancellation' && value === true) {
+                        return [key, getDefaultNoiseCancellationModel(this.#loader.models)];
+                    }
+
+                    if (key === 'dereverberation' && value === true) {
+                        return [key, getDefaultDereverberationModel(this.#loader.models)];
+                    }
+
+                    return [key, value];
+                }),
         );
         this.#logger.info('Setting Spench features:', filteredFeatures);
 
-        const mixed: Features = {
+        const mixed: Features<M> = {
             ...this.#features,
             ...filteredFeatures,
         };
@@ -147,6 +166,16 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
             }
 
             res = await this.#setDspWorkletFeatures(mixed);
+        } else if (areMainFeaturesEnabled(mixed) && areDspFeaturesEnabled(mixed) && !this.#workerPort) {
+            this.#logger.debug('Starting DSP features first to speed up loading');
+            this.#loader.preload(mixed);
+            const workletFeatures = getDspFeatures(mixed);
+
+            res = await this.#setFeatures({ ...workletFeatures, ...getMainFeatures() });
+
+            if (!(res instanceof SpenchError)) {
+                res = await this.#setFeatures(mixed);
+            }
         } else {
             res = await this.#setFeatures(mixed);
         }
@@ -184,7 +213,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         this.#workerPort?.postMessage({ type: WORKER_MESSAGES.RESET });
     }
 
-    async #setFeatures(features: Features): Promise<void | LoadError | SetFeaturesFailedError> {
+    async #setFeatures(features: Features<M>): Promise<void | LoadError | SetFeaturesFailedError> {
         const workerFeaturesEnabled = areMainFeaturesEnabled(features) || areDspFeaturesEnabled(features);
         const workerSetResult = await this.#setWorkerFeatures(features);
 
@@ -260,7 +289,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         });
     }
 
-    async #setWorkerFeatures(features: Features): Promise<void | LoadError | SetFeaturesFailedError> {
+    async #setWorkerFeatures(features: Features<M>): Promise<void | LoadError | SetFeaturesFailedError> {
         const areFeaturesChanged =
             areMainFeaturesChanged(this.#features, features) || areDspFeaturesChanged(this.#features, features);
 
@@ -275,7 +304,10 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
         }
 
         this.#logger.debug('Applying features:', features);
-        this.#workerPort!.postMessage({ type: WORKER_MESSAGES.SET_FEATURES, features });
+        this.#workerPort!.postMessage({
+            type: WORKER_MESSAGES.SET_FEATURES,
+            features: features as Features<ModelsTmpl>,
+        });
 
         return new Promise<void | LoadError | SetFeaturesFailedError>((resolve) => {
             const handler = (ev: MessageEvent<ControllerMessage>) => {
@@ -283,7 +315,8 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
                     return;
                 }
 
-                const { errors, features: resultFeatures } = ev.data;
+                const { errors: rawErrors, features: resultFeatures } = ev.data;
+                const errors = rawErrors.map((err) => deserializeError(err));
 
                 this.#features = {
                     ...this.#features,
@@ -378,7 +411,7 @@ export class SpenchAudioNodeImpl extends AudioWorkletNode implements SpenchAudio
                 return;
             case CONTROLLER_MESSAGES.ERROR:
                 const { error } = event.data;
-                this.#handleError(new SpenchError(error));
+                this.#handleError(new SpenchError(deserializeError(error)));
 
                 return;
             case CONTROLLER_MESSAGES.LOW_PERFORMANCE:

@@ -11,10 +11,36 @@ import {
 import { Logger } from './utils/logger';
 import { assert } from './utils/error';
 import { Telemetry } from './utils/telemetry';
-import { dataUrl, wasmDspUrl, wasmUrl, workerUrl } from './utils/resources';
-import { Settings } from './utils/common';
+import { WASM_DSP_URL, WASM_URL } from './utils/resources';
+import { ModelsTmpl, Settings } from './utils/common';
 
 let currentWorkerNumber = 0;
+
+function getTransferableModelRepresentation<M extends ModelsTmpl>(
+    rawModels?: M,
+): [ModelsTmpl<string | ArrayBuffer> | undefined, Transferable[]] {
+    if (!rawModels) {
+        return [undefined, []];
+    }
+    const transferable = [] as Transferable[];
+
+    const models = Object.fromEntries(
+        Object.entries(rawModels).map(([kind, modelTypeMap]) => [
+            kind,
+            Object.fromEntries(
+                Object.entries(modelTypeMap).map(([modelType, resourceValue]) => {
+                    if (resourceValue instanceof ArrayBuffer) {
+                        transferable.push(resourceValue);
+                    }
+
+                    return [modelType, resourceValue instanceof URL ? resourceValue.href : resourceValue];
+                }),
+            ),
+        ]),
+    ) as ModelsTmpl<string | ArrayBuffer>;
+
+    return [models, transferable];
+}
 
 interface ISpenchWorker extends Worker {
     onmessage: ((this: Worker, event: MessageEvent<WorkerControllerMessage>) => void) | null;
@@ -36,7 +62,9 @@ interface ISpenchWorker extends Worker {
     ): void;
 }
 
-class SpenchWorker extends Worker implements ISpenchWorker {
+const WORKER_URL = new URL('../dist/workers/spench-worker.min.js', import.meta.url);
+
+class SpenchWorker<M extends ModelsTmpl = ModelsTmpl> extends Worker implements ISpenchWorker {
     weak = true;
 
     protected clients: number = 0;
@@ -49,21 +77,26 @@ class SpenchWorker extends Worker implements ISpenchWorker {
         protected readonly logger: Logger,
         protected readonly telemetry: Telemetry,
         settings: Settings,
+        models?: M,
     ) {
-        super(workerUrl);
+        super(WORKER_URL);
+        const [transferableModels, transferable] = getTransferableModelRepresentation(models);
         const resources = {
-            wasmUrl,
-            wasmDspUrl,
-            dataUrl,
+            wasmUrl: WASM_URL.href,
+            wasmDspUrl: WASM_DSP_URL.href,
+            models: transferableModels,
         };
         logger.debug(resources);
-        this.postMessage({
-            type: SELF_WORKER_MESSAGES.INIT,
-            resources,
-            verbosity: this.logger.verbosity,
-            isTelemetryEnabled: telemetry.enabled,
-            settings,
-        });
+        this.postMessage(
+            {
+                type: SELF_WORKER_MESSAGES.INIT,
+                resources,
+                verbosity: this.logger.verbosity,
+                isTelemetryEnabled: telemetry.enabled,
+                settings,
+            },
+            transferable,
+        );
 
         this.addEventListener('message', this.#handleMessage);
         this.addEventListener('error', this.#handleError);

@@ -15,6 +15,7 @@ describe('Loader', () => {
         wasmUrl,
         wasmDspUrl,
         dataUrl,
+        models: {},
     } as const;
 
     const telemetryMock = {
@@ -56,19 +57,6 @@ describe('Loader', () => {
         expect(downloadFileAsBuffer).toHaveBeenCalledTimes(2);
         expect(downloadFileAsBuffer).toHaveBeenNthCalledWith(1, wasmDspUrl);
         expect(downloadFileAsBuffer).toHaveBeenNthCalledWith(2, wasmDspUrl);
-        expect(first).toBe(buffer);
-        expect(second).toBe(buffer);
-    });
-
-    it('loads models data and caches the promise', async () => {
-        (downloadFileAsBuffer as jest.Mock).mockResolvedValue([buffer, time]);
-
-        const first = await loader.loadModelsData();
-        const second = await loader.loadModelsData();
-
-        expect(retry).toHaveBeenCalledTimes(1);
-        expect(downloadFileAsBuffer).toHaveBeenCalledTimes(1);
-        expect(downloadFileAsBuffer).toHaveBeenCalledWith(dataUrl);
         expect(first).toBe(buffer);
         expect(second).toBe(buffer);
     });
