@@ -8,7 +8,7 @@ export const FEATURE_SWITCH_CACHE_MILLISECONDS = 60 * 1000;
 
 export const DEFAULT_LP_WINDOW_SECONDS = 1;
 
-export const DEFAULT_LP_MAX_REFILL_TIMES = 3;
+export const DEFAULT_LP_MAX_REFILL_TIMES = 4;
 
 export const DEFAULT_FETCH_RETRIES = 2;
 
@@ -18,7 +18,9 @@ export const MEAN_PROCESS_TIME_COUNT = 60;
 
 export const WORKLET_OUTPUT_BUFFER_SECONDS = 0.256;
 
-export const WORKLET_OUTPUT_BUFFER_THRESHOLD = 0.192;
+export const WORKLET_OUTPUT_BUFFER_MIN_LATENCY = 0.064;
+
+export const WORKLET_OUTPUT_BUFFER_STEP = 0.032;
 
 // Max frame time measurements in worker before submit (near 5s)
 export const TELEMETRY_FRAME_TIME_MAX_COUNT = 300;

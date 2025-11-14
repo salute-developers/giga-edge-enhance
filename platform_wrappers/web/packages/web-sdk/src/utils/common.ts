@@ -1,4 +1,10 @@
-import { DEFAULT_FETCH_RETRIES, DEFAULT_LP_MAX_REFILL_TIMES, DEFAULT_LP_WINDOW_SECONDS } from './constants';
+import {
+    DEFAULT_FETCH_RETRIES,
+    DEFAULT_LP_MAX_REFILL_TIMES,
+    DEFAULT_LP_WINDOW_SECONDS,
+    WORKLET_OUTPUT_BUFFER_MIN_LATENCY,
+    WORKLET_OUTPUT_BUFFER_STEP,
+} from './constants';
 
 export type ModelKey = 'lite24k' | 'full24k' | 'lite48k' | 'full48k';
 
@@ -21,6 +27,8 @@ export type Features<M extends ModelsTmpl> = MainFeatures<M> & DspFeatures;
 export type Settings = {
     lowPerformanceWindowSeconds: number;
     lowPerformanceMaxRefillTimes: number;
+    minLatency: number;
+    latencyIncreaseStep: number;
     dspOnAudioThread: boolean;
     fetchRetries: number;
     unstable_customNormalizationConfig?: string;
@@ -40,6 +48,11 @@ export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Setti
             typeof settings.lowPerformanceMaxRefillTimes === 'number'
                 ? settings.lowPerformanceMaxRefillTimes
                 : DEFAULT_LP_MAX_REFILL_TIMES,
+        minLatency: typeof settings.minLatency === 'number' ? settings.minLatency : WORKLET_OUTPUT_BUFFER_MIN_LATENCY,
+        latencyIncreaseStep:
+            typeof settings.latencyIncreaseStep === 'number'
+                ? settings.latencyIncreaseStep
+                : WORKLET_OUTPUT_BUFFER_STEP,
     };
 }
 

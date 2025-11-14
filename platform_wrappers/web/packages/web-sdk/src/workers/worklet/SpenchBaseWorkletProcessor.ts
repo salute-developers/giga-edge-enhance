@@ -2,8 +2,8 @@ import { serializeError } from 'serialize-error';
 
 import {
     TRANSPORT_SIZE_SECONDS,
+    WORKLET_OUTPUT_BUFFER_MIN_LATENCY,
     WORKLET_OUTPUT_BUFFER_SECONDS,
-    WORKLET_OUTPUT_BUFFER_THRESHOLD,
 } from '../../utils/constants';
 import RingBuffer from '../../utils/ringBuffer';
 import { assert } from '../../utils/error';
@@ -46,6 +46,8 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
     protected refillTimes: number[] = [];
 
     protected previouslyRendered = false;
+
+    protected currentBufferThreshold = WORKLET_OUTPUT_BUFFER_MIN_LATENCY;
 
     constructor() {
         super();
@@ -140,14 +142,13 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
     protected processOutput(outputs: Float32Array[][]): boolean {
         const [output] = outputs;
         const [outputChannel] = output;
-        const isBufferSufficientlyFilled = this.outputBuffer.size >= WORKLET_OUTPUT_BUFFER_THRESHOLD * sampleRate;
+        const isBufferSufficientlyFilled = this.outputBuffer.size >= this.currentBufferThreshold * sampleRate;
         const shouldRenderAnyway = this.outputBuffer.size >= outputChannel.length && this.previouslyRendered;
 
         if (isBufferSufficientlyFilled || shouldRenderAnyway) {
             this.outputBuffer.pull(outputChannel, 0, outputChannel.length);
             this.previouslyRendered = true;
         } else if (this.previouslyRendered) {
-            // This is frame skip and artifacts will appear
             this.handleOverflow();
 
             return false;
@@ -175,6 +176,11 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
             currentTime,
         ];
         this.previouslyRendered = false;
+        this.currentBufferThreshold = Math.min(
+            (this.refillTimes.length - 1) * this.settings.latencyIncreaseStep + this.settings.minLatency,
+            WORKLET_OUTPUT_BUFFER_SECONDS,
+        );
+        this.logger.debug(`Setting output buffer size to ${this.currentBufferThreshold} seconds`);
 
         if (this.refillTimes.length >= this.settings.lowPerformanceMaxRefillTimes) {
             this.logger.debug(
@@ -224,6 +230,7 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
                 this.logger = getWorkerLogger(this.controllerPort, verbosity, '[worklet]');
                 this.telemetry = getWorkletTelemetry(isTelemetryEnabled, this.controllerPort);
                 this.settings = settings;
+                this.currentBufferThreshold = settings.minLatency;
                 this.logger.debug('init data received');
 
                 return;
@@ -232,6 +239,7 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
 
                 this.logger.debug(`Setting worklet state, worker features enabled: ${workerFeaturesEnabled}`);
                 this.areWorkerFeaturesEnabled = workerFeaturesEnabled;
+                this.refillTimes = [];
 
                 return;
             case WORKLET_MESSAGES.WORKER_CREATED:
