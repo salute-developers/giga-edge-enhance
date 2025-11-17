@@ -5,14 +5,14 @@ import createLogger, { ExternalLogger, Logger, Verbosity } from './utils/logger'
 import { createTelemetry, Telemetry, SendMetricFunction } from './utils/telemetry';
 import { LIB_VERSION } from './utils/version';
 import Loader, { LoadError } from './loader';
-import { DEFAULT_MODELS } from './utils/resources';
+import { DEFAULT_MODELS, getDefaultModels } from './utils/resources';
 
 type CreateSpenchParams<M extends ModelsTmpl> = {
     logger?: ExternalLogger;
     sendMetric?: SendMetricFunction;
     preloadFeatures?: Partial<Features<M>>;
     loggerVerbosity?: Verbosity;
-    models?: M;
+    models?: Partial<M>;
     settings?: Partial<Settings>;
 };
 
@@ -48,11 +48,12 @@ class SpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
             logger: externalLogger,
             preloadFeatures,
             sendMetric,
-            models = DEFAULT_MODELS as any,
+            models: rawModels = DEFAULT_MODELS as any,
             settings: rawSettings,
         }: CreateSpenchParams<M> = {},
-    ): SpenchSDK<M> {
+    ): SpenchSDK<typeof DEFAULT_MODELS & M> {
         const logger = createLogger(loggerVerbosity, externalLogger);
+        const models = getDefaultModels(rawModels);
         const telemetry = createTelemetry(sendMetric);
         const settings = getSettingsWithDefaults(rawSettings);
         const instance = new SpenchSDK(ctx, logger, telemetry, settings, models);

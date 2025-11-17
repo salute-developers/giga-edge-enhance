@@ -1,3 +1,5 @@
+import { ModelsTmpl } from './common';
+
 export const WASM_URL = new URL('../../bin/spench.wasm', import.meta.url);
 export const WASM_DSP_URL = new URL('../../bin/spench.dsp.wasm', import.meta.url);
 
@@ -14,3 +16,10 @@ export const DEFAULT_MODELS = {
         full48k: DEREVERB_MODEL_URL,
     },
 } as const;
+
+export function getDefaultModels<M extends ModelsTmpl>(models: Partial<M>): typeof DEFAULT_MODELS & M {
+    return {
+        noiseCancellation: { ...DEFAULT_MODELS.noiseCancellation, ...models.noiseCancellation },
+        dereverberation: { ...DEFAULT_MODELS.dereverberation, ...models.dereverberation },
+    } as typeof DEFAULT_MODELS & M;
+}
