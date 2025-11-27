@@ -4,7 +4,6 @@ import { serializeError } from 'serialize-error';
 
 import {
     WORKER_MESSAGES,
-    WORKLET_MESSAGES,
     CONTROLLER_MESSAGES,
     SELF_WORKER_MESSAGES,
     CustomPort,
@@ -26,11 +25,11 @@ import {
     ModelsTmpl,
     Settings,
 } from '../../utils/common';
-import { SPENCH_FRAME_SIZE_SECONDS, TRANSPORT_SIZE_SECONDS } from '../../utils/constants';
-import RingBuffer from '../../utils/ringBuffer';
+import { SPENCH_FRAME_SIZE_SECONDS } from '../../utils/constants';
 
 import Loader, { LoadError } from './loader';
 import { InternalError, SpenchDspWrapper, SpenchWrapper } from './wrapper';
+import { AbstractTransport, MessageTransport, Payload } from './transport';
 
 interface SpenchWorkerGlobalScope extends DedicatedWorkerGlobalScope {
     onmessage: ((this: SpenchWorkerGlobalScope, event: MessageEvent<SelfWorkerMessage>) => void) | null;
@@ -66,11 +65,7 @@ export class SpenchWorker {
 
     protected dspInstance: SpenchDspWrapper | undefined;
 
-    protected readonly inputBuffer: RingBuffer;
-
-    protected readonly loopbackBuffer: RingBuffer;
-
-    protected readonly outputBuffer: RingBuffer;
+    protected readonly transport: AbstractTransport;
 
     protected mainFeaturesEnabled = false;
 
@@ -78,15 +73,11 @@ export class SpenchWorker {
 
     constructor(
         protected readonly controllerPort: ControllerPort,
-        protected readonly workletPort: WorkletPort,
+        workletPort: WorkletPort,
         protected readonly sampleRate: number,
     ) {
-        this.inputBuffer = new RingBuffer(Math.trunc(2 * TRANSPORT_SIZE_SECONDS * sampleRate));
-        this.loopbackBuffer = new RingBuffer(Math.trunc(2 * TRANSPORT_SIZE_SECONDS * sampleRate));
-        this.outputBuffer = new RingBuffer(Math.trunc(2 * TRANSPORT_SIZE_SECONDS * sampleRate));
-        this.workletPort.addEventListener('message', this.handleWorkletMessage);
+        this.transport = new MessageTransport(workletPort, sampleRate, SPENCH_FRAME_SIZE_SECONDS, this.handleFrame);
         this.controllerPort.addEventListener('message', this.handleControllerMessage);
-        this.workletPort.start();
         this.controllerPort.start();
     }
 
@@ -94,21 +85,20 @@ export class SpenchWorker {
         shared.telemetry.flush();
         this.instance?.destroy();
         this.dspInstance?.destroy();
-        this.workletPort.close();
+        this.transport.close();
         this.controllerPort.close();
     }
 
-    reset() {
+    protected reset() {
         this.instance?.resetContext();
         this.dspInstance?.resetContext();
-        this.inputBuffer.clear();
-        this.outputBuffer.clear();
+        this.transport.reset();
         shared.telemetry.flush();
 
         shared.logger.debug('context reset');
     }
 
-    async setFeatures(features: Features<ModelsTmpl>): Promise<void> {
+    protected async setFeatures(features: Features<ModelsTmpl>): Promise<void> {
         shared.logger.debug(`Setting features: ${JSON.stringify(features)}`);
 
         const [mainResult, dspResult] = await Promise.all([
@@ -137,7 +127,7 @@ export class SpenchWorker {
         });
     }
 
-    async setMainFeatures(features: MainFeatures<ModelsTmpl>): Promise<void | LoadError | InternalError> {
+    protected async setMainFeatures(features: MainFeatures<ModelsTmpl>): Promise<void | LoadError | InternalError> {
         if (!this.instance) {
             if (!areMainFeaturesEnabled(features)) {
                 return;
@@ -179,7 +169,7 @@ export class SpenchWorker {
         this.mainFeaturesEnabled = areMainFeaturesEnabled(features);
     }
 
-    async setDspFeatures(features: DspFeatures): Promise<void | LoadError | InternalError> {
+    protected async setDspFeatures(features: DspFeatures): Promise<void | LoadError | InternalError> {
         if (!this.dspInstance) {
             if (!areDspFeaturesEnabled(features)) {
                 return;
@@ -223,116 +213,79 @@ export class SpenchWorker {
         this.dspFeaturesEnabled = areDspFeaturesEnabled(features);
     }
 
-    withErrorHandling = <T extends (...args: any[]) => any>(fn: T): T => {
-        // eslint-disable-next-line @typescript-eslint/no-this-alias
-        const origThis = this;
+    protected process(input: Float32Array, loopback: Float32Array): void {
+        let output = input;
 
-        return function wrapped(this: ThisParameterType<T>, ...args: Parameters<T>): ReturnType<T> | void {
-            try {
-                return fn.apply(this, args);
-            } catch (e) {
-                origThis.controllerPort.postMessage({
-                    type: CONTROLLER_MESSAGES.ERROR,
-                    error: serializeError(e as Error),
-                });
-            }
-        } as T;
-    };
+        const startTime = performance.now();
 
-    process(): void {
-        const frameSize = Math.ceil(SPENCH_FRAME_SIZE_SECONDS * this.sampleRate);
+        if (this.dspFeaturesEnabled) {
+            assert(this.dspInstance, 'DSP instance must exist before processing');
+            output = this.dspInstance.process(input, loopback);
 
-        while (this.inputBuffer.size >= frameSize) {
-            const frame = new Float32Array(frameSize);
-            const lbFrame = new Float32Array(frameSize);
-            let output = frame;
-            this.inputBuffer.pull(frame, 0, frameSize);
-            this.loopbackBuffer.pull(lbFrame, 0, frameSize);
-
-            const startTime = performance.now();
-
-            if (this.dspFeaturesEnabled) {
-                assert(this.dspInstance, 'DSP instance must exist before processing');
-                output = this.dspInstance.process(frame, lbFrame);
-
-                if (!output.length) {
-                    continue;
-                }
-            }
-
-            if (this.mainFeaturesEnabled) {
-                assert(this.instance, 'Spench instance must exist before processing');
-                output = this.instance.process(output);
-
-                if (!output.length) {
-                    continue;
-                }
-            }
-
-            const elapsed = performance.now() - startTime;
-            shared.telemetry.recordFrameProcessTime(elapsed);
-            shared.telemetry.recordMeanFrameProcessTime(elapsed);
-
-            this.outputBuffer.push(output);
-            const transferChunkSize = Math.ceil(TRANSPORT_SIZE_SECONDS * this.sampleRate);
-
-            if (this.outputBuffer.size >= transferChunkSize) {
-                const chunk = new Float32Array(transferChunkSize);
-                this.outputBuffer.pull(chunk, 0, transferChunkSize);
-
-                this.workletPort.postMessage(
-                    {
-                        type: WORKLET_MESSAGES.OUTPUT,
-                        output: chunk,
-                    },
-                    [chunk.buffer],
-                );
+            if (!output.length) {
+                return;
             }
         }
+
+        if (this.mainFeaturesEnabled) {
+            assert(this.instance, 'Spench instance must exist before processing');
+            output = this.instance.process(output);
+
+            if (!output.length) {
+                return;
+            }
+        }
+
+        const elapsed = performance.now() - startTime;
+        shared.telemetry.recordFrameProcessTime(elapsed);
+        shared.telemetry.recordMeanFrameProcessTime(elapsed);
+
+        this.transport.push(output);
     }
 
-    // eslint-disable-next-line @typescript-eslint/member-ordering
-    handleWorkletMessage: Exclude<WorkletPort['onmessage'], null> = this.withErrorHandling((event) => {
-        switch (event.data.type) {
-            case WORKER_MESSAGES.INPUT:
-                const { input, loopback } = event.data;
-
-                this.inputBuffer.push(input);
-                this.loopbackBuffer.push(loopback);
-                this.process();
-
-                return;
-            default:
+    protected readonly handleFrame = ({ input, loopback }: Payload) => {
+        try {
+            this.process(input, loopback);
+        } catch (e) {
+            this.onError(e as Error);
         }
+    };
 
-        assert(false, 'Unknown message type from Worklet');
-    });
+    protected readonly handleControllerMessage = (event: MessageEvent<WorkerMessage>) => {
+        try {
+            switch (event.data.type) {
+                case WORKER_MESSAGES.SET_FEATURES:
+                    const { features } = event.data;
+                    this.setFeatures(features);
 
-    // eslint-disable-next-line @typescript-eslint/member-ordering
-    handleControllerMessage: Exclude<ControllerPort['onmessage'], null> = this.withErrorHandling((event) => {
-        switch (event.data.type) {
-            case WORKER_MESSAGES.SET_FEATURES:
-                const { features } = event.data;
-                this.setFeatures(features);
+                    return;
+                case WORKER_MESSAGES.DESTROY:
+                    this.destroy();
+                    instances.delete(this);
 
-                return;
-            case WORKER_MESSAGES.DESTROY:
-                this.destroy();
-                instances.delete(this);
+                    return;
+                case WORKER_MESSAGES.RESET:
+                    this.reset();
 
-                return;
-            case WORKER_MESSAGES.RESET:
-                this.reset();
+                    return;
+                default:
+            }
 
-                return;
-            default:
+            assert(false, 'Unknown message type from Worklet');
+        } catch (e) {
+            this.onError(e as Error);
         }
+    };
 
-        assert(false, 'Unknown message type from Worklet');
-    });
+    protected readonly onError = (e: Error) => {
+        this.controllerPort.postMessage({
+            type: CONTROLLER_MESSAGES.ERROR,
+            error: serializeError(e as Error),
+        });
+    };
 }
 
-export const handleControllerMessage: Exclude<SpenchWorkerGlobalScope['onmessage'], null> = (event) => {
+export const handleControllerMessage = (event: MessageEvent<SelfWorkerMessage>) => {
     switch (event.data.type) {
         case SELF_WORKER_MESSAGES.INIT:
             const { verbosity, isTelemetryEnabled, resources, settings: rawSettings } = event.data;

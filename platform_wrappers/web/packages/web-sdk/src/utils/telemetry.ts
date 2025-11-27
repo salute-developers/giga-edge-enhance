@@ -43,7 +43,7 @@ export type WorkerTelemetry = {
     flush(): void;
 };
 
-type WorkletTelemetry = {
+export type WorkletTelemetry = {
     enabled: boolean;
     started: boolean;
     frameReceived(): void;

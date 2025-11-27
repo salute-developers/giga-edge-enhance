@@ -12,11 +12,11 @@ import { SpenchBaseWorkletProcessor } from './SpenchBaseWorkletProcessor';
 class InternalError extends SpenchError {}
 
 export class SpenchDspWorkletProcessor extends SpenchBaseWorkletProcessor {
-    protected readonly dspInputBuffer = new RingBuffer(Math.trunc(2 * SPENCH_FRAME_SIZE_SECONDS * sampleRate));
+    protected readonly dspInputBuffer = new RingBuffer(2 * Math.ceil(SPENCH_FRAME_SIZE_SECONDS * sampleRate));
 
-    protected readonly dspLoopbackBuffer = new RingBuffer(Math.trunc(2 * SPENCH_FRAME_SIZE_SECONDS * sampleRate));
+    protected readonly dspLoopbackBuffer = new RingBuffer(2 * Math.ceil(SPENCH_FRAME_SIZE_SECONDS * sampleRate));
 
-    protected readonly dspOutputBuffer = new RingBuffer(Math.trunc(2 * SPENCH_FRAME_SIZE_SECONDS * sampleRate));
+    protected readonly dspOutputBuffer = new RingBuffer(2 * Math.ceil(SPENCH_FRAME_SIZE_SECONDS * sampleRate));
 
     protected instance: SpenchDspWorkletWrapper | undefined;
 

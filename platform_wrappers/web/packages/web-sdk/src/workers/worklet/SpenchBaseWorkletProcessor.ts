@@ -1,42 +1,24 @@
 import { serializeError } from 'serialize-error';
 
-import {
-    TRANSPORT_SIZE_SECONDS,
-    WORKLET_OUTPUT_BUFFER_MIN_LATENCY,
-    WORKLET_OUTPUT_BUFFER_SECONDS,
-} from '../../utils/constants';
-import RingBuffer from '../../utils/ringBuffer';
+import { WORKLET_OUTPUT_BUFFER_MIN_LATENCY, WORKLET_OUTPUT_BUFFER_SECONDS } from '../../utils/constants';
 import { assert } from '../../utils/error';
-import {
-    CONTROLLER_MESSAGES,
-    ControllerMessage,
-    CustomPort,
-    WORKER_MESSAGES,
-    WorkerMessage,
-    WORKLET_MESSAGES,
-    WorkletMessage,
-} from '../../utils/ipc';
+import { CONTROLLER_MESSAGES, ControllerMessage, CustomPort, WORKLET_MESSAGES, WorkletMessage } from '../../utils/ipc';
 import { getWorkerLogger } from '../../utils/logger';
 import { getWorkletTelemetry } from '../../utils/telemetry';
 import { getSettingsWithDefaults, Settings } from '../../utils/common';
 
+import { AbstractTransport, MessageTransport } from './transport';
+
 type ControllerPort = CustomPort<WorkletMessage, ControllerMessage>;
-type WorkerPort = CustomPort<WorkletMessage, WorkerMessage>;
 
 export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
-    protected readonly outputBuffer = new RingBuffer(Math.trunc(WORKLET_OUTPUT_BUFFER_SECONDS * sampleRate));
-
-    protected readonly inputBuffer = new RingBuffer(Math.trunc(2 * TRANSPORT_SIZE_SECONDS * sampleRate));
-
-    protected readonly loopbackBuffer = new RingBuffer(Math.trunc(2 * TRANSPORT_SIZE_SECONDS * sampleRate));
+    protected transport: AbstractTransport | undefined;
 
     protected logger = getWorkerLogger(this.controllerPort, 'verbose', '[worklet]');
 
     protected telemetry = getWorkletTelemetry(false, this.controllerPort);
 
     protected settings: Settings = getSettingsWithDefaults();
-
-    protected workerPort: WorkerPort | undefined;
 
     protected areWorkerFeaturesEnabled = false;
 
@@ -91,7 +73,7 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
 
             return true;
         } catch (e) {
-            this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.ERROR, error: serializeError(e as Error) });
+            this.onError(e as Error);
 
             return false;
         }
@@ -116,37 +98,21 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
     }
 
     protected processInput(inputChannel: Float32Array, loopbackChannel: Float32Array): void {
-        assert(this.workerPort, 'Worker must be ready to accept input');
+        assert(this.transport, 'transport must be initialized before using');
 
-        this.inputBuffer.push(inputChannel);
-        this.loopbackBuffer.push(loopbackChannel);
-        const transferChunkSize = Math.ceil(TRANSPORT_SIZE_SECONDS * sampleRate);
-
-        if (this.inputBuffer.size >= transferChunkSize) {
-            const input = new Float32Array(transferChunkSize);
-            const loopback = new Float32Array(transferChunkSize);
-            this.inputBuffer.pull(input, 0, transferChunkSize);
-            this.loopbackBuffer.pull(loopback, 0, transferChunkSize);
-
-            this.workerPort.postMessage(
-                {
-                    type: WORKER_MESSAGES.INPUT,
-                    input,
-                    loopback,
-                },
-                [input.buffer, loopback.buffer],
-            );
-        }
+        this.transport.push(inputChannel, loopbackChannel);
     }
 
     protected processOutput(outputs: Float32Array[][]): boolean {
+        assert(this.transport, 'transport must be initialized before using');
+
         const [output] = outputs;
         const [outputChannel] = output;
-        const isBufferSufficientlyFilled = this.outputBuffer.size >= this.currentBufferThreshold * sampleRate;
-        const shouldRenderAnyway = this.outputBuffer.size >= outputChannel.length && this.previouslyRendered;
+        const isBufferSufficientlyFilled = this.transport.outputBufferSize >= this.currentBufferThreshold * sampleRate;
+        const shouldRenderAnyway = this.transport.outputBufferSize >= outputChannel.length && this.previouslyRendered;
 
         if (isBufferSufficientlyFilled || shouldRenderAnyway) {
-            this.outputBuffer.pull(outputChannel, 0, outputChannel.length);
+            this.transport.pull(outputChannel);
             this.previouslyRendered = true;
         } else if (this.previouslyRendered) {
             this.handleOverflow();
@@ -197,94 +163,66 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
         }
     }
 
-    protected withErrorHandling = <T extends (...args: any[]) => any>(fn: T): T => {
-        // eslint-disable-next-line @typescript-eslint/no-this-alias
-        const origThis = this;
-
-        return function wrapped(this: ThisParameterType<T>, ...args: Parameters<T>): ReturnType<T> | void {
-            try {
-                return fn.apply(this, args);
-            } catch (e) {
-                origThis.controllerPort.postMessage({
-                    type: CONTROLLER_MESSAGES.ERROR,
-                    error: serializeError(e as Error),
-                });
-            }
-        } as T;
+    protected readonly onError = (e: Error) => {
+        this.controllerPort.postMessage({
+            type: CONTROLLER_MESSAGES.ERROR,
+            error: serializeError(e as Error),
+        });
     };
 
     protected handleControllerMessageDerived(_event: MessageEvent<WorkletMessage>): boolean {
         return false;
     }
 
-    // eslint-disable-next-line @typescript-eslint/member-ordering
-    protected handleControllerMessage: Exclude<ControllerPort['onmessage'], null> = this.withErrorHandling((event) => {
-        if (this.handleControllerMessageDerived(event)) {
-            return;
-        }
-
-        switch (event.data.type) {
-            case WORKLET_MESSAGES.INIT:
-                const { verbosity, isTelemetryEnabled, settings } = event.data;
-
-                this.logger = getWorkerLogger(this.controllerPort, verbosity, '[worklet]');
-                this.telemetry = getWorkletTelemetry(isTelemetryEnabled, this.controllerPort);
-                this.settings = settings;
-                this.currentBufferThreshold = settings.minLatency;
-                this.logger.debug('init data received');
-
+    protected readonly handleControllerMessage = (event: MessageEvent<WorkletMessage>) => {
+        try {
+            if (this.handleControllerMessageDerived(event)) {
                 return;
-            case WORKLET_MESSAGES.SET_FEATURES:
-                const { workerFeaturesEnabled } = event.data;
+            }
 
-                this.logger.debug(`Setting worklet state, worker features enabled: ${workerFeaturesEnabled}`);
-                this.areWorkerFeaturesEnabled = workerFeaturesEnabled;
-                this.refillTimes = [];
+            switch (event.data.type) {
+                case WORKLET_MESSAGES.INIT:
+                    const { verbosity, isTelemetryEnabled, settings } = event.data;
 
-                return;
-            case WORKLET_MESSAGES.WORKER_CREATED:
-                const { workerPort } = event.data;
-                this.workerPort = workerPort;
-                this.workerPort.addEventListener('message', this.handleWorkerMessage);
-                this.workerPort.start();
+                    this.logger = getWorkerLogger(this.controllerPort, verbosity, '[worklet]');
+                    this.telemetry = getWorkletTelemetry(isTelemetryEnabled, this.controllerPort);
+                    this.settings = settings;
+                    this.currentBufferThreshold = settings.minLatency;
+                    this.logger.debug('init data received');
 
-                return;
-            case WORKLET_MESSAGES.RESET:
-                this.reset();
-
-                return;
-            case WORKLET_MESSAGES.DESTROY:
-                this.destroy();
-
-                return;
-            default:
-        }
-
-        assert(false, 'Unknown message type from Controller');
-    });
-
-    // eslint-disable-next-line @typescript-eslint/member-ordering
-    protected handleWorkerMessage: Exclude<WorkerPort['onmessage'], null> = this.withErrorHandling((event) => {
-        switch (event.data.type) {
-            case WORKLET_MESSAGES.OUTPUT:
-                if (!this.areWorkerFeaturesEnabled) {
                     return;
-                }
+                case WORKLET_MESSAGES.SET_FEATURES:
+                    const { workerFeaturesEnabled } = event.data;
 
-                this.outputBuffer.push(event.data.output);
-                this.telemetry.frameReceived();
+                    this.logger.debug(`Setting worklet state, worker features enabled: ${workerFeaturesEnabled}`);
+                    this.areWorkerFeaturesEnabled = workerFeaturesEnabled;
+                    this.refillTimes = [];
 
-                return;
-            default:
+                    return;
+                case WORKLET_MESSAGES.WORKER_CREATED:
+                    const { workerPort } = event.data;
+                    this.transport = new MessageTransport(workerPort, this.telemetry, this.onError);
+
+                    return;
+                case WORKLET_MESSAGES.RESET:
+                    this.reset();
+
+                    return;
+                case WORKLET_MESSAGES.DESTROY:
+                    this.destroy();
+
+                    return;
+                default:
+            }
+
+            assert(false, 'Unknown message type from Controller');
+        } catch (e) {
+            this.onError(e as Error);
         }
-
-        assert(false, 'Unknown message type from Worker');
-    });
+    };
 
     protected reset() {
-        this.inputBuffer.clear();
-        this.outputBuffer.clear();
-        this.loopbackBuffer.clear();
+        this.transport?.reset();
         this.telemetry.stop(currentTime);
         this.refillTimes = [];
 
@@ -298,9 +236,7 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
         this.telemetry.stop(currentTime);
         this.controllerPort.close();
 
-        if (this.workerPort) {
-            this.workerPort.close();
-            this.workerPort = undefined;
-        }
+        this.transport?.close();
+        this.transport = undefined;
     }
 }
