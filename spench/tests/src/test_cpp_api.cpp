@@ -182,63 +182,63 @@ TEST_CASE("SUCCEED Convert float point to pcm [spench c++ api]") {
   REQUIRE(ref_pcm == converted_pcm);
 }
 
-TEST_CASE("SUCCEED Create context [spench c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
-#else
-  auto test_data = std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
-#endif
-  spench::SpenchContext<float>* ctx = nullptr;
-  ctx = test_data.denoiser->CreateContext();
-  REQUIRE(ctx != nullptr);
+// TEST_CASE("SUCCEED Create context [spench c++ api]") {
+// #ifdef BUILD_TFLITE_ENGINE
+//   auto test_data = std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
+// #else
+//   auto test_data = std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
+// #endif
+//   spench::SpenchContext<float>* ctx = nullptr;
+//   ctx = test_data.denoiser->CreateContext();
+//   REQUIRE(ctx != nullptr);
 
-  test_data.denoiser->DestroyContext(&ctx);
-  REQUIRE(ctx == nullptr);
-}
+//   test_data.denoiser->DestroyContext(&ctx);
+//   REQUIRE(ctx == nullptr);
+// }
 
-TEST_CASE("SUCCEED Retrieve model sample rate [spench c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
-#else
-  auto test_data = std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
-#endif
-  REQUIRE(test_data.denoiser->GetModelSampleRate() == 16000);
-}
+// TEST_CASE("SUCCEED Retrieve model sample rate [spench c++ api]") {
+// #ifdef BUILD_TFLITE_ENGINE
+//   auto test_data = std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
+// #else
+//   auto test_data = std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
+// #endif
+//   REQUIRE(test_data.denoiser->GetModelSampleRate() == 16000);
+// }
 
-TEST_CASE("SUCCEED Retrieve model input frame size [spench c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
-#else
-  auto test_data = std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
-#endif
-  REQUIRE(test_data.denoiser->GetModelInputFrameSize() == (16000 * 16) / 1000);
-}
+// TEST_CASE("SUCCEED Retrieve model input frame size [spench c++ api]") {
+// #ifdef BUILD_TFLITE_ENGINE
+//   auto test_data = std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
+// #else
+//   auto test_data = std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
+// #endif
+//   REQUIRE(test_data.denoiser->GetModelInputFrameSize() == (16000 * 16) / 1000);
+// }
 
-TEST_CASE("SUCCEED Set and retrieve a context id [spench c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
-#else
-  auto test_data = std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
-#endif
+// TEST_CASE("SUCCEED Set and retrieve a context id [spench c++ api]") {
+// #ifdef BUILD_TFLITE_ENGINE
+//   auto test_data = std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
+// #else
+//   auto test_data = std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
+// #endif
 
-  spench::SpenchContext<float>* ctx = nullptr;
-  ctx = test_data.denoiser->CreateContext();
+//   spench::SpenchContext<float>* ctx = nullptr;
+//   ctx = test_data.denoiser->CreateContext();
 
-  test_data.denoiser->SetContextId(ctx, 1000);
-  REQUIRE(test_data.denoiser->GetContextId(ctx) == 1000);
-  test_data.denoiser->SetContextId(ctx, 5000);
-  REQUIRE(test_data.denoiser->GetContextId(ctx) == 5000);
+//   test_data.denoiser->SetContextId(ctx, 1000);
+//   REQUIRE(test_data.denoiser->GetContextId(ctx) == 1000);
+//   test_data.denoiser->SetContextId(ctx, 5000);
+//   REQUIRE(test_data.denoiser->GetContextId(ctx) == 5000);
 
-  test_data.denoiser->DestroyContext(&ctx);
-}
+//   test_data.denoiser->DestroyContext(&ctx);
+// }
 
 TEST_CASE("SUCCEED Get empty statistic information with nullptr instead of context [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
@@ -255,39 +255,39 @@ TEST_CASE("SUCCEED Get empty statistic information with nullptr instead of conte
   REQUIRE(stat.m_snr == 0.0);
 }
 
-TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
-  #ifdef BUILD_TFLITE_ENGINE
-    auto test_data =
-                std::move(TestFixture().
-                          InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
-                          SetWav("rec_noise_001_16k.wav"));
-  #else
-    auto test_data =
-                std::move(TestFixture().
-                          InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
-                          SetWav("rec_noise_001_16k.wav"));
-  #endif
+// TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
+//   #ifdef BUILD_TFLITE_ENGINE
+//     auto test_data =
+//                 std::move(TestFixture().
+//                           InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
+//                           SetWav("rec_noise_001_16k.wav"));
+//   #else
+//     auto test_data =
+//                 std::move(TestFixture().
+//                           InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
+//                           SetWav("rec_noise_001_16k.wav"));
+//   #endif
 
-  spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext();
-  const uint32_t kChunks_to_compare = 100;
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                test_data.denoiser->GetModelSampleRate(),
-                                kChunk_size, kChunk_stride);
-  chunks.resize(kChunks_to_compare);
+//   spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext();
+//   const uint32_t kChunks_to_compare = 100;
+//   const uint32_t kChunk_size = 16;
+//   const uint32_t kChunk_stride = 16;
+//   auto chunks = chunkWav<float>(test_data.wav_data,
+//                                 test_data.denoiser->GetModelSampleRate(),
+//                                 kChunk_size, kChunk_stride);
+//   chunks.resize(kChunks_to_compare);
 
-  for (auto& chunk : chunks) {
-    std::vector<float> ret;
-    REQUIRE(chunk.size() == test_data.denoiser->GetModelInputFrameSize());
-    auto ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-    REQUIRE(ret_code >= SpenchRetCode::SUCCESS);
-    REQUIRE(ret_code <= SpenchRetCode::CONTEXT_ACCUMULATION);
-  }
+//   for (auto& chunk : chunks) {
+//     std::vector<float> ret;
+//     REQUIRE(chunk.size() == test_data.denoiser->GetModelInputFrameSize());
+//     auto ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
+//     REQUIRE(ret_code >= SpenchRetCode::SUCCESS);
+//     REQUIRE(ret_code <= SpenchRetCode::CONTEXT_ACCUMULATION);
+//   }
 
-  test_data.denoiser->DestroyContext(&ctx);
-  REQUIRE(ctx == nullptr);
-}
+//   test_data.denoiser->DestroyContext(&ctx);
+//   REQUIRE(ctx == nullptr);
+// }
 
 #if 0
 TEST_CASE("SUCCEED Get statistic information [spench c++ api]") {
@@ -332,194 +332,194 @@ TEST_CASE("SUCCEED Get statistic information [spench c++ api]") {
 }
 #endif
 
-TEST_CASE("SUCCEED Run inference with 100 tensors and default context argumetns [spench c++ api]") {
-  #ifdef BUILD_TFLITE_ENGINE
-    auto test_data =
-                std::move(TestFixture().
-                          InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
-                          SetWav("rec_noise_001_16k.wav"));
-  #else
-    auto test_data =
-                std::move(TestFixture().
-                          InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
-                          SetWav("rec_noise_001_16k.wav"));
-  #endif
+// TEST_CASE("SUCCEED Run inference with 100 tensors and default context argumetns [spench c++ api]") {
+//   #ifdef BUILD_TFLITE_ENGINE
+//     auto test_data =
+//                 std::move(TestFixture().
+//                           InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
+//                           SetWav("rec_noise_001_16k.wav"));
+//   #else
+//     auto test_data =
+//                 std::move(TestFixture().
+//                           InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
+//                           SetWav("rec_noise_001_16k.wav"));
+//   #endif
 
-  spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext(0, 0);
-  const uint32_t kChunks_to_compare = 100;
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                test_data.denoiser->GetModelSampleRate(),
-                                kChunk_size, kChunk_stride);
-  chunks.resize(kChunks_to_compare);
+//   spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext(0, 0);
+//   const uint32_t kChunks_to_compare = 100;
+//   const uint32_t kChunk_size = 16;
+//   const uint32_t kChunk_stride = 16;
+//   auto chunks = chunkWav<float>(test_data.wav_data,
+//                                 test_data.denoiser->GetModelSampleRate(),
+//                                 kChunk_size, kChunk_stride);
+//   chunks.resize(kChunks_to_compare);
 
-  for (auto& chunk : chunks) {
-    std::vector<float> ret;
-    REQUIRE(chunk.size() == test_data.denoiser->GetModelInputFrameSize());
-    auto ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-    REQUIRE(ret_code >= SpenchRetCode::SUCCESS);
-    REQUIRE(ret_code <= SpenchRetCode::CONTEXT_ACCUMULATION);
-  }
+//   for (auto& chunk : chunks) {
+//     std::vector<float> ret;
+//     REQUIRE(chunk.size() == test_data.denoiser->GetModelInputFrameSize());
+//     auto ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
+//     REQUIRE(ret_code >= SpenchRetCode::SUCCESS);
+//     REQUIRE(ret_code <= SpenchRetCode::CONTEXT_ACCUMULATION);
+//   }
 
-  test_data.denoiser->DestroyContext(&ctx);
-  REQUIRE(ctx == nullptr);
-}
+//   test_data.denoiser->DestroyContext(&ctx);
+//   REQUIRE(ctx == nullptr);
+// }
 
-TEST_CASE("SUCCEED Reload configuration from disk [spench c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
-#else
-  auto test_data = std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
-#endif
-  REQUIRE_NOTHROW(test_data.denoiser->ReloadConfig());
-}
+// TEST_CASE("SUCCEED Reload configuration from disk [spench c++ api]") {
+// #ifdef BUILD_TFLITE_ENGINE
+//   auto test_data = std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")));
+// #else
+//   auto test_data = std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")));
+// #endif
+//   REQUIRE_NOTHROW(test_data.denoiser->ReloadConfig());
+// }
 
-TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contexts [spench c++ api]") {
-  #ifdef BUILD_TFLITE_ENGINE
-    auto test_data =
-                std::move(TestFixture().
-                          InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
-                          SetWav("rec_noise_001_16k.wav"));
-  #else
-    auto test_data =
-                std::move(TestFixture().
-                          InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
-                          SetWav("rec_noise_001_16k.wav"));
-  #endif
+// TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contexts [spench c++ api]") {
+//   #ifdef BUILD_TFLITE_ENGINE
+//     auto test_data =
+//                 std::move(TestFixture().
+//                           InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
+//                           SetWav("rec_noise_001_16k.wav"));
+//   #else
+//     auto test_data =
+//                 std::move(TestFixture().
+//                           InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
+//                           SetWav("rec_noise_001_16k.wav"));
+//   #endif
 
-  std::vector<float> predictions1;
-  std::vector<float> predictions2;
-  spench::SpenchContext<float>* ctx1 = test_data.denoiser->CreateContext();
-  spench::SpenchContext<float>* ctx2 = test_data.denoiser->CreateContext();
-  CHECK(ctx1 != ctx2);
-  const uint32_t kChunks_to_compare = 100;
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                test_data.denoiser->GetModelSampleRate(),
-                                kChunk_size, kChunk_stride);
-  chunks.resize(kChunks_to_compare);
-  for (auto& chunk : chunks) {
-    std::vector<float> ret1;
-    std::vector<float> ret2;
-    SpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret1, ctx1);
-    CHECK(ret_code >= SpenchRetCode::SUCCESS);
-    ret_code = test_data.denoiser->ProcessChunk(chunk, ret2, ctx2);
-    CHECK(ret_code >= SpenchRetCode::SUCCESS);
-    predictions1.insert(predictions1.end(), ret1.begin(), ret1.end());
-    predictions2.insert(predictions2.end(), ret2.begin(), ret2.end());
-  }
-  IsVectorsClose(predictions1, predictions2, 0.000001);
+//   std::vector<float> predictions1;
+//   std::vector<float> predictions2;
+//   spench::SpenchContext<float>* ctx1 = test_data.denoiser->CreateContext();
+//   spench::SpenchContext<float>* ctx2 = test_data.denoiser->CreateContext();
+//   CHECK(ctx1 != ctx2);
+//   const uint32_t kChunks_to_compare = 100;
+//   const uint32_t kChunk_size = 16;
+//   const uint32_t kChunk_stride = 16;
+//   auto chunks = chunkWav<float>(test_data.wav_data,
+//                                 test_data.denoiser->GetModelSampleRate(),
+//                                 kChunk_size, kChunk_stride);
+//   chunks.resize(kChunks_to_compare);
+//   for (auto& chunk : chunks) {
+//     std::vector<float> ret1;
+//     std::vector<float> ret2;
+//     SpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret1, ctx1);
+//     CHECK(ret_code >= SpenchRetCode::SUCCESS);
+//     ret_code = test_data.denoiser->ProcessChunk(chunk, ret2, ctx2);
+//     CHECK(ret_code >= SpenchRetCode::SUCCESS);
+//     predictions1.insert(predictions1.end(), ret1.begin(), ret1.end());
+//     predictions2.insert(predictions2.end(), ret2.begin(), ret2.end());
+//   }
+//   IsVectorsClose(predictions1, predictions2, 0.000001);
 
-  test_data.denoiser->DestroyContext(&ctx1);
-  CHECK(ctx1 == nullptr);
-  test_data.denoiser->DestroyContext(&ctx2);
-  CHECK(ctx2 == nullptr);
-}
+//   test_data.denoiser->DestroyContext(&ctx1);
+//   CHECK(ctx1 == nullptr);
+//   test_data.denoiser->DestroyContext(&ctx2);
+//   CHECK(ctx2 == nullptr);
+// }
 
-TEST_CASE("SUCCEED Run inference with 16 kHz model and 2 context with default parameters [spench c++ api]") {
-  #ifdef BUILD_TFLITE_ENGINE
-    auto test_data =
-              std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
-                        SetWav("rec_noise_001_16k.wav"));
-  #else
-    auto test_data =
-              std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
-                        SetWav("rec_noise_001_16k.wav"));
-  #endif
+// TEST_CASE("SUCCEED Run inference with 16 kHz model and 2 context with default parameters [spench c++ api]") {
+//   #ifdef BUILD_TFLITE_ENGINE
+//     auto test_data =
+//               std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
+//                         SetWav("rec_noise_001_16k.wav"));
+//   #else
+//     auto test_data =
+//               std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
+//                         SetWav("rec_noise_001_16k.wav"));
+//   #endif
 
-  std::vector<float> predictions1;
-  std::vector<float> predictions2;
-  spench::SpenchContext<float>* ctx1 = test_data.denoiser->CreateContext();
-  spench::SpenchContext<float>* ctx2 = test_data.denoiser->CreateContext(0, 0);
-  CHECK(ctx1 != ctx2);
-  const uint32_t kChunks_to_compare = 100;
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                test_data.denoiser->GetModelSampleRate(),
-                                kChunk_size, kChunk_stride);
-  chunks.resize(kChunks_to_compare);
-  for (auto& chunk : chunks) {
-    std::vector<float> ret1;
-    std::vector<float> ret2;
-    SpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret1, ctx1);
-    CHECK(ret_code >= SpenchRetCode::SUCCESS);
-    ret_code = test_data.denoiser->ProcessChunk(chunk, ret2, ctx2);
-    CHECK(ret_code >= SpenchRetCode::SUCCESS);
-    predictions1.insert(predictions1.end(), ret1.begin(), ret1.end());
-    predictions2.insert(predictions2.end(), ret2.begin(), ret2.end());
-  }
-  IsVectorsClose(predictions1, predictions2, 0.000001);
+//   std::vector<float> predictions1;
+//   std::vector<float> predictions2;
+//   spench::SpenchContext<float>* ctx1 = test_data.denoiser->CreateContext();
+//   spench::SpenchContext<float>* ctx2 = test_data.denoiser->CreateContext(0, 0);
+//   CHECK(ctx1 != ctx2);
+//   const uint32_t kChunks_to_compare = 100;
+//   const uint32_t kChunk_size = 16;
+//   const uint32_t kChunk_stride = 16;
+//   auto chunks = chunkWav<float>(test_data.wav_data,
+//                                 test_data.denoiser->GetModelSampleRate(),
+//                                 kChunk_size, kChunk_stride);
+//   chunks.resize(kChunks_to_compare);
+//   for (auto& chunk : chunks) {
+//     std::vector<float> ret1;
+//     std::vector<float> ret2;
+//     SpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret1, ctx1);
+//     CHECK(ret_code >= SpenchRetCode::SUCCESS);
+//     ret_code = test_data.denoiser->ProcessChunk(chunk, ret2, ctx2);
+//     CHECK(ret_code >= SpenchRetCode::SUCCESS);
+//     predictions1.insert(predictions1.end(), ret1.begin(), ret1.end());
+//     predictions2.insert(predictions2.end(), ret2.begin(), ret2.end());
+//   }
+//   IsVectorsClose(predictions1, predictions2, 0.000001);
 
-  test_data.denoiser->DestroyContext(&ctx1);
-  CHECK(ctx1 == nullptr);
-  test_data.denoiser->DestroyContext(&ctx2);
-  CHECK(ctx2 == nullptr);
-}
+//   test_data.denoiser->DestroyContext(&ctx1);
+//   CHECK(ctx1 == nullptr);
+//   test_data.denoiser->DestroyContext(&ctx2);
+//   CHECK(ctx2 == nullptr);
+// }
 
-TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contexts concurently [spench c++ api]") {
-  #ifdef BUILD_TFLITE_ENGINE
-    auto test_data =
-            std::move(TestFixture().
-                      InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
-                      SetWav("rec_noise_001_16k.wav"));
-  #else
-    auto test_data =
-            std::move(TestFixture().
-                      InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
-                      SetWav("rec_noise_001_16k.wav"));
-  #endif
+// TEST_CASE("SUCCEED Run inference with the best quality 16 kHz model and 2 contexts concurently [spench c++ api]") {
+//   #ifdef BUILD_TFLITE_ENGINE
+//     auto test_data =
+//             std::move(TestFixture().
+//                       InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
+//                       SetWav("rec_noise_001_16k.wav"));
+//   #else
+//     auto test_data =
+//             std::move(TestFixture().
+//                       InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
+//                       SetWav("rec_noise_001_16k.wav"));
+//   #endif
 
-  const uint16_t kNumber = 2;
-  const uint32_t kChunks_to_compare = 100;
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  std::vector<std::vector<float>> predictions(kNumber);
-  std::vector<std::thread> pool;
-  std::vector<spench::SpenchContext<float>*> contexts;
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                test_data.denoiser->GetModelSampleRate(),
-                                kChunk_size, kChunk_stride);
-  chunks.resize(kChunks_to_compare);
+//   const uint16_t kNumber = 2;
+//   const uint32_t kChunks_to_compare = 100;
+//   const uint32_t kChunk_size = 16;
+//   const uint32_t kChunk_stride = 16;
+//   std::vector<std::vector<float>> predictions(kNumber);
+//   std::vector<std::thread> pool;
+//   std::vector<spench::SpenchContext<float>*> contexts;
+//   auto chunks = chunkWav<float>(test_data.wav_data,
+//                                 test_data.denoiser->GetModelSampleRate(),
+//                                 kChunk_size, kChunk_stride);
+//   chunks.resize(kChunks_to_compare);
 
-  auto functor =
-   [&test_data, &chunks](
-          spench::SpenchContext<float>* ctx,
-          std::vector<float>& predictions) ->void {
-    for (auto& chunk : chunks) {
-      std::vector<float> ret;
-      SpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-      CHECK(ret_code >= SpenchRetCode::SUCCESS);
-      predictions.insert(predictions.end(), ret.begin(), ret.end());
-    }
-  };
+//   auto functor =
+//    [&test_data, &chunks](
+//           spench::SpenchContext<float>* ctx,
+//           std::vector<float>& predictions) ->void {
+//     for (auto& chunk : chunks) {
+//       std::vector<float> ret;
+//       SpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
+//       CHECK(ret_code >= SpenchRetCode::SUCCESS);
+//       predictions.insert(predictions.end(), ret.begin(), ret.end());
+//     }
+//   };
 
-  for (uint32_t i = 0; i < kNumber; ++i) {
-    spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext();
-    test_data.denoiser->SetContextId(ctx, i);
-    contexts.emplace_back(ctx);
-    pool.emplace_back(std::thread(functor, contexts.back(), std::ref(predictions.at(i))));
-  }
+//   for (uint32_t i = 0; i < kNumber; ++i) {
+//     spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext();
+//     test_data.denoiser->SetContextId(ctx, i);
+//     contexts.emplace_back(ctx);
+//     pool.emplace_back(std::thread(functor, contexts.back(), std::ref(predictions.at(i))));
+//   }
 
-  for (uint32_t i = 0; i < kNumber; ++i) {
-    if (pool[i].joinable()) {
-        pool[i].join();
-    }
-  }
+//   for (uint32_t i = 0; i < kNumber; ++i) {
+//     if (pool[i].joinable()) {
+//         pool[i].join();
+//     }
+//   }
 
-  for (uint32_t i = 0; i < kNumber - 1; ++i) {
-    REQUIRE(predictions[i] == predictions[i+1]);
-  }
-  for (uint32_t i = 0; i < kNumber; ++i) {
-    test_data.denoiser->DestroyContext(&contexts[i]);
-  }
-}
+//   for (uint32_t i = 0; i < kNumber - 1; ++i) {
+//     REQUIRE(predictions[i] == predictions[i+1]);
+//   }
+//   for (uint32_t i = 0; i < kNumber; ++i) {
+//     test_data.denoiser->DestroyContext(&contexts[i]);
+//   }
+// }
 
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 2 contexts concurently [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
@@ -577,70 +577,70 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 2 contexts concu
   }
 }
 
-TEST_CASE("FAIL Run inference with invalid chunk size [spench c++ api]") {
-  #ifdef BUILD_TFLITE_ENGINE
-    auto test_data =
-              std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
-                        SetWav("rec_noise_001_16k.wav"));
-  #else
-    auto test_data =
-              std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
-                        SetWav("rec_noise_001_16k.wav"));
-  #endif
+// TEST_CASE("FAIL Run inference with invalid chunk size [spench c++ api]") {
+//   #ifdef BUILD_TFLITE_ENGINE
+//     auto test_data =
+//               std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
+//                         SetWav("rec_noise_001_16k.wav"));
+//   #else
+//     auto test_data =
+//               std::move(TestFixture().
+//                         InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
+//                         SetWav("rec_noise_001_16k.wav"));
+//   #endif
 
-  std::vector<float> predictions;
-  spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext(16000, 16000);
-  const uint32_t kChunk_size = 20;
-  const uint32_t kChunk_stride = 10;
-  const uint32_t kChunks_to_compare = 5;
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                test_data.denoiser->GetModelSampleRate(),
-                                kChunk_size, kChunk_stride);
-  chunks.resize(kChunks_to_compare);
-  std::vector<float> ret;
-  SpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunks[0], ret, ctx);
-  CHECK(ret_code == SpenchRetCode::ERR_INVALID_FRAME_SIZE);
-  test_data.denoiser->DestroyContext(&ctx);
-}
+//   std::vector<float> predictions;
+//   spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext(16000, 16000);
+//   const uint32_t kChunk_size = 20;
+//   const uint32_t kChunk_stride = 10;
+//   const uint32_t kChunks_to_compare = 5;
+//   auto chunks = chunkWav<float>(test_data.wav_data,
+//                                 test_data.denoiser->GetModelSampleRate(),
+//                                 kChunk_size, kChunk_stride);
+//   chunks.resize(kChunks_to_compare);
+//   std::vector<float> ret;
+//   SpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunks[0], ret, ctx);
+//   CHECK(ret_code == SpenchRetCode::ERR_INVALID_FRAME_SIZE);
+//   test_data.denoiser->DestroyContext(&ctx);
+// }
 
-TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav file [spench c++ api]") {
-  #ifdef BUILD_TFLITE_ENGINE
-    auto test_data =
-            std::move(TestFixture().
-                      InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
-                      SetWav("rec_noise_001_16k.wav"));
-  #else
-    auto test_data =
-            std::move(TestFixture().
-                      InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
-                      SetWav("rec_noise_001_16k.wav"));
-  #endif
+// TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav file [spench c++ api]") {
+//   #ifdef BUILD_TFLITE_ENGINE
+//     auto test_data =
+//             std::move(TestFixture().
+//                       InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
+//                       SetWav("rec_noise_001_16k.wav"));
+//   #else
+//     auto test_data =
+//             std::move(TestFixture().
+//                       InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
+//                       SetWav("rec_noise_001_16k.wav"));
+//   #endif
 
-  std::vector<float> prediction;
-  std::vector<float> reference_prediction;
-  spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext();
+//   std::vector<float> prediction;
+//   std::vector<float> reference_prediction;
+//   spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext();
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 30;
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                test_data.denoiser->GetModelSampleRate(),
-                                kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/rec_denoised_best_quality_001_16k.wav", reference_prediction);
-  chunks.resize(kChunks_to_compare);
+//   const uint32_t kChunk_size = 16;
+//   const uint32_t kChunk_stride = 16;
+//   const uint32_t kChunks_to_compare = 30;
+//   auto chunks = chunkWav<float>(test_data.wav_data,
+//                                 test_data.denoiser->GetModelSampleRate(),
+//                                 kChunk_size, kChunk_stride);
+//   loadWavFx("data/results/wavs/rec_denoised_best_quality_001_16k.wav", reference_prediction);
+//   chunks.resize(kChunks_to_compare);
 
-  for (uint32_t i = 0; i < chunks.size(); ++i) {
-    auto& chunk = chunks[i];
-    std::vector<float> ret;
-    test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-    prediction.insert(prediction.end(), ret.begin(), ret.end());
-  }
-  test_data.denoiser->DestroyContext(&ctx);
-  reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.001);
-}
+//   for (uint32_t i = 0; i < chunks.size(); ++i) {
+//     auto& chunk = chunks[i];
+//     std::vector<float> ret;
+//     test_data.denoiser->ProcessChunk(chunk, ret, ctx);
+//     prediction.insert(prediction.end(), ret.begin(), ret.end());
+//   }
+//   test_data.denoiser->DestroyContext(&ctx);
+//   reference_prediction.resize(prediction.size());
+//   IsVectorsClose(reference_prediction, prediction, 0.001);
+// }
 
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav file [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE

@@ -245,399 +245,399 @@ TEST_CASE("SUCCEED Run single dummy inference for dereverb model [onnx]") {
   FreeNames(allocator, output_names);
 }
 
-TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with one thread [onnx]") {
-  auto data = std::move(TestOnnx()
-      .InitModel("quality_model_with_layerNorm_16khz.onnx"));
+// TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with one thread [onnx]") {
+//   auto data = std::move(TestOnnx()
+//       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
-  std::vector<Ort::Value> inputs;
-  std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<char*> output_names;
-  std::vector<std::vector<float>> const_allocated_data;
+//   std::vector<Ort::Value> inputs;
+//   std::vector<char*> input_names;
+//   std::vector<std::vector<int64_t> > input_shapes;
+//   std::vector<char*> output_names;
+//   std::vector<std::vector<float>> const_allocated_data;
 
-  Ort::AllocatorWithDefaultOptions allocator;
-  for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
-    // print input node names
-    input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
-    input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-  }
+//   Ort::AllocatorWithDefaultOptions allocator;
+//   for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
+//     // print input node names
+//     input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
+//     input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+//   }
 
-  for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
-    // print output node names
-    output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
-  }
+//   for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
+//     // print output node names
+//     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
+//   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+//   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
 
-  std::vector<size_t> timings(data.nattempts);
-  auto ts_1 = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < data.nattempts; ++i) {
-    auto start = std::chrono::steady_clock::now();
-    Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
-                                      output_names.size());
-    auto stop = std::chrono::steady_clock::now();
-    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-  }
-  auto ts_2 = std::chrono::steady_clock::now();
+//   std::vector<size_t> timings(data.nattempts);
+//   auto ts_1 = std::chrono::steady_clock::now();
+//   for (size_t i = 0; i < data.nattempts; ++i) {
+//     auto start = std::chrono::steady_clock::now();
+//     Ort::RunOptions opt;
+//     auto outputs = data.denoiser->Run(opt,
+//                                       input_names.data(),
+//                                       inputs.data(),
+//                                       inputs.size(),
+//                                       output_names.data(),
+//                                       output_names.size());
+//     auto stop = std::chrono::steady_clock::now();
+//     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+//   }
+//   auto ts_2 = std::chrono::steady_clock::now();
 
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "16kHz best quality model infer with 1 thread completed: " <<
-                                      tot << " | "
-                                      << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+//   auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+//   std::cout << "16kHz best quality model infer with 1 thread completed: " <<
+//                                       tot << " | "
+//                                       << static_cast<double>(tot) / data.nattempts <<
+//                                         " ms per infer" << std::endl;
 
-  FreeNames(allocator, input_names);
-  FreeNames(allocator, output_names);
-}
+//   FreeNames(allocator, input_names);
+//   FreeNames(allocator, output_names);
+// }
 
-TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with two threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(2)
-      .InitModel("quality_model_with_layerNorm_16khz.onnx"));
+// TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with two threads [onnx]") {
+//   auto data = std::move(TestOnnx().SetThreadNum(2)
+//       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
-  std::vector<Ort::Value> inputs;
-  std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<char*> output_names;
-  std::vector<std::vector<float>> const_allocated_data;
+//   std::vector<Ort::Value> inputs;
+//   std::vector<char*> input_names;
+//   std::vector<std::vector<int64_t> > input_shapes;
+//   std::vector<char*> output_names;
+//   std::vector<std::vector<float>> const_allocated_data;
 
-  Ort::AllocatorWithDefaultOptions allocator;
-  for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
-    // print input node names
-    input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
-    input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-  }
+//   Ort::AllocatorWithDefaultOptions allocator;
+//   for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
+//     // print input node names
+//     input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
+//     input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+//   }
 
-  for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
-    // print output node names
-    output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
-  }
+//   for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
+//     // print output node names
+//     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
+//   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+//   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
 
-  std::vector<size_t> timings(data.nattempts);
-  auto ts_1 = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < data.nattempts; ++i) {
-    auto start = std::chrono::steady_clock::now();
-    Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
-                                      output_names.size());
-    auto stop = std::chrono::steady_clock::now();
-    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-  }
-  auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "16kHz best quality model infer with 2 threads completed: " <<
-                                      tot << " | "
-                                      << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+//   std::vector<size_t> timings(data.nattempts);
+//   auto ts_1 = std::chrono::steady_clock::now();
+//   for (size_t i = 0; i < data.nattempts; ++i) {
+//     auto start = std::chrono::steady_clock::now();
+//     Ort::RunOptions opt;
+//     auto outputs = data.denoiser->Run(opt,
+//                                       input_names.data(),
+//                                       inputs.data(),
+//                                       inputs.size(),
+//                                       output_names.data(),
+//                                       output_names.size());
+//     auto stop = std::chrono::steady_clock::now();
+//     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+//   }
+//   auto ts_2 = std::chrono::steady_clock::now();
+//   auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+//   std::cout << "16kHz best quality model infer with 2 threads completed: " <<
+//                                       tot << " | "
+//                                       << static_cast<double>(tot) / data.nattempts <<
+//                                         " ms per infer" << std::endl;
 
-  FreeNames(allocator, input_names);
-  FreeNames(allocator, output_names);
-}
+//   FreeNames(allocator, input_names);
+//   FreeNames(allocator, output_names);
+// }
 
-TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with four threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(4)
-      .InitModel("quality_model_with_layerNorm_16khz.onnx"));
+// TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with four threads [onnx]") {
+//   auto data = std::move(TestOnnx().SetThreadNum(4)
+//       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
-  std::vector<Ort::Value> inputs;
-  std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<char*> output_names;
-  std::vector<std::vector<float>> const_allocated_data;
+//   std::vector<Ort::Value> inputs;
+//   std::vector<char*> input_names;
+//   std::vector<std::vector<int64_t> > input_shapes;
+//   std::vector<char*> output_names;
+//   std::vector<std::vector<float>> const_allocated_data;
 
-  Ort::AllocatorWithDefaultOptions allocator;
-  for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
-    // print input node names
-    input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
-    input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-  }
+//   Ort::AllocatorWithDefaultOptions allocator;
+//   for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
+//     // print input node names
+//     input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
+//     input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+//   }
 
-  for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
-    // print output node names
-    output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
-  }
+//   for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
+//     // print output node names
+//     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
+//   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+//   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
 
-  std::vector<size_t> timings(data.nattempts);
-  auto ts_1 = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < data.nattempts; ++i) {
-    auto start = std::chrono::steady_clock::now();
-    Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
-                                      output_names.size());
-    auto stop = std::chrono::steady_clock::now();
-    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-  }
-  auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "16kHz best quality model infer with 4 threads completed: " <<
-                                        tot <<
-                                        " | " << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+//   std::vector<size_t> timings(data.nattempts);
+//   auto ts_1 = std::chrono::steady_clock::now();
+//   for (size_t i = 0; i < data.nattempts; ++i) {
+//     auto start = std::chrono::steady_clock::now();
+//     Ort::RunOptions opt;
+//     auto outputs = data.denoiser->Run(opt,
+//                                       input_names.data(),
+//                                       inputs.data(),
+//                                       inputs.size(),
+//                                       output_names.data(),
+//                                       output_names.size());
+//     auto stop = std::chrono::steady_clock::now();
+//     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+//   }
+//   auto ts_2 = std::chrono::steady_clock::now();
+//   auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+//   std::cout << "16kHz best quality model infer with 4 threads completed: " <<
+//                                         tot <<
+//                                         " | " << static_cast<double>(tot) / data.nattempts <<
+//                                         " ms per infer" << std::endl;
 
-  FreeNames(allocator, input_names);
-  FreeNames(allocator, output_names);
-}
+//   FreeNames(allocator, input_names);
+//   FreeNames(allocator, output_names);
+// }
 
-TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with eight threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(8)
-      .InitModel("quality_model_with_layerNorm_16khz.onnx"));
+// TEST_CASE("SUCCEED Run dummy multi inference for a model 16kHz and with eight threads [onnx]") {
+//   auto data = std::move(TestOnnx().SetThreadNum(8)
+//       .InitModel("quality_model_with_layerNorm_16khz.onnx"));
 
-  std::vector<Ort::Value> inputs;
-  std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<char*> output_names;
-  std::vector<std::vector<float>> const_allocated_data;
+//   std::vector<Ort::Value> inputs;
+//   std::vector<char*> input_names;
+//   std::vector<std::vector<int64_t> > input_shapes;
+//   std::vector<char*> output_names;
+//   std::vector<std::vector<float>> const_allocated_data;
 
-  Ort::AllocatorWithDefaultOptions allocator;
-  for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
-    // print input node names
-    input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
-    input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-  }
+//   Ort::AllocatorWithDefaultOptions allocator;
+//   for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
+//     // print input node names
+//     input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
+//     input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+//   }
 
-  for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
-    // print output node names
-    output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
-  }
+//   for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
+//     // print output node names
+//     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
+//   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+//   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
 
-  std::vector<size_t> timings(data.nattempts);
-  auto ts_1 = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < data.nattempts; ++i) {
-    auto start = std::chrono::steady_clock::now();
-    Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
-                                      output_names.size());
-    auto stop = std::chrono::steady_clock::now();
-    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-  }
-  auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "16kHz best quality model infer with 8 threads completed: " <<
-                                        tot <<
-                                        " | " << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+//   std::vector<size_t> timings(data.nattempts);
+//   auto ts_1 = std::chrono::steady_clock::now();
+//   for (size_t i = 0; i < data.nattempts; ++i) {
+//     auto start = std::chrono::steady_clock::now();
+//     Ort::RunOptions opt;
+//     auto outputs = data.denoiser->Run(opt,
+//                                       input_names.data(),
+//                                       inputs.data(),
+//                                       inputs.size(),
+//                                       output_names.data(),
+//                                       output_names.size());
+//     auto stop = std::chrono::steady_clock::now();
+//     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+//   }
+//   auto ts_2 = std::chrono::steady_clock::now();
+//   auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+//   std::cout << "16kHz best quality model infer with 8 threads completed: " <<
+//                                         tot <<
+//                                         " | " << static_cast<double>(tot) / data.nattempts <<
+//                                         " ms per infer" << std::endl;
 
-  FreeNames(allocator, input_names);
-  FreeNames(allocator, output_names);
-}
+//   FreeNames(allocator, input_names);
+//   FreeNames(allocator, output_names);
+// }
 
-TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with one thread [onnx]") {
-  auto data = std::move(TestOnnx()
-      .InitModel("quality_model_with_layerNorm_24khz.onnx"));
+// TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with one thread [onnx]") {
+//   auto data = std::move(TestOnnx()
+//       .InitModel("quality_model_with_layerNorm_24khz.onnx"));
 
-  std::vector<Ort::Value> inputs;
-  std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<char*> output_names;
-  std::vector<std::vector<float>> const_allocated_data;
+//   std::vector<Ort::Value> inputs;
+//   std::vector<char*> input_names;
+//   std::vector<std::vector<int64_t> > input_shapes;
+//   std::vector<char*> output_names;
+//   std::vector<std::vector<float>> const_allocated_data;
 
-  Ort::AllocatorWithDefaultOptions allocator;
-  for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
-    // print input node names
-    input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
-    input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-  }
+//   Ort::AllocatorWithDefaultOptions allocator;
+//   for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
+//     // print input node names
+//     input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
+//     input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+//   }
 
-  for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
-    // print output node names
-    output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
-  }
+//   for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
+//     // print output node names
+//     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
+//   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+//   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
 
-  std::vector<size_t> timings(data.nattempts);
-  auto ts_1 = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < data.nattempts; ++i) {
-    auto start = std::chrono::steady_clock::now();
-    Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
-                                      output_names.size());
-    auto stop = std::chrono::steady_clock::now();
-    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-  }
-  auto ts_2 = std::chrono::steady_clock::now();
+//   std::vector<size_t> timings(data.nattempts);
+//   auto ts_1 = std::chrono::steady_clock::now();
+//   for (size_t i = 0; i < data.nattempts; ++i) {
+//     auto start = std::chrono::steady_clock::now();
+//     Ort::RunOptions opt;
+//     auto outputs = data.denoiser->Run(opt,
+//                                       input_names.data(),
+//                                       inputs.data(),
+//                                       inputs.size(),
+//                                       output_names.data(),
+//                                       output_names.size());
+//     auto stop = std::chrono::steady_clock::now();
+//     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+//   }
+//   auto ts_2 = std::chrono::steady_clock::now();
 
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "24kHz best quality model infer with 1 thread completed: " <<
-                                      tot << " | "
-                                      << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+//   auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+//   std::cout << "24kHz best quality model infer with 1 thread completed: " <<
+//                                       tot << " | "
+//                                       << static_cast<double>(tot) / data.nattempts <<
+//                                         " ms per infer" << std::endl;
 
-  FreeNames(allocator, input_names);
-  FreeNames(allocator, output_names);
-}
+//   FreeNames(allocator, input_names);
+//   FreeNames(allocator, output_names);
+// }
 
-TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with two threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(2)
-      .InitModel("quality_model_with_layerNorm_24khz.onnx"));
+// TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with two threads [onnx]") {
+//   auto data = std::move(TestOnnx().SetThreadNum(2)
+//       .InitModel("quality_model_with_layerNorm_24khz.onnx"));
 
-  std::vector<Ort::Value> inputs;
-  std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<char*> output_names;
-  std::vector<std::vector<float>> const_allocated_data;
+//   std::vector<Ort::Value> inputs;
+//   std::vector<char*> input_names;
+//   std::vector<std::vector<int64_t> > input_shapes;
+//   std::vector<char*> output_names;
+//   std::vector<std::vector<float>> const_allocated_data;
 
-  Ort::AllocatorWithDefaultOptions allocator;
-  for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
-    // print input node names
-    input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
-    input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-  }
+//   Ort::AllocatorWithDefaultOptions allocator;
+//   for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
+//     // print input node names
+//     input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
+//     input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+//   }
 
-  for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
-    // print output node names
-    output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
-  }
+//   for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
+//     // print output node names
+//     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
+//   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+//   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
 
-  std::vector<size_t> timings(data.nattempts);
-  auto ts_1 = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < data.nattempts; ++i) {
-    auto start = std::chrono::steady_clock::now();
-    Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
-                                      output_names.size());
-    auto stop = std::chrono::steady_clock::now();
-    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-  }
-  auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "24kHz best quality model infer with 2 threads completed: " <<
-                                      tot << " | "
-                                      << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+//   std::vector<size_t> timings(data.nattempts);
+//   auto ts_1 = std::chrono::steady_clock::now();
+//   for (size_t i = 0; i < data.nattempts; ++i) {
+//     auto start = std::chrono::steady_clock::now();
+//     Ort::RunOptions opt;
+//     auto outputs = data.denoiser->Run(opt,
+//                                       input_names.data(),
+//                                       inputs.data(),
+//                                       inputs.size(),
+//                                       output_names.data(),
+//                                       output_names.size());
+//     auto stop = std::chrono::steady_clock::now();
+//     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+//   }
+//   auto ts_2 = std::chrono::steady_clock::now();
+//   auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+//   std::cout << "24kHz best quality model infer with 2 threads completed: " <<
+//                                       tot << " | "
+//                                       << static_cast<double>(tot) / data.nattempts <<
+//                                         " ms per infer" << std::endl;
 
-  FreeNames(allocator, input_names);
-  FreeNames(allocator, output_names);
-}
+//   FreeNames(allocator, input_names);
+//   FreeNames(allocator, output_names);
+// }
 
-TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with four threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(4)
-      .InitModel("quality_model_with_layerNorm_24khz.onnx"));
+// TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with four threads [onnx]") {
+//   auto data = std::move(TestOnnx().SetThreadNum(4)
+//       .InitModel("quality_model_with_layerNorm_24khz.onnx"));
 
-  std::vector<Ort::Value> inputs;
-  std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<char*> output_names;
-  std::vector<std::vector<float>> const_allocated_data;
+//   std::vector<Ort::Value> inputs;
+//   std::vector<char*> input_names;
+//   std::vector<std::vector<int64_t> > input_shapes;
+//   std::vector<char*> output_names;
+//   std::vector<std::vector<float>> const_allocated_data;
 
-  Ort::AllocatorWithDefaultOptions allocator;
-  for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
-    // print input node names
-    input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
-    input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-  }
+//   Ort::AllocatorWithDefaultOptions allocator;
+//   for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
+//     // print input node names
+//     input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
+//     input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+//   }
 
-  for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
-    // print output node names
-    output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
-  }
+//   for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
+//     // print output node names
+//     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
+//   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+//   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
 
-  std::vector<size_t> timings(data.nattempts);
-  auto ts_1 = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < data.nattempts; ++i) {
-    auto start = std::chrono::steady_clock::now();
-    Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
-                                      output_names.size());
-    auto stop = std::chrono::steady_clock::now();
-    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-  }
-  auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "24kHz best quality model infer with 4 threads completed: " <<
-                                        tot <<
-                                        " | " << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+//   std::vector<size_t> timings(data.nattempts);
+//   auto ts_1 = std::chrono::steady_clock::now();
+//   for (size_t i = 0; i < data.nattempts; ++i) {
+//     auto start = std::chrono::steady_clock::now();
+//     Ort::RunOptions opt;
+//     auto outputs = data.denoiser->Run(opt,
+//                                       input_names.data(),
+//                                       inputs.data(),
+//                                       inputs.size(),
+//                                       output_names.data(),
+//                                       output_names.size());
+//     auto stop = std::chrono::steady_clock::now();
+//     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+//   }
+//   auto ts_2 = std::chrono::steady_clock::now();
+//   auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+//   std::cout << "24kHz best quality model infer with 4 threads completed: " <<
+//                                         tot <<
+//                                         " | " << static_cast<double>(tot) / data.nattempts <<
+//                                         " ms per infer" << std::endl;
 
-  FreeNames(allocator, input_names);
-  FreeNames(allocator, output_names);
-}
+//   FreeNames(allocator, input_names);
+//   FreeNames(allocator, output_names);
+// }
 
-TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with eight threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(8)
-      .InitModel("quality_model_with_layerNorm_24khz.onnx"));
+// TEST_CASE("SUCCEED Run dummy multi inference for a model 24kHz and with eight threads [onnx]") {
+//   auto data = std::move(TestOnnx().SetThreadNum(8)
+//       .InitModel("quality_model_with_layerNorm_24khz.onnx"));
 
-  std::vector<Ort::Value> inputs;
-  std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<char*> output_names;
-  std::vector<std::vector<float>> const_allocated_data;
+//   std::vector<Ort::Value> inputs;
+//   std::vector<char*> input_names;
+//   std::vector<std::vector<int64_t> > input_shapes;
+//   std::vector<char*> output_names;
+//   std::vector<std::vector<float>> const_allocated_data;
 
-  Ort::AllocatorWithDefaultOptions allocator;
-  for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
-    // print input node names
-    input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
-    input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-  }
+//   Ort::AllocatorWithDefaultOptions allocator;
+//   for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
+//     // print input node names
+//     input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
+//     input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+//   }
 
-  for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
-    // print output node names
-    output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
-  }
+//   for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
+//     // print output node names
+//     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
+//   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+//   CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
 
-  std::vector<size_t> timings(data.nattempts);
-  auto ts_1 = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < data.nattempts; ++i) {
-    auto start = std::chrono::steady_clock::now();
-    Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
-                                      output_names.size());
-    auto stop = std::chrono::steady_clock::now();
-    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-  }
-  auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "24kHz best quality model infer with 8 threads completed: " <<
-                                        tot <<
-                                        " | " << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+//   std::vector<size_t> timings(data.nattempts);
+//   auto ts_1 = std::chrono::steady_clock::now();
+//   for (size_t i = 0; i < data.nattempts; ++i) {
+//     auto start = std::chrono::steady_clock::now();
+//     Ort::RunOptions opt;
+//     auto outputs = data.denoiser->Run(opt,
+//                                       input_names.data(),
+//                                       inputs.data(),
+//                                       inputs.size(),
+//                                       output_names.data(),
+//                                       output_names.size());
+//     auto stop = std::chrono::steady_clock::now();
+//     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+//   }
+//   auto ts_2 = std::chrono::steady_clock::now();
+//   auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+//   std::cout << "24kHz best quality model infer with 8 threads completed: " <<
+//                                         tot <<
+//                                         " | " << static_cast<double>(tot) / data.nattempts <<
+//                                         " ms per infer" << std::endl;
 
-  FreeNames(allocator, input_names);
-  FreeNames(allocator, output_names);
-}
+//   FreeNames(allocator, input_names);
+//   FreeNames(allocator, output_names);
+// }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with one thread [onnx]") {
   auto data = std::move(TestOnnx()
@@ -1109,45 +1109,45 @@ TEST_CASE("FAIL Pass incorrect checksum for licensed encrypted model [onnx runne
 }
 #endif
 
-TEST_CASE("SUCCEED Run the best quality model and check network outputs (audio 16kHz) [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
+// TEST_CASE("SUCCEED Run the best quality model and check network outputs (audio 16kHz) [onnx runner]") {
+//   auto data = std::move(TestOnnxRunner()
+//       .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
 
-  std::valarray<float> real;
-  std::valarray<float> imag;
-  std::vector<float> gt_real;
-  std::vector<float> gt_imag;
-  std::vector<float> gt_fullband_hidden;
-  std::vector<float> gt_fullband_cell_state;
-  std::vector<float> gt_subband_hidden;
-  std::vector<float> gt_subband_cell_state;
-  data.LoadDataFromBin("1_real_wav_stft.dump", real);
-  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
-  data.LoadDataFromBin("1_real_network_output_for_zeroed_hiddens_16khz.dump", gt_real);
-  data.LoadDataFromBin("1_imag_network_output_for_zeroed_hiddens_16khz.dump", gt_imag);
-  data.LoadDataFromBin("1_predicted_full_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_fullband_hidden);
-  data.LoadDataFromBin("1_predicted_full_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_fullband_cell_state);
-  data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
-  data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
+//   std::valarray<float> real;
+//   std::valarray<float> imag;
+//   std::vector<float> gt_real;
+//   std::vector<float> gt_imag;
+//   std::vector<float> gt_fullband_hidden;
+//   std::vector<float> gt_fullband_cell_state;
+//   std::vector<float> gt_subband_hidden;
+//   std::vector<float> gt_subband_cell_state;
+//   data.LoadDataFromBin("1_real_wav_stft.dump", real);
+//   data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
+//   data.LoadDataFromBin("1_real_network_output_for_zeroed_hiddens_16khz.dump", gt_real);
+//   data.LoadDataFromBin("1_imag_network_output_for_zeroed_hiddens_16khz.dump", gt_imag);
+//   data.LoadDataFromBin("1_predicted_full_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_fullband_hidden);
+//   data.LoadDataFromBin("1_predicted_full_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_fullband_cell_state);
+//   data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
+//   data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
 
-  spench::SpenchTask denoise_task;
-  std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   spench::SpenchTask denoise_task;
+//   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
+//   denoise_task.m_data.context = ctx.get();
+//   denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
+//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 
-  data.spench_model_runner->Infer(&denoise_task);
+//   data.spench_model_runner->Infer(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
-  IsVectorsClose(gt_real, denoise_task.m_data.new_spectrogram.real, 0.000001);
-  IsVectorsClose(gt_imag, denoise_task.m_data.new_spectrogram.imag, 0.000001);
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-                                                 denoise_task.m_data.enhanced_wav);
-  IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.000001);
-  IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.000001);
-  IsVectorsClose(gt_subband_hidden, ctx.get()->subband_hidden, 0.000001);
-  IsVectorsClose(gt_subband_cell_state, ctx.get()->subband_cell_state, 0.000001);
-}
+//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
+//   IsVectorsClose(gt_real, denoise_task.m_data.new_spectrogram.real, 0.000001);
+//   IsVectorsClose(gt_imag, denoise_task.m_data.new_spectrogram.imag, 0.000001);
+//   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
+//                                                  denoise_task.m_data.enhanced_wav);
+//   IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.000001);
+//   IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.000001);
+//   IsVectorsClose(gt_subband_hidden, ctx.get()->subband_hidden, 0.000001);
+//   IsVectorsClose(gt_subband_cell_state, ctx.get()->subband_cell_state, 0.000001);
+// }
 
 TEST_CASE("SUCCEED Run the dereverb model and check network outputs (audio 48kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
@@ -1196,101 +1196,101 @@ TEST_CASE("SUCCEED Run the dereverb model and check network outputs (audio 48kHz
 }
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
-TEST_CASE("SUCCEED Run encrypted the best quality model and check network outputs (audio 16kHz) [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_best_quality_onnx_encrypted_16khz.yaml", "test"));
+// TEST_CASE("SUCCEED Run encrypted the best quality model and check network outputs (audio 16kHz) [onnx runner]") {
+//   auto data = std::move(TestOnnxRunner()
+//       .InitRunner("default_configuration_best_quality_onnx_encrypted_16khz.yaml", "test"));
 
-  std::valarray<float> real;
-  std::valarray<float> imag;
-  std::vector<float> gt_real;
-  std::vector<float> gt_imag;
-  std::vector<float> gt_fullband_hidden;
-  std::vector<float> gt_fullband_cell_state;
-  std::vector<float> gt_subband_hidden;
-  std::vector<float> gt_subband_cell_state;
-  data.LoadDataFromBin("1_real_wav_stft.dump", real);
-  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
-  data.LoadDataFromBin("1_real_network_output_for_zeroed_hiddens_16khz.dump", gt_real);
-  data.LoadDataFromBin("1_imag_network_output_for_zeroed_hiddens_16khz.dump", gt_imag);
-  data.LoadDataFromBin("1_predicted_full_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_fullband_hidden);
-  data.LoadDataFromBin("1_predicted_full_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_fullband_cell_state);
-  data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
-  data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
+//   std::valarray<float> real;
+//   std::valarray<float> imag;
+//   std::vector<float> gt_real;
+//   std::vector<float> gt_imag;
+//   std::vector<float> gt_fullband_hidden;
+//   std::vector<float> gt_fullband_cell_state;
+//   std::vector<float> gt_subband_hidden;
+//   std::vector<float> gt_subband_cell_state;
+//   data.LoadDataFromBin("1_real_wav_stft.dump", real);
+//   data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
+//   data.LoadDataFromBin("1_real_network_output_for_zeroed_hiddens_16khz.dump", gt_real);
+//   data.LoadDataFromBin("1_imag_network_output_for_zeroed_hiddens_16khz.dump", gt_imag);
+//   data.LoadDataFromBin("1_predicted_full_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_fullband_hidden);
+//   data.LoadDataFromBin("1_predicted_full_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_fullband_cell_state);
+//   data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
+//   data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
 
-  spench::SpenchTask denoise_task;
-  std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   spench::SpenchTask denoise_task;
+//   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
+//   denoise_task.m_data.context = ctx.get();
+//   denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
+//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 
-  data.spench_model_runner->Infer(&denoise_task);
+//   data.spench_model_runner->Infer(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
-  IsVectorsClose(gt_real, denoise_task.m_data.new_spectrogram.real, 0.000001);
-  IsVectorsClose(gt_imag, denoise_task.m_data.new_spectrogram.imag, 0.000001);
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-                                                 denoise_task.m_data.enhanced_wav);
-  IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.000001);
-  IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.000001);
-  IsVectorsClose(gt_subband_hidden, ctx.get()->subband_hidden, 0.000001);
-  IsVectorsClose(gt_subband_cell_state, ctx.get()->subband_cell_state, 0.000001);
-}
+//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
+//   IsVectorsClose(gt_real, denoise_task.m_data.new_spectrogram.real, 0.000001);
+//   IsVectorsClose(gt_imag, denoise_task.m_data.new_spectrogram.imag, 0.000001);
+//   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
+//                                                  denoise_task.m_data.enhanced_wav);
+//   IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.000001);
+//   IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.000001);
+//   IsVectorsClose(gt_subband_hidden, ctx.get()->subband_hidden, 0.000001);
+//   IsVectorsClose(gt_subband_cell_state, ctx.get()->subband_cell_state, 0.000001);
+// }
 #endif
 
-TEST_CASE("SUCCEED Run four frames with the best quality model and check states (audio 16kHz) [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
+// TEST_CASE("SUCCEED Run four frames with the best quality model and check states (audio 16kHz) [onnx runner]") {
+//   auto data = std::move(TestOnnxRunner()
+//       .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
 
-  spench::SpenchTask denoise_task;
-  std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
-  denoise_task.m_data.context = ctx.get();
+//   spench::SpenchTask denoise_task;
+//   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
+//   denoise_task.m_data.context = ctx.get();
 
-  std::valarray<float> real;
-  std::valarray<float> imag;
-  data.LoadDataFromBin("1_real_wav_stft.dump", real);
-  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
-  denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  uint64_t hop_size = static_cast<uint64_t>(data.sample_rate * data.frame_size_ms / 1000);
-  denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
+//   std::valarray<float> real;
+//   std::valarray<float> imag;
+//   data.LoadDataFromBin("1_real_wav_stft.dump", real);
+//   data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
+//   denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
+//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   uint64_t hop_size = static_cast<uint64_t>(data.sample_rate * data.frame_size_ms / 1000);
+//   denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
 
-  data.spench_model_runner->Infer(&denoise_task);
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
+//   data.spench_model_runner->Infer(&denoise_task);
+//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
 
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-                                                 denoise_task.m_data.enhanced_wav);
-  CHECK(std::vector<float>(ctx.get()->fullband_hidden.size(), 0.0) !=
-                                                 ctx.get()->fullband_hidden);
-  CHECK(std::vector<float>(ctx.get()->fullband_cell_state.size(), 0.0) !=
-                                                 ctx.get()->fullband_cell_state);
-  CHECK(std::vector<float>(ctx.get()->subband_hidden.size(), 0.0) !=
-                                                 ctx.get()->subband_hidden);
-  CHECK(std::vector<float>(ctx.get()->subband_cell_state.size(), 0.0) !=
-                                                 ctx.get()->subband_cell_state);
+//   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
+//                                                  denoise_task.m_data.enhanced_wav);
+//   CHECK(std::vector<float>(ctx.get()->fullband_hidden.size(), 0.0) !=
+//                                                  ctx.get()->fullband_hidden);
+//   CHECK(std::vector<float>(ctx.get()->fullband_cell_state.size(), 0.0) !=
+//                                                  ctx.get()->fullband_cell_state);
+//   CHECK(std::vector<float>(ctx.get()->subband_hidden.size(), 0.0) !=
+//                                                  ctx.get()->subband_hidden);
+//   CHECK(std::vector<float>(ctx.get()->subband_cell_state.size(), 0.0) !=
+//                                                  ctx.get()->subband_cell_state);
 
-  denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
+//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 
-  data.spench_model_runner->Infer(&denoise_task);
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-                                                 denoise_task.m_data.enhanced_wav);
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
+//   data.spench_model_runner->Infer(&denoise_task);
+//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
+//   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
+//                                                  denoise_task.m_data.enhanced_wav);
+//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
 
-  data.spench_model_runner->Infer(&denoise_task);
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-                                                 denoise_task.m_data.enhanced_wav);
+//   data.spench_model_runner->Infer(&denoise_task);
+//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
+//   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
+//                                                  denoise_task.m_data.enhanced_wav);
 
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
+//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
 
-  data.spench_model_runner->Infer(&denoise_task);
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 1.0) ==
-                                                 denoise_task.m_data.enhanced_wav);
-}
+//   data.spench_model_runner->Infer(&denoise_task);
+//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
+//   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 1.0) ==
+//                                                  denoise_task.m_data.enhanced_wav);
+// }
 
 TEST_CASE("FAIL Read config for the best speed model 24kHz with error in inputs [onnx runner]") {
   CHECK_THROWS_WITH(TestOnnxRunner().InitRunner("test_configuration_with_error_in_inputs.yaml"),

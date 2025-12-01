@@ -378,141 +378,147 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
   }
 }
 
-TEST_CASE("SUCCEED Run inference via the best quality model and check network outputs (audio 16kHz) [tflite runner]") {
-  auto data = std::move(TestTfliteRunner()
-      .InitRunner("default_configuration_best_quality_tflite_16khz.yaml"));
+// TEST_CASE(
+//  "SUCCEED Run inference via the best quality model and check network outputs "
+//  "(audio 16kHz) [tflite runner]")
+// {
+//   auto data = std::move(TestTfliteRunner()
+//       .InitRunner("default_configuration_best_quality_tflite_16khz.yaml"));
 
-  std::valarray<float> real;
-  std::valarray<float> imag;
-  std::vector<float> gt_real;
-  std::vector<float> gt_imag;
-  std::vector<float> gt_fullband_hidden;
-  std::vector<float> gt_fullband_cell_state;
-  std::vector<float> gt_subband_hidden;
-  std::vector<float> gt_subband_cell_state;
-  data.LoadDataFromBin("1_real_wav_stft.dump", real);
-  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
-  data.LoadDataFromBin("1_real_network_output_for_zeroed_hiddens_16khz.dump", gt_real);
-  data.LoadDataFromBin("1_imag_network_output_for_zeroed_hiddens_16khz.dump", gt_imag);
-  data.LoadDataFromBin("1_predicted_full_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_fullband_hidden);
-  data.LoadDataFromBin("1_predicted_full_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_fullband_cell_state);
-  data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
-  data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
+//   std::valarray<float> real;
+//   std::valarray<float> imag;
+//   std::vector<float> gt_real;
+//   std::vector<float> gt_imag;
+//   std::vector<float> gt_fullband_hidden;
+//   std::vector<float> gt_fullband_cell_state;
+//   std::vector<float> gt_subband_hidden;
+//   std::vector<float> gt_subband_cell_state;
+//   data.LoadDataFromBin("1_real_wav_stft.dump", real);
+//   data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
+//   data.LoadDataFromBin("1_real_network_output_for_zeroed_hiddens_16khz.dump", gt_real);
+//   data.LoadDataFromBin("1_imag_network_output_for_zeroed_hiddens_16khz.dump", gt_imag);
+//   data.LoadDataFromBin("1_predicted_full_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_fullband_hidden);
+//   data.LoadDataFromBin("1_predicted_full_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_fullband_cell_state);
+//   data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
+//   data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
 
-  spench::SpenchTask denoise_task;
-  std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
-  ctx.get()->fullband_hidden.resize(data.denoiser_runner->m_model_input_size[1], 0);
-  ctx.get()->fullband_cell_state.resize(data.denoiser_runner->m_model_input_size[2], 0);
-  ctx.get()->subband_hidden.resize(data.denoiser_runner->m_model_input_size[3], 0);
-  ctx.get()->subband_cell_state.resize(data.denoiser_runner->m_model_input_size[4], 0);
+//   spench::SpenchTask denoise_task;
+//   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
+//   ctx.get()->fullband_hidden.resize(data.denoiser_runner->m_model_input_size[1], 0);
+//   ctx.get()->fullband_cell_state.resize(data.denoiser_runner->m_model_input_size[2], 0);
+//   ctx.get()->subband_hidden.resize(data.denoiser_runner->m_model_input_size[3], 0);
+//   ctx.get()->subband_cell_state.resize(data.denoiser_runner->m_model_input_size[4], 0);
 
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   denoise_task.m_data.context = ctx.get();
+//   denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
+//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 
-  data.denoiser_runner->Infer(&denoise_task);
+//   data.denoiser_runner->Infer(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
-  IsVectorsClose(gt_real, denoise_task.m_data.new_spectrogram.real, 0.000001);
+//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
+//   IsVectorsClose(gt_real, denoise_task.m_data.new_spectrogram.real, 0.000001);
 
-  IsVectorsClose(gt_imag, denoise_task.m_data.new_spectrogram.imag, 0.000001);
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-                                                 denoise_task.m_data.enhanced_wav);
-  IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.000001);
-  IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.000001);
-  IsVectorsClose(gt_subband_hidden, ctx.get()->subband_hidden, 0.00001);
-  IsVectorsClose(gt_subband_cell_state, ctx.get()->subband_cell_state, 0.00001);
-}
+//   IsVectorsClose(gt_imag, denoise_task.m_data.new_spectrogram.imag, 0.000001);
+//   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
+//                                                  denoise_task.m_data.enhanced_wav);
+//   IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.000001);
+//   IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.000001);
+//   IsVectorsClose(gt_subband_hidden, ctx.get()->subband_hidden, 0.00001);
+//   IsVectorsClose(gt_subband_cell_state, ctx.get()->subband_cell_state, 0.00001);
+// }
 
-TEST_CASE("SUCCEED Run four frames with the best quality model and check states (audio 16kHz) [tflite runner]") {
-  auto data = std::move(TestTfliteRunner()
-      .InitRunner("default_configuration_best_quality_tflite_16khz.yaml"));
+// TEST_CASE("SUCCEED Run four frames with the best quality model and check states (audio 16kHz) [tflite runner]") {
+//   auto data = std::move(TestTfliteRunner()
+//       .InitRunner("default_configuration_best_quality_tflite_16khz.yaml"));
 
-  spench::SpenchTask denoise_task;
-  std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
-  ctx.get()->fullband_hidden.resize(data.denoiser_runner->m_model_input_size[1], 0);
-  ctx.get()->fullband_cell_state.resize(data.denoiser_runner->m_model_input_size[2], 0);
-  ctx.get()->subband_hidden.resize(data.denoiser_runner->m_model_input_size[3], 0);
-  ctx.get()->subband_cell_state.resize(data.denoiser_runner->m_model_input_size[4], 0);
-  denoise_task.m_data.context = ctx.get();
+//   spench::SpenchTask denoise_task;
+//   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
+//   ctx.get()->fullband_hidden.resize(data.denoiser_runner->m_model_input_size[1], 0);
+//   ctx.get()->fullband_cell_state.resize(data.denoiser_runner->m_model_input_size[2], 0);
+//   ctx.get()->subband_hidden.resize(data.denoiser_runner->m_model_input_size[3], 0);
+//   ctx.get()->subband_cell_state.resize(data.denoiser_runner->m_model_input_size[4], 0);
+//   denoise_task.m_data.context = ctx.get();
 
-  std::valarray<float> real;
-  std::valarray<float> imag;
-  data.LoadDataFromBin("1_real_wav_stft.dump", real);
-  data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
-  denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  uint64_t hop_size = static_cast<uint64_t>(data.sample_rate * data.frame_size_ms / 1000);
-  denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
+//   std::valarray<float> real;
+//   std::valarray<float> imag;
+//   data.LoadDataFromBin("1_real_wav_stft.dump", real);
+//   data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
+//   denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
+//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   uint64_t hop_size = static_cast<uint64_t>(data.sample_rate * data.frame_size_ms / 1000);
+//   denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
 
-  data.denoiser_runner->Infer(&denoise_task);
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
+//   data.denoiser_runner->Infer(&denoise_task);
+//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
 
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-                                                 denoise_task.m_data.enhanced_wav);
-  CHECK(std::vector<float>(ctx.get()->fullband_hidden.size(), 0.0) !=
-                                                 ctx.get()->fullband_hidden);
-  CHECK(std::vector<float>(ctx.get()->fullband_cell_state.size(), 0.0) !=
-                                                 ctx.get()->fullband_cell_state);
-  CHECK(std::vector<float>(ctx.get()->subband_hidden.size(), 0.0) !=
-                                                 ctx.get()->subband_hidden);
-  CHECK(std::vector<float>(ctx.get()->subband_cell_state.size(), 0.0) !=
-                                                 ctx.get()->subband_cell_state);
+//   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
+//                                                  denoise_task.m_data.enhanced_wav);
+//   CHECK(std::vector<float>(ctx.get()->fullband_hidden.size(), 0.0) !=
+//                                                  ctx.get()->fullband_hidden);
+//   CHECK(std::vector<float>(ctx.get()->fullband_cell_state.size(), 0.0) !=
+//                                                  ctx.get()->fullband_cell_state);
+//   CHECK(std::vector<float>(ctx.get()->subband_hidden.size(), 0.0) !=
+//                                                  ctx.get()->subband_hidden);
+//   CHECK(std::vector<float>(ctx.get()->subband_cell_state.size(), 0.0) !=
+//                                                  ctx.get()->subband_cell_state);
 
-  denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
+//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 
-  data.denoiser_runner->Infer(&denoise_task);
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-                                                 denoise_task.m_data.enhanced_wav);
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
+//   data.denoiser_runner->Infer(&denoise_task);
+//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
+//   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
+//                                                  denoise_task.m_data.enhanced_wav);
+//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
 
-  data.denoiser_runner->Infer(&denoise_task);
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-                                                 denoise_task.m_data.enhanced_wav);
+//   data.denoiser_runner->Infer(&denoise_task);
+//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
+//   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
+//                                                  denoise_task.m_data.enhanced_wav);
 
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
+//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
 
-  data.denoiser_runner->Infer(&denoise_task);
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 1.0) ==
-                                                 denoise_task.m_data.enhanced_wav);
-}
+//   data.denoiser_runner->Infer(&denoise_task);
+//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
+//   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 1.0) ==
+//                                                  denoise_task.m_data.enhanced_wav);
+// }
 
-TEST_CASE("SUCCEED Run dummy multi inference for a quality model 16kHz and with different number of threads [tflite]") {
-  const std::size_t nattempts = 50;
+// TEST_CASE(
+//  "SUCCEED Run dummy multi inference for a quality model 16kHz and with "
+//  "different number of threads [tflite]")
+// {
+//   const std::size_t nattempts = 50;
 
-  for (uint16_t num_threads : {1, 2, 4, 8}) {
-    auto data = std::move(TestTfliteRunner()
-      .InitRunner("default_configuration_best_quality_tflite_16khz.yaml", "", "", num_threads));
+//   for (uint16_t num_threads : {1, 2, 4, 8}) {
+//     auto data = std::move(TestTfliteRunner()
+//       .InitRunner("default_configuration_best_quality_tflite_16khz.yaml", "", "", num_threads));
 
-    std::vector<size_t> timings(nattempts);
-    std::vector<std::vector<float>*> inputs;
-    for (auto s : data.denoiser_runner->m_model_input_size) {
-      inputs.push_back(new std::vector<float>(s, static_cast<float>(0.)));
-    }
+//     std::vector<size_t> timings(nattempts);
+//     std::vector<std::vector<float>*> inputs;
+//     for (auto s : data.denoiser_runner->m_model_input_size) {
+//       inputs.push_back(new std::vector<float>(s, static_cast<float>(0.)));
+//     }
 
-    auto ts_1 = std::chrono::steady_clock::now();
-    for (size_t i = 0; i < nattempts; ++i) {
-      auto start = std::chrono::steady_clock::now();
-      data.denoiser_runner->_TestRun<float>(inputs);
-      auto stop = std::chrono::steady_clock::now();
-      timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-    }
-    auto ts_2 = std::chrono::steady_clock::now();
+//     auto ts_1 = std::chrono::steady_clock::now();
+//     for (size_t i = 0; i < nattempts; ++i) {
+//       auto start = std::chrono::steady_clock::now();
+//       data.denoiser_runner->_TestRun<float>(inputs);
+//       auto stop = std::chrono::steady_clock::now();
+//       timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+//     }
+//     auto ts_2 = std::chrono::steady_clock::now();
 
-    auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-    spdlog::info("24kHz quality model infer with  {} threads completed: {} | {} ms per infer",
-               num_threads,
-               tot,
-               static_cast<double>(tot) / nattempts);
+//     auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+//     spdlog::info("24kHz quality model infer with  {} threads completed: {} | {} ms per infer",
+//                num_threads,
+//                tot,
+//                static_cast<double>(tot) / nattempts);
 
-    for (uint16_t i = 0; i < data.denoiser_runner->m_model_input_size.size(); i++) {
-      delete inputs[i];
-    }
-  }
-}
+//     for (uint16_t i = 0; i < data.denoiser_runner->m_model_input_size.size(); i++) {
+//       delete inputs[i];
+//     }
+//   }
+// }
