@@ -6,7 +6,6 @@
 #include <utility>
 #include <vector>
 
-#include <yaml-cpp/yaml.h>
 #include <dsplib/agc.h>
 #include <dsplib/audio/limiter.h>
 #include <dsplib/audio/noise-gate.h>

@@ -1,4 +1,5 @@
 #include "spench/src/feature_extractor_runner.h"
+
 #include <cmath>
 #include <vector>
 #include <deque>
@@ -6,6 +7,8 @@
 #include <chrono> // NOLINT
 #include <cassert>
 #include <memory>
+
+#include <spench/src/spench_config_reader.h>
 
 namespace spench {
 
@@ -29,8 +32,8 @@ uint64_t FeatureExtractorRunner::GetPowSpecFeatSizeSamples() const {
   return m_params.PowSpecFeatSz();
 }
 
-void FeatureExtractorRunner::ReadConfig(const YAML::Node& yaml_config) {
-  m_params.ReadFeatureParamsNode(yaml_config);
+void FeatureExtractorRunner::ReadConfig(std::shared_ptr<spench::NetworkConfig> config) {
+  m_params.ReadFeatureParamsNode(config);
 }
 
 void FeatureExtractorRunner::Run(spench::SpenchTask* spench_task) {

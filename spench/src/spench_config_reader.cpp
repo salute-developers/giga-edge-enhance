@@ -1,55 +1,217 @@
-#include <yaml-cpp/yaml.h>
-#include <spdlog/spdlog.h>
+#include "spench/src/spench_config_reader.h"  // IWYU: keep own header first
+
+#include <cmath>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
-#include <cmath>
-#include "spench/src/spench_config_reader.h"
+
+#include <spdlog/spdlog.h>
+#include <yaml-cpp/yaml.h>
 
 #include "spench/util/echo/echo_canceler.h"
 
 namespace spench {
+namespace {
+
+// Local helpers kept in this TU to avoid exposing yaml-cpp in the header.
+template <typename T>
+T as(const YAML::Node& node) {
+  return node.as<T>();
+}
+
+template <typename T>
+T asOr(const YAML::Node& node, const T& fallback) {
+  if (node && !node.IsNull()) {
+    return node.as<T>();
+  } else {
+    return fallback;
+  }
+}
+
+// Validates optional sequence-of-scalars node with exact logging texts used in tests.
+inline void ValidateOptionalSeqOfScalars(const YAML::Node& node,
+                                         const char* noun,        // e.g. "Model inputs"
+                                         const char* fq_field) {  // e.g. "model.model_inputs"
+  if (node && !node.IsNull()) {
+    if (!node.IsSequence()) {
+      spdlog::critical("Config reading error. {} parameter is not a sequence!", noun);
+      throw std::runtime_error("Config reading error. " + std::string(noun) +
+                               " parameter is not a sequence!");
+    }
+    for (const auto& item : node) {
+      if (!item || !item.IsScalar()) {
+        spdlog::critical("Config reading error. {} parameter must be a sequence of scalars!", noun);
+        throw std::runtime_error("Config reading error. " + std::string(noun) +
+                                 " parameter must be a sequence of scalars!");
+      }
+    }
+    if (node.size() == 0) {
+      spdlog::warn("network: empty '{}'; using defaults", fq_field);
+    }
+  } else {
+    spdlog::warn("network: missing '{}'; using defaults", fq_field);
+  }
+}
+
+// Requires a scalar node; logs and throws with the provided exact message.
+inline void RequireScalarNode(const YAML::Node& node, const char* err_msg) {
+  if (!node || node.Type() != YAML::NodeType::Scalar) {
+    spdlog::critical(err_msg);
+    throw std::runtime_error(err_msg);
+  }
+}
+
+// If present, requires scalar; logs and throws with the provided exact message.
+inline void RequireIfPresentScalarNode(const YAML::Node& node, const char* err_msg) {
+  if (node && !node.IsNull()) {
+    if (node.Type() != YAML::NodeType::Scalar) {
+      spdlog::critical(err_msg);
+      throw std::runtime_error(err_msg);
+    }
+  }
+}
+
+}  // namespace
+
+// Free functions declared in the header.
+YAML::Node lookup(const YAML::Node& root,
+                  const std::initializer_list<std::string>& path) {
+  YAML::Node node = YAML::Clone(root);
+  for (const auto& key : path) {
+    if (!node[key]) {
+      return YAML::Node{};
+    }
+    node = node[key];
+  }
+  return node;
+}
+
+void mergeYaml(YAML::Node& dest, const YAML::Node& src) {
+  if (!src.IsMap()) {
+    return;
+  }
+  for (auto kv : src) {
+    const auto key = kv.first.as<std::string>();
+    const auto& val = kv.second;
+
+    YAML::Node child = dest[key];
+    if (child && child.IsMap() && val.IsMap()) {
+      mergeYaml(child, val);
+    } else {
+      child = val;
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+
+ConfigReader::ConfigReader() : m_params(new YAML::Node{}) {}
+
+ConfigReader::~ConfigReader() = default;
+
+// -----------------------------------------------------------------------------
+
+PipelineConfig::PipelineConfig(const ConfigReader& base_reader,
+                               std::string default_config) {
+  m_params.reset(new YAML::Node{});
+  if (!default_config.empty()) {
+    *m_params = YAML::Load(default_config);
+  }
+  mergeYaml(*m_params, base_reader.params());
+}
+
+// -----------------------------------------------------------------------------
 
 FileConfigReader::FileConfigReader(std::string path) {
   try {
-    m_params = YAML::LoadFile(path);
+    m_params.reset(new YAML::Node{YAML::LoadFile(path)});
   } catch (const YAML::Exception& e) {
-    spdlog::critical("FileConfigReader: cannot load or parse '{}': {}", path, e.what());
+    spdlog::critical("FileConfigReader: cannot load or parse '{}': {}", path,
+                     e.what());
     throw std::runtime_error(std::string("Config file load error: ") + e.what());
   }
 }
 
-// — StringConfigReader —
+// -----------------------------------------------------------------------------
+
 StringConfigReader::StringConfigReader(std::string yaml) {
   try {
-    m_params = YAML::Load(yaml);
+    m_params.reset(new YAML::Node{YAML::Load(yaml)});
   } catch (const YAML::Exception& e) {
     spdlog::critical("StringConfigReader: cannot parse string: {}", e.what());
     throw std::runtime_error(std::string("Config file load error: ") + e.what());
   }
 }
 
-// — NetworkConfig —
+// -----------------------------------------------------------------------------
+
+// ParamBlockView moved-from-header.
+YAML::Node ParamBlockView::node() const {
+  return lookup(root_, {base_, block_});
+}
+
+template <typename T>
+T ParamBlockView::get(const char* key) const {
+  return as<T>(lookup(root_, {base_, block_, key}));
+}
+
+// Explicit instantiations to avoid including yaml-cpp at the call sites.
+template uint32_t ParamBlockView::get<uint32_t>(const char*) const;
+template uint16_t ParamBlockView::get<uint16_t>(const char*) const;
+template double   ParamBlockView::get<double>(const char*) const;
+template float    ParamBlockView::get<float>(const char*) const;
+template bool     ParamBlockView::get<bool>(const char*) const;
+template std::string ParamBlockView::get<std::string>(const char*) const;
+
+// -----------------------------------------------------------------------------
+
+// AudioProcessorConfig::get moved-from-header.
+template <typename T>
+T AudioProcessorConfig::get(const char* block, const char* key) const {
+  return as<T>(lookup(params(), {"sound_processing", block, key}));
+}
+
+// Explicit instantiations to avoid including yaml-cpp at the call sites.
+template uint32_t AudioProcessorConfig::get<uint32_t>(const char*,
+                                                      const char*) const;
+template uint16_t AudioProcessorConfig::get<uint16_t>(const char*,
+                                                      const char*) const;
+template double   AudioProcessorConfig::get<double>(const char*,
+                                                    const char*) const;
+template float    AudioProcessorConfig::get<float>(const char*,
+                                                   const char*) const;
+template bool     AudioProcessorConfig::get<bool>(const char*,
+                                                  const char*) const;
+template std::string AudioProcessorConfig::get<std::string>(
+    const char*, const char*) const;
+
+// -----------------------------------------------------------------------------
+
 void NetworkConfig::validate() const {
   spdlog::info("Yaml file reading: ");
 
-  // Ensure we have a 'model' map
-  const auto& model = lookup(m_params, {"model"});
+  // Ensure we have a 'model' map.
+  const auto& model = lookup(params(), {"model"});
   if (!model || !model.IsMap()) {
     spdlog::critical("network: missing required 'model' section");
     throw std::runtime_error("Missing model section");
   }
-  // --- model.model_path (required, scalar string) ---
-  const auto& n_path = model["model_path"];
-  const auto model_bundled = isModelBundled();
 
-  if (!model_bundled && (!n_path || n_path.Type() != YAML::NodeType::Scalar)) {
-    spdlog::critical("Config reading error. Model path parameter is not a single string!");
-    throw std::runtime_error("Config reading error. Model path parameter is not a single string!");
-  }
-  if (!model_bundled && n_path.as<std::string>().empty()) {
-    spdlog::critical("denoiser: missing required 'model.model_path'");
-    throw std::runtime_error("Missing model.model_path");
+  // model.model_path (required if not bundled).
+  const auto& n_path = model["model_path"];
+  const bool model_bundled = isModelBundled();
+  if (!model_bundled) {
+    if (!n_path || n_path.Type() != YAML::NodeType::Scalar) {
+      spdlog::critical(
+          "Config reading error. Model path parameter is not a single string!");
+      throw std::runtime_error(
+          "Config reading error. Model path parameter is not a single string!");
+    }
+    if (n_path.as<std::string>().empty()) {
+      spdlog::critical("denoiser: missing required 'model.model_path'");
+      throw std::runtime_error("Missing model.model_path");
+    }
   }
 
   if (model_bundled) {
@@ -57,53 +219,44 @@ void NetworkConfig::validate() const {
   } else {
     spdlog::info("Model path {}", n_path.as<std::string>());
   }
-  // --- model.model_inputs (optional, must be a sequence of scalars) ---
+
+  // model.model_inputs (optional sequence of scalars).
   const auto& n_inputs = model["model_inputs"];
-  if (n_inputs && !n_inputs.IsNull()) {
-    if (!n_inputs.IsSequence()) {
-      spdlog::critical("Config reading error. Model inputs parameter is not a sequence!");
-      throw std::runtime_error("Config reading error. Model inputs parameter is not a sequence!");
-    }
-    for (const auto& item : n_inputs) {
-      if (!item || !item.IsScalar()) {
-        spdlog::critical("Config reading error. Model inputs parameter must be a sequence of scalars!");
-        throw std::runtime_error("Config reading error. Model inputs parameter must be a sequence of scalars!");
-      }
-    }
-    if (n_inputs.size() == 0) {
-      spdlog::warn("network: empty 'model.model_inputs'; using defaults");
-    }
-  } else {
-    spdlog::warn("network: missing 'model.model_inputs'; using defaults");
-  }
+  ValidateOptionalSeqOfScalars(n_inputs, "Model inputs", "model.model_inputs");
 
-  // --- model.model_outputs (required, must be a sequence of scalars) ---
+  // model.model_outputs (optional sequence of scalars).
   const auto& n_outputs = model["model_outputs"];
-  if (n_outputs && !n_outputs.IsNull()) {
-    if (!n_outputs.IsSequence()) {
-      spdlog::critical("Config reading error. Model outputs parameter is not a sequence!");
-      throw std::runtime_error("Config reading error. Model outputs parameter is not a sequence!");
-    }
-    for (const auto& item : n_outputs) {
-      if (!item || !item.IsScalar()) {
-        spdlog::critical("Config reading error. Model outputs parameter must be a sequence of scalars!");
-        throw std::runtime_error("Config reading error. Model outputs parameter must be a sequence of scalars!");
-      }
-    }
-    if (n_outputs.size() == 0) {
-      spdlog::warn("network: empty 'model.model_outputs'; using defaults");
-    }
-  } else {
-    spdlog::warn("network: missing 'model.model_outputs'; using defaults");
+  ValidateOptionalSeqOfScalars(n_outputs, "Model outputs", "model.model_outputs");
+
+  // model_input_ctx_len (optional scalar).
+  const auto& n_ctx = model["model_input_ctx_len"];
+  RequireIfPresentScalarNode(
+      n_ctx, "Config reading error. Model context length is not a scalar!");
+
+  // feature_params section.
+  const auto& features = lookup(params(), {"feature_params"});
+  if (!features || !features.IsMap()) {
+    spdlog::critical("network: missing required 'feature_params' section");
+    throw std::runtime_error("Missing feature_params section");
   }
 
-  // --- model_input_ctx_len (optional; support both nested and legacy top-level) ---
-  const auto& n_ctx = model["model_input_ctx_len"];
-  if (n_ctx && !n_ctx.IsNull()) {
-    if (n_ctx.Type() != YAML::NodeType::Scalar) {
-      spdlog::critical("Config reading error. Model context length is not a scalar!");
-      throw std::runtime_error("Config reading error. Model context length is not a scalar!");
-    }
+  // Required scalars inside feature_params.
+  struct ScalarCheck {
+    const char* key;
+    const char* err;
+  };
+  static const ScalarCheck kChecks[] = {
+      {"sampling_freq",
+       "Config reading error. Sampling frequency is not a scalar!"},
+      {"frame_size_ms",
+       "Config reading error. Frame size is not a scalar!"},
+      {"frame_stride_ms",
+       "Config reading error. Frame size stide is not a scalar!"},
+      {"window_type",
+       "Config reading error. Window type is not a single string"},
+  };
+  for (const auto& c : kChecks) {
+    RequireScalarNode(features[c.key], c.err);
   }
 }
 
@@ -111,18 +264,18 @@ std::string NetworkConfig::modelPath() const {
   if (isModelBundled()) {
     return "";
   }
-
-  return as<std::string>(lookup(m_params, {"model", "model_path"}));
+  return as<std::string>(lookup(params(), {"model", "model_path"}));
 }
 
 std::vector<std::string> NetworkConfig::modelInputs() const {
-  auto n = lookup(m_params, {"model", "model_inputs"});
+  auto n = lookup(params(), {"model", "model_inputs"});
   if (n && n.IsSequence() && n.size() > 0) {
     std::vector<std::string> out;
     out.reserve(n.size());
     for (const auto& item : n) {
-      if (!item || !item.IsScalar())
+      if (!item || !item.IsScalar()) {
         return defaultModelInputs();
+      }
       out.push_back(item.as<std::string>());
     }
     return out;
@@ -131,13 +284,14 @@ std::vector<std::string> NetworkConfig::modelInputs() const {
 }
 
 std::vector<std::string> NetworkConfig::modelOutputs() const {
-  auto n = lookup(m_params, {"model", "model_outputs"});
+  auto n = lookup(params(), {"model", "model_outputs"});
   if (n && n.IsSequence() && n.size() > 0) {
     std::vector<std::string> out;
     out.reserve(n.size());
     for (const auto& item : n) {
-      if (!item || !item.IsScalar())
+      if (!item || !item.IsScalar()) {
         return defaultModelOutputs();
+      }
       out.push_back(item.as<std::string>());
     }
     return out;
@@ -146,53 +300,53 @@ std::vector<std::string> NetworkConfig::modelOutputs() const {
 }
 
 uint32_t NetworkConfig::samplingFreq() const {
-  return as<uint32_t>(lookup(m_params, {"feature_params", "sampling_freq"}));
+  return as<uint32_t>(lookup(params(), {"feature_params", "sampling_freq"}));
 }
 
 uint32_t NetworkConfig::frameSizeMs() const {
-  return as<uint32_t>(lookup(m_params, {"feature_params", "frame_size_ms"}));
+  return as<uint32_t>(lookup(params(), {"feature_params", "frame_size_ms"}));
 }
 
 uint32_t NetworkConfig::frameStrideMs() const {
-  return as<uint32_t>(lookup(m_params, {"feature_params", "frame_stride_ms"}));
+  return as<uint32_t>(lookup(params(), {"feature_params", "frame_stride_ms"}));
 }
 
 std::string NetworkConfig::windowType() const {
-  return as<std::string>(lookup(m_params, {"feature_params", "window_type"}));
+  return as<std::string>(lookup(params(), {"feature_params", "window_type"}));
 }
 
 bool NetworkConfig::useGpu() const {
-  return as<bool>(lookup(m_params, {"inference", "gpu"}));
+  return as<bool>(lookup(params(), {"inference", "gpu"}));
 }
 
 bool NetworkConfig::skipZeroedChunks() const {
-  auto zeroedChunks = lookup(m_params, {"inference", "skip_zeroed_chunks"});
+  auto zeroedChunks = lookup(params(), {"inference", "skip_zeroed_chunks"});
   bool res = asOr(zeroedChunks, static_cast<bool>(false));
   return res;
 }
 
 uint32_t NetworkConfig::numThreads() const {
-  return as<uint32_t>(lookup(m_params, {"inference", "engine_num_threads"}));
+  return as<uint32_t>(lookup(params(), {"inference", "engine_num_threads"}));
 }
 
 std::string NetworkConfig::modelType() const {
-  return as<std::string>(lookup(m_params, {"inference", "model_type"}));
+  return as<std::string>(lookup(params(), {"inference", "model_type"}));
 }
 
 bool NetworkConfig::isModelBundled() const {
-  const auto& model = lookup(m_params, {"model"});
+  const auto& model = lookup(params(), {"model"});
   return model["model_bundled"] && model["model_bundled"].as<bool>();
 }
 
 const std::vector<uint8_t>& NetworkConfig::getModel() const {
-  if (!isModelBundled() || bundle == nullptr) {
+  if (!isModelBundled() || bundle_ == nullptr) {
     throw std::runtime_error("the model is not bundled or not present");
   }
-
-  return bundle->getModel();
+  return bundle_->getModel();
 }
 
-// -------------------- DenoiserConfig --------------------
+// -----------------------------------------------------------------------------
+
 std::vector<std::string> DenoiserConfig::defaultModelInputs() const {
 #ifdef BUILD_TFLITE_ENGINE
   return {"noisy_mag", "fb_h", "fb_c", "prev_fb_out"};
@@ -209,7 +363,8 @@ std::vector<std::string> DenoiserConfig::defaultModelOutputs() const {
 #endif
 }
 
-// -------------------- DereverbConfig --------------------
+// -----------------------------------------------------------------------------
+
 std::vector<std::string> DereverbConfig::defaultModelInputs() const {
 #ifdef BUILD_TFLITE_ENGINE
   return {""};
@@ -226,9 +381,10 @@ std::vector<std::string> DereverbConfig::defaultModelOutputs() const {
 #endif
 }
 
+// -----------------------------------------------------------------------------
+
 void AudioProcessorConfigYamlBlock::validateSection(
-    const YAML::Node& section,
-    const std::string& section_name,
+    const YAML::Node& section, const std::string& section_name,
     std::initializer_list<Field> fields) {
   if (!section || !section.IsMap()) {
     spdlog::warn("{}: missing or not a map", section_name);
@@ -248,81 +404,87 @@ void AudioProcessorConfigYamlBlock::validateSection(
       }
     }
 
-    if (f.kind == Kind::Scalar) {
+    if (f.kind == Kind::kScalar) {
       if (!n.IsScalar()) {
         spdlog::critical("Config reading error. {} is not a scalar!", fq);
-        throw std::runtime_error("Config reading error. " + fq + " is not a scalar!");
+        throw std::runtime_error("Config reading error. " + fq +
+                                 " is not a scalar!");
       }
-    } else if (f.kind == Kind::Sequence) {
+    } else if (f.kind == Kind::kSequence) {
       if (!n.IsSequence()) {
         spdlog::critical("Config reading error. {} is not a sequence!", fq);
-        throw std::runtime_error("Config reading error. " + fq + " is not a sequence!");
+        throw std::runtime_error("Config reading error. " + fq +
+                                 " is not a sequence!");
       }
-    } else if (f.kind == Kind::Map) {
+    } else if (f.kind == Kind::kMap) {
       if (!n.IsMap()) {
         spdlog::critical("Config reading error. {} is not a map!", fq);
-        throw std::runtime_error("Config reading error. " + fq + " is not a map!");
+        throw std::runtime_error("Config reading error. " + fq +
+                                 " is not a map!");
       }
     }
   }
 }
 
-// AudioProcessorConfig
+// -----------------------------------------------------------------------------
+
 void AudioProcessorConfig::validate() const {
-  const auto& sp = lookup(m_params, {"sound_processing"});
+  const auto& sp = lookup(params(), {"sound_processing"});
   if (!sp || !sp.IsMap()) {
-    spdlog::critical("sound_processing: missing required 'sound_processing' section");
+    spdlog::critical(
+        "sound_processing: missing required 'sound_processing' section");
     throw std::runtime_error("Missing sound_processing section");
   }
 
   AudioProcessorConfigYamlBlock::validateSection(
       sp["range_ctrl"], "sound_processing.range_ctrl",
-      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"target_level_db", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"max_gain_db", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"attack_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"release_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"hold_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true}});
+      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"target_level_db", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"max_gain_db", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"attack_time", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"release_time", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"hold_time", AudioProcessorConfigYamlBlock::Kind::kScalar, true}});
 
   AudioProcessorConfigYamlBlock::validateSection(
       sp["auto_gain_ctrl"], "sound_processing.auto_gain_ctrl",
-      {{"target_level", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"max_gain", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"average_len", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"step_size_rise", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"step_size_fall", AudioProcessorConfigYamlBlock::Kind::Scalar, true}});
+      {{"target_level", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"max_gain", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"average_len", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"step_size_rise", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"step_size_fall", AudioProcessorConfigYamlBlock::Kind::kScalar, true}});
 
   AudioProcessorConfigYamlBlock::validateSection(
       sp["noise_gate_ctrl"], "sound_processing.noise_gate_ctrl",
-      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"threshold", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"attack_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"release_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"hold_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true}});
+      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"threshold", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"attack_time", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"release_time", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"hold_time", AudioProcessorConfigYamlBlock::Kind::kScalar, true}});
 
   AudioProcessorConfigYamlBlock::validateSection(
-      sp["dynamic_range_compressor_ctrl"], "sound_processing.dynamic_range_compressor_ctrl",
-      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"threshold", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"ratio", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"knee_width", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"attack_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"release_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true}});
+      sp["dynamic_range_compressor_ctrl"],
+      "sound_processing.dynamic_range_compressor_ctrl",
+      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"threshold", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"ratio", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"knee_width", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"attack_time", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"release_time", AudioProcessorConfigYamlBlock::Kind::kScalar, true}});
 
   AudioProcessorConfigYamlBlock::validateSection(
       sp["loudness_ctrl"], "sound_processing.loudness_ctrl",
-      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"target_level_db", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"bypass_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"max_gain_db", AudioProcessorConfigYamlBlock::Kind::Scalar, true}});
+      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"target_level_db", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"bypass_time", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"max_gain_db", AudioProcessorConfigYamlBlock::Kind::kScalar, true}});
 
   AudioProcessorConfigYamlBlock::validateSection(
       sp["limiter_ctrl"], "sound_processing.limiter_ctrl",
-      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"threshold", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"knee_width", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"attack_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true},
-       {"release_time", AudioProcessorConfigYamlBlock::Kind::Scalar, true}});
+      {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"threshold", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"knee_width", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"attack_time", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"release_time", AudioProcessorConfigYamlBlock::Kind::kScalar, true}});
 
   auto finite = [](double v) { return std::isfinite(v); };
   auto ensure = [](bool cond, const std::string& what) {
@@ -390,7 +552,8 @@ void AudioProcessorConfig::validate() const {
     const auto at = sec["attack_time"].as<double>();
     const auto rt = sec["release_time"].as<double>();
 
-    ensure(sr <= 100000, "dynamic_range_compressor_ctrl.sample_rate must be <= 100000");
+    ensure(sr <= 100000,
+           "dynamic_range_compressor_ctrl.sample_rate must be <= 100000");
     ensure(finite(th), "dynamic_range_compressor_ctrl.threshold must be finite");
     ensure(at >= 0.0, "dynamic_range_compressor_ctrl.attack_time must be >= 0");
     ensure(rt >= 0.0, "dynamic_range_compressor_ctrl.release_time must be >= 0");
@@ -425,15 +588,16 @@ void AudioProcessorConfig::validate() const {
   }
 }
 
-// AecConfig
+// -----------------------------------------------------------------------------
+
 void AecConfig::validate() const {
-  auto echo = lookup(m_params, {"echo_cancellation"});
+  auto echo = lookup(params(), {"echo_cancellation"});
   if (!echo || !echo.IsMap()) {
     spdlog::critical("AEC: missing 'echo_cancellation' section");
     throw std::runtime_error("Missing echo_cancellation section");
   }
   // Validate type
-  auto tnode = lookup(m_params, {"echo_cancellation", "type"});
+  auto tnode = lookup(params(), {"echo_cancellation", "type"});
   auto type_str = asOr(tnode, std::string("speex"));
   if (type_str != "speex") {
     spdlog::critical("AEC: invalid type '{}'", type_str);
@@ -442,37 +606,39 @@ void AecConfig::validate() const {
 }
 
 uint32_t AecConfig::sampleRate() const {
-  return as<uint32_t>(lookup(m_params, {"echo_cancellation", "sample_rate"}));
+  return as<uint32_t>(lookup(params(), {"echo_cancellation", "sample_rate"}));
 }
 
 uint16_t AecConfig::filterLen() const {
-  auto node = lookup(m_params, {"echo_cancellation", "filter_len"});
-  return as<uint16_t>(lookup(m_params, {"echo_cancellation", "filter_len"}));
+  auto node = lookup(params(), {"echo_cancellation", "filter_len"});
+  return as<uint16_t>(node);
 }
 
 bool AecConfig::residualEchoSuppressionEnabled() const {
-  return as<bool>(lookup(m_params, {"echo_cancellation", "residual_echo_suppression_enabled"}));
+  return as<bool>(lookup(params(),
+                         {"echo_cancellation", "residual_echo_suppression_enabled"}));
 }
 
 bool AecConfig::delayCompensatorEnabled() const {
-  return as<bool>(lookup(m_params, {"echo_cancellation", "delay_compensator_enabled"}));
+  return as<bool>(lookup(params(),
+                         {"echo_cancellation", "delay_compensator_enabled"}));
 }
 
 uint16_t AecConfig::echoPremute() const {
-  return as<uint16_t>(lookup(m_params, {"echo_cancellation", "echo_premute_ms"}));
+  return as<uint16_t>(lookup(params(), {"echo_cancellation", "echo_premute_ms"}));
 }
 
 uint16_t AecConfig::frameLen() const {
   // frame_len = round(sample_rate/1000 * chunk_len_ms)
   uint32_t sr = sampleRate();
-  auto node     = lookup(m_params, {"echo_cancellation", "chunk_len_ms"});
+  auto node = lookup(params(), {"echo_cancellation", "chunk_len_ms"});
   auto chunk_ms = asOr(node, static_cast<uint16_t>(16));
-  float ppm     = sr / 1000.0f;
+  float ppm = sr / 1000.0f;
   return static_cast<uint16_t>(std::round(ppm * chunk_ms));
 }
 
 util::echo::EchoCancelerType AecConfig::type() const {
-  // we know validate() guaranteed "speex"
+  // validate() guarantees "speex".
   return util::echo::EchoCancelerType::SPEEX;
 }
 
