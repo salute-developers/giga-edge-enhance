@@ -9,4 +9,8 @@ describe('copyArrayBuffer', () => {
         expect(first).not.toBe(second);
         expect(first).toEqual(second);
     });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
 });

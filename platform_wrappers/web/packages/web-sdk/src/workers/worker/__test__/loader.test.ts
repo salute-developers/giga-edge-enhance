@@ -73,4 +73,8 @@ describe('Loader', () => {
         expect(result).toBeInstanceOf(LoadError);
         expect((result as LoadError).message).toContain('network');
     });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
 });
