@@ -1,5 +1,5 @@
-import Spench, { PackedModelReader, MainModule as SpenchCore } from '../../../lib/spench';
-import SpenchDsp, { MainModule as SpenchDSPCore } from '../../../lib/spench.dsp';
+import Spench, { type PackedModelReader, type MainModule as SpenchCore } from '../../../lib/spench';
+import SpenchDsp, { type MainModule as SpenchDSPCore } from '../../../lib/spench.dsp';
 import {
     FEATURE_SWITCH_CACHE_MILLISECONDS,
     getDefaultAECConfig,
@@ -20,6 +20,8 @@ interface CreateSpenchWrapperParams {
     sampleRate: number;
     logger: Logger;
     loader: Loader;
+    onHeavyLoadStart?: () => void;
+    onHeavyLoadEnd?: () => void;
 }
 
 export class SpenchDspWrapper extends AbstractSpenchWrapper {
@@ -28,11 +30,11 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
     protected constructor(
         wasm: ArrayBuffer,
         protected readonly sampleRate: number,
-        protected logger: Logger,
+        protected readonly logger: Logger,
     ) {
         super();
 
-        this.bridge = SpenchDsp({ wasmBinary: wasm, print: logger.info, printErr: logger.error });
+        this.bridge = SpenchDsp({ wasmBinary: wasm, print: logger.debug, printErr: logger.error });
         this.dataPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
         this.lbPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
     }
@@ -133,16 +135,20 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
     protected constructor(
         wasm: ArrayBuffer,
         protected readonly sampleRate: number,
-        protected logger: Logger,
-        protected loader: Loader,
+        protected readonly logger: Logger,
+        protected readonly loader: Loader,
+        protected readonly onHeavyLoadStart: () => void,
+        protected readonly onHeavyLoadEnd: () => void,
     ) {
         super();
+        onHeavyLoadStart();
         this.bridge = Spench({
             wasmBinary: wasm,
             print: logger.debug,
             printErr: logger.error,
         });
         this.dataPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
+        onHeavyLoadEnd();
     }
 
     protected get heap(): Float32Array {
@@ -153,6 +159,8 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
         sampleRate,
         logger,
         loader,
+        onHeavyLoadStart,
+        onHeavyLoadEnd,
     }: CreateSpenchWrapperParams): Promise<SpenchWrapper | InternalError | LoadError> {
         const wasm = await loader.loadWasm();
 
@@ -161,7 +169,7 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
         }
 
         try {
-            return new SpenchWrapper(wasm, sampleRate, logger, loader);
+            return new SpenchWrapper(wasm, sampleRate, logger, loader, onHeavyLoadStart!, onHeavyLoadEnd!);
         } catch (e) {
             return new InternalError(e);
         }
@@ -199,16 +207,19 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
             }
             this.logger.debug('model loaded');
 
+            this.onHeavyLoadStart();
             const model = this.loadModel(loadedModel);
 
             if (model instanceof SpenchError) {
+                this.onHeavyLoadEnd();
+
                 return model;
             }
             this.logger.debug('model created');
 
             try {
                 this.pipeline.push([key, new this.bridge.DenoisePipelineElement(this.sampleRate, model)]);
-
+                this.onHeavyLoadEnd();
                 this.logger.debug('element created');
             } catch (e) {
                 return new InternalError(e);
@@ -233,14 +244,18 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
                 return loadedModel;
             }
 
+            this.onHeavyLoadStart();
             const model = this.loadModel(loadedModel);
 
             if (model instanceof SpenchError) {
+                this.onHeavyLoadEnd();
+
                 return model;
             }
 
             try {
                 this.pipeline.push([key, new this.bridge.DereverbPipelineElement(this.sampleRate, model)]);
+                this.onHeavyLoadEnd();
             } catch (e) {
                 return new InternalError(e);
             } finally {

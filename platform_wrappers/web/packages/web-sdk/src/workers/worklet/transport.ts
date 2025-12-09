@@ -1,40 +1,48 @@
-import RingBuffer from '../../utils/ringBuffer';
+import { RingBuffer } from '../../utils/ringBuffer';
 import { CustomPort, WORKER_MESSAGES, WorkerMessage, WORKLET_MESSAGES, WorkletMessage } from '../../utils/ipc';
-import { TRANSPORT_SIZE_SECONDS, WORKLET_OUTPUT_BUFFER_SECONDS } from '../../utils/constants';
+import {
+    TRANSPORT_SIZE_SECONDS,
+    OUTPUT_BUFFER_SECONDS,
+    getInputBufferSize,
+    getOutputBufferSize,
+} from '../../utils/constants';
 import { WorkletTelemetry } from '../../utils/telemetry';
-import { assert } from '../../utils/error';
+import { BinarySemaphore } from '../../utils/semaphore';
 
 export interface AbstractTransport {
     get outputBufferSize(): number;
-    push(input: Float32Array, loopback: Float32Array): void;
-    pull(output: Float32Array): void;
+    set outputBufferMaxSize(size: number);
+    push(input: Float32Array, loopback: Float32Array): boolean | Promise<boolean>;
+    pull(output: Float32Array): boolean;
     reset(): void;
-    close(): void;
 }
 
 type WorkerPort = CustomPort<WorkletMessage, WorkerMessage>;
 
 export class MessageTransport implements AbstractTransport {
-    protected readonly outputBuffer = new RingBuffer(Math.ceil(WORKLET_OUTPUT_BUFFER_SECONDS * sampleRate));
+    protected readonly outputBuffer = new RingBuffer(Math.ceil(OUTPUT_BUFFER_SECONDS * sampleRate));
 
     protected readonly inputBuffer = new RingBuffer(2 * Math.ceil(TRANSPORT_SIZE_SECONDS * sampleRate));
 
     protected readonly loopbackBuffer = new RingBuffer(2 * Math.ceil(TRANSPORT_SIZE_SECONDS * sampleRate));
 
     constructor(
-        private readonly port: WorkerPort,
-        private readonly telemetry: WorkletTelemetry,
-        private readonly onError: (error: Error) => void,
+        protected readonly port: WorkerPort,
+        protected readonly telemetry: WorkletTelemetry,
+        protected readonly onError: (error: Error) => void,
     ) {
         this.port.addEventListener('message', this.handleWorkerMessage);
-        this.port.start();
     }
 
     get outputBufferSize(): number {
         return this.outputBuffer.size;
     }
 
-    push(inputChannel: Float32Array, loopbackChannel: Float32Array): void {
+    set outputBufferMaxSize(value: number) {
+        this.outputBuffer.maxSize = value;
+    }
+
+    push(inputChannel: Float32Array, loopbackChannel: Float32Array): boolean {
         this.inputBuffer.push(inputChannel);
         this.loopbackBuffer.push(loopbackChannel);
         const transferChunkSize = Math.ceil(TRANSPORT_SIZE_SECONDS * sampleRate);
@@ -42,8 +50,8 @@ export class MessageTransport implements AbstractTransport {
         if (this.inputBuffer.size >= transferChunkSize) {
             const input = new Float32Array(transferChunkSize);
             const loopback = new Float32Array(transferChunkSize);
-            this.inputBuffer.pull(input, 0, transferChunkSize);
-            this.loopbackBuffer.pull(loopback, 0, transferChunkSize);
+            this.inputBuffer.pull(input);
+            this.loopbackBuffer.pull(loopback);
 
             this.port.postMessage(
                 {
@@ -54,20 +62,24 @@ export class MessageTransport implements AbstractTransport {
                 [input.buffer, loopback.buffer],
             );
         }
+
+        return true;
     }
 
-    pull(output: Float32Array): void {
-        this.outputBuffer.pull(output, 0, output.length);
+    pull(output: Float32Array): boolean {
+        if (this.outputBuffer.size >= output.length) {
+            this.outputBuffer.pull(output);
+
+            return true;
+        }
+
+        return false;
     }
 
     reset() {
         this.inputBuffer.clear();
         this.outputBuffer.clear();
         this.loopbackBuffer.clear();
-    }
-
-    close() {
-        this.port.close();
     }
 
     protected readonly handleWorkerMessage = (event: MessageEvent<WorkletMessage>) => {
@@ -77,13 +89,90 @@ export class MessageTransport implements AbstractTransport {
                     this.outputBuffer.push(event.data.output);
                     this.telemetry.frameReceived();
 
+                    // eslint-disable-next-line no-useless-return
                     return;
                 default:
             }
-
-            assert(false, 'Unknown message type from Worker');
         } catch (e) {
             this.onError(e as Error);
         }
     };
+}
+
+export class SharedMemoryTransport implements AbstractTransport {
+    protected readonly inputBuffer: RingBuffer;
+
+    protected readonly loopbackBuffer: RingBuffer;
+
+    protected readonly outputBuffer: RingBuffer;
+
+    protected readonly clearSemaphore: BinarySemaphore;
+
+    constructor(buffer: SharedArrayBuffer) {
+        let offset = 0;
+        const inputSize = getInputBufferSize(sampleRate);
+        const inputABSize = RingBuffer.getInternalBufferSize(inputSize);
+        const outputSize = getOutputBufferSize(sampleRate);
+
+        this.inputBuffer = new RingBuffer(inputSize, buffer);
+        offset += inputABSize;
+
+        this.loopbackBuffer = new RingBuffer(inputSize, buffer, offset);
+        offset += inputABSize;
+
+        this.outputBuffer = new RingBuffer(outputSize, buffer, offset);
+        offset += RingBuffer.getInternalBufferSize(outputSize);
+
+        this.clearSemaphore = new BinarySemaphore(buffer, offset);
+    }
+
+    get outputBufferSize(): number {
+        return this.outputBuffer.size;
+    }
+
+    set outputBufferMaxSize(value: number) {
+        this.outputBuffer.maxSize = value;
+    }
+
+    async push(inputChannel: Float32Array, loopbackChannel: Float32Array) {
+        const inputFree = this.inputBuffer.free;
+        const loopbackFree = this.loopbackBuffer.free;
+
+        if (inputFree < inputChannel.length || loopbackFree < loopbackChannel.length) {
+            await this.clearSemaphore.lock();
+
+            this.inputBuffer.clear();
+            this.loopbackBuffer.clear();
+
+            this.clearSemaphore.unlock();
+
+            return false;
+        }
+
+        this.loopbackBuffer.push(loopbackChannel);
+        this.inputBuffer.push(inputChannel);
+
+        return true;
+    }
+
+    pull(output: Float32Array): boolean {
+        if (this.outputBuffer.size >= output.length) {
+            this.outputBuffer.pull(output);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    async reset() {
+        await this.clearSemaphore.lock();
+
+        this.inputBuffer.clear();
+        this.loopbackBuffer.clear();
+
+        this.clearSemaphore.unlock();
+
+        this.outputBuffer.clear();
+    }
 }

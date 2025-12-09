@@ -38,7 +38,7 @@ export abstract class AbstractSpenchWrapper {
         while (this.pop());
     }
 
-    process(frame: Float32Array, loopback?: Float32Array): Float32Array<ArrayBuffer> {
+    process(frame: Float32Array, loopback?: Float32Array): Float32Array {
         if (!this.pipeline.length) {
             return new Float32Array(frame.subarray());
         }

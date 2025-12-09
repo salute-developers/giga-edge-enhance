@@ -22,6 +22,7 @@ export const WORKLET_MESSAGES = {
     INIT: 'init',
     RESET: 'reset',
     SET_FEATURES: 'set_features',
+    SET_FLAG: 'set_flag',
     WORKER_CREATED: 'worker_created',
     DESTROY: 'destroy',
 
@@ -66,11 +67,12 @@ export type WorkerControllerMessage = LogMessage;
 
 export type WorkletMessage =
     | Message<typeof WORKLET_MESSAGES.INIT, { verbosity: Verbosity; isTelemetryEnabled: boolean; settings: Settings }>
-    | Message<typeof WORKLET_MESSAGES.WORKER_CREATED, { workerPort: MessagePort }>
+    | Message<typeof WORKLET_MESSAGES.WORKER_CREATED, { workerPort: MessagePort; buffer?: SharedArrayBuffer }>
     | Message<
           typeof WORKLET_MESSAGES.SET_FEATURES,
           { workerFeaturesEnabled: boolean; dspWasm?: ArrayBuffer; features?: DspFeatures }
       >
+    | Message<typeof WORKLET_MESSAGES.SET_FLAG, { isWorkerBlockExpected?: boolean }>
     | Message<typeof WORKLET_MESSAGES.OUTPUT, { output: Float32Array }>
     | Message<typeof WORKLET_MESSAGES.RESET, { telemetry?: boolean }>
     | Message<typeof WORKLET_MESSAGES.DESTROY>;
@@ -81,6 +83,7 @@ export type WorkerMessage =
           {
               sampleRate: number;
               workletPort: MessagePort;
+              buffer?: SharedArrayBuffer;
           }
       >
     | Message<typeof WORKER_MESSAGES.SET_FEATURES, { features: Features<ModelsTmpl> }>

@@ -21,7 +21,7 @@ export class SpenchDspWorkletWrapper extends AbstractSpenchWrapper {
     ) {
         super();
 
-        this.bridge = SpenchDsp({ wasmBinary: wasm, print: logger.info, printErr: logger.error });
+        this.bridge = SpenchDsp({ wasmBinary: wasm, print: logger.debug, printErr: logger.error });
         this.dataPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
         this.lbPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
     }

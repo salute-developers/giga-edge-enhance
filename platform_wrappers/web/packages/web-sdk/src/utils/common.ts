@@ -29,8 +29,9 @@ export type Settings = {
     lowPerformanceMaxRefillTimes: number;
     minLatency: number;
     latencyIncreaseStep: number;
-    dspOnAudioThread: boolean;
     fetchRetries: number;
+    sharedMemoryEnabled: boolean;
+    dspOnAudioThread: boolean;
     unstable_customNormalizationConfig?: string;
     unstable_customAECConfig?: string;
 };
@@ -40,6 +41,7 @@ export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Setti
         ...settings,
         dspOnAudioThread: Boolean(settings.dspOnAudioThread),
         fetchRetries: typeof settings.fetchRetries === 'number' ? settings.fetchRetries : DEFAULT_FETCH_RETRIES,
+        sharedMemoryEnabled: typeof settings.sharedMemoryEnabled === 'boolean' ? settings.sharedMemoryEnabled : true,
         lowPerformanceWindowSeconds:
             typeof settings.lowPerformanceWindowSeconds === 'number'
                 ? settings.lowPerformanceWindowSeconds
@@ -83,6 +85,10 @@ export function areDspFeaturesChanged(features: Partial<DspFeatures>, newFeature
     return (Object.keys(dspFeatures) as (keyof DspFeatures)[]).some((feature) => {
         return dspFeatures[feature] !== newDspFeatures[feature];
     });
+}
+
+export function isSharedMemorySupported() {
+    return typeof SharedArrayBuffer === 'function' && typeof window !== 'undefined' && window.crossOriginIsolated;
 }
 
 export function getMainFeatures<M extends ModelsTmpl>(features: Partial<MainFeatures<M>> = {}): MainFeatures<M> {

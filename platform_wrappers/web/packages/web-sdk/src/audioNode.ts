@@ -25,11 +25,20 @@ import {
     getDefaultNoiseCancellationModel,
     getDefaultDereverberationModel,
     getMainFeatures,
+    isSharedMemorySupported,
 } from './utils/common';
-import { LP_CAUSE_THRESHOLD, SPENCH_DSP_WORKLET_NAME, SPENCH_WORKLET_NAME } from './utils/constants';
+import {
+    LP_CAUSE_THRESHOLD,
+    SPENCH_DSP_WORKLET_NAME,
+    SPENCH_WORKLET_NAME,
+    getInputBufferSize,
+    getOutputBufferSize,
+} from './utils/constants';
 import SpenchWorker from './worker';
 import Loader, { LoadError } from './loader';
 import Deferred from './utils/deferred';
+import { RingBuffer } from './utils/ringBuffer';
+import { BinarySemaphore } from './utils/semaphore';
 
 export class SetFeaturesFailedError extends SpenchError {}
 
@@ -374,21 +383,38 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
             return worker;
         }
         this.#worker = worker;
-
-        const workerWorkletChannel = new MessageChannel();
         this.#workerPort = this.#worker.createPort();
+        const workerWorkletChannel = new MessageChannel();
+        let buffer: SharedArrayBuffer | undefined;
+
+        if (this.#settings.sharedMemoryEnabled && isSharedMemorySupported()) {
+            this.#logger.debug('Using SharedArrayBuffer transport');
+            buffer = new SharedArrayBuffer(
+                2 * RingBuffer.getInternalBufferSize(getInputBufferSize(sampleRate)) +
+                    RingBuffer.getInternalBufferSize(getOutputBufferSize(sampleRate)) +
+                    BinarySemaphore.INTERNAL_BUFFER_SIZE,
+            );
+        } else {
+            this.#logger.debug('Using MessageChannel transport');
+        }
 
         this.#workerPort.postMessage(
             {
                 type: WORKER_MESSAGES.INIT,
+                buffer,
                 workletPort: workerWorkletChannel.port1,
                 sampleRate,
             },
             [workerWorkletChannel.port1],
         );
-        this.#port.postMessage({ type: WORKLET_MESSAGES.WORKER_CREATED, workerPort: workerWorkletChannel.port2 }, [
-            workerWorkletChannel.port2,
-        ]);
+        this.#port.postMessage(
+            {
+                type: WORKLET_MESSAGES.WORKER_CREATED,
+                workerPort: workerWorkletChannel.port2,
+                buffer,
+            },
+            [workerWorkletChannel.port2],
+        );
 
         this.#workerPort.addEventListener('message', this.#handleWorkerMessage);
         this.#workerPort.start();

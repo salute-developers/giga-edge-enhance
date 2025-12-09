@@ -1,15 +1,27 @@
 import { serializeError } from 'serialize-error';
 
-import { WORKLET_OUTPUT_BUFFER_MIN_LATENCY, WORKLET_OUTPUT_BUFFER_SECONDS } from '../../utils/constants';
+import {
+    WORKLET_OUTPUT_BUFFER_MIN_LATENCY,
+    OUTPUT_BUFFER_SECONDS,
+    MAX_WORKER_BLOCK_TIME_SECONDS,
+} from '../../utils/constants';
 import { assert } from '../../utils/error';
-import { CONTROLLER_MESSAGES, ControllerMessage, CustomPort, WORKLET_MESSAGES, WorkletMessage } from '../../utils/ipc';
+import {
+    CONTROLLER_MESSAGES,
+    ControllerMessage,
+    CustomPort,
+    WorkerMessage,
+    WORKLET_MESSAGES,
+    WorkletMessage,
+} from '../../utils/ipc';
 import { getWorkerLogger } from '../../utils/logger';
 import { getWorkletTelemetry } from '../../utils/telemetry';
 import { getSettingsWithDefaults, Settings } from '../../utils/common';
 
-import { AbstractTransport, MessageTransport } from './transport';
+import { AbstractTransport, MessageTransport, SharedMemoryTransport } from './transport';
 
 type ControllerPort = CustomPort<WorkletMessage, ControllerMessage>;
+type WorkerPort = CustomPort<WorkletMessage, WorkerMessage>;
 
 export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
     protected transport: AbstractTransport | undefined;
@@ -20,12 +32,20 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
 
     protected settings: Settings = getSettingsWithDefaults();
 
+    protected workerPort: WorkerPort | undefined;
+
     protected areWorkerFeaturesEnabled = false;
 
     protected destroyed = false;
 
     // Overflow
     protected refillTimes: number[] = [];
+
+    protected overflowTimes: number[] = [];
+
+    protected workerBlockFactor = 0;
+
+    protected refillStartTime = Infinity;
 
     protected previouslyRendered = false;
 
@@ -108,14 +128,16 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
 
         const [output] = outputs;
         const [outputChannel] = output;
-        const isBufferSufficientlyFilled = this.transport.outputBufferSize >= this.currentBufferThreshold * sampleRate;
-        const shouldRenderAnyway = this.transport.outputBufferSize >= outputChannel.length && this.previouslyRendered;
+        const { outputBufferSize } = this.transport;
+        const isBufferSufficientlyFilled = outputBufferSize >= this.currentBufferThreshold * sampleRate;
+        const shouldRenderAnyway = outputBufferSize >= outputChannel.length && this.previouslyRendered;
 
         if (isBufferSufficientlyFilled || shouldRenderAnyway) {
             this.transport.pull(outputChannel);
             this.previouslyRendered = true;
+            this.refillStartTime = Infinity;
         } else if (this.previouslyRendered) {
-            this.handleOverflow();
+            this.handleOutputOverflow();
 
             return false;
         }
@@ -134,18 +156,27 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
         }
     }
 
-    protected handleOverflow() {
+    protected handleOutputOverflow() {
         this.logger.debug('The output buffer is empty, refilling');
+
+        this.previouslyRendered = false;
+        this.refillStartTime = currentFrame / sampleRate;
+
+        if (this.workerBlockFactor) {
+            this.logger.debug('Skipping the overflow check as it is expected worker block time');
+
+            return;
+        }
 
         this.refillTimes = [
             ...this.refillTimes.filter((t) => currentTime - t <= this.settings.lowPerformanceWindowSeconds),
             currentTime,
         ];
-        this.previouslyRendered = false;
         this.currentBufferThreshold = Math.min(
             (this.refillTimes.length - 1) * this.settings.latencyIncreaseStep + this.settings.minLatency,
-            WORKLET_OUTPUT_BUFFER_SECONDS,
+            OUTPUT_BUFFER_SECONDS,
         );
+        this.transport!.outputBufferMaxSize = this.currentBufferThreshold;
         this.logger.debug(`Setting output buffer size to ${this.currentBufferThreshold} seconds`);
 
         if (this.refillTimes.length >= this.settings.lowPerformanceMaxRefillTimes) {
@@ -160,6 +191,27 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
     protected timerTick() {
         if (!this.telemetry.started && this.areWorkerFeaturesEnabled) {
             this.telemetry.start(currentTime);
+        }
+
+        if (this.refillStartTime !== Infinity) {
+            const delta = currentFrame / sampleRate - this.refillStartTime;
+
+            if (this.workerBlockFactor && delta > MAX_WORKER_BLOCK_TIME_SECONDS) {
+                this.logger.debug(
+                    `Refill takes ${delta}s (max ${MAX_WORKER_BLOCK_TIME_SECONDS}s), while the worker being blocked. Emitting LOW_PERFORMANCE`,
+                );
+                this.refillStartTime = Infinity;
+                this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.LOW_PERFORMANCE });
+
+                return;
+            }
+
+            if (!this.workerBlockFactor && delta > 2 * this.currentBufferThreshold) {
+                this.logger.debug(
+                    `Refill takes ${delta}s (current max ${2 * this.currentBufferThreshold}s). Repeating refill.`,
+                );
+                this.handleOutputOverflow();
+            }
         }
     }
 
@@ -197,11 +249,23 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
                     this.logger.debug(`Setting worklet state, worker features enabled: ${workerFeaturesEnabled}`);
                     this.areWorkerFeaturesEnabled = workerFeaturesEnabled;
                     this.refillTimes = [];
+                    this.overflowTimes = [];
 
                     return;
                 case WORKLET_MESSAGES.WORKER_CREATED:
-                    const { workerPort } = event.data;
-                    this.transport = new MessageTransport(workerPort, this.telemetry, this.onError);
+                    const { workerPort, buffer } = event.data;
+
+                    this.workerPort = workerPort;
+                    this.workerPort.addEventListener('message', this.handleWorkerMessage);
+
+                    if (buffer) {
+                        this.transport = new SharedMemoryTransport(buffer);
+                    } else {
+                        this.transport = new MessageTransport(workerPort, this.telemetry, this.onError);
+                    }
+
+                    this.workerPort.start();
+                    this.transport.outputBufferMaxSize = this.currentBufferThreshold;
 
                     return;
                 case WORKLET_MESSAGES.RESET:
@@ -221,10 +285,30 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
         }
     };
 
+    protected readonly handleWorkerMessage = (event: MessageEvent<WorkletMessage>) => {
+        try {
+            switch (event.data.type) {
+                case WORKLET_MESSAGES.SET_FLAG:
+                    const { isWorkerBlockExpected } = event.data;
+
+                    if (typeof isWorkerBlockExpected === 'boolean') {
+                        this.workerBlockFactor += isWorkerBlockExpected ? 1 : -1;
+                    }
+
+                    // eslint-disable-next-line no-useless-return
+                    return;
+                default:
+            }
+        } catch (e) {
+            this.onError(e as Error);
+        }
+    };
+
     protected reset() {
         this.transport?.reset();
         this.telemetry.stop(currentTime);
         this.refillTimes = [];
+        this.overflowTimes = [];
 
         this.previouslyRendered = false;
     }
@@ -236,7 +320,7 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
         this.telemetry.stop(currentTime);
         this.controllerPort.close();
 
-        this.transport?.close();
+        this.workerPort?.close();
         this.transport = undefined;
     }
 }

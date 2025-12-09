@@ -1,7 +1,7 @@
 import { serializeError } from 'serialize-error';
 
 import { SPENCH_FRAME_SIZE_SECONDS } from '../../utils/constants';
-import RingBuffer from '../../utils/ringBuffer';
+import { RingBuffer } from '../../utils/ringBuffer';
 import SpenchError, { assert } from '../../utils/error';
 import { CONTROLLER_MESSAGES, WORKLET_MESSAGES, WorkletMessage } from '../../utils/ipc';
 import { areDspFeaturesEnabled, DspFeatures } from '../../utils/common';
@@ -41,14 +41,14 @@ export class SpenchDspWorkletProcessor extends SpenchBaseWorkletProcessor {
         if (this.dspInputBuffer.size >= frameSize) {
             const inputFrame = new Float32Array(frameSize);
             const loopbackFrame = new Float32Array(frameSize);
-            this.dspInputBuffer.pull(inputFrame, 0, frameSize);
-            this.dspLoopbackBuffer.pull(loopbackFrame, 0, frameSize);
+            this.dspInputBuffer.pull(inputFrame);
+            this.dspLoopbackBuffer.pull(loopbackFrame);
 
             this.dspOutputBuffer.push(this.instance.process(inputFrame, loopbackFrame));
         }
 
         if (this.dspOutputBuffer.size >= outputChannel.length) {
-            this.dspOutputBuffer.pull(outputChannel, 0, outputChannel.length);
+            this.dspOutputBuffer.pull(outputChannel);
         }
     }
 

@@ -12,6 +12,7 @@ import {
     SelfWorkerMessage,
     WorkerControllerMessage,
     ControllerMessage,
+    WORKLET_MESSAGES,
 } from '../../utils/ipc';
 import SpenchError, { assert } from '../../utils/error';
 import { getWorkerLogger, Logger } from '../../utils/logger';
@@ -29,7 +30,7 @@ import { SPENCH_FRAME_SIZE_SECONDS } from '../../utils/constants';
 
 import Loader, { LoadError } from './loader';
 import { InternalError, SpenchDspWrapper, SpenchWrapper } from './wrapper';
-import { AbstractTransport, MessageTransport, Payload } from './transport';
+import { AbstractTransport, MessageTransport, Payload, SharedMemoryTransport } from './transport';
 
 interface SpenchWorkerGlobalScope extends DedicatedWorkerGlobalScope {
     onmessage: ((this: SpenchWorkerGlobalScope, event: MessageEvent<SelfWorkerMessage>) => void) | null;
@@ -73,10 +74,20 @@ export class SpenchWorker {
 
     constructor(
         protected readonly controllerPort: ControllerPort,
-        workletPort: WorkletPort,
         protected readonly sampleRate: number,
+        protected readonly workletPort: WorkletPort,
+        buffer?: SharedArrayBuffer,
     ) {
-        this.transport = new MessageTransport(workletPort, sampleRate, SPENCH_FRAME_SIZE_SECONDS, this.handleFrame);
+        if (buffer) {
+            this.transport = new SharedMemoryTransport(
+                buffer!,
+                sampleRate,
+                SPENCH_FRAME_SIZE_SECONDS,
+                this.handleFrame,
+            );
+        } else {
+            this.transport = new MessageTransport(workletPort, sampleRate, SPENCH_FRAME_SIZE_SECONDS, this.handleFrame);
+        }
         this.controllerPort.addEventListener('message', this.handleControllerMessage);
         this.controllerPort.start();
     }
@@ -136,6 +147,18 @@ export class SpenchWorker {
                 sampleRate: this.sampleRate,
                 logger: shared.logger,
                 loader: shared.loader!,
+                onHeavyLoadStart: () => {
+                    this.workletPort.postMessage({
+                        type: WORKLET_MESSAGES.SET_FLAG,
+                        isWorkerBlockExpected: true,
+                    });
+                },
+                onHeavyLoadEnd: () => {
+                    this.workletPort.postMessage({
+                        type: WORKLET_MESSAGES.SET_FLAG,
+                        isWorkerBlockExpected: false,
+                    });
+                },
             });
 
             if (instance instanceof SpenchError) {
@@ -304,9 +327,9 @@ export const handleControllerMessage = (event: MessageEvent<SelfWorkerMessage>) 
                 'message',
                 (e) => {
                     assert(e.data.type === WORKER_MESSAGES.INIT);
-                    const { sampleRate, workletPort } = e.data;
 
-                    instances.add(new SpenchWorker(controllerPort, workletPort, sampleRate));
+                    const { sampleRate, workletPort, buffer } = e.data;
+                    instances.add(new SpenchWorker(controllerPort, sampleRate, workletPort, buffer));
                 },
                 { once: true },
             );
