@@ -37,13 +37,16 @@ void FeatureExtractorRunner::ReadConfig(std::shared_ptr<spench::NetworkConfig> c
 }
 
 void FeatureExtractorRunner::Run(spench::SpenchTask* spench_task) {
+  if (!spench_task) {
+    throw std::invalid_argument("FeatureExtractorRunner::Run: spench_task is null");
+  }
   auto& spench_data = spench_task->m_data;
   auto& spench_context = spench_data.context;
 
   if (spench_task->m_stage == PipelineStage::ORIG_CHUNK) {
     if (spench_data.waveform.size() == 0) {
       // error
-      throw("Input signal is empty!");
+      throw std::runtime_error("Input signal is empty!");
     }
 
     m_feature_extractor_ptr->STFTApply(spench_data.waveform,
@@ -51,7 +54,7 @@ void FeatureExtractorRunner::Run(spench::SpenchTask* spench_task) {
 
     if (spench_data.input_spectrogram.size() < 1) {
       // error
-      throw("Spectrogram is calculated incorectly! Something with input data!");
+      throw std::runtime_error("Spectrogram is calculated incorectly! Something with input data!");
     }
 
     spench_task->m_stage = PipelineStage::FOURIER_TRANSFORMED_SPEC;
@@ -105,7 +108,7 @@ void FeatureExtractorRunner::Run(spench::SpenchTask* spench_task) {
     // network pass the input to output and nothing to do
     spench_data.enhanced_wav.resize(m_params.NumFrameStrideSamples());
   } else {
-    throw("State is incorrect!");
+    throw std::runtime_error("State is incorrect!");
   }
 }
 
