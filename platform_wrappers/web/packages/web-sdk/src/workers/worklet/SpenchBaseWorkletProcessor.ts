@@ -41,8 +41,6 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
     // Overflow
     protected refillTimes: number[] = [];
 
-    protected overflowTimes: number[] = [];
-
     protected workerBlockFactor = 0;
 
     protected refillStartTime = Infinity;
@@ -184,6 +182,7 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
                 `The output buffer is empty for ${this.settings.lowPerformanceMaxRefillTimes} times in ${this.settings.lowPerformanceWindowSeconds} seconds, emitting LOW_PERFORMANCE`,
             );
             this.refillTimes = [];
+            this.refillStartTime = Infinity;
             this.controllerPort.postMessage({ type: CONTROLLER_MESSAGES.LOW_PERFORMANCE });
         }
     }
@@ -249,7 +248,6 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
                     this.logger.debug(`Setting worklet state, worker features enabled: ${workerFeaturesEnabled}`);
                     this.areWorkerFeaturesEnabled = workerFeaturesEnabled;
                     this.refillTimes = [];
-                    this.overflowTimes = [];
 
                     return;
                 case WORKLET_MESSAGES.WORKER_CREATED:
@@ -293,6 +291,11 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
 
                     if (typeof isWorkerBlockExpected === 'boolean') {
                         this.workerBlockFactor += isWorkerBlockExpected ? 1 : -1;
+
+                        if (!this.workerBlockFactor && this.refillStartTime !== Infinity) {
+                            this.refillStartTime = currentFrame / sampleRate;
+                            this.refillTimes = [];
+                        }
                     }
 
                     // eslint-disable-next-line no-useless-return
@@ -308,7 +311,7 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
         this.transport?.reset();
         this.telemetry.stop(currentTime);
         this.refillTimes = [];
-        this.overflowTimes = [];
+        this.refillStartTime = Infinity;
 
         this.previouslyRendered = false;
     }

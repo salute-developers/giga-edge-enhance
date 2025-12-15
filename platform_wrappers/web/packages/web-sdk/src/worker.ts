@@ -86,7 +86,7 @@ class SpenchWorker<M extends ModelsTmpl = ModelsTmpl> extends Worker implements 
             wasmDspUrl: WASM_DSP_URL.href,
             models: transferableModels,
         };
-        logger.debug(resources);
+
         this.postMessage(
             {
                 type: SELF_WORKER_MESSAGES.INIT,

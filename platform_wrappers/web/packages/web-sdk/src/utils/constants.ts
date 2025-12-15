@@ -34,6 +34,8 @@ export const SYNC_WAIT_TIMEOUT = 1;
 
 export const MAX_SEMAPHORE_WAIT_TIME_MS = 5000;
 
+export const MAX_MESSAGE_WAIT_TIME_MS = 5;
+
 // Max frame time measurements in worker before submit (near 5s)
 export const TELEMETRY_FRAME_TIME_MAX_COUNT = 300;
 

@@ -3,6 +3,7 @@ import { CustomPort, WORKER_MESSAGES, WorkerMessage, WORKLET_MESSAGES, WorkletMe
 import {
     getInputBufferSize,
     getOutputBufferSize,
+    MAX_MESSAGE_WAIT_TIME_MS,
     MAX_SPIN_BLOCK_TIME_MS,
     TRANSPORT_SIZE_SECONDS,
 } from '../../utils/constants';
@@ -29,7 +30,9 @@ export class MessageTransport implements AbstractTransport {
 
     protected readonly loopbackBuffer;
 
-    protected timeoutId = 0;
+    protected timeoutId = 0 as any as NodeJS.Timeout;
+
+    protected firstMessageInTickTime: number | null = null;
 
     constructor(
         protected readonly port: WorkletPort,
@@ -75,6 +78,11 @@ export class MessageTransport implements AbstractTransport {
     protected readonly handleWorkletMessage = (event: MessageEvent<WorkerMessage>) => {
         switch (event.data.type) {
             case WORKER_MESSAGES.INPUT:
+                if (this.firstMessageInTickTime === null) {
+                    this.firstMessageInTickTime = performance.now();
+                    setTimeout(() => (this.firstMessageInTickTime = null), 0);
+                }
+
                 const { input, loopback } = event.data;
 
                 if (this.inputBuffer.free < input.length) {
@@ -85,8 +93,13 @@ export class MessageTransport implements AbstractTransport {
                 this.inputBuffer.push(input);
                 this.loopbackBuffer.push(loopback);
 
+                if (performance.now() - this.firstMessageInTickTime > MAX_MESSAGE_WAIT_TIME_MS) {
+                    this.process();
+                    clearTimeout(this.timeoutId);
+                }
+
                 if (!this.timeoutId) {
-                    setTimeout(() => this.process(), 0);
+                    this.timeoutId = setTimeout(() => this.process(), 0);
                 }
 
                 return;
@@ -117,7 +130,7 @@ export class MessageTransport implements AbstractTransport {
             }
         }
 
-        this.timeoutId = 0;
+        this.timeoutId = 0 as any as NodeJS.Timeout;
     }
 }
 
