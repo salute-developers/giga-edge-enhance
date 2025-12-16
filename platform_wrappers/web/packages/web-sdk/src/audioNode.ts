@@ -388,7 +388,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         const workerWorkletChannel = new MessageChannel();
         let buffer: SharedArrayBuffer | undefined;
 
-        if (this.#settings.sharedMemoryEnabled && isSharedMemorySupported()) {
+        if (this.#settings.forceSharedMemory || (this.#settings.sharedMemoryEnabled && isSharedMemorySupported())) {
             this.#logger.debug('Using SharedArrayBuffer transport');
             buffer = new SharedArrayBuffer(
                 2 * RingBuffer.getInternalBufferSize(getInputBufferSize(sampleRate)) +

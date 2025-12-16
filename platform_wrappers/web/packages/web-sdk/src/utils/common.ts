@@ -33,6 +33,7 @@ export type Settings = {
     latencyIncreaseStep: number;
     fetchRetries: number;
     sharedMemoryEnabled: boolean;
+    forceSharedMemory: boolean;
     dspOnAudioThread: boolean;
     unstable_customNormalizationConfig?: string;
     unstable_customAECConfig?: string;
@@ -47,7 +48,10 @@ export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Setti
             typeof settings.lowPerformanceMaxRefillTimeFactor === 'number'
                 ? settings.lowPerformanceMaxRefillTimeFactor
                 : DEFAULT_LP_REFILL_TIME_FACTOR,
-        sharedMemoryEnabled: typeof settings.sharedMemoryEnabled === 'boolean' ? settings.sharedMemoryEnabled : true,
+        forceSharedMemory: Boolean(settings.forceSharedMemory),
+        sharedMemoryEnabled:
+            Boolean(settings.forceSharedMemory) ||
+            (typeof settings.sharedMemoryEnabled === 'boolean' ? settings.sharedMemoryEnabled : true),
         lowPerformanceWindowSeconds:
             typeof settings.lowPerformanceWindowSeconds === 'number'
                 ? settings.lowPerformanceWindowSeconds
