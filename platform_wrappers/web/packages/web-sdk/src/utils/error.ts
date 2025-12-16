@@ -18,6 +18,10 @@ class SpenchError extends Error {
     override get name() {
         return this.constructor.name;
     }
+
+    override get message(): string {
+        return super.message || 'Unknown error';
+    }
 }
 
 class AssertionError extends SpenchError {}

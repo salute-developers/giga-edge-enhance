@@ -357,6 +357,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
             };
 
             this.#workerPort!.addEventListener('message', handler);
+            this.addEventListener('destroyed', () => resolve(new LoadError('Destroyed while loading')));
         });
     }
 

@@ -171,7 +171,9 @@ class SpenchWorker<M extends ModelsTmpl = ModelsTmpl> extends Worker implements 
     };
 
     #handleError = (event: ErrorEvent) => {
-        this.logger.error(`${event.error || event.message} at SpenchWorker`);
+        this.logger.error(
+            `${event.error || event.message || 'Unknown error (check resource accessibility)'} at SpenchWorker`,
+        );
         this.destroy();
     };
 }

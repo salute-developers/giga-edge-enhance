@@ -207,8 +207,10 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
             const maxRefillTime = this.settings.lowPerformanceMaxRefillTimeFactor * this.currentBufferThreshold;
 
             if (!this.workerBlockFactor && delta > maxRefillTime) {
-                this.logger.debug(`Refill takes ${delta}s (current max ${maxRefillTime}s). Repeating refill.`);
-                this.handleOutputOverflow();
+                this.logger.debug(
+                    `Refill takes ${delta}s (current max ${maxRefillTime}s). Trying to continue playback.`,
+                );
+                this.previouslyRendered = true;
             }
         }
     }
