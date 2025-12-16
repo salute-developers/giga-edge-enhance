@@ -1,6 +1,7 @@
 import {
     DEFAULT_FETCH_RETRIES,
     DEFAULT_LP_MAX_REFILL_TIMES,
+    DEFAULT_LP_REFILL_TIME_FACTOR,
     DEFAULT_LP_WINDOW_SECONDS,
     WORKLET_OUTPUT_BUFFER_MIN_LATENCY,
     WORKLET_OUTPUT_BUFFER_STEP,
@@ -27,6 +28,7 @@ export type Features<M extends ModelsTmpl> = MainFeatures<M> & DspFeatures;
 export type Settings = {
     lowPerformanceWindowSeconds: number;
     lowPerformanceMaxRefillTimes: number;
+    lowPerformanceMaxRefillTimeFactor: number;
     minLatency: number;
     latencyIncreaseStep: number;
     fetchRetries: number;
@@ -41,6 +43,10 @@ export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Setti
         ...settings,
         dspOnAudioThread: Boolean(settings.dspOnAudioThread),
         fetchRetries: typeof settings.fetchRetries === 'number' ? settings.fetchRetries : DEFAULT_FETCH_RETRIES,
+        lowPerformanceMaxRefillTimeFactor:
+            typeof settings.lowPerformanceMaxRefillTimeFactor === 'number'
+                ? settings.lowPerformanceMaxRefillTimeFactor
+                : DEFAULT_LP_REFILL_TIME_FACTOR,
         sharedMemoryEnabled: typeof settings.sharedMemoryEnabled === 'boolean' ? settings.sharedMemoryEnabled : true,
         lowPerformanceWindowSeconds:
             typeof settings.lowPerformanceWindowSeconds === 'number'

@@ -135,6 +135,7 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
             this.previouslyRendered = true;
             this.refillStartTime = Infinity;
         } else if (this.previouslyRendered) {
+            this.logger.debug('The output buffer is empty, refilling');
             this.handleOutputOverflow();
 
             return false;
@@ -155,8 +156,6 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
     }
 
     protected handleOutputOverflow() {
-        this.logger.debug('The output buffer is empty, refilling');
-
         this.previouslyRendered = false;
         this.refillStartTime = currentFrame / sampleRate;
 
@@ -205,10 +204,10 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
                 return;
             }
 
-            if (!this.workerBlockFactor && delta > 2 * this.currentBufferThreshold) {
-                this.logger.debug(
-                    `Refill takes ${delta}s (current max ${2 * this.currentBufferThreshold}s). Repeating refill.`,
-                );
+            const maxRefillTime = this.settings.lowPerformanceMaxRefillTimeFactor * this.currentBufferThreshold;
+
+            if (!this.workerBlockFactor && delta > maxRefillTime) {
+                this.logger.debug(`Refill takes ${delta}s (current max ${maxRefillTime}s). Repeating refill.`);
                 this.handleOutputOverflow();
             }
         }
