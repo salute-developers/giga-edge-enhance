@@ -84,7 +84,7 @@ TEST_CASE("SUCCEED Run relu model dummy inference [tflite]") {
   IsVectorsClose(output, gt_vector, 0.0000001);
 }
 
-TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with fast onnx model (audio 24 kHz) [tflite runner]") {
+TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with fast tflite model (audio 24 kHz) [tflite runner]") {
   auto data = std::move(TestTfliteRunner()
       .InitRunner("default_configuration_fast_tflite_24khz.yaml"));
   std::vector<float> noisy_mag_5_old;
@@ -343,8 +343,43 @@ TEST_CASE("SUCCEED Run licensed encrypted model w/o lic check (24 kHz) [tflite r
 }
 #endif
 
+TEST_CASE("SUCCEED Run dummy multi inference for a model 48kHz and with different number of threads [tflite]") {
+  const std::size_t nattempts = 100;
+
+  for (uint16_t num_threads : {1, 2, 4, 8}) {
+    auto data = std::move(TestTfliteRunner()
+      .InitRunner("default_configuration_best_quality_tflite_48khz.yaml", "", "", num_threads));
+
+    std::vector<size_t> timings(nattempts);
+    std::vector<std::vector<float>*> inputs;
+    for (auto s : data.denoiser_runner->m_model_input_size) {
+      inputs.push_back(new std::vector<float>(s, static_cast<float>(0.)));
+    }
+
+    auto ts_1 = std::chrono::steady_clock::now();
+    for (size_t i = 0; i < nattempts; ++i) {
+      auto start = std::chrono::steady_clock::now();
+      data.denoiser_runner->_TestRun<float>(inputs);
+      auto stop = std::chrono::steady_clock::now();
+      timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
+    }
+    auto ts_2 = std::chrono::steady_clock::now();
+
+    auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+
+    spdlog::info("48kHz quality model infer with {} threads completed: {} | {} ms per infer",
+               num_threads,
+               tot,
+               static_cast<double>(tot) / nattempts);
+
+    for (uint16_t i = 0; i < data.denoiser_runner->m_model_input_size.size(); i++) {
+      delete inputs[i];
+    }
+  }
+}
+
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with different number of threads [tflite]") {
-  const std::size_t nattempts = 50;
+  const std::size_t nattempts = 100;
 
   for (uint16_t num_threads : {1, 2, 4, 8}) {
     auto data = std::move(TestTfliteRunner()
