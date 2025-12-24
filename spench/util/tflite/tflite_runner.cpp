@@ -344,15 +344,15 @@ void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
                                      dynamic_cast<spench::DenoiseContextQ<float>*>(context);
 
   ResizeIfNeededInPlace(denoise_context->fullband_hidden, m_model_input_size[1]);  // fb_h
-  ResizeIfNeededInPlace(denoise_context->fullband_cell_state, m_model_input_size[2]);  // fb_c
-  ResizeIfNeededInPlace(denoise_context->subband_hidden, m_model_input_size[3]);  // sb_h
-  ResizeIfNeededInPlace(denoise_context->subband_cell_state, m_model_input_size[4]);  // sb_c
+  ResizeIfNeededInPlace(denoise_context->fb_ctx, m_model_input_size[2]);  // fb_c
+  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_psd, m_model_input_size[3]);  // sb_h
+  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_psd, m_model_input_size[4]);  // sb_c
 
   inputs.push_back(&mag);
   inputs.push_back(&denoise_context->fullband_hidden);
-  inputs.push_back(&denoise_context->fullband_cell_state);
-  inputs.push_back(&denoise_context->subband_hidden);
-  inputs.push_back(&denoise_context->subband_cell_state);
+  inputs.push_back(&denoise_context->fb_ctx);
+  inputs.push_back(&denoise_context->fb_snr_noise_psd);
+  inputs.push_back(&denoise_context->sb_snr_noise_psd);
 }
 
 template<typename T>
@@ -367,20 +367,20 @@ void SpenchQTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
     const_output_ptr = tflite::GetTensorData<T>(m_model_outputs[output_idx]);
     switch (output_idx) {
       case 0:
-        context->fullband_hidden.assign(const_output_ptr,
-                                          const_output_ptr + context->fullband_hidden.size());
+        context->fb_ctx.assign(const_output_ptr,
+                                          const_output_ptr + context->fb_ctx.size());
         break;
       case 1:
-        context->fullband_cell_state.assign(const_output_ptr,
-                                              const_output_ptr + context->fullband_cell_state.size());
+        context->fullband_hidden.assign(const_output_ptr,
+                                              const_output_ptr + context->fullband_hidden.size());
         break;
       case 2:
-        context->subband_hidden.assign(const_output_ptr,
-                                         const_output_ptr + context->subband_hidden.size());
+        context->fb_snr_noise_psd.assign(const_output_ptr,
+                                         const_output_ptr + context->fb_snr_noise_psd.size());
         break;
       case 3:
-        context->subband_cell_state.assign(const_output_ptr,
-                                             const_output_ptr + context->subband_cell_state.size());
+        context->sb_snr_noise_psd.assign(const_output_ptr,
+                                             const_output_ptr + context->sb_snr_noise_psd.size());
         break;
       case 4:
         for (uint64_t i = 0; i < m_model_output_size[output_idx]; i += 2) {

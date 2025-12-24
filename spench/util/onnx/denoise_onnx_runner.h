@@ -25,19 +25,19 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
       throw("Context is not allocated!");
     }
 
-    T* probabilities = network_output[0].GetTensorMutableData<T>();
     spench::DenoiseContextQ<T>* context = dynamic_cast<spench::DenoiseContextQ<T>*>(data.context);
+    T* probabilities = network_output[0].GetTensorMutableData<T>();
+    context->fb_ctx.assign(probabilities,
+                                                  probabilities + context->fb_ctx.size());
+    probabilities = network_output[1].GetTensorMutableData<T>();
     context->fullband_hidden.assign(probabilities,
                                                   probabilities + context->fullband_hidden.size());
-    probabilities = network_output[1].GetTensorMutableData<T>();
-    context->fullband_cell_state.assign(probabilities,
-                                                      probabilities + context->fullband_cell_state.size());
     probabilities = network_output[2].GetTensorMutableData<T>();
-    context->subband_hidden.assign(probabilities,
-                                                  probabilities + context->subband_hidden.size());
+    context->fb_snr_noise_psd.assign(probabilities,
+                                                  probabilities + context->fb_snr_noise_psd.size());
     probabilities = network_output[3].GetTensorMutableData<T>();
-    context->subband_cell_state.assign(probabilities,
-                                                      probabilities + context->subband_cell_state.size());
+    context->sb_snr_noise_psd.assign(probabilities,
+                                                      probabilities + context->sb_snr_noise_psd.size());
     probabilities = network_output[4].GetTensorMutableData<T>();
 
     for (uint64_t i = 0; i < 2 * data.new_spectrogram.real.size(); i += 2) {
