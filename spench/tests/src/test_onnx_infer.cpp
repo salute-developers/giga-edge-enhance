@@ -866,14 +866,14 @@ TEST_CASE("FAIL Read config for Inference Runner with not existed model path [on
 
 TEST_CASE("FAIL Run cpu onnx runner with null pointer task and zeroed hidden layer [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
+      .InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
   CHECK_THROWS_WITH(data.spench_model_runner->Infer(nullptr),
-                                            "Task data or context are not initialized!");
+                                              "Task data or context are not initialized!");
 }
 
 TEST_CASE("FAIL Run cpu onnx runner with null pointer context and zeroed hidden layer [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_best_quality_onnx_16khz.yaml"));
+      .InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
   spench::SpenchTask denoise_task;
   CHECK_THROWS_WITH(data.spench_model_runner->Infer(&denoise_task),
                                             "Task data or context are not initialized!");
@@ -1124,33 +1124,44 @@ TEST_CASE("SUCCEED Run fast onnx model with real data and check first two iterat
 TEST_CASE("SUCCEED Run quality onnx model with real data and check first two iterations (audio 48 kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
-  std::vector<float> gt_fb_ctx;
-  std::vector<float> gt_fb_hidden;
-  std::vector<float> gt_fb_snr_noise_psd;
-  std::vector<float> gt_sb_snr_noise_psd;
+
+  std::vector<float> gt_fb_ctx_step1;
+  std::vector<float> gt_fb_hidden_step1;
+  std::vector<float> gt_fb_ctx_step2;
+  std::vector<float> gt_fb_hidden_step2;
   std::vector<float> gt_fb_snr_noise_psd_step1;
   std::vector<float> gt_sb_snr_noise_psd_step1;
+  std::vector<float> gt_fb_snr_noise_psd_step2;
+  std::vector<float> gt_sb_snr_noise_psd_step2;
 
-  data.LoadDataFromBin("1_cur_fb_snr_noise_psd_out_48k.dump", gt_fb_snr_noise_psd_step1);
-  data.LoadDataFromBin("1_cur_sb_snr_noise_psd_out_48k.dump", gt_sb_snr_noise_psd_step1);
-  data.LoadDataFromBin("2_cur_fb_ctx_out_48k.dump", gt_fb_ctx);
-  data.LoadDataFromBin("2_cur_fb_hidden_out_48k.dump", gt_fb_hidden);
-  data.LoadDataFromBin("2_cur_fb_snr_noise_psd_out_48k.dump", gt_fb_snr_noise_psd);
-  data.LoadDataFromBin("2_cur_sb_snr_noise_psd_out_48k.dump", gt_sb_snr_noise_psd);
+  data.LoadDataFromBin("1_cur_fb_ctx_out_48khz.dump", gt_fb_ctx_step1);
+  data.LoadDataFromBin("1_cur_fb_hidden_out_48khz.dump", gt_fb_hidden_step1);
+  data.LoadDataFromBin("2_cur_fb_ctx_out_48khz.dump", gt_fb_ctx_step2);
+  data.LoadDataFromBin("2_cur_fb_hidden_out_48khz.dump", gt_fb_hidden_step2);
+  data.LoadDataFromBin("1_cur_fb_snr_noise_psd_out_48khz.dump", gt_fb_snr_noise_psd_step1);
+  data.LoadDataFromBin("1_cur_sb_snr_noise_psd_out_48khz.dump", gt_sb_snr_noise_psd_step1);
+  data.LoadDataFromBin("2_cur_fb_snr_noise_psd_out_48khz.dump", gt_fb_snr_noise_psd_step2);
+  data.LoadDataFromBin("2_cur_sb_snr_noise_psd_out_48khz.dump", gt_sb_snr_noise_psd_step2);
+
   std::valarray<float> noisy_real_0, noisy_imag_0;
   std::valarray<float> noisy_real_1, noisy_imag_1;
-  data.LoadDataFromBin("1_noisy_real_frame0_48k.dump", noisy_real_0);
-  data.LoadDataFromBin("1_noisy_imag_frame0_48k.dump", noisy_imag_0);
-  data.LoadDataFromBin("1_noisy_real_frame1_48k.dump", noisy_real_1);
-  data.LoadDataFromBin("1_noisy_imag_frame1_48k.dump", noisy_imag_1);
+  data.LoadDataFromBin("1_noisy_real_frame0_48khz.dump", noisy_real_0);
+  data.LoadDataFromBin("1_noisy_imag_frame0_48khz.dump", noisy_imag_0);
+  data.LoadDataFromBin("1_noisy_real_frame1_48khz.dump", noisy_real_1);
+  data.LoadDataFromBin("1_noisy_imag_frame1_48khz.dump", noisy_imag_1);
+
   spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>());
-  ctx->fb_ctx.assign(160 * 5, 0.0f);
-  ctx->fullband_hidden.assign(gt_fb_hidden.size(), 0.0f);
-  ctx->fb_snr_noise_psd.assign(gt_fb_snr_noise_psd.size(), 1e-3f);
-  ctx->sb_snr_noise_psd.assign(gt_sb_snr_noise_psd.size(), 1e-3f);
+
+  data.LoadDataFromBin("step1_prev_fb_ctx_in_48khz.dump", ctx->fb_ctx);
+  data.LoadDataFromBin("step1_prev_fb_hidden_in_48khz.dump", ctx->fullband_hidden);
+  data.LoadDataFromBin("step1_prev_fb_snr_noise_psd_in_48khz.dump", ctx->fb_snr_noise_psd);
+  data.LoadDataFromBin("step1_prev_sb_snr_noise_psd_in_48khz.dump", ctx->sb_snr_noise_psd);
+
+  // num_mels = 160, num_frames = 5
   REQUIRE(ctx->fb_ctx.size() == 160 * 5);
   REQUIRE(ctx->fullband_hidden.size() == 2 * 256);
+
   denoise_task.m_data.context = ctx.get();
   denoise_task.m_data.input_spectrogram.clear();
   denoise_task.m_data.input_spectrogram.emplace_back(noisy_real_0, noisy_imag_0);
@@ -1158,6 +1169,8 @@ TEST_CASE("SUCCEED Run quality onnx model with real data and check first two ite
 
   data.spench_model_runner->Infer(&denoise_task);
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
+  IsVectorsClose(gt_fb_ctx_step1, ctx->fb_ctx, 1e-5f);
+  IsVectorsClose(gt_fb_hidden_step1, ctx->fullband_hidden, 1e-5f);
   IsVectorsClose(gt_fb_snr_noise_psd_step1, ctx->fb_snr_noise_psd, 1e-5f);
   IsVectorsClose(gt_sb_snr_noise_psd_step1, ctx->sb_snr_noise_psd, 1e-5f);
 
@@ -1167,9 +1180,10 @@ TEST_CASE("SUCCEED Run quality onnx model with real data and check first two ite
 
   data.spench_model_runner->Infer(&denoise_task);
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
-
-  IsVectorsClose(gt_fb_snr_noise_psd, ctx->fb_snr_noise_psd, 1e-5f);
-  IsVectorsClose(gt_sb_snr_noise_psd, ctx->sb_snr_noise_psd, 1e-5f);
+  IsVectorsClose(gt_fb_ctx_step2, ctx->fb_ctx, 1e-5f);
+  IsVectorsClose(gt_fb_hidden_step2, ctx->fullband_hidden, 1e-5f);
+  IsVectorsClose(gt_fb_snr_noise_psd_step2, ctx->fb_snr_noise_psd, 1e-5f);
+  IsVectorsClose(gt_sb_snr_noise_psd_step2, ctx->sb_snr_noise_psd, 1e-5f);
 }
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
