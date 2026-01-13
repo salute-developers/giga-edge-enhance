@@ -1,3 +1,4 @@
+/* eslint-disable no-shadow */
 import SpenchError from './utils/error';
 import { SetFeaturesFailedError, SpenchAudioNode, SpenchAudioNodeImpl } from './audioNode';
 import { Features, getSettingsWithDefaults, ModelsTmpl, Settings } from './utils/common';
@@ -7,6 +8,17 @@ import { LIB_VERSION } from './utils/version';
 import Loader, { LoadError } from './loader';
 import { DEFAULT_MODELS, getDefaultModels } from './utils/resources';
 
+/**
+ * Configuration options used to create a {@link SpenchSDK} instance.
+ *
+ * @template M - The model template used by the SDK.
+ * @property {ExternalLogger} [logger] - External logger to use.
+ * @property {SendMetricFunction} [sendMetric] - Function to send telemetry metrics.
+ * @property {Partial<Features<M>>} [preloadFeatures] - Features to preload before use.
+ * @property {Verbosity} [loggerVerbosity] - Verbosity level for the internal logger.
+ * @property {Partial<M>} [models] - Custom models to override defaults.
+ * @property {Partial<Settings>} [settings] - Custom settings to override defaults.
+ */
 type CreateSpenchParams<M extends ModelsTmpl> = {
     logger?: ExternalLogger;
     sendMetric?: SendMetricFunction;
@@ -16,6 +28,11 @@ type CreateSpenchParams<M extends ModelsTmpl> = {
     settings?: Partial<Settings>;
 };
 
+/**
+ * Represents the main SDK class for interacting with Spench features.
+ *
+ * @template M - The model template for the SDK, defaulting to {@link DEFAULT_MODELS}.
+ */
 class SpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
     #ctx: AudioContext;
 
@@ -27,6 +44,15 @@ class SpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
 
     #settings: Settings;
 
+    /**
+     * Creates a new instance of {@link SpenchSDK}.
+     *
+     * @param ctx - The {@link AudioContext} to use for the SDK.
+     * @param logger - The external logger instance.
+     * @param telemetry - The telemetry instance for metric collection.
+     * @param settings - The settings for the SDK.
+     * @param models - Optional custom models to use.
+     */
     protected constructor(ctx: AudioContext, logger: Logger, telemetry: Telemetry, settings: Settings, models?: M) {
         this.#ctx = ctx;
         this.#logger = logger;
@@ -35,12 +61,23 @@ class SpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
         this.#loader = new Loader(ctx, logger, telemetry, settings, models);
     }
 
+    /**
+     * Checks if the current environment supports the required Web Audio features.
+     *
+     * @returns {boolean} `true` if supported, otherwise `false`.
+     */
     static isEnvironmentSupported(): boolean {
         // TODO browser versions
         return true;
     }
 
-    // eslint-disable-next-line no-shadow
+    /**
+     * Factory method to create a new {@link SpenchSDK} instance.
+     *
+     * @param ctx - The {@link AudioContext} to use.
+     * @param params - Optional configuration parameters {@link CreateSpenchParams}.
+     * @returns A new {@link SpenchSDK} instance.
+     */
     static create<M extends ModelsTmpl = typeof DEFAULT_MODELS>(
         ctx: AudioContext,
         {
@@ -75,6 +112,13 @@ class SpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
         return instance;
     }
 
+    /**
+     * Creates an {@link SpenchAudioNode} with optional features and settings.
+     *
+     * @param features - Features to enable on the node.
+     * @param rawSettings - Optional additional settings to merge with the SDK defaults.
+     * @returns A promise that resolves to an {@link SpenchAudioNode} or an error type.
+     */
     async createAudioNode(
         features?: Partial<Features<M>>,
         rawSettings?: Partial<Settings>,

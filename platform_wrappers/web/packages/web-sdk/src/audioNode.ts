@@ -40,11 +40,34 @@ import Deferred from './utils/deferred';
 import { RingBuffer } from './utils/ringBuffer';
 import { BinarySemaphore } from './utils/semaphore';
 
+/**
+ * Represents an error that occurs when changing feature configuration fails in the
+ * {@link SpenchAudioNode}. This error is a thin wrapper around {@link SpenchError}
+ * that can be distinguished in the error handling logic.
+ */
 export class SetFeaturesFailedError extends SpenchError {}
 
+/**
+ * Possible causes for a low‑performance event emitted by the audio node.
+ *
+ * * `transport` – latency introduced by the worker/message channel.
+ * * `inference` – heavy inference processing on the DSP thread.
+ * * `unknown` – the cause could not be determined.
+ */
 type LowPerformanceCause = 'transport' | 'inference' | 'unknown';
 
+/**
+ * Custom event that is dispatched when the audio node is unable to operate
+ * in real‑time mode under the current environmental conditions. The event
+ * carries the most probable cause and the mean process time observed.
+ *
+ * @extends Event
+ */
 class LowPerformanceEvent extends Event {
+    /**
+     * @param {LowPerformanceCause} potentialCause - The most likely cause.
+     * @param {number|undefined} [meanProcessTime] - The mean processing time in milliseconds.
+     */
     constructor(
         public potentialCause: LowPerformanceCause,
         public meanProcessTime?: number,
@@ -53,25 +76,72 @@ class LowPerformanceEvent extends Event {
     }
 }
 
+/**
+ * Map of event names to their corresponding event objects for
+ * {@link SpenchAudioNode}. Used for type‑safe event handling.
+ */
 interface SpenchAudioNodeEventMap {
     low_performance: LowPerformanceEvent;
     destroyed: Event;
 }
 
+/**
+ * A port that the worklet node uses to communicate with the processor
+ * (`CustomPort` typed for controller ↔ worklet messages).
+ */
 type WorkletPort = CustomPort<ControllerMessage, WorkletMessage>;
+
+/**
+ * A port that the worklet node uses to communicate with the Web Worker
+ * (`CustomPort` typed for controller ↔ worker messages).
+ */
 type WorkerPort = CustomPort<ControllerMessage, WorkerMessage>;
 
+/**
+ * Public API surface of the Spench audio node.  Extends the native
+ * {@link AudioWorkletNode} with Spench‑specific control methods and
+ * custom events.
+ *
+ * @template M - Template for the available Spench models.
+ */
 export interface SpenchAudioNode<M extends ModelsTmpl> extends AudioWorkletNode {
+    /**
+     * Configures the node with the specified features.
+     *
+     * @param {Partial<Features<M>>} features - Features to enable or disable.
+     * @returns {Promise<void | LoadError | SetFeaturesFailedError>} A promise that
+     * resolves when the configuration has finished or resolves with an error.
+     */
     setFeatures(features: Partial<Features<M>>): Promise<void | LoadError | SetFeaturesFailedError>;
+
+    /** Immediately resets the internal state of the node and its worker. */
     reset(): void;
+
+    /** Cleans up all resources of the node. */
     destroy(): void;
 
+    /**
+     * Adds an event listener for events emitted by this node.
+     *
+     * @template K - Key of the event map.
+     * @param {K} type - Name of the event.
+     * @param {(this: SpenchAudioNode<M>, ev: SpenchAudioNodeEventMap[K]) => any} listener - Callback.
+     * @param {boolean|AddEventListenerOptions} [options] - Listener options.
+     */
     addEventListener<K extends keyof SpenchAudioNodeEventMap>(
         type: K,
         listener: (this: SpenchAudioNode<M>, ev: SpenchAudioNodeEventMap[K]) => any,
         options?: boolean | AddEventListenerOptions,
     ): void;
 
+    /**
+     * Removes a previously added event listener.
+     *
+     * @template K - Key of the event map.
+     * @param {K} type - Name of the event.
+     * @param {(this: SpenchAudioNode<M>, ev: SpenchAudioNodeEventMap[K]) => any} listener - Callback.
+     * @param {boolean|EventListenerOptions} [options] - Listener options.
+     */
     removeEventListener<K extends keyof SpenchAudioNodeEventMap>(
         type: K,
         listener: (this: SpenchAudioNode<M>, ev: SpenchAudioNodeEventMap[K]) => any,
@@ -79,6 +149,11 @@ export interface SpenchAudioNode<M extends ModelsTmpl> extends AudioWorkletNode 
     ): void;
 }
 
+/**
+ * Parameters required to construct a {@link SpenchAudioNodeImpl}.
+ *
+ * @template M - Template for the available Spench models.
+ */
 interface SpenchAudioNodeCtorParams<M extends ModelsTmpl> {
     logger: Logger;
     ctx: AudioContext;
@@ -87,15 +162,28 @@ interface SpenchAudioNodeCtorParams<M extends ModelsTmpl> {
     settings: Settings;
 }
 
+/**
+ * Implementation of the Spench audio node.  It orchestrates communication
+ * with the AudioWorkletProcessor, a Web Worker, and the optional
+ * DSP‑WASM module.  The class handles feature loading, dynamic re‑configuration,
+ * error reporting, and state synchronization with the audio context.
+ *
+ * @template M - Template for the available Spench models.
+ */
 export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode implements SpenchAudioNode<M> {
+    /** Logger instance scoped to this node. */
     readonly #logger: Logger;
 
+    /** Resource loader for models, WASM, and worker. */
     readonly #loader: Loader<M>;
 
+    /** Current user settings. */
     readonly #settings: Settings;
 
+    /** Telemetry client used for metrics. */
     readonly #telemetry: Telemetry;
 
+    /** Current feature configuration. */
     #features: Features<M> = {
         normalization: false,
         echoCancellation: false,
@@ -103,18 +191,29 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         dereverberation: false,
     };
 
+    /** Reference to the worker thread, if running. */
     #worker: SpenchWorker | undefined;
 
+    /** Message channel port used to talk to the worker. */
     #workerPort: WorkerPort | undefined;
 
+    /** Indicates whether the node has finished its first processing cycle. */
     #initialized = false;
 
+    /** Indicates whether the DSP‑WASM module has been loaded. */
     #isDspLoaded = false;
 
+    /** Promise that blocks concurrent calls to {@link setFeatures}. */
     #setFeaturesLock: Promise<void> | undefined;
 
+    /** Timestamp of the last feature configuration start. */
     #initStartTime = performance.now();
 
+    /**
+     * Creates a new instance.
+     *
+     * @param {SpenchAudioNodeCtorParams<M>} params - Constructor parameters.
+     */
     constructor({ ctx, logger, telemetry, loader, settings }: SpenchAudioNodeCtorParams<M>) {
         super(ctx, settings.dspOnAudioThread ? SPENCH_DSP_WORKLET_NAME : SPENCH_WORKLET_NAME, {
             numberOfInputs: 2,
@@ -130,14 +229,22 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         this.#init();
     }
 
+    /** Returns the current feature configuration. */
     get features(): Features<M> {
         return this.#features;
     }
 
+    /** Internal alias for the worklet port. */
     get #port(): WorkletPort {
         return super.port;
     }
 
+    /**
+     * Configures the node with the specified features.
+     *
+     * @param {Partial<Features<M>>} features - Features to enable/disable.
+     * @returns {Promise<void | LoadError | SetFeaturesFailedError>}
+     */
     async setFeatures(features: Partial<Features<M>>): Promise<void | LoadError | SetFeaturesFailedError> {
         if (this.#setFeaturesLock) {
             return this.#setFeaturesLock.then(() => this.setFeatures(features));
@@ -195,6 +302,10 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         return res;
     }
 
+    /**
+     * Cleans up all resources, detaching event listeners, closing ports and
+     * workers, and dispatching a `destroyed` event.
+     */
     destroy(): void {
         this.#logger.debug('Destroying Spench AudioNode');
 
@@ -215,6 +326,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         super.dispatchEvent(new Event('destroyed'));
     }
 
+    /** Resets the internal state of the node and forwards the reset to the worker. */
     reset() {
         this.#logger.debug('Resetting Spench AudioNode');
 
@@ -222,6 +334,14 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         this.#workerPort?.postMessage({ type: WORKER_MESSAGES.RESET });
     }
 
+    /**
+     * Internal helper that applies a full feature set to the worker (if needed)
+     * and forwards the feature list to the worklet processor.
+     *
+     * @private
+     * @param {Features<M>} features - The full feature set to apply.
+     * @returns {Promise<void | LoadError | SetFeaturesFailedError>}
+     */
     async #setFeatures(features: Features<M>): Promise<void | LoadError | SetFeaturesFailedError> {
         const workerFeaturesEnabled = areMainFeaturesEnabled(features) || areDspFeaturesEnabled(features);
         const workerSetResult = await this.#setWorkerFeatures(features);
@@ -241,6 +361,14 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         }
     }
 
+    /**
+     * Internal helper that loads the DSP WASM module (if not already loaded)
+     * and sends the required feature set to the worklet processor.
+     *
+     * @private
+     * @param {DspFeatures} features - DSP‑specific features to enable.
+     * @returns {Promise<void | LoadError | SetFeaturesFailedError>}
+     */
     async #setDspWorkletFeatures(features: DspFeatures): Promise<void | LoadError | SetFeaturesFailedError> {
         if (!areDspFeaturesChanged(this.#features, features)) {
             return;
@@ -298,6 +426,13 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         });
     }
 
+    /**
+     * Ensures the worker is running and sends a feature set request to it.
+     *
+     * @private
+     * @param {Features<M>} features - Features to set in the worker.
+     * @returns {Promise<void | LoadError | SetFeaturesFailedError>}
+     */
     async #setWorkerFeatures(features: Features<M>): Promise<void | LoadError | SetFeaturesFailedError> {
         const areFeaturesChanged =
             areMainFeaturesChanged(this.#features, features) || areDspFeaturesChanged(this.#features, features);
@@ -361,6 +496,14 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         });
     }
 
+    /**
+     * Checks if a received message is a common message that can be ignored
+     * by the node.
+     *
+     * @private
+     * @param {MessageEvent<ControllerMessage>} event - Incoming message.
+     * @returns {boolean} `true` if the message is handled.
+     */
     #handleCommonMessage(event: MessageEvent<ControllerMessage>): boolean {
         switch (event.data.type) {
             case CONTROLLER_MESSAGES.SET_FEATURES_RESULT:
@@ -371,6 +514,13 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         return false;
     }
 
+    /**
+     * Loads the worker process, establishes the message channels and
+     * initializes the worker with the audio context's sample rate.
+     *
+     * @private
+     * @returns {Promise<void | LoadError>}
+     */
     async #loadWorker(): Promise<void | LoadError> {
         if (this.#workerPort) return;
 
@@ -422,6 +572,12 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         this.#worker.addEventListener('error', this.#handleWorkerError);
     }
 
+    /**
+     * Handles messages from the AudioWorkletProcessor.
+     *
+     * @private
+     * @param {MessageEvent<ControllerMessage>} event - Incoming message.
+     */
     #handleWorkletMessage: Exclude<WorkletPort['onmessage'], null> = (event): void => {
         if (this.#handleCommonMessage(event)) {
             return;
@@ -464,6 +620,14 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         assert(false, 'Unknown message type from AudioWorkletProcessor');
     };
 
+    /**
+     * Handles messages from the worker. Currently all messages are forwarded
+     * to the common handler; this function is a placeholder for future
+     * worker‑specific handling.
+     *
+     * @private
+     * @param {MessageEvent<ControllerMessage>} event - Incoming message.
+     */
     #handleWorkerMessage: Exclude<WorkerPort['onmessage'], null> = (event): void => {
         if (this.#handleCommonMessage(event)) {
             return;
@@ -472,22 +636,28 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         assert(false, 'Unknown message type from Worker');
     };
 
+    /** Placeholder for low‑performance handling logic. */
     #handleLowPerformance() {
         // TODO HANDLE DEFAULT LOW PERFORMANCE
     }
 
+    /** Central error handler that logs and destroys the node. */
     #handleError = (error: SpenchError) => {
         this.#logger.error(`${error} at SpenchAudioNode`);
 
         this.destroy();
     };
 
+    /** Handles processor‑level errors. */
     #handleProcessorError = () => this.#handleError(new SpenchError('Error in AudioWorkletProcessor'));
 
+    /** Handles worker errors. */
     #handleWorkerError = (event: ErrorEvent) => this.#handleError(new SpenchError(event.error || event.message));
 
+    /** Handles message‑serialization errors. */
     #handleMessageError = () => this.#handleError(new SpenchError('Error serializing AudioWorkletProcessor message'));
 
+    /** Responds to changes in the audio context state. */
     #handleContextStateChange = () => {
         switch (super.context.state) {
             case 'closed':
@@ -500,6 +670,12 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         }
     };
 
+    /**
+     * Performs initial setup: registers context listeners, attaches worklet ports,
+     * and sends the first init message to the processor.
+     *
+     * @private
+     */
     #init(): void {
         super.context.addEventListener('statechange', this.#handleContextStateChange);
         super.addEventListener('processorerror', this.#handleProcessorError);

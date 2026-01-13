@@ -9,22 +9,77 @@ import {
 
 export type ModelKey = 'lite24k' | 'full24k' | 'lite48k' | 'full48k';
 
+/**
+ * A value that can represent a model. It can be a string URL, a `URL` instance,
+ * or the raw `ArrayBuffer` containing the model data.
+ */
 export type ModelValue = string | URL | ArrayBuffer;
 
+/**
+ * A map from a main feature (`noiseCancellation` / `dereverberation`) to the
+ * available model URLs for each {@link ModelKey}.  The type is generic over the
+ * model value type `V` to allow for flexibility.
+ *
+ * @template V - The type of the model value.
+ */
 export type ModelsTmpl<V = ModelValue> = Partial<Record<keyof MainFeatures<any>, Partial<Record<ModelKey, V>>>>;
 
 export type MainFeatures<M extends ModelsTmpl> = {
+    /** Enable/disable Noise Cancellation.  When truthy, the string must be a
+     * {@link ModelKey} selecting the model to load. */
     noiseCancellation: boolean | keyof M['noiseCancellation'];
+    /** Enable/disable Dereverberation.  When truthy, the string must be a
+     * {@link ModelKey} selecting the model to load. */
     dereverberation: boolean | keyof M['dereverberation'];
 };
 
+/**
+ * Digital Signal Processing (DSP) features that can be toggled on the audio
+ * thread.  These features do not require external model files.
+ */
 export type DspFeatures = {
+    /** Enable/disable audio normalization. */
     normalization: boolean;
+    /** Enable/disable acoustic echo cancellation. */
     echoCancellation: boolean;
 };
 
+/**
+ * A full feature set that combines the main features and DSP features.
+ *
+ * @template M - The {@link ModelsTmpl} instance defining available models.
+ */
 export type Features<M extends ModelsTmpl> = MainFeatures<M> & DspFeatures;
 
+/**
+ * Configuration options for the Web SDK.
+ *
+ * @property lowPerformanceWindowSeconds   The time window (in seconds) used to count
+ *                                          refill attempts before deciding that the node
+ *                                          should emit a low‑performance event.
+ * @property lowPerformanceMaxRefillTimes  The maximum number of buffer refills allowed
+ *                                          before the low‑performance event is emitted.
+ * @property lowPerformanceMaxRefillTimeFactor
+ *                                      A scaling factor applied to the output buffer size
+ *                                      after each refill.
+ * @property minLatency                    The initial buffer latency (in ms) before any
+ *                                          expansion occurs.
+ * @property latencyIncreaseStep           The amount (in ms) by which the latency is
+ *                                          increased on each step.
+ * @property fetchRetries                  The maximum number of retry attempts for
+ *                                          fetching resources before giving up.
+ * @property sharedMemoryEnabled           Whether to use `SharedArrayBuffer` when the
+ *                                          environment supports it.
+ * @property forceSharedMemory             Force the SDK to use shared memory regardless
+ *                                          of environment support.
+ * @property dspOnAudioThread              (Deprecated) Whether to run DSP features on
+ *                                          the audio thread.
+ * @property unstable_customNormalizationConfig
+ *                                      (Experimental) Custom configuration string for
+ *                                      the normalization feature.
+ * @property unstable_customAECConfig      (Experimental) Custom configuration string for
+ *                                          the echo‑cancellation feature.
+ */
 export type Settings = {
     lowPerformanceWindowSeconds: number;
     lowPerformanceMaxRefillTimes: number;
