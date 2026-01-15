@@ -177,7 +177,7 @@ TEST_CASE("FAIL Create resampler with equal sample rates [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().
                                     Init(16, 16, 48000, 48000));
 
-  CHECK_THROWS_WITH(util::sound::BuildResampler(voice_utils.src_sample_rate,
+  CHECK_THROWS_WITH(util::sound::Resampler(voice_utils.src_sample_rate,
                                                 voice_utils.dst_sample_rate, 1),
                     "BuildResampler: in_rate equals out_rate.");
 }
@@ -187,14 +187,10 @@ TEST_CASE("SUCCEED Run offline audio downsampling 48kHz -> 24kHz [sound]") {
                                      Init(16, 16, 48000, 24000).
                                      SetSrcAudio("test1_48_noised.wav").
                                      SetDstAudio("test1_24_noised.wav"));
-  util::sound::ResampleWrapper resampler =
-                      util::sound::BuildResampler(voice_utils.src_sample_rate,
+  auto resampler = util::sound::Resampler(voice_utils.src_sample_rate,
                                                   voice_utils.dst_sample_rate, 1);
-  std::vector<float> output_data = util::sound::ResampleVec(resampler,
-                                                            voice_utils.src_wav_data,
-                                                            voice_utils.src_sample_rate,
-                                                            voice_utils.dst_sample_rate);
-  std::vector<float> ending_part_of_data = util::sound::FlushVec(resampler);
+  std::vector<float> output_data = resampler.process(voice_utils.src_wav_data);
+  std::vector<float> ending_part_of_data = resampler.flush();
 
   output_data.insert(end(output_data), begin(ending_part_of_data), end(ending_part_of_data));
 
@@ -213,15 +209,9 @@ TEST_CASE("SUCCEED Run offline audio upsampling 24kHz -> 48kHz [sound]") {
                                      SetSrcAudio("rec_noise_001_24k.wav").
                                      SetDstAudio("rec_noise_001_48k.wav"));
 
-  util::sound::ResampleWrapper resampler =
-                      util::sound::BuildResampler(voice_utils.src_sample_rate,
-                                                  voice_utils.dst_sample_rate, 1);
-  std::vector<float> output_data = util::sound::ResampleVec(resampler,
-                                                            voice_utils.src_wav_data,
-                                                            voice_utils.src_sample_rate,
-                                                            voice_utils.dst_sample_rate);
-
-  std::vector<float> ending_part_of_data = util::sound::FlushVec(resampler);
+  auto resampler = util::sound::Resampler(voice_utils.src_sample_rate, voice_utils.dst_sample_rate, 1);
+  std::vector<float> output_data = resampler.process(voice_utils.src_wav_data);
+  std::vector<float> ending_part_of_data = resampler.flush();
 
   output_data.insert(end(output_data), begin(ending_part_of_data), end(ending_part_of_data));
   IsVectorsClose(voice_utils.dst_wav_data, output_data, 0.0001);
@@ -238,8 +228,7 @@ TEST_CASE("SUCCEED Run stream audio downsampling 48kHz -> 24kHz [sound]") {
                                      SetSrcAudio("test1_48_noised.wav").
                                      SetDstAudio("test1_24_noised.wav"));
 
-  util::sound::ResampleWrapper resampler =
-                      util::sound::BuildResampler(voice_utils.src_sample_rate,
+  auto resampler = util::sound::Resampler(voice_utils.src_sample_rate,
                                                   voice_utils.dst_sample_rate, 1);
   auto src_chunks = ChunkWav<float>(voice_utils.src_wav_data,
                                     voice_utils.src_sample_rate,
@@ -255,15 +244,13 @@ TEST_CASE("SUCCEED Run stream audio downsampling 48kHz -> 24kHz [sound]") {
   for (uint32_t i = 0; i < src_chunks.size(); ++i) {
     auto& s_chunk = src_chunks[i];
 
-    std::vector<float> output_data = util::sound::ResampleVec(resampler, s_chunk,
-                                                              voice_utils.src_sample_rate,
-                                                              voice_utils.dst_sample_rate);
+    std::vector<float> output_data = resampler.process(s_chunk);
     if (output_data.size() > 0) {
       result.insert(end(result), begin(output_data), end(output_data));
     }
   }
 
-  std::vector<float> output_data = util::sound::FlushVec(resampler);
+  std::vector<float> output_data = resampler.flush();
   result.insert(end(result), begin(output_data), end(output_data));
 
   if (result.size() >= voice_utils.dst_wav_data.size()) {
@@ -371,9 +358,8 @@ TEST_CASE("SUCCEED Run stream audio upsampling 24kHz -> 48kHz [sound]") {
                                      SetSrcAudio("rec_noise_001_24k.wav").
                                      SetDstAudio("rec_noise_001_48k.wav"));
 
-  util::sound::ResampleWrapper resampler =
-                      util::sound::BuildResampler(voice_utils.src_sample_rate,
-                                                  voice_utils.dst_sample_rate, 1);
+  auto resampler = util::sound::Resampler(voice_utils.src_sample_rate, voice_utils.dst_sample_rate, 1);
+
   auto src_chunks = ChunkWav<float>(voice_utils.src_wav_data,
                                     voice_utils.src_sample_rate,
                                     voice_utils.chunk_size_ms,
@@ -387,15 +373,13 @@ TEST_CASE("SUCCEED Run stream audio upsampling 24kHz -> 48kHz [sound]") {
   std::vector<float> result;
   for (uint32_t i = 0; i < src_chunks.size(); ++i) {
     auto& s_chunk = src_chunks[i];
-    std::vector<float> output_data = util::sound::ResampleVec(resampler, s_chunk,
-                                                              voice_utils.src_sample_rate,
-                                                              voice_utils.dst_sample_rate);
+    std::vector<float> output_data = resampler.process(s_chunk);
     if (output_data.size() > 0) {
       result.insert(end(result), begin(output_data), end(output_data));
     }
   }
 
-  std::vector<float> output_data = util::sound::FlushVec(resampler);
+  std::vector<float> output_data = resampler.flush();
   result.insert(end(result), begin(output_data), end(output_data));
 
   if (result.size() >= voice_utils.dst_wav_data.size()) {

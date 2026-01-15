@@ -7,38 +7,19 @@
 #include <string>
 #include <utility>
 
-#ifndef BUILD_WITHOUT_SOXR
-#include <spench/submodules/soxr/src/soxr.h>
-#endif
-
 namespace util {
 namespace sound {
 
 SoundStream::SoundStream(const SoundInfo& src, const SoundInfo& dst)
-    : ISoundStream(src, dst)
-#ifndef BUILD_WITHOUT_SOXR
-      ,
-      m_resampler{},
+    : ISoundStream(src, dst),
+      m_resampler{src.sample_rate, dst.sample_rate, src.channels},
       m_nominal_ratio(dst.sample_rate == 0 || src.sample_rate == 0
                           ? 1.0
-                          : static_cast<double>(dst.sample_rate) / static_cast<double>(src.sample_rate))
-#endif
-{
-  m_in_resample = false;
+                          : static_cast<double>(dst.sample_rate) / static_cast<double>(src.sample_rate)) {
   // Allow only mono↔mono or mono↔stereo (one side must be mono)
   if (src.channels != dst.channels && !(src.channels == 1 || dst.channels == 1)) {
     throw std::runtime_error("SoundStream::SoundStream: channel conversion from " + std::to_string(src.channels) +
                              " to " + std::to_string(dst.channels) + " is not supported!");
-  }
-  if (src.sample_rate != dst.sample_rate) {
-#ifndef BUILD_WITHOUT_SOXR
-    m_in_resample = true;
-    m_resampler = BuildResampler(src.sample_rate, dst.sample_rate, src.channels);
-#else
-    throw std::runtime_error(
-        "SoundStream::SoundStream: Library built without resampling ability. "
-        "Please use a sample rate that is supported by model!");
-#endif
   }
   // Enable drift-control scheme only when resampling and 44.1 kHz is involved.
   m_enable_drift_control =
@@ -59,22 +40,18 @@ std::vector<float> SoundStream::ReadChunkToVector(const std::vector<float>& in_c
     throw std::runtime_error("SoundStream::ReadChunk: channel conversion is not supported for non-mono cases");
   }
 
-#ifndef BUILD_WITHOUT_SOXR
   if (m_in.sample_rate != m_out.sample_rate) {
     // Apply drift control only when enabled (44.1 kHz involved).
     if (m_enable_drift_control) {
       ApplyDriftControl();
     }
-
-    result = ResampleVec(m_resampler, in_chunk, m_in.sample_rate, m_out.sample_rate);
   }
-#endif
-  return result;
+
+  return m_resampler.process(in_chunk);
 }
 
 // --- Drift control implementation ---
 void SoundStream::ApplyDriftControl() {
-#ifndef BUILD_WITHOUT_SOXR
   // Soft drift control window and limits (only when 44.1 kHz is involved).
   const double delay_ms = GetAccumulatedDelayMs();
   double rel = 0.0;
@@ -84,9 +61,9 @@ void SoundStream::ApplyDriftControl() {
     rel = +m_drift_max_rel;
 
   bool ratio_set = false;
-  if (m_allow_varying_ratio && m_resampler) {
+  if (m_allow_varying_ratio) {
     const double io_ratio = m_nominal_ratio * (1.0 + rel);
-    ratio_set = SetResamplerIoRatio(m_resampler, io_ratio);
+    ratio_set = m_resampler.set_io_ratio(io_ratio);
 
     if (!ratio_set) {
       m_allow_varying_ratio = false;  // stop trying; fall back from now on
@@ -95,7 +72,6 @@ void SoundStream::ApplyDriftControl() {
   if (!m_allow_varying_ratio) {
     ApplyFallbackDriftCorrection(delay_ms);
   }
-#endif
 }
 
 // --- Fallback drift correction: rare single-sample insert/remove with interpolation.
@@ -148,13 +124,13 @@ std::vector<float> SoundStream::ReadChunk(const std::vector<float>& in_chunk) {
 std::vector<float> SoundStream::FinalizeStream() {
   std::vector<float> result;
   std::move(std::begin(m_output_buffer), std::end(m_output_buffer), std::back_inserter(result));
-#ifndef BUILD_WITHOUT_SOXR
+
   // Always flush if rates differ, regardless of m_in_resample flag.
   if (m_in.sample_rate != m_out.sample_rate) {
-    std::vector<float> flushed_out = FlushVec(m_resampler);
+    std::vector<float> flushed_out = m_resampler.flush();
     std::move(std::begin(flushed_out), std::end(flushed_out), std::back_inserter(result));
   }
-#endif
+
   m_output_buffer.clear();
   m_emitted_samples_total += result.size();
   return result;
@@ -201,15 +177,7 @@ double SoundStream::PendingMs() const {
 }
 
 double SoundStream::GetAccumulatedDelayMs() const {
-  double ms = PendingMs();
-#ifndef BUILD_WITHOUT_SOXR
-  if (m_in.sample_rate != m_out.sample_rate && m_resampler) {
-    const double d = soxr_delay(m_resampler.get());  // in output samples
-    if (d > 0.0 && m_out.sample_rate != 0) {
-      ms += 1000.0 * d / static_cast<double>(m_out.sample_rate);
-    }
-  }
-#endif
+  double ms = PendingMs() + m_resampler.accumulated_delay_ms();
   return ms;
 }
 

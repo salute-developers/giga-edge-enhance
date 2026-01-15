@@ -1,8 +1,6 @@
 #pragma once
 
-#ifndef BUILD_WITHOUT_SOXR
 #include <spench/util/sound/resampler.h>
-#endif
 #include <spench/util/sound/sound_types.h>
 
 #include <cstring>
@@ -58,11 +56,10 @@ class SoundStream : public ISoundStream {
   void ApplyFallbackDriftCorrection(double delay_ms);
 
   std::deque<float> m_output_buffer;
-#ifndef BUILD_WITHOUT_SOXR
-  ResampleWrapper m_resampler;
+
+  Resampler m_resampler;
   double m_nominal_ratio{1.0};  // out_rate / in_rate at construction time
-#endif
-  bool m_in_resample{false};
+
   // --- drift control & logging ---
   bool m_enable_drift_control{false};   // true only if resampling involves 44100 Hz
   uint64_t m_emitted_samples_total{0};  // total samples emitted to caller (out-domain)
