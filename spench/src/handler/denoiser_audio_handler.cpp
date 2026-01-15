@@ -54,14 +54,14 @@ SpenchRetCode DenoiserAudioHandler::InitAudioStreams(SpenchContext<float>* ctx,
     try {
       if (!ctx->input_sound_stream_ptr) {
         ctx->input_sound_stream_ptr =
-                  util::sound::BuildSoundStream<float>(input_sample_rate,
+                  util::sound::BuildSoundStream(input_sample_rate,
                               dynamic_cast<spench::DenoiserConfig*>(m_config.get())->samplingFreq(),
                               dynamic_cast<spench::DenoiserConfig*>(m_config.get())->frameStrideMs(),
                                                        util::sound::TemplateType::INPUT);
       }
       if (!ctx->output_sound_stream_ptr) {
         ctx->output_sound_stream_ptr =
-          util::sound::BuildSoundStream<float>(
+          util::sound::BuildSoundStream(
                                 dynamic_cast<spench::DenoiserConfig*>(m_config.get())->samplingFreq(),
                                 output_sample_rate,
                                 dynamic_cast<spench::DenoiserConfig*>(m_config.get())->frameStrideMs(),

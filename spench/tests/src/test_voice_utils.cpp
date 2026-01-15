@@ -194,7 +194,7 @@ TEST_CASE("SUCCEED Run offline audio downsampling 48kHz -> 24kHz [sound]") {
                                                             voice_utils.src_wav_data,
                                                             voice_utils.src_sample_rate,
                                                             voice_utils.dst_sample_rate);
-  std::vector<float> ending_part_of_data = util::sound::FlushVec<float>(resampler);
+  std::vector<float> ending_part_of_data = util::sound::FlushVec(resampler);
 
   output_data.insert(end(output_data), begin(ending_part_of_data), end(ending_part_of_data));
 
@@ -221,7 +221,7 @@ TEST_CASE("SUCCEED Run offline audio upsampling 24kHz -> 48kHz [sound]") {
                                                             voice_utils.src_sample_rate,
                                                             voice_utils.dst_sample_rate);
 
-  std::vector<float> ending_part_of_data = util::sound::FlushVec<float>(resampler);
+  std::vector<float> ending_part_of_data = util::sound::FlushVec(resampler);
 
   output_data.insert(end(output_data), begin(ending_part_of_data), end(ending_part_of_data));
   IsVectorsClose(voice_utils.dst_wav_data, output_data, 0.0001);
@@ -263,7 +263,7 @@ TEST_CASE("SUCCEED Run stream audio downsampling 48kHz -> 24kHz [sound]") {
     }
   }
 
-  std::vector<float> output_data = util::sound::FlushVec<float>(resampler);
+  std::vector<float> output_data = util::sound::FlushVec(resampler);
   result.insert(end(result), begin(output_data), end(output_data));
 
   if (result.size() >= voice_utils.dst_wav_data.size()) {
@@ -290,7 +290,7 @@ TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 44.1
                                     voice_utils.src_sample_rate,
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
-  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+  auto input_sound_stream = util::sound::BuildSoundStream(voice_utils.src_sample_rate,
                                                           voice_utils.dst_sample_rate,
                                                           voice_utils.chunk_size_ms,
                                                           util::sound::TemplateType::INPUT);
@@ -333,7 +333,7 @@ TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 32kH
                                     voice_utils.src_sample_rate,
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
-  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+  auto input_sound_stream = util::sound::BuildSoundStream(voice_utils.src_sample_rate,
                                                           voice_utils.dst_sample_rate,
                                                           voice_utils.chunk_size_ms,
                                                           util::sound::TemplateType::INPUT);
@@ -395,7 +395,7 @@ TEST_CASE("SUCCEED Run stream audio upsampling 24kHz -> 48kHz [sound]") {
     }
   }
 
-  std::vector<float> output_data = util::sound::FlushVec<float>(resampler);
+  std::vector<float> output_data = util::sound::FlushVec(resampler);
   result.insert(end(result), begin(output_data), end(output_data));
 
   if (result.size() >= voice_utils.dst_wav_data.size()) {
@@ -422,7 +422,7 @@ TEST_CASE("SUCCESS Run stream audio upsampling via sound stream interface 24kHz 
                                     voice_utils.src_sample_rate,
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
-  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+  auto input_sound_stream = util::sound::BuildSoundStream(voice_utils.src_sample_rate,
                                                           voice_utils.dst_sample_rate,
                                                           voice_utils.chunk_size_ms,
                                                           util::sound::TemplateType::INPUT);
@@ -464,7 +464,7 @@ TEST_CASE("SUCCESS Run stream audio upsampling via sound stream interface 24kHz 
                                     voice_utils.src_sample_rate,
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
-  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+  auto input_sound_stream = util::sound::BuildSoundStream(voice_utils.src_sample_rate,
                                                           voice_utils.dst_sample_rate,
                                                           voice_utils.chunk_size_ms,
                                                           util::sound::TemplateType::INPUT);
@@ -505,7 +505,7 @@ TEST_CASE("SUCCESS Run stream audio downsampling via sound stream interface 48kH
                                     voice_utils.src_sample_rate,
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
-  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+  auto input_sound_stream = util::sound::BuildSoundStream(voice_utils.src_sample_rate,
                                                           voice_utils.dst_sample_rate,
                                                           voice_utils.chunk_size_ms,
                                                           util::sound::TemplateType::INPUT);
@@ -543,7 +543,7 @@ TEST_CASE("SUCCESS Run sound stream for audious with the equal sample rate [soun
                                     voice_utils.src_sample_rate,
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
-  auto input_sound_stream = util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+  auto input_sound_stream = util::sound::BuildSoundStream(voice_utils.src_sample_rate,
                                                           voice_utils.dst_sample_rate,
                                                           voice_utils.chunk_size_ms,
                                                           util::sound::TemplateType::INPUT);
@@ -587,13 +587,13 @@ TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 48
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
   auto input_sound_stream =
-                        util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                        util::sound::BuildSoundStream(voice_utils.src_sample_rate,
                                                              voice_utils.dst_sample_rate / 2,
                                                              voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::INPUT);
 
   auto output_sound_stream =
-                        util::sound::BuildSoundStream<float>(voice_utils.dst_sample_rate / 2,
+                        util::sound::BuildSoundStream(voice_utils.dst_sample_rate / 2,
                                                              voice_utils.src_sample_rate,
                                                              voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::OUTPUT);
@@ -641,13 +641,13 @@ TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 44
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
   auto input_sound_stream =
-                        util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                        util::sound::BuildSoundStream(voice_utils.src_sample_rate,
                                                              kAudio_model_sample_rate,
                                                              voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::INPUT);
 
   auto output_sound_stream =
-                        util::sound::BuildSoundStream<float>(kAudio_model_sample_rate,
+                        util::sound::BuildSoundStream(kAudio_model_sample_rate,
                                                              voice_utils.src_sample_rate,
                                                              voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::OUTPUT);
@@ -696,13 +696,13 @@ TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 32
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
   auto input_sound_stream =
-                        util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                        util::sound::BuildSoundStream(voice_utils.src_sample_rate,
                                                              kAudio_model_sample_rate,
                                                              voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::INPUT);
 
   auto output_sound_stream =
-                        util::sound::BuildSoundStream<float>(kAudio_model_sample_rate,
+                        util::sound::BuildSoundStream(kAudio_model_sample_rate,
                                                              voice_utils.src_sample_rate,
                                                              voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::OUTPUT);
@@ -749,7 +749,7 @@ TEST_CASE("SUCCESS Accumulated delay bounded for 44.1kHz -> 24kHz input stream [
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
 
-  auto s = util::sound::BuildSoundStream<float>(
+  auto s = util::sound::BuildSoundStream(
       voice_utils.src_sample_rate, voice_utils.dst_sample_rate,
       voice_utils.chunk_size_ms, util::sound::TemplateType::INPUT);
 
@@ -795,7 +795,7 @@ TEST_CASE("SUCCESS Accumulated delay bounded for 24kHz -> 44.1kHz stream [sound]
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
 
-  auto s = util::sound::BuildSoundStream<float>(
+  auto s = util::sound::BuildSoundStream(
       voice_utils.src_sample_rate, voice_utils.dst_sample_rate,
       voice_utils.chunk_size_ms, util::sound::TemplateType::INPUT);
 
@@ -840,7 +840,7 @@ TEST_CASE("SUCCESS Accumulated delay small and stable for 48kHz -> 24kHz [sound]
                                     voice_utils.stride_size_ms);
 
   // Drift-control is not enabled here (no 44.1 kHz); delay should be small and stable.
-  auto s = util::sound::BuildSoundStream<float>(
+  auto s = util::sound::BuildSoundStream(
       voice_utils.src_sample_rate, voice_utils.dst_sample_rate,
       voice_utils.chunk_size_ms, util::sound::TemplateType::INPUT);
 
@@ -888,7 +888,7 @@ TEST_CASE("FAIL Create input resampler [sound]") {
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
 
-  CHECK_THROWS_WITH(util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+  CHECK_THROWS_WITH(util::sound::BuildSoundStream(voice_utils.src_sample_rate,
                                                              kAudio_model_sample_rate,
                                                              voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::INPUT),
@@ -913,7 +913,7 @@ TEST_CASE("FAIL Create output resampler [sound]") {
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
 
-  CHECK_THROWS_WITH(util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+  CHECK_THROWS_WITH(util::sound::BuildSoundStream(voice_utils.src_sample_rate,
                                                              kAudio_model_sample_rate,
                                                              voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::OUTPUT),
@@ -938,13 +938,13 @@ TEST_CASE("SUCCESS Run sound stream without resampling [sound]") {
                                     voice_utils.chunk_size_ms,
                                     voice_utils.stride_size_ms);
   auto input_sound_stream =
-                        util::sound::BuildSoundStream<float>(voice_utils.src_sample_rate,
+                        util::sound::BuildSoundStream(voice_utils.src_sample_rate,
                                                              kAudio_model_sample_rate,
                                                              voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::INPUT);
 
   auto output_sound_stream =
-                        util::sound::BuildSoundStream<float>(kAudio_model_sample_rate,
+                        util::sound::BuildSoundStream(kAudio_model_sample_rate,
                                                              voice_utils.src_sample_rate,
                                                              voice_utils.chunk_size_ms,
                                                              util::sound::TemplateType::OUTPUT);

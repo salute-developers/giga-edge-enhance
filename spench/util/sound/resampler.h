@@ -1,6 +1,7 @@
 #pragma once
 
 #include <spench/util/sound/resampler_fwd.h>
+
 #include <memory>
 #include <vector>
 
@@ -17,15 +18,12 @@ ResampleWrapper BuildResampler(size_t in_rate, size_t out_rate, size_t channels)
 
 bool SetResamplerIoRatio(const ResampleWrapper& resampler_state, double io_ratio);
 
-template <typename T>
-std::vector<T> ResampleVec(const ResampleWrapper& resampler_state,
-                           const std::vector<T>& v, size_t in_rate,
-                           size_t out_rate);
+std::vector<float> ResampleVec(const ResampleWrapper& resampler_state, const std::vector<float>& v, size_t in_rate,
+                               size_t out_rate);
 
-template <typename T>
-std::vector<T> ResampleVecRT(const std::vector<T>& v, size_t in_rate, size_t out_rate);
+std::vector<float> ResampleVecRT(const std::vector<float>& v, size_t in_rate, size_t out_rate);
 
-template <typename T>
-std::vector<T> FlushVec(const ResampleWrapper& resampler_state);
+std::vector<float> FlushVec(const ResampleWrapper& resampler_state);
+
 }  // namespace sound
 }  // namespace util
