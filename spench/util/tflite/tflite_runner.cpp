@@ -335,24 +335,38 @@ void SpenchQTfliteRunner::WarmUp() {
 }
 
 void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
-                                            std::vector<std::vector<float>*>& inputs,
-                                            spench::SpenchContext<float>* context) {
+                                              std::vector<std::vector<float>*>& inputs,
+                                              spench::SpenchContext<float>* context) {
   if (context == nullptr) {
     throw("Context is not allocated!");
   }
   spench::DenoiseContextQ<float>* denoise_context =
-                                     dynamic_cast<spench::DenoiseContextQ<float>*>(context);
-
-  ResizeIfNeededInPlace(denoise_context->fullband_hidden, m_model_input_size[1]);  // fb_h
-  ResizeIfNeededInPlace(denoise_context->fullband_cell_state, m_model_input_size[2]);  // fb_c
-  ResizeIfNeededInPlace(denoise_context->subband_hidden, m_model_input_size[3]);  // sb_h
-  ResizeIfNeededInPlace(denoise_context->subband_cell_state, m_model_input_size[4]);  // sb_c
-
-  inputs.push_back(&mag);
+                                      dynamic_cast<spench::DenoiseContextQ<float>*>(context);
+  ResizeIfNeededInPlace(denoise_context->noisy_mag, m_model_input_size[0]);   // noisy_mag_in [1,1,769,5]
+  ResizeIfNeededInPlace(denoise_context->fullband_hidden, m_model_input_size[1]);   // fb_h
+  ResizeIfNeededInPlace(denoise_context->fb_ctx, m_model_input_size[2]);   // fb_ctx
+  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_psd, m_model_input_size[3]);
+  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_psd, m_model_input_size[4]);
+  const TfLiteTensor* mag_tensor = m_model_inputs[0];
+  const uint32_t num_feats  = mag_tensor->dims->data[2];  // 769
+  const uint32_t num_frames = mag_tensor->dims->data[3];  // 5
+  uint32_t from, to;
+  for (uint32_t frame_i = 1; frame_i < num_frames; ++frame_i) {
+    for (uint32_t feat_i = 0; feat_i < num_feats; ++feat_i) {
+      from = frame_i + feat_i * num_frames;
+      to   = (frame_i - 1) + feat_i * num_frames;
+      denoise_context->noisy_mag[to] = denoise_context->noisy_mag[from];
+    }
+  }
+  for (uint32_t feat_i = 0; feat_i < num_feats; ++feat_i) {
+    to = num_frames - 1 + feat_i * num_frames;
+    denoise_context->noisy_mag[to] = mag[feat_i];
+  }
+  inputs.push_back(&denoise_context->noisy_mag);
   inputs.push_back(&denoise_context->fullband_hidden);
-  inputs.push_back(&denoise_context->fullband_cell_state);
-  inputs.push_back(&denoise_context->subband_hidden);
-  inputs.push_back(&denoise_context->subband_cell_state);
+  inputs.push_back(&denoise_context->fb_ctx);
+  inputs.push_back(&denoise_context->fb_snr_noise_psd);
+  inputs.push_back(&denoise_context->sb_snr_noise_psd);
 }
 
 template<typename T>
@@ -367,20 +381,20 @@ void SpenchQTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
     const_output_ptr = tflite::GetTensorData<T>(m_model_outputs[output_idx]);
     switch (output_idx) {
       case 0:
-        context->fullband_hidden.assign(const_output_ptr,
-                                          const_output_ptr + context->fullband_hidden.size());
+        context->fb_ctx.assign(const_output_ptr,
+                                          const_output_ptr + context->fb_ctx.size());
         break;
       case 1:
-        context->fullband_cell_state.assign(const_output_ptr,
-                                              const_output_ptr + context->fullband_cell_state.size());
+        context->fullband_hidden.assign(const_output_ptr,
+                                              const_output_ptr + context->fullband_hidden.size());
         break;
       case 2:
-        context->subband_hidden.assign(const_output_ptr,
-                                         const_output_ptr + context->subband_hidden.size());
+        context->fb_snr_noise_psd.assign(const_output_ptr,
+                                         const_output_ptr + context->fb_snr_noise_psd.size());
         break;
       case 3:
-        context->subband_cell_state.assign(const_output_ptr,
-                                             const_output_ptr + context->subband_cell_state.size());
+        context->sb_snr_noise_psd.assign(const_output_ptr,
+                                             const_output_ptr + context->sb_snr_noise_psd.size());
         break;
       case 4:
         for (uint64_t i = 0; i < m_model_output_size[output_idx]; i += 2) {
