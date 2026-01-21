@@ -229,20 +229,29 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         this.#init();
     }
 
-    /** Returns the current feature configuration. */
-    get features(): Features<M> {
-        return this.#features;
-    }
-
     /** Internal alias for the worklet port. */
     get #port(): WorkletPort {
         return super.port;
     }
 
+    get #useSharedMemory(): boolean {
+        return this.#settings.forceSharedMemory || (this.#settings.sharedMemoryEnabled && isSharedMemorySupported());
+    }
+
     /**
-     * Configures the node with the specified features.
+     * Configures the audio node with the requested feature set.
      *
-     * @param {Partial<Features<M>>} features - Features to enable/disable.
+     * This method enables or disables the features specified in the `features`
+     * object, automatically loads any required models or worker code, and
+     * synchronises the configuration across the worker, the worklet, and the
+     * node itself.  It returns a promise that resolves once the configuration
+     * has finished. Features which are not provided in the input object will be
+     * disabled. Returns a promise that resolves to:
+     *   • undefined on success
+     *   • LoadError if loading any resources failed
+     *   • SetFeaturesFailedError if the features could not be applied
+     *
+     * @param features - A partial set of {@link Features} to enable or disable.
      * @returns {Promise<void | LoadError | SetFeaturesFailedError>}
      */
     async setFeatures(features: Partial<Features<M>>): Promise<void | LoadError | SetFeaturesFailedError> {
@@ -253,47 +262,44 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         this.#setFeaturesLock = promise;
         this.#initStartTime = performance.now();
 
-        const filteredFeatures = Object.fromEntries(
-            Object.entries(features)
-                .filter(([, value]) => value !== undefined)
-                .map(([key, value]) => {
-                    if (key === 'noiseCancellation' && value === true) {
-                        return [key, getDefaultNoiseCancellationModel(this.#loader.models)];
-                    }
-
-                    if (key === 'dereverberation' && value === true) {
-                        return [key, getDefaultDereverberationModel(this.#loader.models)];
-                    }
-
-                    return [key, value];
-                }),
-        );
-        this.#logger.info('Setting Spench features:', filteredFeatures);
-
-        const mixed: Features<M> = {
-            ...this.#features,
-            ...filteredFeatures,
+        const enrichedFeatures: Features<M> = {
+            normalization: Boolean(features.normalization),
+            echoCancellation: Boolean(features.echoCancellation),
+            noiseCancellation:
+                features.noiseCancellation === true
+                    ? (getDefaultNoiseCancellationModel(this.#loader.models) as keyof M['noiseCancellation'])
+                    : features.noiseCancellation || false,
+            dereverberation:
+                features.dereverberation === true
+                    ? (getDefaultDereverberationModel(this.#loader.models) as keyof M['dereverberation'])
+                    : features.dereverberation || false,
         };
+        this.#logger.info('Setting Spench features:', enrichedFeatures);
+
         let res;
 
         if (this.#settings.dspOnAudioThread) {
-            if (areMainFeaturesEnabled(mixed)) {
+            if (areMainFeaturesEnabled(enrichedFeatures)) {
                 this.#logger.warn('Main features are not available when dspOnAudioThread is enabled');
             }
 
-            res = await this.#setDspWorkletFeatures(mixed);
-        } else if (areMainFeaturesEnabled(mixed) && areDspFeaturesEnabled(mixed) && !this.#workerPort) {
+            res = await this.#setDspWorkletFeatures(enrichedFeatures);
+        } else if (
+            areMainFeaturesEnabled(enrichedFeatures) &&
+            areDspFeaturesEnabled(enrichedFeatures) &&
+            !this.#workerPort
+        ) {
             this.#logger.debug('Starting DSP features first to speed up loading');
-            this.#loader.preload(mixed);
-            const workletFeatures = getDspFeatures(mixed);
+            this.#loader.preload(enrichedFeatures);
+            const workletFeatures = getDspFeatures(enrichedFeatures);
 
             res = await this.#setFeatures({ ...workletFeatures, ...getMainFeatures() });
 
             if (!(res instanceof SpenchError)) {
-                res = await this.#setFeatures(mixed);
+                res = await this.#setFeatures(enrichedFeatures);
             }
         } else {
-            res = await this.#setFeatures(mixed);
+            res = await this.#setFeatures(enrichedFeatures);
         }
 
         this.#setFeaturesLock = undefined;
@@ -543,7 +549,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         const workerWorkletChannel = new MessageChannel();
         let buffer: SharedArrayBuffer | undefined;
 
-        if (this.#settings.forceSharedMemory || (this.#settings.sharedMemoryEnabled && isSharedMemorySupported())) {
+        if (this.#useSharedMemory) {
             this.#logger.debug('Using SharedArrayBuffer transport');
             buffer = new SharedArrayBuffer(
                 2 * RingBuffer.getInternalBufferSize(getInputBufferSize(sampleRate)) +
@@ -598,12 +604,16 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
 
                 return;
             case CONTROLLER_MESSAGES.LOW_PERFORMANCE:
-                const potentialCause: LowPerformanceCause =
-                    this.#telemetry.currentMeanProcessTime === undefined
-                        ? 'unknown'
-                        : this.#telemetry.currentMeanProcessTime > LP_CAUSE_THRESHOLD
-                          ? 'inference'
-                          : 'transport';
+                let potentialCause: LowPerformanceCause = 'inference';
+
+                if (!this.#useSharedMemory) {
+                    potentialCause =
+                        this.#telemetry.currentMeanProcessTime === undefined
+                            ? 'unknown'
+                            : this.#telemetry.currentMeanProcessTime > LP_CAUSE_THRESHOLD
+                              ? 'inference'
+                              : 'transport';
+                }
 
                 if (
                     !super.dispatchEvent(
