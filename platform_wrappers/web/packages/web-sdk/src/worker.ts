@@ -13,10 +13,11 @@ import { assert } from './utils/error';
 import { Telemetry } from './utils/telemetry';
 import { WASM_DSP_URL, WASM_URL } from './utils/resources';
 import { ModelsTmpl, Settings } from './utils/common';
+import { WORKER_URL } from './utils/jsResources';
 
 let currentWorkerNumber = 0;
 
-function getTransferableModelRepresentation<M extends ModelsTmpl>(
+export function getTransferableModelRepresentation<M extends ModelsTmpl>(
     rawModels?: M,
 ): [ModelsTmpl<string | ArrayBuffer> | undefined, Transferable[]] {
     if (!rawModels) {
@@ -61,8 +62,6 @@ interface ISpenchWorker extends Worker {
         options?: boolean | EventListenerOptions,
     ): void;
 }
-
-const WORKER_URL = new URL('../dist/workers/spench-worker.min.js', import.meta.url);
 
 class SpenchWorker<M extends ModelsTmpl = ModelsTmpl> extends Worker implements ISpenchWorker {
     weak = true;

@@ -15,6 +15,7 @@ import { Logger } from './utils/logger';
 import { Telemetry } from './utils/telemetry';
 import SpenchWorker from './worker';
 import { WASM_DSP_URL, WASM_URL } from './utils/resources';
+import { WORKLET_DSP_URL, WORKLET_URL } from './utils/jsResources';
 
 export class LoadError extends SpenchError {}
 
@@ -25,9 +26,6 @@ async function preloadResource(url: string | URL): Promise<void> {
         throw new Error();
     }
 }
-
-const WORKLET_URL = new URL('../dist/workers/spench-worklet.min.js', import.meta.url);
-const WORKLET_DSP_URL = new URL('../dist/workers/spench-worklet-dsp.min.js', import.meta.url);
 
 class Loader<M extends ModelsTmpl> {
     protected static wasmPreloadPromise: Promise<void> | undefined;
