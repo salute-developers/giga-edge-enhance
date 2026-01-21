@@ -151,29 +151,29 @@ TEST_CASE("SUCCEED Create frame [denoiser handler]") {
   IsVectorsClose(reversed_chunk, gt_reversed_chunk, 1.0);
 }
 
-// TEST_CASE("FAIL Run denoiser handler with error for incorrect input lengh [denoiser handler]") {
-// #ifdef BUILD_TFLITE_ENGINE
-//   auto sheduler_test_env = std::move(
-//       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-//                                         spench::DenoiserConfig>(
-//           "default_configuration_best_quality_tflite_16khz.yaml"));
-// #else
-//   auto sheduler_test_env = std::move(
-//       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-//                                         spench::DenoiserConfig>(
-//           "default_configuration_best_quality_onnx_16khz.yaml"));
-// #endif
+TEST_CASE("FAIL Run denoiser handler with error for incorrect input length [denoiser handler]") {
+#ifdef BUILD_TFLITE_ENGINE
+  auto sheduler_test_env = std::move(
+      TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
+                                        spench::DenoiserConfig>(
+          "default_configuration_best_quality_tflite_48khz.yaml"));
+#else
+  auto sheduler_test_env = std::move(
+      TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
+                                        spench::DenoiserConfig>(
+          "default_configuration_best_quality_onnx_48khz.yaml"));
+#endif
 
-//   spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
+  spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
 
-//   const std::vector<float> kInput(128, 0.5);
-//   std::vector<float> output;
+  const std::vector<float> kInput(128, 0.5);
+  std::vector<float> output;
 
-//   SpenchRetCode ret_code =
-//       sheduler_test_env.handler->ProcessFrame(ctx, kInput, output);
-//   CHECK(ret_code == SpenchRetCode::ERR_INVALID_FRAME_SIZE);
-//   sheduler_test_env.handler->DestroyContext(&ctx);
-// }
+  SpenchRetCode ret_code =
+      sheduler_test_env.handler->ProcessFrame(ctx, kInput, output);
+  CHECK(ret_code == SpenchRetCode::ERR_INVALID_FRAME_SIZE);
+  sheduler_test_env.handler->DestroyContext(&ctx);
+}
 
 // TEST_CASE("SUCCEED Change number of engine threads [denoiser handler]") {
 // #ifdef BUILD_TFLITE_ENGINE
@@ -340,122 +340,107 @@ model:
 #endif
 }
 
-// TEST_CASE("SUCCEED Run denoise and check first non-zero output with the best quality model [denoiser handler]") {
-// #ifdef BUILD_TFLITE_ENGINE
-//   auto sheduler_test_env = std::move(
-//       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-//                                         spench::DenoiserConfig>(
-//           "default_configuration_best_quality_tflite_16khz.yaml"));
-// #else
-//   auto sheduler_test_env = std::move(
-//       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-//                                         spench::DenoiserConfig>(
-//           "default_configuration_best_quality_onnx_16khz.yaml"));
-// #endif
+TEST_CASE("SUCCEED Run denoiser 48kHz model with yaml string config [denoiser handler]") {
+#ifdef BUILD_TFLITE_ENGINE
+  const char* model_path = "data/models/quality_model_48khz.tflite";
+#else
+  const char* model_path = "data/models/quality_model_48khz.onnx";
+#endif
+  const std::string yaml_conf =
+      std::string("model:\n"
+                  " model_path: ") + model_path + "\n"
+                  " model_inputs: [noisy_mag_in, prev_fb_hidden_in, prev_fb_ctx_in, "
+                  "prev_fb_snr_noise_psd_in, prev_sb_snr_noise_psd_in]\n"
+                  " model_outputs: [cur_fb_ctx_out, cur_fb_hidden_out, cur_fb_snr_noise_psd_out, "
+                  "cur_sb_snr_noise_psd_out, predicted_mask_out]\n"
+                  "\n"
+                  "feature_params:\n"
+                  " sampling_freq: 48000\n"
+                  " frame_size_ms: 32\n"
+                  " frame_stride_ms: 16\n"
+                  " window_type: hanning\n"
+                  "\n"
+                  "inference:\n"
+                  " gpu: false\n"
+                  " engine_num_threads: 1\n"
+                  " model_type: best_quality\n";
 
-//   spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
-//   spench::DenoiseContextQ<float>* ctx_q =
-//       dynamic_cast<spench::DenoiseContextQ<float>*>(ctx);
-//   uint16_t kInput_frame_size = 256;
-//   const std::vector<float> input1(kInput_frame_size, 0.5);
-//   std::vector<float> output;
+  TestHandler sheduler_test_env;
+  REQUIRE_NOTHROW(
+    sheduler_test_env.InitHandlerFromYaml<spench::DenoiserAudioHandler,
+                                        spench::DenoiserConfig>(std::string(yaml_conf)));
+}
 
-//   SpenchRetCode ret_code =
-//       sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
-//   REQUIRE(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
+TEST_CASE("SUCCEED Check finalize chunk for the best quality model "
+          "[denoiser handler]") {
+#ifdef BUILD_TFLITE_ENGINE
+  auto sheduler_test_env = std::move(
+      TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
+                                        spench::DenoiserConfig>(
+          "default_configuration_best_quality_tflite_48khz.yaml"));
+#else
+  auto sheduler_test_env = std::move(
+      TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
+                                        spench::DenoiserConfig>(
+          "default_configuration_best_quality_onnx_48khz.yaml"));
+#endif
 
-//   ret_code =
-//       sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
-//   REQUIRE(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
+  spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
+  uint16_t kInput_frame_size = ctx->input_sound_stream_ptr->m_in.FrameSizeSamples();
+  std::vector<float> output;
 
-//   ret_code =
-//       sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
-//   REQUIRE(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
+  SpenchRetCode ret_code =
+      sheduler_test_env.handler->FinalizeInference(ctx, output);
+  CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
 
-//   ret_code =
-//       sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
-//   REQUIRE(ret_code == SpenchRetCode::SUCCESS);
-//   REQUIRE(ctx_q->prev_features.size() == 3);
-//   REQUIRE(output.size() == kInput_frame_size);
-//   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
-//   sheduler_test_env.handler->DestroyContext(&ctx);
-// }
+  REQUIRE(kInput_frame_size * 1 == output.size());
+  REQUIRE(std::vector<float>(kInput_frame_size * 1, 0.0) == output);
+  sheduler_test_env.handler->DestroyContext(&ctx);
+}
 
-// TEST_CASE("SUCCEED Check finalize chunk for the best quality model "
-//           "[denoiser handler]") {
-// #ifdef BUILD_TFLITE_ENGINE
-//   auto sheduler_test_env = std::move(
-//       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-//                                         spench::DenoiserConfig>(
-//           "default_configuration_best_quality_tflite_16khz.yaml"));
-// #else
-//   auto sheduler_test_env = std::move(
-//       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-//                                         spench::DenoiserConfig>(
-//           "default_configuration_best_quality_onnx_16khz.yaml"));
-// #endif
+TEST_CASE("SUCCEED Run denoise and check finalize a chunk for the best quality model [denoiser handler]") {
+#ifdef BUILD_TFLITE_ENGINE
+  auto sheduler_test_env = std::move(
+      TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
+                                        spench::DenoiserConfig>(
+          "default_configuration_best_quality_tflite_48khz.yaml"));
+#else
+  auto sheduler_test_env = std::move(
+      TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
+                                        spench::DenoiserConfig>(
+          "default_configuration_best_quality_onnx_48khz.yaml"));
+#endif
 
-//   spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
+  spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
+  spench::DenoiseContextQ<float>* ctx_q =
+      dynamic_cast<spench::DenoiseContextQ<float>*>(ctx);
+  uint16_t kInput_frame_size = ctx->input_sound_stream_ptr->m_in.FrameSizeSamples();
+  const std::vector<float> input1(kInput_frame_size, 0.5);
+  std::vector<float> output;
 
-//   uint16_t kInput_frame_size = 256;
-//   std::vector<float> output;
+  SpenchRetCode ret_code =
+      sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
+  CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
 
-//   SpenchRetCode ret_code =
-//       sheduler_test_env.handler->FinalizeInference(ctx, output);
-//   CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
+  ret_code =
+      sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-//   REQUIRE(kInput_frame_size * 3 == output.size());
-//   REQUIRE(std::vector<float>(kInput_frame_size * 3, 0.0) == output);
-//   sheduler_test_env.handler->DestroyContext(&ctx);
-// }
+  ret_code =
+      sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+  CHECK(output.size() == kInput_frame_size);
+  REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
 
-// TEST_CASE("SUCCEED Run denoise and check finalize chunk for the best quality model [denoiser handler]") {
-// #ifdef BUILD_TFLITE_ENGINE
-//   auto sheduler_test_env = std::move(
-//       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-//                                         spench::DenoiserConfig>(
-//           "default_configuration_best_quality_tflite_16khz.yaml"));
-// #else
-//   auto sheduler_test_env = std::move(
-//       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
-//                                         spench::DenoiserConfig>(
-//           "default_configuration_best_quality_onnx_16khz.yaml"));
-// #endif
+  output.resize(0);
 
-//   spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
-//   spench::DenoiseContextQ<float>* ctx_q =
-//       dynamic_cast<spench::DenoiseContextQ<float>*>(ctx);
-//   uint16_t kInput_frame_size = 256;
-//   const std::vector<float> input1(kInput_frame_size, 0.5);
-//   std::vector<float> output;
+  ret_code = sheduler_test_env.handler->FinalizeInference(ctx_q, output);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-//   SpenchRetCode ret_code =
-//       sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
-//   CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
-
-//   ret_code =
-//       sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
-//   CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
-
-//   ret_code =
-//       sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
-//   CHECK(ret_code == SpenchRetCode::CONTEXT_ACCUMULATION);
-
-//   ret_code =
-//       sheduler_test_env.handler->ProcessFrame(ctx_q, input1, output);
-//   CHECK(ret_code == SpenchRetCode::SUCCESS);
-//   CHECK(output.size() == kInput_frame_size);
-//   REQUIRE(std::vector<float>(kInput_frame_size, 0.0) != output);
-
-//   output.resize(0);
-
-//   ret_code = sheduler_test_env.handler->FinalizeInference(ctx_q, output);
-//   CHECK(ret_code == SpenchRetCode::SUCCESS);
-
-//   REQUIRE(kInput_frame_size * 3 == output.size());
-//   REQUIRE(std::vector<float>(kInput_frame_size * 3, 0.0) != output);
-//   sheduler_test_env.handler->DestroyContext(&ctx);
-// }
+  REQUIRE(kInput_frame_size * 1 == output.size());
+  REQUIRE(std::vector<float>(kInput_frame_size * 1, 0.0) != output);
+  sheduler_test_env.handler->DestroyContext(&ctx);
+}
 
 TEST_CASE("SUCCEED Run denoise and check finalize chunk for the fast model [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
