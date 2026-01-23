@@ -128,3 +128,27 @@ dsplib::arr_real DumbRIR(int n) {
   rir = rir.slice(n, 2 * n);
   return rir;
 }
+
+dsplib::arr_real tone(uint32_t fs, int32_t n, float f_hz, float amp) {
+  const auto t = dsplib::arange(n) / static_cast<float>(fs);
+  return amp * sin(2 * dsplib::pi * f_hz * t);
+}
+
+dsplib::arr_real noise(int32_t n, float amp) {
+  // Deterministic "noise" without RNG: sum of several inharmonic sines.
+  const auto i = dsplib::arange(n);
+  auto x = dsplib::zeros(n);
+  x += sin(2 * dsplib::pi * (0.013f) * i);
+  x += 0.7f * sin(2 * dsplib::pi * (0.017f) * i);
+  x += 0.5f * sin(2 * dsplib::pi * (0.019f) * i);
+  x /= dsplib::max(dsplib::abs(x)) + 1e-9f;
+  return amp * x;
+}
+
+float rmsDb(const dsplib::arr_real& x) {
+  return dsplib::mag2db(dsplib::rms(x) + 1e-12f);
+}
+
+float maxAbs(const dsplib::arr_real& x) {
+  return dsplib::max(dsplib::abs(x));
+}

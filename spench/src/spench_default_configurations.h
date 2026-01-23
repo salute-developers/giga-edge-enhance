@@ -120,6 +120,7 @@ sound_processing:
     target_level_db: -15.0
     bypass_time: 0.1
     max_gain_db: 30
+    use_vad: false
   limiter_ctrl:
     sample_rate: 48000
     threshold: -3.0

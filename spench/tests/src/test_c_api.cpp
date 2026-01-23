@@ -1898,8 +1898,9 @@ auto test_data = std::move(TestCAPI().
   const     int32_t bypass_time = 3;
   const     int32_t target_db = -23;
   const     int32_t max_gain_db = 40;
+  const     uint32_t use_vad = false;
 
-  SpenchAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db);
+  SpenchAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db, use_vad);
 
   const auto tt = dsplib::arange(num_samples) / fs;
   const auto in = 0.5 * sin(2 * dsplib::pi * 440.0 * tt);
@@ -1949,6 +1950,137 @@ auto test_data = std::move(TestCAPI().
 
   SpenchAudioProcessFree(test_data.audio_proc);
   test_data.audio_proc = nullptr;
+}
+
+TEST_CASE("SUCCEED VAD LC does not normalize pure noise to target [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  auto test_data = std::move(TestCAPI().InitAudioProcessor(
+      "default_configuration_fast_tflite_rc_enabled_24khz.yaml", ret_code));
+  REQUIRE(ret_code == SpenchRetCode::SUCCESS);
+  REQUIRE(test_data.audio_proc != nullptr);
+
+  constexpr uint32_t fs = 16000;
+  constexpr uint32_t chunk_ms = 32;
+  constexpr uint32_t frame_len = fs * chunk_ms / 1000;
+  constexpr int32_t num_frames = (8 * fs) / frame_len;
+  constexpr int32_t num_samples = num_frames * frame_len;
+
+  const float bypass_time = 0.0f;
+  const float target_db = -15.0f;
+  const float max_gain_db = 30.0f;
+  const uint32_t use_vad = 1;
+
+  ret_code = SpenchAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db, use_vad);
+  REQUIRE(ret_code == SpenchRetCode::SUCCESS);
+
+  // Pure noise for the whole duration.
+  const auto in = noise(num_samples, 0.01f);
+
+  dsplib::arr_real out;
+  for (uint32_t i = 0; i < static_cast<uint32_t>(num_frames); ++i) {
+    const uint32_t t1 = i * frame_len;
+    const uint32_t t2 = t1 + frame_len;
+    const auto x = *in.slice(t1, t2);
+    std::vector<float> chunk = x.to_vec();
+
+    unsigned char* ret_mem = nullptr;
+    uint64_t ret_size = 0;
+    ret_code = SpenchAudioProcessChunkFp(test_data.audio_proc,
+                                         reinterpret_cast<const unsigned char*>(chunk.data()),
+                                         chunk.size() * sizeof(float),
+                                         &ret_mem,
+                                         &ret_size);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+
+    std::vector<float> ret_vec(ret_size / sizeof(float));
+    if (ret_size != 0) {
+      std::memcpy(ret_vec.data(), ret_mem, ret_size);
+    }
+    out |= dsplib::arr_real(ret_vec);
+
+    if (ret_mem != nullptr) {
+      std::free(ret_mem);
+      ret_mem = nullptr;
+    }
+  }
+
+  // If VAD works, pure noise should not be driven close to target_db.
+  const float rms_out = rmsDb(out);
+  REQUIRE(std::abs(rms_out - target_db) > 6.0f);
+
+  // Also, the output should not be excessively amplified vs input.
+  const float rms_in = rmsDb(in);
+  REQUIRE((rms_out - rms_in) < 10.0f);
+
+  SpenchAudioProcessFree(test_data.audio_proc);
+  test_data.audio_proc = nullptr;
+}
+
+TEST_CASE("SUCCEED VAD LC reaches target for speech under different input gains [spench c api]") {
+  constexpr uint32_t fs = 16000;
+  constexpr uint32_t chunk_ms = 32;
+  constexpr uint32_t frame_len = fs * chunk_ms / 1000;
+  constexpr int32_t num_frames = (10 * fs) / frame_len;
+  constexpr int32_t num_samples = num_frames * frame_len;
+
+  const float bypass_time = 0.0f;
+  const float target_db = -15.0f;
+  const float max_gain_db = 30.0f;
+  const uint32_t use_vad = 1;
+
+  // "Speech-like" synthetic signal.
+  const auto base = tone(fs, num_samples, 220.0f, 0.05f) + tone(fs, num_samples, 440.0f, 0.02f);
+
+  const dsplib::arr_real gains_db = {-20, -10, 0, 10};
+  for (auto gdb : gains_db) {
+    SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+    auto test_data = std::move(TestCAPI().InitAudioProcessor(
+        "default_configuration_fast_tflite_rc_enabled_24khz.yaml", ret_code));
+    REQUIRE(ret_code == SpenchRetCode::SUCCESS);
+    REQUIRE(test_data.audio_proc != nullptr);
+
+    ret_code = SpenchAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db, use_vad);
+    REQUIRE(ret_code == SpenchRetCode::SUCCESS);
+
+    const auto in = base * dsplib::db2mag(gdb);
+
+    dsplib::arr_real out;
+    for (uint32_t i = 0; i < static_cast<uint32_t>(num_frames); ++i) {
+      const uint32_t t1 = i * frame_len;
+      const uint32_t t2 = t1 + frame_len;
+      const auto x = *in.slice(t1, t2);
+      std::vector<float> chunk = x.to_vec();
+
+      unsigned char* ret_mem = nullptr;
+      uint64_t ret_size = 0;
+      ret_code = SpenchAudioProcessChunkFp(test_data.audio_proc,
+                                           reinterpret_cast<const unsigned char*>(chunk.data()),
+                                           chunk.size() * sizeof(float),
+                                           &ret_mem,
+                                           &ret_size);
+      CHECK(ret_code >= SpenchRetCode::SUCCESS);
+
+      std::vector<float> ret_vec(ret_size / sizeof(float));
+      if (ret_size != 0) {
+        std::memcpy(ret_vec.data(), ret_mem, ret_size);
+      }
+      out |= dsplib::arr_real(ret_vec);
+
+      if (ret_mem != nullptr) {
+        std::free(ret_mem);
+        ret_mem = nullptr;
+      }
+    }
+
+    // Use the tail segment to allow the controller to accumulate stats and settle.
+    const int32_t t_start = 4 * static_cast<int32_t>(fs);
+    const auto out_tail = out.slice(t_start, num_samples);
+    const float rms_tail = rmsDb(out_tail);
+    REQUIRE(std::abs(rms_tail - target_db) < 4.0f);
+
+    SpenchAudioProcessFree(test_data.audio_proc);
+    test_data.audio_proc = nullptr;
+  }
 }
 
 TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [spench c api]") {

@@ -126,14 +126,17 @@ typedef struct LoudnessParameters : public Parameters {
   LoudnessParameters(uint32_t sr,
                  float tgt,
                  float b_time,
-                 float max) : sample_rate(sr),
+                 float max,
+                 bool vad) : sample_rate(sr),
                               target_level_db(tgt),
                               bypass_time(b_time),
-                              max_gain_db(max) {}
+                              max_gain_db(max),
+                              use_vad(vad) {}
   uint32_t sample_rate = 48000;
-  float target_level_db = -23;
-  float bypass_time = 3.0;
-  float max_gain_db = 40;
+  float target_level_db = -15;
+  float bypass_time = 1.0;
+  float max_gain_db = 30;
+  bool use_vad = false;
 } LoudnessParametersStruct;
 
 class AudioProcItem {

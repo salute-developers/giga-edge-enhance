@@ -476,7 +476,8 @@ void AudioProcessorConfig::validate() const {
       {{"sample_rate", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
        {"target_level_db", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
        {"bypass_time", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
-       {"max_gain_db", AudioProcessorConfigYamlBlock::Kind::kScalar, true}});
+       {"max_gain_db", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"use_vad", AudioProcessorConfigYamlBlock::Kind::kScalar, true}});
 
   AudioProcessorConfigYamlBlock::validateSection(
       sp["limiter_ctrl"], "sound_processing.limiter_ctrl",

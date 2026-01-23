@@ -106,12 +106,15 @@ void AudioProcLC::SetParameters(const ParametersStruct* params) {
   // m_stats_window_sec: if you add it in the future, wire it here. For now keep default.
 
   m_lc = util::sound::LoudnessControlBuilder()
-             .set_sample_rate(m_sr)
-             .set_method(util::sound::ILoudnessControl::SIMPLE)
-             .set_max_gain(p->max_gain_db)
-             .set_target_level(p->target_level_db)
-             .set_bypass_time(p->bypass_time)
-             .create();
+              .set_sample_rate(m_sr)
+              .set_method(p->use_vad ?
+                          util::sound::ILoudnessControl::VADBASE :
+                          util::sound::ILoudnessControl::SIMPLE)
+              .set_max_gain(p->max_gain_db)
+              .set_target_level(p->target_level_db)
+              .set_post_processing(p->use_vad == true)
+              .set_bypass_time(p->use_vad ? 0 : p->bypass_time)
+              .create();
 
   stats_configure(m_sr,
                   m_stats_window_sec,
@@ -336,11 +339,12 @@ AudioProcessorHandler& AudioProcessorHandler::addLC() {
     lc.target_level_db = n["target_level_db"].as<float>();
     lc.max_gain_db = n["max_gain_db"].as<float>();
     lc.bypass_time = n["bypass_time"].as<float>();
+    lc.use_vad = n["use_vad"].as<bool>();
 
     m_sequence_vec.emplace_back(std::make_unique<AudioProcLC>(lc));
     spdlog::info("New Loudness Control element created. sr: {}, target_level_db: {}, max_gain_db: {}, "
-                 "bypass_time: {}",
-                 lc.sample_rate, lc.target_level_db, lc.max_gain_db, lc.bypass_time);
+                 "bypass_time: {}, vad enabled: {}",
+                 lc.sample_rate, lc.target_level_db, lc.max_gain_db, lc.bypass_time, lc.use_vad);
   } else {
     m_sequence_vec.emplace_back(std::make_unique<AudioProcLC>());
     spdlog::debug("New Loudness Control element created with params by default");
@@ -351,8 +355,8 @@ AudioProcessorHandler& AudioProcessorHandler::addLC() {
 AudioProcessorHandler& AudioProcessorHandler::addLC(const LoudnessParameters& p) {
   m_sequence_vec.emplace_back(std::make_unique<AudioProcLC>(p));
   spdlog::info("New Loudness Control element created. sr: {}, target_level_db: {}, max_gain_db: {}, "
-               "bypass_time: {}",
-               p.sample_rate, p.target_level_db, p.max_gain_db, p.bypass_time);
+               "bypass_time: {}, vad enabled: {}",
+               p.sample_rate, p.target_level_db, p.max_gain_db, p.bypass_time, p.use_vad);
   return *this;
 }
 

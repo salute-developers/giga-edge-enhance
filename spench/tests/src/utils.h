@@ -139,3 +139,8 @@ void loadBin(const char* path, std::valarray<InputType>& output) {
 }
 
 dsplib::arr_real DumbRIR(int n);
+
+dsplib::arr_real tone(uint32_t fs, int32_t n, float f_hz, float amp);
+dsplib::arr_real noise(int32_t n, float amp);
+float rmsDb(const dsplib::arr_real& x);
+float maxAbs(const dsplib::arr_real& x);

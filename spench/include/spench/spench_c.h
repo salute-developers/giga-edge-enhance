@@ -296,11 +296,15 @@ SPENCH_API SpenchRetCode SpenchAudioProcessAddLc(SpenchAudioProcess model);
  * \param target_level_db   Target level (dB).
  * \param bypass_time       Time in seconds during which LC stays in bypass for configuration.
  * \param max_gain_db       Maximum output signal value (dB). 0 dB means no effect.
+ * \param use_vad           If LC should use VAD for voice detection this option shpuld be enabled (1).
+ *                          Provide more accurate work, but has a small impact on CPU consumption.
+ *                          By default VAD is deactivated (0)
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
 SPENCH_API SpenchRetCode SpenchAudioProcessAddLcWithParam(SpenchAudioProcess model, u_int32_t audio_sample_rate,
-                                                          float target_level_db, float bypass_time, float max_gain_db);
+                                                          float target_level_db, float bypass_time,
+                                                          float max_gain_db, u_int32_t use_vad);
 
 /* --------------------------- Newly Added Functions ------------------------ */
 

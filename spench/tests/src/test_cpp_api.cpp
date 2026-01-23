@@ -1438,6 +1438,41 @@ TEST_CASE("SUCCEED Run AudioProcessing LC with parameters passed via constructor
   }
 }
 
+TEST_CASE("SUCCEED LC with VAD prevents clipping on loud input [spench c++ api]") {
+  auto test_data = std::move(TestFixture().InitAudioProcessor());
+
+  constexpr uint32_t fs = 16000;
+  constexpr uint32_t chunk_ms = 32;
+  constexpr uint32_t frame_len = fs * chunk_ms / 1000;
+  constexpr int32_t num_frames = (6 * fs) / frame_len;
+  constexpr int32_t num_samples = num_frames * frame_len;
+
+  const int32_t bypass_time = 0;
+  const int32_t target_db = -15;
+  const int32_t max_gain_db = 30;
+  const bool use_vad = true;
+
+  test_data.dsp->AddLC(fs, target_db, bypass_time, max_gain_db, use_vad);
+
+  // Very loud input intended to trigger limiter (if enabled in this high-level path).
+  const auto in = tone(fs, num_samples, 220.0f, 2.0f);
+
+  dsplib::arr_real out;
+  for (uint32_t i = 0; i < num_frames; ++i) {
+    const uint32_t t1 = i * frame_len;
+    const uint32_t t2 = t1 + frame_len;
+    const auto x = *in.slice(t1, t2);
+    std::vector<float> chunk = x.to_vec();
+    std::vector<float> ret;
+    test_data.dsp->ProcessChunk(chunk, ret);
+    out |= dsplib::arr_real(ret);
+  }
+
+  // If limiter is enabled internally, peak should be bounded near -1 dBFS.
+  const float kLimiterMag = dsplib::db2mag(-1.0f);
+  REQUIRE(maxAbs(out) <= kLimiterMag + 5e-3f);
+}
+
 TEST_CASE("SUCCEED Run AudioProcessing with AGC default parameters [spench c++ api]") {
   auto test_data = std::move(TestFixture().
                              InitAudioProcessor().

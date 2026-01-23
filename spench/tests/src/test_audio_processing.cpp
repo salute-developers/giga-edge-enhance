@@ -866,7 +866,7 @@ TEST_CASE("SUCCEED Create and run audio processing with Limiter specific paramet
 
 TEST_CASE("SUCCEED Create and run LoudnessControl with default parameters [audio processing handler]") {
   auto env = std::move(TestAudioProcessing().InitAudioProcessing());
-  env.getAudioProc().addLC({48000, -15, 30, 3});
+  env.getAudioProc().addLC({48000, -15, 30, 3, false});
 
   constexpr int32_t fs = 48000;
   constexpr int32_t chunk_ms = 16;

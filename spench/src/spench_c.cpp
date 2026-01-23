@@ -1,6 +1,7 @@
 #include "spench/spench_c.h"
 #include "include/spench.h"
 #include "spench/src/spench_task.h"
+#include "tests/src/utils.h"
 #include <cstring>
 #include <vector>
 
@@ -344,14 +345,16 @@ SpenchRetCode SpenchAudioProcessAddLcWithParam(SpenchAudioProcess model,
                                                uint32_t           audio_sample_rate,
                                                float              target_level_db,
                                                float              bypass_time,
-                                               float              max_gain_db) {
+                                               float              max_gain_db,
+                                               uint32_t           use_vad) {
   if (model == nullptr) {
     return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
   static_cast<spench::SpenchAudioProcess*>(model)->AddLC(audio_sample_rate,
                                                          target_level_db,
                                                          bypass_time,
-                                                         max_gain_db);
+                                                         max_gain_db,
+                                                         use_vad > 0 ? true : false);
   return SpenchRetCode::SUCCESS;
 }
 
