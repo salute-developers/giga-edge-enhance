@@ -1,9 +1,10 @@
 #include "util/sound/rnnoise.h"
 
-#include <vector>
-#include <utility>
-
 #include <rnnoise.h>
+
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace util::sound {
 
@@ -43,7 +44,7 @@ RNNoise::Result RNNoise::process(const std::vector<float>& x) {
       res |= m_out_rsmp.process(out);
     }
   }
-  return Result{ std::move(res), m_vad };
+  return Result{std::move(res), m_vad};
 }
 
 }  // namespace util::sound

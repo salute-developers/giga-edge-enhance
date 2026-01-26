@@ -568,8 +568,8 @@ TEST_CASE("SUCCESS AudioProcessorConfig generic getter returns defaults [audio p
   REQUIRE(cfg->get<float>("dynamic_range_compressor_ctrl", "release_time") == Approx(0.2f));
 
   REQUIRE(cfg->get<uint32_t>("loudness_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg->get<float>("loudness_ctrl", "target_level_db") == Approx(-12.0f));
-  REQUIRE(cfg->get<float>("loudness_ctrl", "bypass_time") == Approx(3.0f));
+  REQUIRE(cfg->get<float>("loudness_ctrl", "target_level_db") == Approx(-15.0f));
+  REQUIRE(cfg->get<float>("loudness_ctrl", "bypass_time") == Approx(0.1f));
   REQUIRE(cfg->get<float>("loudness_ctrl", "max_gain_db") == Approx(30.0f));
 
   REQUIRE(cfg->get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
@@ -629,8 +629,8 @@ TEST_CASE("SUCCESS AudioProcessorConfig getters return defaults [audio processin
   REQUIRE(cfg->get<float>("dynamic_range_compressor_ctrl", "release_time") == Approx(0.2f));
 
   REQUIRE(cfg->get<uint32_t>("loudness_ctrl", "sample_rate") == 48000u);
-  REQUIRE(cfg->get<float>("loudness_ctrl", "target_level_db") == Approx(-12.0f));
-  REQUIRE(cfg->get<float>("loudness_ctrl", "bypass_time") == Approx(3.0f));
+  REQUIRE(cfg->get<float>("loudness_ctrl", "target_level_db") == Approx(-15.0f));
+  REQUIRE(cfg->get<float>("loudness_ctrl", "bypass_time") == Approx(0.1f));
   REQUIRE(cfg->get<float>("loudness_ctrl", "max_gain_db") == Approx(30.0f));
 
   REQUIRE(cfg->get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);

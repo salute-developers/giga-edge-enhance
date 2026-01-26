@@ -91,9 +91,7 @@ std::vector<float>& AudioProcLC::process(const std::vector<float>& in,
     stats_update("input_lufs", std::nullopt, frames);
   }
 
-  const float applied_gain_db = dsplib::mag2db(st.current_gain_linear);
-  stats_update("gain_db", applied_gain_db, frames);
-
+  stats_update("gain_db", st.current_gain_db_smoothed, frames);
   stats_try_log_window();
   return out;
 }
@@ -107,8 +105,13 @@ void AudioProcLC::SetParameters(const ParametersStruct* params) {
   m_sr = p->sample_rate;
   // m_stats_window_sec: if you add it in the future, wire it here. For now keep default.
 
-  m_lc = std::make_unique<util::sound::LoudnessControl>(
-  m_sr, p->target_level_db, p->bypass_time, p->max_gain_db);
+  m_lc = util::sound::LoudnessControlBuilder()
+             .set_sample_rate(m_sr)
+             .set_method(util::sound::ILoudnessControl::SIMPLE)
+             .set_max_gain(p->max_gain_db)
+             .set_target_level(p->target_level_db)
+             .set_bypass_time(p->bypass_time)
+             .create();
 
   stats_configure(m_sr,
                   m_stats_window_sec,

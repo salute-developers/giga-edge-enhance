@@ -117,8 +117,8 @@ sound_processing:
     release_time: 0.2
   loudness_ctrl:
     sample_rate: 48000
-    target_level_db: -12.0
-    bypass_time: 3.0
+    target_level_db: -15.0
+    bypass_time: 0.1
     max_gain_db: 30
   limiter_ctrl:
     sample_rate: 48000

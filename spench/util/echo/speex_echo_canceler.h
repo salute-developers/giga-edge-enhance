@@ -3,7 +3,6 @@
 #include <speex/speex_echo.h>
 #include <speex/speex_preprocess.h>
 
-#include <chrono>  //NOLINT
 #include <cmath>
 #include <memory>
 #include <stdexcept>
@@ -69,9 +68,12 @@ class PreMuter {
 
   float process(const std::vector<float>& sig) {
     bool active = false;
+
     if (m_loudm) {
-      const auto state = m_loudm->update(sig);
-      active = (state.short_term > m_threshold_db);
+      m_loudm->update(sig);
+      auto state = m_loudm->state();
+      auto st = state.short_term.value_or(m_threshold_db);
+      active = (st > m_threshold_db);
     }
 
     // smooth gain values

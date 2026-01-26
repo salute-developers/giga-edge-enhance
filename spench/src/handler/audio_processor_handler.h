@@ -387,7 +387,7 @@ class AudioProcDRCompressor : public AudioProcItem {
 
 class AudioProcLC : public AudioProcItemWithStats {
  private:
-  std::unique_ptr<util::sound::LoudnessControl> m_lc;
+  std::unique_ptr<util::sound::ILoudnessControl> m_lc;
   uint32_t m_sr{48000};
   uint32_t m_channels{1};  // IMPORTANT: frames = samples / channels
   double m_stats_window_sec{10.0};
@@ -395,10 +395,12 @@ class AudioProcLC : public AudioProcItemWithStats {
 
  public:
   AudioProcLC() {
-  m_lc = std::make_unique<util::sound::LoudnessControl>(m_sr);
-  stats_configure(m_sr,
-                  m_stats_window_sec,
-                  { {"input_lufs", Options::All()}, {"gain_db", Options::All()} });}
+    m_lc = util::sound::LoudnessControlBuilder()
+               .set_sample_rate(m_sr)
+               .set_method(util::sound::ILoudnessControl::SIMPLE)
+               .create();
+
+  stats_configure(m_sr, m_stats_window_sec, {{"input_lufs", Options::All()}, {"gain_db", Options::All()}});}
 
   explicit AudioProcLC(const LoudnessParametersStruct& parameters) { SetParameters(&parameters); }
 

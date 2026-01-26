@@ -2,8 +2,8 @@
 
 #include <dsplib/resample.h>
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 #include "util/sound/common.h"
 

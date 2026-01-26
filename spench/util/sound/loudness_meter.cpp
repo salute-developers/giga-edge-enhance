@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include "util/sound/weighting_filter.h"
 
@@ -46,6 +47,8 @@ class PowerMeter {
     return result;
   }
 
+  [[nodiscard]] int32_t stride() const noexcept { return m_stride; }
+
  private:
   int32_t m_step{0};
   int32_t m_idx{0};
@@ -55,42 +58,36 @@ class PowerMeter {
 };
 
 LoudnessMeter::LoudnessMeter(int32_t sample_rate) {
-  const int32_t wlen = static_cast<int32_t>(sample_rate * 0.4);
-  const int32_t overlap = static_cast<int32_t>(sample_rate * 0.3);
-  m_mm_meter = std::make_shared<PowerMeter>(wlen, overlap);
-  m_st_meter = std::make_shared<PowerMeter>(wlen, overlap);
+  // see EBU R 128
+  m_mm_meter = std::make_shared<PowerMeter>(sample_rate * 0.4, sample_rate * 0.35);  ///< 0.4s, 0.35 overlap
+  m_st_meter = std::make_shared<PowerMeter>(sample_rate * 3.0, sample_rate * 2.95);  ///< 3.0s, 2.95 overlap
   m_wflt = std::make_shared<WeightingFilter>(sample_rate, WeightingFilter::Type::K);
 }
 
-LoudnessMeter::Result LoudnessMeter::update(const std::vector<float>& x) {
-  Result res;
+size_t LoudnessMeter::stride() const noexcept { return m_st_meter->stride(); }
 
+void LoudnessMeter::update(const std::vector<float>& x) {
   // k-weightning
   const auto kx = m_wflt->process(x);
 
   // momentary power
-  auto mm_pow = m_mm_meter->process(kx);
-  if (mm_pow.has_value()) {
-    m_mm_value = -0.691F + dsplib::pow2db(*mm_pow + eps);
+  auto mm = m_mm_meter->process(kx);
+  if (mm.has_value()) {
+    auto mP = -0.691F + dsplib::pow2db(*mm + eps);
+    m_state.momentary = mP;
   }
 
   // short-term power
-  auto st_pow = m_st_meter->process(kx);
-  if (st_pow.has_value()) {
-    m_st_value = -0.691F + dsplib::pow2db(*st_pow + eps);
+  auto st = m_st_meter->process(kx);
+  if (st.has_value()) {
+    auto sP = -0.691F + dsplib::pow2db(*st + eps);
+    m_state.short_term = sP;
   }
 
   // true peak level (for current frame)
   // TODO(vayulis): interpolate signal
   auto peak = dsplib::mag2db(_max_abs(x));
-
-  res.momentary = m_mm_value.value_or(-80);
-  res.short_term = m_st_value.value_or(-80);
-  res.true_peak = peak;
-
-  return res;
+  m_state.true_peak = peak;
 }
-
-bool LoudnessMeter::is_ready() const noexcept { return m_mm_value.has_value() && m_st_value.has_value(); }
 
 }  // namespace util::sound

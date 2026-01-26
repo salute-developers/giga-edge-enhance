@@ -1,31 +1,31 @@
-#include <catch.hpp>
+#include <dsplib.h>
 
+#include <catch.hpp>
 #include <cmath>
 #include <cstdint>
 #include <memory>
 #include <vector>
-#include <dsplib.h>
 
-#include "util/vad/rnnoise_vad.h"
-#include "util/vad/voice_activity.h"
-
-using spench::util::vad::IVad;
-using spench::util::vad::RNNoiseVad;
-using spench::util::vad::VadBuilder;
-using spench::util::vad::VadConfig;
-using spench::util::vad::VadType;
+#include "util/sound/rnnoise_vad.h"
+#include "util/sound/voice_activity.h"
 
 namespace {
 
 std::vector<float> MakeFrame(uint32_t n, float amp = 0.0f) {
   std::vector<float> x(n, 0.0f);
-  if (amp == 0.0f) { return x; }
+  if (amp == 0.0f) {
+    return x;
+  }
   // Simple deterministic excitation: alternating +/- amp.
-  for (uint32_t i = 0; i < n; ++i) { x[i] = (i & 1U) ? amp : -amp; }
+  for (uint32_t i = 0; i < n; ++i) {
+    x[i] = (i & 1U) ? amp : -amp;
+  }
   return x;
 }
 
 }  // namespace
+
+namespace util::sound {
 
 TEST_CASE("FAIL Create returns nullptr for SIMPLE type [voice activity detection]") {
   VadConfig cfg;
@@ -64,11 +64,7 @@ TEST_CASE("FAIL Create returns nullptr for unknown VAD type [voice activity dete
 TEST_CASE("SUCCEED Builder setters affect created VAD instance [voice activity detection]") {
   constexpr uint32_t kFs = 48000;
 
-  auto vad = VadBuilder()
-                 .set_type(VadType::RNNOISE)
-                 .set_sample_rate(kFs)
-                 .set_threshold(0.25f)
-                 .create();
+  auto vad = VadBuilder().set_type(VadType::RNNOISE).set_sample_rate(kFs).set_threshold(0.25f).create();
 
   REQUIRE(vad != nullptr);
   REQUIRE(vad->sample_rate() == kFs);
@@ -149,12 +145,8 @@ TEST_CASE("SUCCEED Create and process voice activity detector [voice activity de
   constexpr uint32_t frame_len = fs * chunk_ms / 1000;
   constexpr uint32_t num_frames = (60 * fs) / frame_len;
 
-  auto vad = VadBuilder()
-                 .set_sample_rate(fs)
-                 .set_frame_len(frame_len)
-                 .set_threshold(0.5)
-                 .set_type(VadType::RNNOISE)
-                 .create();
+  auto vad =
+      VadBuilder().set_sample_rate(fs).set_frame_len(frame_len).set_threshold(0.5).set_type(VadType::RNNOISE).create();
 
   dsplib::arr_real vad_state(num_frames);
   for (int32_t i = 0; i < num_frames; ++i) {
@@ -165,3 +157,5 @@ TEST_CASE("SUCCEED Create and process voice activity detector [voice activity de
   // false positive is smaller 1%
   REQUIRE(dsplib::mean(vad_state) < 0.01);
 }
+
+}  // namespace util::sound

@@ -18,9 +18,9 @@ class LoudnessMeter {
  public:
   explicit LoudnessMeter(int32_t sample_rate);
 
-  struct Result {
-    float momentary{-80};
-    float short_term{-80};
+  struct State {
+    std::optional<float> momentary;
+    std::optional<float> short_term;
     float true_peak{-80};
   };
 
@@ -28,21 +28,18 @@ class LoudnessMeter {
    * @brief Update meter state
    * @todo use span instead vector
    * @param x [in] signle channel audio frame
-   * @return updated loudness info
    */
-  Result update(const std::vector<float>& x);
+  void update(const std::vector<float>& x);
 
-  /**
-   * @return meter has valid loudness data
-   */
-  bool is_ready() const noexcept;
+  [[nodiscard]] const State& state() const noexcept { return m_state; }
+
+  size_t stride() const noexcept;
 
  private:
   std::shared_ptr<WeightingFilter> m_wflt;
   std::shared_ptr<PowerMeter> m_mm_meter;
   std::shared_ptr<PowerMeter> m_st_meter;
-  std::optional<float> m_mm_value;
-  std::optional<float> m_st_value;
+  State m_state;
 };
 
 }  // namespace util::sound

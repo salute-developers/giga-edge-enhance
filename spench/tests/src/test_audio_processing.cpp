@@ -391,12 +391,12 @@ TEST_CASE("SUCCEED Run audio processing with reading LC parameters from config [
           std::move(TestAudioProcessing().
               InitAudioProcessing(std::filesystem::path("default_configuration_fast_tflite_rc_enabled_24khz.yaml")));
   audio_proc_test_env.getAudioProc().addLC();
-  constexpr int fs = 48000;
-  constexpr int chunk_ms = 16;
-  constexpr int frame_len = fs * chunk_ms / 1000;
-  constexpr int num_frames = (10 * fs) / frame_len;
-  constexpr int num_samples = num_frames * frame_len;
-  const int bypass_time = 3;
+  constexpr int32_t fs = 48000;
+  constexpr int32_t chunk_ms = 16;
+  constexpr int32_t frame_len = fs * chunk_ms / 1000;
+  constexpr int32_t num_frames = (10 * fs) / frame_len;
+  constexpr int32_t num_samples = num_frames * frame_len;
+  const int32_t bypass_time = 3;
 
   const auto tt = dsplib::arange(num_samples) / fs;
   const auto in = 0.5 * sin(2 * dsplib::pi * 440.0 * tt);
@@ -753,12 +753,12 @@ TEST_CASE("SUCCEED Create and run audio processing with DRC specific parameters 
 }
 
 TEST_CASE("SUCCEED Create and process speex echo canceler [echo canceling]") {
-  constexpr int fs = 48000;
-  constexpr int chunk_ms = 16;
-  constexpr int frame_len = fs * chunk_ms / 1000;
-  constexpr int num_frames = (10 * fs) / frame_len;
-  constexpr int num_samples = num_frames * frame_len;
-  constexpr int filter_len = 8192;
+  constexpr int32_t fs = 48000;
+  constexpr int32_t chunk_ms = 16;
+  constexpr int32_t frame_len = fs * chunk_ms / 1000;
+  constexpr int32_t num_frames = (10 * fs) / frame_len;
+  constexpr int32_t num_samples = num_frames * frame_len;
+  constexpr int32_t filter_len = 8192;
 
   auto echo = util::echo::EchoCancelerBuilder()
                   .SetSampleRate(fs)
@@ -787,9 +787,9 @@ TEST_CASE("SUCCEED Create and process speex echo canceler [echo canceling]") {
 
   // process frame by frame
   dsplib::arr_real out;
-  for (int i = 0; i < num_frames; ++i) {
-    const int t1 = i * frame_len;
-    const int t2 = t1 + frame_len;
+  for (int32_t i = 0; i < num_frames; ++i) {
+    const int32_t t1 = i * frame_len;
+    const int32_t t2 = t1 + frame_len;
     const auto d = *mic.slice(t1, t2);
     const auto x = *ref.slice(t1, t2);
     const auto y = echo->Process(d.to_vec(), x.to_vec());
@@ -866,23 +866,23 @@ TEST_CASE("SUCCEED Create and run audio processing with Limiter specific paramet
 
 TEST_CASE("SUCCEED Create and run LoudnessControl with default parameters [audio processing handler]") {
   auto env = std::move(TestAudioProcessing().InitAudioProcessing());
-  env.getAudioProc().addLC();
+  env.getAudioProc().addLC({48000, -15, 30, 3});
 
-  constexpr int fs = 48000;
-  constexpr int chunk_ms = 16;
-  constexpr int frame_len = fs * chunk_ms / 1000;
-  constexpr int seconds = 10;
-  constexpr int num_frames = (seconds * fs) / frame_len;
-  constexpr int num_samples = num_frames * frame_len;
-  const int bypass_time = 3;
+  constexpr int32_t fs = 48000;
+  constexpr int32_t chunk_ms = 16;
+  constexpr int32_t frame_len = fs * chunk_ms / 1000;
+  constexpr int32_t seconds = 10;
+  constexpr int32_t num_frames = (seconds * fs) / frame_len;
+  constexpr int32_t num_samples = num_frames * frame_len;
+  const int32_t bypass_time = 3;
 
   const auto tt = dsplib::arange(num_samples) / fs;
   const auto in = 0.25 * sin(2 * dsplib::pi * 1000.0 * tt);
 
   dsplib::arr_real out;
-  for (int i = 0; i < num_frames; ++i) {
-    const int t1 = i * frame_len;
-    const int t2 = t1 + frame_len;
+  for (int32_t i = 0; i < num_frames; ++i) {
+    const int32_t t1 = i * frame_len;
+    const int32_t t2 = t1 + frame_len;
     const auto x = *in.slice(t1, t2);
     std::vector<float> chunk = x.to_vec();
     std::vector<float> ret;
@@ -893,15 +893,15 @@ TEST_CASE("SUCCEED Create and run LoudnessControl with default parameters [audio
   // RMS after bypass should be close to target program loudness.
   {
     auto rms_after = dsplib::mag2db(dsplib::rms(out.slice(fs * bypass_time, num_samples)));
-    const dsplib::real_t target = -23.0;  // near default target_level_db
-    REQUIRE(std::abs(rms_after - target) < 11.0);
+    const dsplib::real_t target = -14.9;  // near default target_level_db
+    REQUIRE(std::abs(rms_after - target) < 0.5);
   }
 
   // Before bypass, signal should be nearly unchanged.
   {
     auto rms_in = dsplib::mag2db(dsplib::rms(in.slice(0, fs * bypass_time)));
     auto rms_out = dsplib::mag2db(dsplib::rms(out.slice(0, fs * bypass_time)));
-    REQUIRE(std::abs(rms_out - rms_in) < 1.0);
+    REQUIRE(std::abs(rms_out - rms_in) < 0.5);
   }
 }
 

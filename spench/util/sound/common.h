@@ -3,10 +3,29 @@
 #include <dsplib/array.h>
 #include <dsplib/math.h>
 
-#include <vector>
 #include <algorithm>
+#include <vector>
 
 namespace util::sound {
+
+class CycleBuffer {
+ public:
+  explicit CycleBuffer(size_t size, float init = 0) : m_size{size} { m_buf.resize(m_size, init); }
+
+  void push(float value) noexcept {
+    m_buf[m_pos] = value;
+    m_pos = (m_pos + 1) % m_size;
+  }
+
+  const std::vector<float>& data() const noexcept { return m_buf; }
+
+  size_t size() const noexcept { return m_buf.size(); }
+
+ private:
+  size_t m_size;
+  std::vector<float> m_buf;
+  size_t m_pos{0};
+};
 
 /**
  * @class FIFOBuffer
@@ -106,5 +125,8 @@ class FIFOBuffer {
  private:
   std::vector<T> buf_;
 };
+
+// quantiles of data set
+float quantile(const dsplib::arr_real& x, float q, bool sorted = false);
 
 }  // namespace util::sound

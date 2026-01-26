@@ -1,64 +1,80 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-#include <optional>
 #include <cstdint>
+#include <memory>
+#include <optional>
+#include <vector>
 
 namespace util::sound {
 
-class LoudnessMeter;
-class LoudnessStat;
-class StatCollector;
+class ILoudnessControl {
+ public:
+  virtual ~ILoudnessControl() {}
+
+  enum Method { SIMPLE, VADBASE };
+
+  struct State {
+    float current_gain_db_smoothed{0.0f};       // smoothed commanded gain, dB
+    std::optional<float> last_short_term_lufs;  // short-term LUFS before applying gain
+    float longterm_max_lufs{0.0f};
+    float longterm_min_lufs{-80.0f};
+    bool bypass_active{false};
+  };
+
+  virtual std::vector<float> process(const std::vector<float>& x) = 0;
+
+  virtual State state() const noexcept = 0;
+
+  virtual Method method() const noexcept = 0;
+};
 
 /**
  * @brief Detect short-term loudness and normalize to target level
  * @details Accumulates volume statistics, so a reset may be required when the audio path changes
  */
-class LoudnessControl {
+class LoudnessControlBuilder {
  public:
-  struct State {
-    // Instantaneous (current process() results)
-    float current_gain_db_smoothed{0.0f};   // smoothed commanded gain, dB
-    float current_gain_linear{1.0f};        // applied linear gain
-    std::optional<float> last_short_term_lufs;  // short-term LUFS before applying gain
+  LoudnessControlBuilder() = default;
 
-    // Long-term extrema since last reset (from LoudnessStat)
-    float longterm_max_lufs{0.0f};
-    float longterm_min_lufs{-80.0f};
+  LoudnessControlBuilder& set_method(ILoudnessControl::Method method) {
+    m_method = method;
+    return *this;
+  }
 
-    // Meta
-    bool bypass_active{false};              // true while initial bypass is in effect
-  };
+  LoudnessControlBuilder& set_sample_rate(uint32_t sample_rate) {
+    m_sample_rate = sample_rate;
+    return *this;
+  }
 
-   /**
-   * @param sample_rate signal sample rate (Hz)
-   * @param target_level target level in LUFS (dB)
-   * @param bypass_time time (sec) to skip gain apply
-   * @param max_gain max gain limit (db)
-   */
-explicit LoudnessControl(uint32_t sample_rate, float target_level = -23.0f,
-                         float bypass_time = 3.0f, float max_gain = 40.0f);
+  LoudnessControlBuilder& set_target_level(float target_level_db) {
+    m_target_level_db = target_level_db;
+    return *this;
+  }
 
+  LoudnessControlBuilder& set_max_gain(float max_gain_db) {
+    m_max_gain_db = max_gain_db;
+    return *this;
+  }
 
-  [[nodiscard]] std::vector<float> process(const std::vector<float>& x);
+  LoudnessControlBuilder& set_post_processing(bool enabled) {
+    m_postprocessing = enabled;
+    return *this;
+  }
 
-  [[nodiscard]] float current_gain() const noexcept { return m_gain; }
+  LoudnessControlBuilder& set_bypass_time(float bypass_time) {
+    m_bypass_time = bypass_time;
+    return *this;
+  }
 
-  void reset();
-
-  [[nodiscard]] State state() const noexcept;
+  std::unique_ptr<ILoudnessControl> create();
 
  private:
-  std::shared_ptr<LoudnessMeter> m_mtr;
-  std::shared_ptr<LoudnessStat> m_stat;
-  int64_t m_bypass_counter{0};
-  const float m_target_db;
-  const float m_max_gain_db;
-  float m_gain_db{0.0f};
-  float m_gain{1.0f};
-
-  std::optional<float> m_last_short_term;  // cached from meter
+  ILoudnessControl::Method m_method{ILoudnessControl::SIMPLE};
+  std::optional<uint32_t> m_sample_rate;
+  std::optional<float> m_target_level_db{-15.0F};
+  std::optional<float> m_max_gain_db{30.0F};
+  std::optional<bool> m_postprocessing{false};
+  std::optional<float> m_bypass_time{0};
 };
 
 }  // namespace util::sound
