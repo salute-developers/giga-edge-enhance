@@ -48,7 +48,7 @@ describe('SharedMemoryTransport', () => {
     beforeEach(() => {
         buffer = createSharedBuffer(SAMPLE_RATE);
         onFrameReceived = jest.fn();
-        transport = new SharedMemoryTransport(buffer, SAMPLE_RATE, FRAME_SIZE, onFrameReceived);
+        transport = new SharedMemoryTransport(buffer, SAMPLE_RATE, FRAME_SIZE, onFrameReceived, () => {});
     });
 
     test('push outputs are written to the ring buffer', () => {

@@ -84,6 +84,7 @@ export class SpenchWorker {
                 sampleRate,
                 SPENCH_FRAME_SIZE_SECONDS,
                 this.handleFrame,
+                this.onError,
             );
         } else {
             this.transport = new MessageTransport(workletPort, sampleRate, SPENCH_FRAME_SIZE_SECONDS, this.handleFrame);

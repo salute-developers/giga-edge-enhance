@@ -151,6 +151,7 @@ export class SharedMemoryTransport implements AbstractTransport {
         protected readonly sampleRate: number,
         protected readonly frameSize: number,
         protected readonly onFrameReceived: (payload: Payload) => void,
+        protected readonly onError: (error: Error) => void,
     ) {
         let offset = 0;
         const inputSize = getInputBufferSize(sampleRate);
@@ -168,7 +169,7 @@ export class SharedMemoryTransport implements AbstractTransport {
 
         this.clearSemaphore = new BinarySemaphore(buffer, offset);
 
-        this.spin();
+        this.spin().catch(this.onError);
     }
 
     push(output: Float32Array): void {
