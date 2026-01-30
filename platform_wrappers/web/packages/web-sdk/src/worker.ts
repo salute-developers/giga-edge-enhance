@@ -167,7 +167,7 @@ class SpenchWorker<M extends ModelsTmpl = ModelsTmpl> extends Worker implements 
             default:
         }
 
-        assert(false, 'Unknown message type from Worker');
+        assert(false, `Unknown message type from Worker: ${event.data.type}`);
     };
 
     #handleError = (event: ErrorEvent) => {

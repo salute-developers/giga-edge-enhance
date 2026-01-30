@@ -508,6 +508,11 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         switch (event.data.type) {
             case CONTROLLER_MESSAGES.SET_FEATURES_RESULT:
                 return true;
+            case CONTROLLER_MESSAGES.ERROR:
+                const { error } = event.data;
+                this.#handleError(new SpenchError(deserializeError(error)));
+
+                return true;
             default:
         }
 
@@ -592,11 +597,6 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
                 this.#telemetry?.sendMetric(event.data.metricName, event.data.value);
 
                 return;
-            case CONTROLLER_MESSAGES.ERROR:
-                const { error } = event.data;
-                this.#handleError(new SpenchError(deserializeError(error)));
-
-                return;
             case CONTROLLER_MESSAGES.LOW_PERFORMANCE:
                 const potentialCause: LowPerformanceCause =
                     this.#telemetry.currentMeanProcessTime === undefined
@@ -617,7 +617,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
             default:
         }
 
-        assert(false, 'Unknown message type from AudioWorkletProcessor');
+        assert(false, `Unknown message type from AudioWorkletProcessor: ${event.data.type}`);
     };
 
     /**
@@ -633,7 +633,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
             return;
         }
 
-        assert(false, 'Unknown message type from Worker');
+        assert(false, `Unknown message type from Worker: ${event.data.type}`);
     };
 
     /** Placeholder for low‑performance handling logic. */
