@@ -62,6 +62,7 @@ export class BinarySemaphore {
                 );
 
                 await result.value;
+                continue;
             }
 
             const start = getTime();
