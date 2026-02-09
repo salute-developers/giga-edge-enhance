@@ -3,6 +3,7 @@
 #include <dsplib.h>
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <memory>
 #include <optional>
@@ -182,18 +183,14 @@ class SmoothValue {
 
 class LoudnessControlImpl : public ILoudnessControl {
  public:
-  LoudnessControlImpl(uint32_t sample_rate, float target_level, float max_gain, bool postprocess)
+  LoudnessControlImpl(uint32_t sample_rate, float target_level, float max_gain, bool postprocess, float bypass)
       : m_fs{sample_rate}, m_target_db{target_level}, m_current_db{target_level} {
     m_mtr = std::make_shared<LoudnessMeter>(m_fs);
 
+    m_skip_counter = static_cast<int64_t>(sample_rate * bypass);
+
     // internal processing chunk size (10 ms)
     m_frame_len = m_fs / 100;
-
-    // speech activity buffer
-    {
-      const size_t dlen = (m_fs * SPEECH_ACTIVITY_LOG) / m_frame_len;
-      m_peakstory = std::make_shared<CycleBuffer>(dlen, NOISE_FLOOR_DB);
-    }
 
     // voice activity detector
     m_vad = VadBuilder().set_sample_rate(m_fs).set_frame_len(m_frame_len).set_type(VadType::RNNOISE).create();
@@ -228,6 +225,11 @@ class LoudnessControlImpl : public ILoudnessControl {
     while (m_buf.size() >= m_frame_len) {
       auto dx = m_buf.read(m_frame_len);
 
+      // in bypass mode update stat is not allow
+      if (m_skip_counter > 0) {
+        m_skip_counter -= m_frame_len;
+      }
+
       // voice activity detector
       {
         auto [_, vad_score] = m_vad->process(dx);
@@ -236,14 +238,10 @@ class LoudnessControlImpl : public ILoudnessControl {
         bool is_speech_to_noise = !is_speech && m_is_speech;
         bool is_noise_to_speech = is_speech && !m_is_speech;
 
-        if (is_speech_to_noise) {
-          m_first_speech = false;
-        }
-
         m_is_speech = is_speech;
 
         // TODO(vayulis): dont allow stat if noise before speech was louder
-        m_allow_stat = (is_speech_to_noise || m_is_speech) && !is_noise_to_speech;
+        m_allow_stat = (is_speech_to_noise || m_is_speech) && !is_noise_to_speech && (m_skip_counter <= 0);
       }
 
       // loudness meter
@@ -261,7 +259,7 @@ class LoudnessControlImpl : public ILoudnessControl {
 
         // update loudness stat
         if (is_valid_meas && m_allow_stat) {
-          if (!m_first_speech) {
+          if (m_peakstory) {
             m_peakstory->push(dl_pow_db);
             m_current_db = quantile(m_peakstory->data(), 0.9);
 
@@ -270,8 +268,10 @@ class LoudnessControlImpl : public ILoudnessControl {
             m_min_lufs = std::min(m_current_db, m_min_lufs);
           } else {
             // trick: first word attack
-            m_peakstory->push(pow_db);
-            m_current_db = dsplib::max(dsplib::arr_real(m_peakstory->data()));
+            if (!m_peakstory) {
+              _init_peakstory(dl_pow_db);
+            }
+            m_current_db = dl_pow_db;
           }
         }
       }
@@ -311,8 +311,14 @@ class LoudnessControlImpl : public ILoudnessControl {
 
 
  private:
+  void _init_peakstory(float init) {
+    const size_t dlen = (m_fs * SPEECH_ACTIVITY_LOG) / m_frame_len;
+    m_peakstory = std::make_shared<CycleBuffer>(dlen, init);
+  }
+
   size_t m_fs;
   uint32_t m_frame_len;
+  int64_t m_skip_counter{0};
 
   FIFOBuffer<float> m_buf;
 
@@ -323,7 +329,6 @@ class LoudnessControlImpl : public ILoudnessControl {
 
   bool m_is_speech{false};
   bool m_allow_stat{false};
-  bool m_first_speech{true};
 
   std::shared_ptr<LoudnessMeter> m_mtr;
   std::shared_ptr<SmoothValue> m_gain_ctrl;
@@ -343,7 +348,8 @@ std::unique_ptr<ILoudnessControl> LoudnessControlBuilder::create() {
   }
   if (m_method == ILoudnessControl::VADBASE) {
     return std::make_unique<LoudnessControlImpl>(m_sample_rate.value(), m_target_level_db.value(),
-                                                 m_max_gain_db.value(), m_postprocessing.value());
+                                                 m_max_gain_db.value(), m_postprocessing.value(),
+                                                 m_bypass_time.value_or(0.5));
   }
   return nullptr;
 }

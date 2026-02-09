@@ -113,7 +113,7 @@ void AudioProcLC::SetParameters(const ParametersStruct* params) {
               .set_max_gain(p->max_gain_db)
               .set_target_level(p->target_level_db)
               .set_post_processing(p->use_vad == true)
-              .set_bypass_time(p->use_vad ? 0 : p->bypass_time)
+              .set_bypass_time(p->bypass_time)
               .create();
 
   stats_configure(m_sr,

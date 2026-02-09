@@ -74,7 +74,7 @@ class LoudnessControlBuilder {
   std::optional<float> m_target_level_db{-15.0F};
   std::optional<float> m_max_gain_db{30.0F};
   std::optional<bool> m_postprocessing{false};
-  std::optional<float> m_bypass_time{0};
+  std::optional<float> m_bypass_time{0.5F};
 };
 
 }  // namespace util::sound
