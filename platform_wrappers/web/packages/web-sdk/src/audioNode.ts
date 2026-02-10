@@ -554,7 +554,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
             buffer = new SharedArrayBuffer(
                 2 * RingBuffer.getInternalBufferSize(getInputBufferSize(sampleRate)) +
                     RingBuffer.getInternalBufferSize(getOutputBufferSize(sampleRate)) +
-                    BinarySemaphore.INTERNAL_BUFFER_SIZE,
+                    2 * BinarySemaphore.INTERNAL_BUFFER_SIZE,
             );
         } else {
             this.#logger.debug('Using MessageChannel transport');

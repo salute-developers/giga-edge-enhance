@@ -43,7 +43,7 @@ export class BinarySemaphore {
     /**
      * Acquire the semaphore.
      */
-    async lock(): Promise<void> {
+    lock(): void {
         const lockStart = getTime();
 
         /**
@@ -52,18 +52,6 @@ export class BinarySemaphore {
          */
         while (!this.tryLock()) {
             assert(getTime() - lockStart > MAX_SEMAPHORE_WAIT_TIME_MS, 'semaphore must not lock for too long');
-
-            if (Atomics.waitAsync) {
-                const result = Atomics.waitAsync(
-                    this.header,
-                    BinarySemaphore.INDEX,
-                    BinarySemaphore.LOCKED,
-                    ASYNC_WAIT_TIMEOUT,
-                );
-
-                await result.value;
-                continue;
-            }
 
             const start = getTime();
 
@@ -76,8 +64,6 @@ export class BinarySemaphore {
                 );
 
                 if (result !== 'timed-out') continue;
-
-                await new Promise((r) => setTimeout(r, SYNC_WAIT_TIMEOUT));
             }
         }
     }

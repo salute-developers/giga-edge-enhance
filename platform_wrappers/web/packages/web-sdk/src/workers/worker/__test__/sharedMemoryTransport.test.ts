@@ -8,16 +8,12 @@ import { SharedMemoryTransport, Payload } from '../transport';
 const SAMPLE_RATE = 48000;
 const FRAME_SIZE = SPENCH_FRAME_SIZE_SECONDS; // samples per frame
 
-// ---- Mock the BinarySemaphore implementation ----
-var semaphoreLockMock: jest.Mock;
-var semaphoreUnlockMock: jest.Mock;
-
 jest.mock('../../../utils/semaphore', () => {
     return {
         BinarySemaphore: jest.fn().mockImplementation(() => {
             return {
-                lock: (semaphoreLockMock = jest.fn()),
-                unlock: (semaphoreUnlockMock = jest.fn()),
+                lock: jest.fn(),
+                unlock: jest.fn(),
             };
         }),
     };
@@ -58,21 +54,21 @@ describe('SharedMemoryTransport', () => {
         expect((transport as any).outputBuffer.size).toBe(out.length);
     });
 
-    test('reset clears all buffers', async () => {
+    test('reset clears all buffers', () => {
         const out = new Float32Array(50).fill(3);
         transport.push(out);
         // Write some input data directly (bypassing worker)
         (transport as any).inputBuffer.push(out);
         (transport as any).loopbackBuffer.push(out);
 
-        await transport.reset();
+        transport.reset();
 
         expect((transport as any).outputBuffer.size).toBe(0);
         expect((transport as any).inputBuffer.size).toBe(0);
         expect((transport as any).loopbackBuffer.size).toBe(0);
 
-        expect(semaphoreLockMock).toHaveBeenCalledTimes(1);
-        expect(semaphoreUnlockMock).toHaveBeenCalledTimes(1);
+        expect((transport as any).pushSemaphore.lock).toHaveBeenCalledTimes(1);
+        expect((transport as any).pushSemaphore.unlock).toHaveBeenCalledTimes(1);
     });
 
     test('close stops the spin loop', async () => {
@@ -102,8 +98,8 @@ describe('SharedMemoryTransport', () => {
         expect(received.input).toEqual(inputData);
         expect(received.loopback).toEqual(loopbackData);
 
-        expect(semaphoreLockMock).toHaveBeenCalledTimes(1);
-        expect(semaphoreUnlockMock).toHaveBeenCalledTimes(1);
+        expect((transport as any).pullSemaphore.lock).toHaveBeenCalledTimes(1);
+        expect((transport as any).pullSemaphore.unlock).toHaveBeenCalledTimes(1);
     });
 
     test('spin does not emit when data is insufficient', async () => {

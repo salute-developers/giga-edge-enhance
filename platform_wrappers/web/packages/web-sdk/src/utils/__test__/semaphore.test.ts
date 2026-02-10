@@ -21,12 +21,12 @@ describe('BinarySemaphore (one instance)', () => {
 
     test('lock / unlock from the same thread', async () => {
         expect(() => sem.unlock()).not.toThrow(); // unlock when unlocked
-        await sem.lock();
+        sem.lock();
         expect(() => sem.unlock()).not.toThrow();
     });
 
     test('tryLock non‑blocking', async () => {
-        await sem.lock();
+        sem.lock();
         expect(sem.tryLock()).toBe(false); // cannot acquire while locked
         sem.unlock();
         expect(sem.tryLock()).toBe(true); // succeeds after unlock
@@ -51,7 +51,7 @@ describe('BinarySemaphore (2 instances)', () => {
 
     test('write from one instance is visible to another', async () => {
         const { sem1, sem2 } = createSharedSems();
-        await sem1.lock(); // owner 1 acquires
+        sem1.lock(); // owner 1 acquires
         expect(sem2.tryLock()).toBe(false); // owner 2 cannot
         sem1.unlock(); // owner 1 releases
         expect(sem2.tryLock()).toBe(true); // now it can
@@ -59,30 +59,13 @@ describe('BinarySemaphore (2 instances)', () => {
 
     test('lock timeout', async () => {
         const { sem1, sem2 } = createSharedSems();
-        await sem1.lock(); // owner 1 acquires
+        sem1.lock(); // owner 1 acquires
 
-        expect(sem2.lock()).rejects.toThrow();
-
-        sem1.unlock();
-
-        expect(sem2.lock()).resolves.toBeUndefined();
-    });
-
-    test('lock timeout (sync)', async () => {
-        const { waitAsync } = Atomics;
-        // @ts-expect-error
-        Atomics.waitAsync = undefined;
-
-        const { sem1, sem2 } = createSharedSems();
-        await sem1.lock(); // owner 1 acquires
-
-        expect(sem2.lock()).rejects.toThrow();
+        expect(() => sem2.lock()).toThrow();
 
         sem1.unlock();
 
-        expect(sem2.lock()).resolves.toBeUndefined();
-
-        Atomics.waitAsync = waitAsync;
+        expect(sem2.lock()).toBeUndefined();
     });
 
     afterEach(() => {
@@ -128,7 +111,7 @@ const workerScript = `
     switch (cmd) {
       case 'lock':
         try {
-            await sem.lock();
+            sem.lock();
         } catch {
             parentPort.postMessage({ cmd: 'timeout' });
         }

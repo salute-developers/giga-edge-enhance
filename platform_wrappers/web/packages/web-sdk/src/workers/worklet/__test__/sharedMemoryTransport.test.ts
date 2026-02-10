@@ -4,22 +4,17 @@ import { SharedMemoryTransport } from '../transport';
 import { RingBuffer } from '../../../utils/ringBuffer';
 import { getInputBufferSize, getOutputBufferSize } from '../../../utils/constants';
 
-// ---- Mock the BinarySemaphore implementation ----
-var semaphoreLockMock: jest.Mock;
-var semaphoreUnlockMock: jest.Mock;
-
 jest.mock('../../../utils/semaphore', () => {
     return {
         BinarySemaphore: jest.fn().mockImplementation(() => {
             return {
-                lock: (semaphoreLockMock = jest.fn()),
-                unlock: (semaphoreUnlockMock = jest.fn()),
+                lock: jest.fn(),
+                unlock: jest.fn(),
             };
         }),
     };
 });
 
-// ---- Test suite ----
 describe('SharedMemoryTransport', () => {
     const sampleRate = 48000;
     beforeAll(() => {
@@ -45,7 +40,7 @@ describe('SharedMemoryTransport', () => {
         return { transport, sab };
     };
 
-    it('push writes to buffers and clears when full', async () => {
+    it('push writes to buffers even when full', async () => {
         const { transport } = createTransport();
 
         const inputSize = getInputBufferSize(sampleRate);
@@ -53,18 +48,17 @@ describe('SharedMemoryTransport', () => {
         const loopbackData = new Float32Array(inputSize).fill(0.2);
 
         // First push should succeed
-        expect(await transport.push(inputData, loopbackData)).toBe(true);
+        expect(transport.push(inputData, loopbackData)).toBeUndefined();
 
         // Now push a second buffer that would overflow the input buffer
-        // The implementation will lock the semaphore, clear buffers, and return false
         const largerInput = new Float32Array(inputSize + 1).fill(0.3);
         const largerLoopback = new Float32Array(inputSize + 1).fill(0.4);
 
-        expect(await transport.push(largerInput, largerLoopback)).toBe(false);
+        expect(transport.push(largerInput, largerLoopback)).toBeUndefined();
 
         // Verify semaphore was used
-        expect(semaphoreLockMock).toHaveBeenCalledTimes(1);
-        expect(semaphoreUnlockMock).toHaveBeenCalledTimes(1);
+        expect((transport as any).pushSemaphore.lock).toHaveBeenCalledTimes(2);
+        expect((transport as any).pushSemaphore.unlock).toHaveBeenCalledTimes(2);
     });
 
     it('pull reads from the output buffer', () => {
@@ -88,28 +82,28 @@ describe('SharedMemoryTransport', () => {
         expect(output[output.length - 1]).toBeCloseTo(0.7);
     });
 
-    it('reset clears all buffers', async () => {
+    it('reset clears all buffers', () => {
         const { transport } = createTransport();
 
         const inputSize = getInputBufferSize(sampleRate);
         const inputData = new Float32Array(inputSize).fill(0.5);
         const loopbackData = new Float32Array(inputSize).fill(0.6);
 
-        await transport.push(inputData, loopbackData);
+        transport.push(inputData, loopbackData);
 
         const outputSize = getOutputBufferSize(sampleRate);
         const output = new Float32Array(outputSize);
         const outputBuffer = (transport as any).outputBuffer as RingBuffer;
         outputBuffer.push(new Float32Array(outputSize).fill(0.9));
 
-        await transport.reset();
+        transport.reset();
 
         // After reset no data should be available
         expect(transport.pull(output)).toBe(false);
         expect(outputBuffer.size).toBe(0);
         expect((transport as any).inputBuffer.size).toBe(0);
         expect((transport as any).loopbackBuffer.size).toBe(0);
-        expect(semaphoreLockMock).toHaveBeenCalledTimes(1);
-        expect(semaphoreUnlockMock).toHaveBeenCalledTimes(1);
+        expect((transport as any).pullSemaphore.lock).toHaveBeenCalledTimes(1);
+        expect((transport as any).pullSemaphore.unlock).toHaveBeenCalledTimes(1);
     });
 });

@@ -12,7 +12,7 @@ import { BinarySemaphore } from '../../utils/semaphore';
 export interface AbstractTransport {
     get outputBufferSize(): number;
     set outputBufferMaxSize(size: number);
-    push(input: Float32Array, loopback: Float32Array): boolean | Promise<boolean>;
+    push(input: Float32Array, loopback: Float32Array): void;
     pull(output: Float32Array): boolean;
     reset(): void;
 }
@@ -42,7 +42,7 @@ export class MessageTransport implements AbstractTransport {
         this.outputBuffer.maxSize = value;
     }
 
-    push(inputChannel: Float32Array, loopbackChannel: Float32Array): boolean {
+    push(inputChannel: Float32Array, loopbackChannel: Float32Array) {
         this.inputBuffer.push(inputChannel);
         this.loopbackBuffer.push(loopbackChannel);
         const transferChunkSize = Math.ceil(TRANSPORT_SIZE_SECONDS * sampleRate);
@@ -62,8 +62,6 @@ export class MessageTransport implements AbstractTransport {
                 [input.buffer, loopback.buffer],
             );
         }
-
-        return true;
     }
 
     pull(output: Float32Array): boolean {
@@ -106,7 +104,9 @@ export class SharedMemoryTransport implements AbstractTransport {
 
     protected readonly outputBuffer: RingBuffer;
 
-    protected readonly clearSemaphore: BinarySemaphore;
+    protected readonly pullSemaphore: BinarySemaphore;
+
+    protected readonly pushSemaphore: BinarySemaphore;
 
     constructor(buffer: SharedArrayBuffer) {
         let offset = 0;
@@ -123,7 +123,9 @@ export class SharedMemoryTransport implements AbstractTransport {
         this.outputBuffer = new RingBuffer(outputSize, buffer, offset);
         offset += RingBuffer.getInternalBufferSize(outputSize);
 
-        this.clearSemaphore = new BinarySemaphore(buffer, offset);
+        this.pullSemaphore = new BinarySemaphore(buffer, offset);
+        offset += BinarySemaphore.INTERNAL_BUFFER_SIZE;
+        this.pushSemaphore = new BinarySemaphore(buffer, offset);
     }
 
     get outputBufferSize(): number {
@@ -134,25 +136,13 @@ export class SharedMemoryTransport implements AbstractTransport {
         this.outputBuffer.maxSize = value;
     }
 
-    async push(inputChannel: Float32Array, loopbackChannel: Float32Array) {
-        const inputFree = this.inputBuffer.free;
-        const loopbackFree = this.loopbackBuffer.free;
-
-        if (inputFree < inputChannel.length || loopbackFree < loopbackChannel.length) {
-            await this.clearSemaphore.lock();
-
-            this.inputBuffer.clear();
-            this.loopbackBuffer.clear();
-
-            this.clearSemaphore.unlock();
-
-            return false;
-        }
+    push(inputChannel: Float32Array, loopbackChannel: Float32Array) {
+        this.pushSemaphore.lock();
 
         this.loopbackBuffer.push(loopbackChannel);
         this.inputBuffer.push(inputChannel);
 
-        return true;
+        this.pushSemaphore.unlock();
     }
 
     pull(output: Float32Array): boolean {
@@ -165,13 +155,13 @@ export class SharedMemoryTransport implements AbstractTransport {
         return false;
     }
 
-    async reset() {
-        await this.clearSemaphore.lock();
+    reset() {
+        this.pullSemaphore.lock();
 
         this.inputBuffer.clear();
         this.loopbackBuffer.clear();
 
-        this.clearSemaphore.unlock();
+        this.pullSemaphore.unlock();
 
         this.outputBuffer.clear();
     }
