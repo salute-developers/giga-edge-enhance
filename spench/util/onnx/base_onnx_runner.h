@@ -70,10 +70,14 @@ class BaseOnnxRunner {
     }
     std::vector<Ort::Value> ort_inputs;
     for (size_t i = 0; i < inputs.size(); ++i) {
+      auto shape = m_model_input_shapes[i];
+      for (auto& d : shape) {
+        if (d < 0) d = 1;
+      }
       ort_inputs.emplace_back(
           Ort::Value::CreateTensor<T>(*m_memory_info_ptr,
                                       const_cast<T*>(inputs[i]->data()), inputs[i]->size(),
-                                      m_model_input_shapes[i].data(), m_model_input_shapes[i].size()));
+                                      shape.data(), shape.size()));
     }
 
     outputs = m_session_ptr->Run(*m_run_options_ptr, m_model_input_names.data(), ort_inputs.data(), ort_inputs.size(),

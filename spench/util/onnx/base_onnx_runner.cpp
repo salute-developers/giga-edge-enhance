@@ -165,23 +165,31 @@ void BaseOnnxRunner::ValidateModel(const std::vector<std::string>& input_names,
 }
 
 void BaseOnnxRunner::ResizeIfNeededInPlace(std::vector<float>& to_check,
-                                           std::vector<int64_t>& shape,
-                                           uint32_t num_parts) {
-  if (to_check.size() == 0) {
-    uint64_t multi = std::accumulate(shape.begin(), shape.end(), 1,
-                                     std::multiplies<uint64_t>());
-    to_check.resize(multi / num_parts, 0.0);
+                                          std::vector<int64_t>& shape,
+                                          uint32_t num_parts) {
+  if (to_check.size() != 0) return;
+  std::vector<int64_t> shape_copy = shape;
+  for (auto& d : shape_copy) {
+    if (d < 0) d = 1;
   }
+  uint64_t multi = std::accumulate(shape_copy.begin(), shape_copy.end(), uint64_t{1},
+                                   std::multiplies<uint64_t>());
+  if (num_parts == 0) num_parts = 1;
+  to_check.resize(multi / num_parts, 0.0f);
 }
 
 void BaseOnnxRunner::ResizeIfNeededInPlace(std::valarray<float>& to_check,
-                                           std::vector<int64_t>& shape,
-                                           uint32_t num_parts) {
-  if (to_check.size() == 0) {
-    uint64_t multi = std::accumulate(shape.begin(), shape.end(), 1,
-                                     std::multiplies<uint64_t>());
-    to_check.resize(multi / num_parts, 0.0);
+                                          std::vector<int64_t>& shape,
+                                          uint32_t num_parts) {
+  if (to_check.size() != 0) return;
+  std::vector<int64_t> shape_copy = shape;
+  for (auto& d : shape_copy) {
+    if (d < 0) d = 1;
   }
+  uint64_t multi = std::accumulate(shape_copy.begin(), shape_copy.end(), uint64_t{1},
+                                   std::multiplies<uint64_t>());
+  if (num_parts == 0) num_parts = 1;
+  to_check.resize(multi / num_parts, 0.0f);
 }
 
 }  // namespace onnx

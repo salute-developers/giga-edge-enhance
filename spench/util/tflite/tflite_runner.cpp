@@ -342,11 +342,14 @@ void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
   }
   spench::DenoiseContextQ<float>* denoise_context =
                                       dynamic_cast<spench::DenoiseContextQ<float>*>(context);
-  ResizeIfNeededInPlace(denoise_context->noisy_mag, m_model_input_size[0]);   // noisy_mag_in [1,1,769,5]
-  ResizeIfNeededInPlace(denoise_context->fullband_hidden, m_model_input_size[1]);   // fb_h
-  ResizeIfNeededInPlace(denoise_context->fb_ctx, m_model_input_size[2]);   // fb_ctx
-  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_psd, m_model_input_size[3]);
+  ResizeIfNeededInPlace(denoise_context->noisy_mag,        m_model_input_size[0]);   // noisy_mag_in [1,1,769,1]
+  ResizeIfNeededInPlace(denoise_context->fullband_hidden,  m_model_input_size[1]);   // fb_h
+  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_psd, m_model_input_size[2]);
+  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_pg,  m_model_input_size[3]);
   ResizeIfNeededInPlace(denoise_context->sb_snr_noise_psd, m_model_input_size[4]);
+  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_pg,  m_model_input_size[5]);
+  ResizeIfNeededInPlace(denoise_context->fb_conv1_buf,     m_model_input_size[6]);
+  ResizeIfNeededInPlace(denoise_context->fb_conv3_buf,     m_model_input_size[7]);
   const TfLiteTensor* mag_tensor = m_model_inputs[0];
   const uint32_t num_feats  = mag_tensor->dims->data[2];  // 769
   const uint32_t num_frames = mag_tensor->dims->data[3];  // 5
@@ -364,9 +367,12 @@ void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
   }
   inputs.push_back(&denoise_context->noisy_mag);
   inputs.push_back(&denoise_context->fullband_hidden);
-  inputs.push_back(&denoise_context->fb_ctx);
   inputs.push_back(&denoise_context->fb_snr_noise_psd);
+  inputs.push_back(&denoise_context->fb_snr_noise_pg);
   inputs.push_back(&denoise_context->sb_snr_noise_psd);
+  inputs.push_back(&denoise_context->sb_snr_noise_pg);
+  inputs.push_back(&denoise_context->fb_conv1_buf);
+  inputs.push_back(&denoise_context->fb_conv3_buf);
 }
 
 template<typename T>
@@ -381,22 +387,34 @@ void SpenchQTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
     const_output_ptr = tflite::GetTensorData<T>(m_model_outputs[output_idx]);
     switch (output_idx) {
       case 0:
-        context->fb_ctx.assign(const_output_ptr,
-                                          const_output_ptr + context->fb_ctx.size());
-        break;
-      case 1:
         context->fullband_hidden.assign(const_output_ptr,
                                               const_output_ptr + context->fullband_hidden.size());
         break;
-      case 2:
+      case 1:
         context->fb_snr_noise_psd.assign(const_output_ptr,
                                          const_output_ptr + context->fb_snr_noise_psd.size());
+        break;
+      case 2:
+        context->fb_snr_noise_pg.assign(const_output_ptr,
+                                         const_output_ptr + context->fb_snr_noise_pg.size());
         break;
       case 3:
         context->sb_snr_noise_psd.assign(const_output_ptr,
                                              const_output_ptr + context->sb_snr_noise_psd.size());
         break;
       case 4:
+        context->sb_snr_noise_pg.assign(const_output_ptr,
+                                             const_output_ptr + context->sb_snr_noise_pg.size());
+        break;
+      case 5:
+        context->fb_conv1_buf.assign(const_output_ptr,
+                                             const_output_ptr + context->fb_conv1_buf.size());
+        break;
+      case 6:
+        context->fb_conv3_buf.assign(const_output_ptr,
+                                             const_output_ptr + context->fb_conv3_buf.size());
+        break;
+      case 7:
         for (uint64_t i = 0; i < m_model_output_size[output_idx]; i += 2) {
           data.new_spectrogram.real[i / 2] = const_output_ptr[i];
           data.new_spectrogram.imag[i / 2] = const_output_ptr[i + 1];

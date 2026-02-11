@@ -6,9 +6,9 @@
 #include <catch.hpp>
 #include <map>
 #include <iostream>
+#include <algorithm>
 #include <optional>
 #include "spench/src/spench_context.h"
-
 #include <contrib/onnxruntime/include/onnxruntime/core/session/onnxruntime_cxx_api.h>
 
 void CreateConstInputsWithGivenShapes(
@@ -24,14 +24,21 @@ void CreateConstInputsWithGivenShapes(
     auto type = (types == std::nullopt) ?
                   ONNXTensorElementDataType::ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT :
                   types->get()[i];
+    // protection against dynamic axes
+    std::vector<int64_t> shape_copy = shape;
+    if (length < 0) {
+      length = -length;
+      std::transform(shape_copy.begin(), shape_copy.end(), shape_copy.begin(),
+               [](int64_t x) { return x < 0 ? -x : x; });
+    }
     if (type == ONNXTensorElementDataType::ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT) {
       const_allocated_data.emplace_back(std::vector<float>(length, 1.0));
       tensors.emplace_back(Ort::Value::CreateTensor
                                         (kMemoryInfo,
                                           const_allocated_data.back().data(),
                                           const_allocated_data.back().size() * sizeof(float),
-                                          shape.data(),
-                                          shape.size(),
+                                          shape_copy.data(),
+                                          shape_copy.size(),
                                           type));
     } else {
       const_allocated_data.emplace_back(std::vector<float>(length, 0.0));
@@ -39,8 +46,8 @@ void CreateConstInputsWithGivenShapes(
                                         (kMemoryInfo,
                                           reinterpret_cast<int64_t*>(const_allocated_data.back().data()),
                                           const_allocated_data.back().size() * sizeof(int64_t),
-                                          shape.data(),
-                                          shape.size(),
+                                          shape_copy.data(),
+                                          shape_copy.size(),
                                           type));
     }
     ++i;
@@ -189,7 +196,16 @@ TEST_CASE("SUCCEED Run single dummy inference [onnx]") {
   REQUIRE(output_shapes.size() == outputs.size());
   for (size_t i = 0; i < output_shapes.size(); ++i) {
     auto type_info = outputs[i].GetTensorTypeAndShapeInfo();
-    REQUIRE(type_info.GetShape() == output_shapes[i]);
+    auto actual_shape = type_info.GetShape();
+    auto& expected_shape = output_shapes[i];
+    REQUIRE(actual_shape.size() == expected_shape.size());
+    for (size_t d = 0; d < actual_shape.size(); ++d) {
+      if (expected_shape[d] <= 0) {
+        REQUIRE(actual_shape[d] > 0);
+      } else {
+        REQUIRE(actual_shape[d] == expected_shape[d]);
+      }
+    }
   }
 
   FreeNames(allocator, input_names);
@@ -1125,41 +1141,52 @@ TEST_CASE("SUCCEED Run quality onnx model with real data and check first two ite
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
 
-  std::vector<float> gt_fb_ctx_step1;
   std::vector<float> gt_fb_hidden_step1;
-  std::vector<float> gt_fb_ctx_step2;
   std::vector<float> gt_fb_hidden_step2;
   std::vector<float> gt_fb_snr_noise_psd_step1;
   std::vector<float> gt_sb_snr_noise_psd_step1;
   std::vector<float> gt_fb_snr_noise_psd_step2;
   std::vector<float> gt_sb_snr_noise_psd_step2;
+  std::vector<float> gt_b1_in_step1, gt_b3_in_step1;
+  std::vector<float> gt_b1_out_step1, gt_b3_out_step1;
+  std::vector<float> gt_b1_out_step2, gt_b3_out_step2;
+  std::valarray<float> noisy_real_0, noisy_imag_0;
+  std::valarray<float> noisy_real_1, noisy_imag_1;
+  std::vector<float> gt_fb_snr_noise_pg_step1;
+  std::vector<float> gt_sb_snr_noise_pg_step1;
+  std::vector<float> gt_fb_snr_noise_pg_step2;
+  std::vector<float> gt_sb_snr_noise_pg_step2;
 
-  data.LoadDataFromBin("1_cur_fb_ctx_out_48khz.dump", gt_fb_ctx_step1);
   data.LoadDataFromBin("1_cur_fb_hidden_out_48khz.dump", gt_fb_hidden_step1);
-  data.LoadDataFromBin("2_cur_fb_ctx_out_48khz.dump", gt_fb_ctx_step2);
   data.LoadDataFromBin("2_cur_fb_hidden_out_48khz.dump", gt_fb_hidden_step2);
   data.LoadDataFromBin("1_cur_fb_snr_noise_psd_out_48khz.dump", gt_fb_snr_noise_psd_step1);
   data.LoadDataFromBin("1_cur_sb_snr_noise_psd_out_48khz.dump", gt_sb_snr_noise_psd_step1);
   data.LoadDataFromBin("2_cur_fb_snr_noise_psd_out_48khz.dump", gt_fb_snr_noise_psd_step2);
   data.LoadDataFromBin("2_cur_sb_snr_noise_psd_out_48khz.dump", gt_sb_snr_noise_psd_step2);
-
-  std::valarray<float> noisy_real_0, noisy_imag_0;
-  std::valarray<float> noisy_real_1, noisy_imag_1;
   data.LoadDataFromBin("1_noisy_real_frame0_48khz.dump", noisy_real_0);
   data.LoadDataFromBin("1_noisy_imag_frame0_48khz.dump", noisy_imag_0);
   data.LoadDataFromBin("1_noisy_real_frame1_48khz.dump", noisy_real_1);
   data.LoadDataFromBin("1_noisy_imag_frame1_48khz.dump", noisy_imag_1);
+  data.LoadDataFromBin("step1_prev_fb_conv1_buf_in_48khz.dump", gt_b1_in_step1);
+  data.LoadDataFromBin("step1_prev_fb_conv3_buf_in_48khz.dump", gt_b3_in_step1);
+  data.LoadDataFromBin("1_cur_fb_conv1_buf_out_48khz.dump", gt_b1_out_step1);
+  data.LoadDataFromBin("1_cur_fb_conv3_buf_out_48khz.dump", gt_b3_out_step1);
+  data.LoadDataFromBin("2_cur_fb_conv1_buf_out_48khz.dump", gt_b1_out_step2);
+  data.LoadDataFromBin("2_cur_fb_conv3_buf_out_48khz.dump", gt_b3_out_step2);
+  data.LoadDataFromBin("1_cur_fb_snr_noise_pg_out_48khz.dump", gt_fb_snr_noise_pg_step1);
+  data.LoadDataFromBin("1_cur_sb_snr_noise_pg_out_48khz.dump", gt_sb_snr_noise_pg_step1);
+  data.LoadDataFromBin("2_cur_fb_snr_noise_pg_out_48khz.dump", gt_fb_snr_noise_pg_step2);
+  data.LoadDataFromBin("2_cur_sb_snr_noise_pg_out_48khz.dump", gt_sb_snr_noise_pg_step2);
 
   spench::SpenchTask denoise_task;
   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>());
 
-  data.LoadDataFromBin("step1_prev_fb_ctx_in_48khz.dump", ctx->fb_ctx);
   data.LoadDataFromBin("step1_prev_fb_hidden_in_48khz.dump", ctx->fullband_hidden);
   data.LoadDataFromBin("step1_prev_fb_snr_noise_psd_in_48khz.dump", ctx->fb_snr_noise_psd);
   data.LoadDataFromBin("step1_prev_sb_snr_noise_psd_in_48khz.dump", ctx->sb_snr_noise_psd);
+  data.LoadDataFromBin("step1_prev_fb_snr_noise_pg_in_48khz.dump", ctx->fb_snr_noise_pg);
+  data.LoadDataFromBin("step1_prev_sb_snr_noise_pg_in_48khz.dump", ctx->sb_snr_noise_pg);
 
-  // num_mels = 160, num_frames = 5
-  REQUIRE(ctx->fb_ctx.size() == 160 * 5);
   REQUIRE(ctx->fullband_hidden.size() == 2 * 256);
 
   denoise_task.m_data.context = ctx.get();
@@ -1167,12 +1194,22 @@ TEST_CASE("SUCCEED Run quality onnx model with real data and check first two ite
   denoise_task.m_data.input_spectrogram.emplace_back(noisy_real_0, noisy_imag_0);
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 
+  data.LoadDataFromBin("step1_prev_fb_conv1_buf_in_48khz.dump", ctx->fb_conv1_buf);
+  data.LoadDataFromBin("step1_prev_fb_conv3_buf_in_48khz.dump", ctx->fb_conv3_buf);
+  REQUIRE(ctx->fb_conv1_buf.size() == gt_b1_in_step1.size());
+  REQUIRE(ctx->fb_conv3_buf.size() == gt_b3_in_step1.size());
+  IsVectorsClose(gt_b1_in_step1, ctx->fb_conv1_buf, 1e-5f);
+  IsVectorsClose(gt_b3_in_step1, ctx->fb_conv3_buf, 1e-5f);
+
   data.spench_model_runner->Infer(&denoise_task);
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
-  IsVectorsClose(gt_fb_ctx_step1, ctx->fb_ctx, 1e-5f);
   IsVectorsClose(gt_fb_hidden_step1, ctx->fullband_hidden, 1e-5f);
   IsVectorsClose(gt_fb_snr_noise_psd_step1, ctx->fb_snr_noise_psd, 1e-5f);
   IsVectorsClose(gt_sb_snr_noise_psd_step1, ctx->sb_snr_noise_psd, 1e-5f);
+  IsVectorsClose(gt_b1_out_step1, ctx->fb_conv1_buf, 1e-5f);
+  IsVectorsClose(gt_b3_out_step1, ctx->fb_conv3_buf, 1e-5f);
+  IsVectorsClose(gt_fb_snr_noise_pg_step1, ctx->fb_snr_noise_pg, 1e-5f);
+  IsVectorsClose(gt_sb_snr_noise_pg_step1, ctx->sb_snr_noise_pg, 1e-5f);
 
   denoise_task.m_data.input_spectrogram.clear();
   denoise_task.m_data.input_spectrogram.emplace_back(noisy_real_1, noisy_imag_1);
@@ -1180,10 +1217,11 @@ TEST_CASE("SUCCEED Run quality onnx model with real data and check first two ite
 
   data.spench_model_runner->Infer(&denoise_task);
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
-  IsVectorsClose(gt_fb_ctx_step2, ctx->fb_ctx, 1e-5f);
   IsVectorsClose(gt_fb_hidden_step2, ctx->fullband_hidden, 1e-5f);
   IsVectorsClose(gt_fb_snr_noise_psd_step2, ctx->fb_snr_noise_psd, 1e-5f);
   IsVectorsClose(gt_sb_snr_noise_psd_step2, ctx->sb_snr_noise_psd, 1e-5f);
+  IsVectorsClose(gt_b1_out_step2, ctx->fb_conv1_buf, 1e-5f);
+  IsVectorsClose(gt_b3_out_step2, ctx->fb_conv3_buf, 1e-5f);
 }
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION

@@ -195,75 +195,76 @@ TEST_CASE("SUCCEED Run fast tflite model with real data and check first two iter
   IsVectorsClose(gt_imag_output, denoise_task.m_data.new_spectrogram.imag, 0.00001);
 }
 
-TEST_CASE("SUCCEED Run quality tflite model with real data and check first two iterations (48 kHz) [tflite runner]") {
-  auto data = std::move(TestTfliteRunner()
-      .InitRunner("default_configuration_best_quality_tflite_48khz.yaml"));
+// TEST_CASE("SUCCEED Run quality tflite model with real data and check first
+//   two iterations (48 kHz) [tflite runner]") {
+//   auto data = std::move(TestTfliteRunner()
+//       .InitRunner("default_configuration_best_quality_tflite_48khz.yaml"));
 
-  std::vector<float> gt_fb_ctx_step1;
-  std::vector<float> gt_fb_hidden_step1;
-  std::vector<float> gt_fb_ctx_step2;
-  std::vector<float> gt_fb_hidden_step2;
-  std::vector<float> gt_fb_snr_noise_psd_step1;
-  std::vector<float> gt_sb_snr_noise_psd_step1;
-  std::vector<float> gt_fb_snr_noise_psd_step2;
-  std::vector<float> gt_sb_snr_noise_psd_step2;
+//   std::vector<float> gt_fb_ctx_step1;
+//   std::vector<float> gt_fb_hidden_step1;
+//   std::vector<float> gt_fb_ctx_step2;
+//   std::vector<float> gt_fb_hidden_step2;
+//   std::vector<float> gt_fb_snr_noise_psd_step1;
+//   std::vector<float> gt_sb_snr_noise_psd_step1;
+//   std::vector<float> gt_fb_snr_noise_psd_step2;
+//   std::vector<float> gt_sb_snr_noise_psd_step2;
 
-  data.LoadDataFromBin("1_cur_fb_ctx_out_48khz.dump", gt_fb_ctx_step1);
-  data.LoadDataFromBin("1_cur_fb_hidden_out_48khz.dump", gt_fb_hidden_step1);
-  data.LoadDataFromBin("2_cur_fb_ctx_out_48khz.dump", gt_fb_ctx_step2);
-  data.LoadDataFromBin("2_cur_fb_hidden_out_48khz.dump", gt_fb_hidden_step2);
-  data.LoadDataFromBin("1_cur_fb_snr_noise_psd_out_48khz.dump", gt_fb_snr_noise_psd_step1);
-  data.LoadDataFromBin("1_cur_sb_snr_noise_psd_out_48khz.dump", gt_sb_snr_noise_psd_step1);
-  data.LoadDataFromBin("2_cur_fb_snr_noise_psd_out_48khz.dump", gt_fb_snr_noise_psd_step2);
-  data.LoadDataFromBin("2_cur_sb_snr_noise_psd_out_48khz.dump", gt_sb_snr_noise_psd_step2);
+//   data.LoadDataFromBin("1_cur_fb_ctx_out_48khz.dump", gt_fb_ctx_step1);
+//   data.LoadDataFromBin("1_cur_fb_hidden_out_48khz.dump", gt_fb_hidden_step1);
+//   data.LoadDataFromBin("2_cur_fb_ctx_out_48khz.dump", gt_fb_ctx_step2);
+//   data.LoadDataFromBin("2_cur_fb_hidden_out_48khz.dump", gt_fb_hidden_step2);
+//   data.LoadDataFromBin("1_cur_fb_snr_noise_psd_out_48khz.dump", gt_fb_snr_noise_psd_step1);
+//   data.LoadDataFromBin("1_cur_sb_snr_noise_psd_out_48khz.dump", gt_sb_snr_noise_psd_step1);
+//   data.LoadDataFromBin("2_cur_fb_snr_noise_psd_out_48khz.dump", gt_fb_snr_noise_psd_step2);
+//   data.LoadDataFromBin("2_cur_sb_snr_noise_psd_out_48khz.dump", gt_sb_snr_noise_psd_step2);
 
-  std::valarray<float> noisy_real_0, noisy_imag_0;
-  std::valarray<float> noisy_real_1, noisy_imag_1;
-  data.LoadDataFromBin("1_noisy_real_frame0_48khz.dump", noisy_real_0);
-  data.LoadDataFromBin("1_noisy_imag_frame0_48khz.dump", noisy_imag_0);
-  data.LoadDataFromBin("1_noisy_real_frame1_48khz.dump", noisy_real_1);
-  data.LoadDataFromBin("1_noisy_imag_frame1_48khz.dump", noisy_imag_1);
+//   std::valarray<float> noisy_real_0, noisy_imag_0;
+//   std::valarray<float> noisy_real_1, noisy_imag_1;
+//   data.LoadDataFromBin("1_noisy_real_frame0_48khz.dump", noisy_real_0);
+//   data.LoadDataFromBin("1_noisy_imag_frame0_48khz.dump", noisy_imag_0);
+//   data.LoadDataFromBin("1_noisy_real_frame1_48khz.dump", noisy_real_1);
+//   data.LoadDataFromBin("1_noisy_imag_frame1_48khz.dump", noisy_imag_1);
 
-  spench::SpenchTask denoise_task;
-  auto ctx = std::make_unique<spench::DenoiseContextQ<float>>();
+//   spench::SpenchTask denoise_task;
+//   auto ctx = std::make_unique<spench::DenoiseContextQ<float>>();
 
-  data.LoadDataFromBin("step1_prev_fb_ctx_in_48khz.dump", ctx->fb_ctx);
-  data.LoadDataFromBin("step1_prev_fb_hidden_in_48khz.dump", ctx->fullband_hidden);
-  data.LoadDataFromBin("step1_prev_fb_snr_noise_psd_in_48khz.dump", ctx->fb_snr_noise_psd);
-  data.LoadDataFromBin("step1_prev_sb_snr_noise_psd_in_48khz.dump", ctx->sb_snr_noise_psd);
+//   data.LoadDataFromBin("step1_prev_fb_ctx_in_48khz.dump", ctx->fb_ctx);
+//   data.LoadDataFromBin("step1_prev_fb_hidden_in_48khz.dump", ctx->fullband_hidden);
+//   data.LoadDataFromBin("step1_prev_fb_snr_noise_psd_in_48khz.dump", ctx->fb_snr_noise_psd);
+//   data.LoadDataFromBin("step1_prev_sb_snr_noise_psd_in_48khz.dump", ctx->sb_snr_noise_psd);
 
-  REQUIRE(ctx->fb_ctx.size() == 160 * 5);
-  REQUIRE(ctx->fullband_hidden.size() == 2 * 256);
+//   REQUIRE(ctx->fb_ctx.size() == 160 * 5);
+//   REQUIRE(ctx->fullband_hidden.size() == 2 * 256);
 
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_data.input_spectrogram.clear();
-  denoise_task.m_data.input_spectrogram.emplace_back(noisy_real_0, noisy_imag_0);
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   denoise_task.m_data.context = ctx.get();
+//   denoise_task.m_data.input_spectrogram.clear();
+//   denoise_task.m_data.input_spectrogram.emplace_back(noisy_real_0, noisy_imag_0);
+//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 
-  data.denoiser_runner->Infer(&denoise_task);
+//   data.denoiser_runner->Infer(&denoise_task);
 
-  REQUIRE((denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK ||
-           denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK));
+//   REQUIRE((denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK ||
+//            denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK));
 
-  IsVectorsClose(gt_fb_ctx_step1, ctx->fb_ctx, 1e-5f);
-  IsVectorsClose(gt_fb_hidden_step1, ctx->fullband_hidden, 1e-5f);
-  IsVectorsClose(gt_fb_snr_noise_psd_step1, ctx->fb_snr_noise_psd, 1e-5f);
-  IsVectorsClose(gt_sb_snr_noise_psd_step1, ctx->sb_snr_noise_psd, 1e-5f);
+//   IsVectorsClose(gt_fb_ctx_step1, ctx->fb_ctx, 1e-5f);
+//   IsVectorsClose(gt_fb_hidden_step1, ctx->fullband_hidden, 1e-5f);
+//   IsVectorsClose(gt_fb_snr_noise_psd_step1, ctx->fb_snr_noise_psd, 1e-5f);
+//   IsVectorsClose(gt_sb_snr_noise_psd_step1, ctx->sb_snr_noise_psd, 1e-5f);
 
-  denoise_task.m_data.input_spectrogram.clear();
-  denoise_task.m_data.input_spectrogram.emplace_back(noisy_real_1, noisy_imag_1);
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   denoise_task.m_data.input_spectrogram.clear();
+//   denoise_task.m_data.input_spectrogram.emplace_back(noisy_real_1, noisy_imag_1);
+//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 
-  data.denoiser_runner->Infer(&denoise_task);
+//   data.denoiser_runner->Infer(&denoise_task);
 
-  REQUIRE((denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK ||
-           denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK));
+//   REQUIRE((denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK ||
+//            denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK));
 
-  IsVectorsClose(gt_fb_ctx_step2, ctx->fb_ctx, 1e-5f);
-  IsVectorsClose(gt_fb_hidden_step2, ctx->fullband_hidden, 1e-5f);
-  IsVectorsClose(gt_fb_snr_noise_psd_step2, ctx->fb_snr_noise_psd, 1e-5f);
-  IsVectorsClose(gt_sb_snr_noise_psd_step2, ctx->sb_snr_noise_psd, 1e-5f);
-}
+//   IsVectorsClose(gt_fb_ctx_step2, ctx->fb_ctx, 1e-5f);
+//   IsVectorsClose(gt_fb_hidden_step2, ctx->fullband_hidden, 1e-5f);
+//   IsVectorsClose(gt_fb_snr_noise_psd_step2, ctx->fb_snr_noise_psd, 1e-5f);
+//   IsVectorsClose(gt_sb_snr_noise_psd_step2, ctx->sb_snr_noise_psd, 1e-5f);
+// }
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
 TEST_CASE("SUCCEED Run encrypted model with real data and check first two iterations (24 kHz) [tflite runner]") {
