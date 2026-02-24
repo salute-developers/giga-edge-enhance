@@ -5,10 +5,12 @@ export const WASM_DSP_URL = new URL('../../bin/spench.dsp.wasm', import.meta.url
 
 const DEREVERB_MODEL_URL = new URL('../../models/dereverb_vae_48khz_fp32.spench', import.meta.url);
 const DENOISE_QUANT_MODEL_URL = new URL('../../models/fast_model_int8.spench', import.meta.url);
+const DENOISE_QUANT_MODEL_8K_URL = new URL('../../models/fast_model_int8_8k.spench', import.meta.url);
 const DENOISE_MOBILE_MODEL_URL = new URL('../../models/mobile_group8_hybrid_loss_fp32.spench', import.meta.url);
 
 export const DEFAULT_MODELS = {
     noiseCancellation: {
+        lite8k: DENOISE_QUANT_MODEL_8K_URL,
         lite24k: DENOISE_QUANT_MODEL_URL,
         full24k: DENOISE_MOBILE_MODEL_URL,
     },

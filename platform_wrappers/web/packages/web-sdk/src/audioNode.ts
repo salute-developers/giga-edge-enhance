@@ -267,7 +267,10 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
             echoCancellation: Boolean(features.echoCancellation),
             noiseCancellation:
                 features.noiseCancellation === true
-                    ? (getDefaultNoiseCancellationModel(this.#loader.models) as keyof M['noiseCancellation'])
+                    ? (getDefaultNoiseCancellationModel(
+                          this.#loader.models,
+                          super.context.sampleRate,
+                      ) as keyof M['noiseCancellation'])
                     : features.noiseCancellation || false,
             dereverberation:
                 features.dereverberation === true

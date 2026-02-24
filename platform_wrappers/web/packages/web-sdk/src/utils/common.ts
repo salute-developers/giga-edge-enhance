@@ -7,7 +7,7 @@ import {
     WORKLET_OUTPUT_BUFFER_STEP,
 } from './constants';
 
-export type ModelKey = 'lite24k' | 'full24k' | 'lite48k' | 'full48k';
+export type ModelKey = 'lite8k' | 'lite24k' | 'full24k' | 'lite48k' | 'full48k';
 
 /**
  * A value that can represent a model. It can be a string URL, a `URL` instance,
@@ -173,7 +173,11 @@ export function getDspFeatures(features: Partial<DspFeatures> = {}): DspFeatures
 }
 
 const modelTypeLoadOrder = ['lite24k', 'full24k', 'lite24k', 'full48k'] as const;
-export function getDefaultNoiseCancellationModel(models: ModelsTmpl | undefined): ModelKey {
+export function getDefaultNoiseCancellationModel(models: ModelsTmpl | undefined, sampleRate: number): ModelKey {
+    if (sampleRate <= 8000 && models?.noiseCancellation?.lite8k) {
+        return 'lite8k';
+    }
+
     for (const type of modelTypeLoadOrder) {
         if (models?.noiseCancellation?.[type]) {
             return type;
