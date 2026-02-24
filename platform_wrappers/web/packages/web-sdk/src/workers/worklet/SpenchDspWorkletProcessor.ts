@@ -89,7 +89,7 @@ export class SpenchDspWorkletProcessor extends SpenchBaseWorkletProcessor {
 
         try {
             if (!this.instance) {
-                this.instance = new SpenchDspWorkletWrapper(dspWasm!, sampleRate, this.logger);
+                this.instance = new SpenchDspWorkletWrapper(dspWasm!, sampleRate, this.logger, this.settings);
                 this.logger.debug('SpenchDSP instance created');
             }
 

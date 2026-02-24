@@ -1,3 +1,5 @@
+import type { Settings } from './common';
+
 export const SPENCH_FRAME_SIZE_SECONDS = 0.016;
 
 export const TRANSPORT_SIZE_SECONDS = SPENCH_FRAME_SIZE_SECONDS * 2;
@@ -53,10 +55,17 @@ export function getOutputBufferSize(sampleRate: number) {
     return Math.ceil(sampleRate * OUTPUT_BUFFER_SECONDS);
 }
 
-export const getDefaultNormalizationConfig = (sampleRate: number) => `
+export const getDefaultNormalizationConfig = (sampleRate: number, settings: Settings) => `
 sound_processing:
   loudness_ctrl:
     sample_rate: ${sampleRate}
+${
+    !settings.useVadNormalization
+        ? ''
+        : `
+    use_vad: true
+    target_level_db: -18.0`
+}
   dynamic_range_compressor_ctrl:
     sample_rate: ${sampleRate}
   noise_gate_ctrl:

@@ -1,6 +1,8 @@
 /* eslint-disable no-var */
 import { SpenchDspWorkletWrapper } from '../wrapper';
 import { Logger } from '../../../utils/logger';
+import { Settings } from '../../../utils/common';
+import { getDefaultNormalizationConfig } from '../../../utils/constants';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -82,7 +84,7 @@ describe('SpenchDspWorkletWrapper', () => {
     // -----------------------------------------------------------------------
     test('constructor allocates heap and stores bridge', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger);
+        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         // _malloc should be called twice with HEAP_SIZE * 4
         const expectedBytes = 64 * Float32Array.BYTES_PER_ELEMENT; // 256
@@ -103,7 +105,8 @@ describe('SpenchDspWorkletWrapper', () => {
     // -----------------------------------------------------------------------
     test('addNormalizer creates a new normalizer when not cached (default)', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger);
+        const settings = {} as Settings;
+        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger, settings);
 
         wrapper.addNormalizer(); // no config
 
@@ -116,11 +119,12 @@ describe('SpenchDspWorkletWrapper', () => {
 
         // Ensure the constructor was called with default config
         expect(mockAudioProcessElement).toHaveBeenCalledWith('defaultNormalizationConfig');
+        expect(getDefaultNormalizationConfig).toHaveBeenCalledWith(48000, settings);
     });
 
     test('addNormalizer creates a new normalizer when not cached', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger);
+        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         wrapper.addNormalizer('aba');
 
@@ -137,7 +141,7 @@ describe('SpenchDspWorkletWrapper', () => {
 
     test('addNormalizer re‑uses a cached normalizer', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger);
+        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         // Pre‑populate the cache
         const cachedElement = { resetContext: jest.fn(), delete: jest.fn() };
@@ -159,7 +163,7 @@ describe('SpenchDspWorkletWrapper', () => {
     // -----------------------------------------------------------------------
     test('addEchoCanceller creates a new AEC when not cached (default)', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger);
+        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         wrapper.addEchoCanceller(); // no config
 
@@ -173,7 +177,7 @@ describe('SpenchDspWorkletWrapper', () => {
 
     test('addEchoCanceller creates a new AEC when not cached', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger);
+        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         wrapper.addEchoCanceller('aba');
 
@@ -190,7 +194,7 @@ describe('SpenchDspWorkletWrapper', () => {
     // -----------------------------------------------------------------------
     test('pop removes the last element, stores it in cache and timeout', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger);
+        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         // Insert a dummy element manually
         const dummy = { delete: jest.fn(), resetContext: jest.fn(), process: jest.fn() };
@@ -223,7 +227,7 @@ describe('SpenchDspWorkletWrapper', () => {
 
     test('pop returns false when pipeline is empty', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger);
+        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
         expect(wrapper.pop()).toBe(false);
     });
 
@@ -232,7 +236,7 @@ describe('SpenchDspWorkletWrapper', () => {
     // -----------------------------------------------------------------------
     test('tick removes stale cache entries and deletes elements', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger);
+        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         // Add a dummy element and pop it
         const dummy = { delete: jest.fn(), resetContext: jest.fn(), process: jest.fn() };
@@ -260,7 +264,7 @@ describe('SpenchDspWorkletWrapper', () => {
     // -----------------------------------------------------------------------
     test('destroy frees heap and deletes pipeline elements', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger);
+        const wrapper = new SpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         // Add two dummy elements
         const el1 = { delete: jest.fn(), resetContext: jest.fn(), process: jest.fn() };

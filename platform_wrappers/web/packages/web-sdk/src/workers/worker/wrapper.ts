@@ -9,7 +9,7 @@ import {
 import { Logger } from '../../utils/logger';
 import { AbstractSpenchWrapper } from '../../utils/wrapper';
 import getHashCode from '../../utils/hash';
-import { ModelKey } from '../../utils/common';
+import { ModelKey, Settings } from '../../utils/common';
 import SpenchError from '../../utils/error';
 
 import Loader, { LoadError, ModelNotFoundError } from './loader';
@@ -20,6 +20,7 @@ interface CreateSpenchWrapperParams {
     sampleRate: number;
     logger: Logger;
     loader: Loader;
+    settings?: Settings;
     onHeavyLoadStart?: () => void;
     onHeavyLoadEnd?: () => void;
 }
@@ -31,6 +32,7 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
         wasm: ArrayBuffer,
         protected readonly sampleRate: number,
         protected readonly logger: Logger,
+        protected readonly settings: Settings,
     ) {
         super();
 
@@ -47,6 +49,7 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
         sampleRate,
         logger,
         loader,
+        settings,
     }: CreateSpenchWrapperParams): Promise<SpenchDspWrapper | InternalError | LoadError> {
         const wasm = await loader.loadDSPWasm();
 
@@ -55,7 +58,7 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
         }
 
         try {
-            return new SpenchDspWrapper(wasm, sampleRate, logger);
+            return new SpenchDspWrapper(wasm, sampleRate, logger, settings!);
         } catch (e) {
             return new InternalError(e);
         }
@@ -76,7 +79,7 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
                 key,
                 cached ||
                     new this.bridge.AudioProcessPipelineElement(
-                        config || getDefaultNormalizationConfig(this.sampleRate),
+                        config || getDefaultNormalizationConfig(this.sampleRate, this.settings),
                     ),
             ]);
         } catch (e) {

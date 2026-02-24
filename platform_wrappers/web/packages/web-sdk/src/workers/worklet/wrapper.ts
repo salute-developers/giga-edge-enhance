@@ -8,6 +8,7 @@ import {
 import { Logger } from '../../utils/logger';
 import getHashCode from '../../utils/hash';
 import { AbstractSpenchWrapper } from '../../utils/wrapper';
+import { Settings } from '../../utils/common';
 
 export class SpenchDspWorkletWrapper extends AbstractSpenchWrapper {
     protected bridge: SpenchDSPCore;
@@ -17,7 +18,8 @@ export class SpenchDspWorkletWrapper extends AbstractSpenchWrapper {
     constructor(
         wasm: ArrayBuffer,
         protected readonly sampleRate: number,
-        protected logger: Logger,
+        protected readonly logger: Logger,
+        protected readonly settings: Settings,
     ) {
         super();
 
@@ -42,7 +44,9 @@ export class SpenchDspWorkletWrapper extends AbstractSpenchWrapper {
         this.pipeline.push([
             key,
             cached ||
-                new this.bridge.AudioProcessPipelineElement(config || getDefaultNormalizationConfig(this.sampleRate)),
+                new this.bridge.AudioProcessPipelineElement(
+                    config || getDefaultNormalizationConfig(this.sampleRate, this.settings),
+                ),
         ]);
     }
 

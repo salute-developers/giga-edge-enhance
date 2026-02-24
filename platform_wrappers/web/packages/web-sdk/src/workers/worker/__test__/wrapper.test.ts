@@ -6,6 +6,7 @@ import { SpenchWrapper, SpenchDspWrapper } from '../wrapper';
 import { LoadError } from '../loader';
 import getHashCode from '../../../utils/hash';
 import { getDefaultAECConfig, getDefaultNormalizationConfig } from '../../../utils/constants';
+import { Settings } from '../../../utils/common';
 
 jest.mock('../../../../lib/spench', () => {
     const bridge = {
@@ -235,6 +236,7 @@ describe('SpenchWrapper', () => {
 
 describe('SpenchDspWrapper', () => {
     let wrapper: SpenchDspWrapper;
+    const settings = {} as Settings;
     const loader = new DummyLoader() as any;
     const logger = new DummyLogger() as any;
 
@@ -243,6 +245,7 @@ describe('SpenchDspWrapper', () => {
             sampleRate: 48000,
             logger,
             loader,
+            settings,
         })) as SpenchDspWrapper;
     });
 
@@ -251,6 +254,7 @@ describe('SpenchDspWrapper', () => {
             sampleRate: 48000,
             logger,
             loader,
+            settings,
         });
         expect(instance).toBeInstanceOf(SpenchDspWrapper);
     });
@@ -262,6 +266,7 @@ describe('SpenchDspWrapper', () => {
             sampleRate: 48000,
             logger,
             loader: badLoader,
+            settings,
         });
         expect(result).toBeInstanceOf(LoadError);
     });
@@ -269,7 +274,7 @@ describe('SpenchDspWrapper', () => {
     test('addNormalizer creates default element', () => {
         const res = wrapper.addNormalizer();
         expect(res).toBeUndefined();
-        expect(getDefaultNormalizationConfig).toHaveBeenCalledWith(48000);
+        expect(getDefaultNormalizationConfig).toHaveBeenCalledWith(48000, settings);
         expect((wrapper as any).pipeline.length).toBe(1);
         expect((wrapper as any).pipeline[0][0]).toBe('normalizer-default');
     });

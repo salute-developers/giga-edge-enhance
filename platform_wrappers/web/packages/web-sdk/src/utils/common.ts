@@ -74,6 +74,8 @@ export type Features<M extends ModelsTmpl> = MainFeatures<M> & DspFeatures;
  *                                          of environment support.
  * @property dspOnAudioThread              (Deprecated) Whether to run DSP features on
  *                                          the audio thread.
+ * @property useVadNormalization           Use Voice Activity Detection feature for
+ *                                          the normalization feature.
  * @property unstable_customNormalizationConfig
  *                                      (Experimental) Custom configuration string for
  *                                      the normalization feature.
@@ -90,6 +92,7 @@ export type Settings = {
     sharedMemoryEnabled: boolean;
     forceSharedMemory: boolean;
     dspOnAudioThread: boolean;
+    useVadNormalization: boolean;
     unstable_customNormalizationConfig?: string;
     unstable_customAECConfig?: string;
 };
@@ -98,6 +101,7 @@ export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Setti
     return {
         ...settings,
         dspOnAudioThread: Boolean(settings.dspOnAudioThread),
+        useVadNormalization: Boolean(settings.useVadNormalization),
         fetchRetries: typeof settings.fetchRetries === 'number' ? settings.fetchRetries : DEFAULT_FETCH_RETRIES,
         lowPerformanceMaxRefillTimeFactor:
             typeof settings.lowPerformanceMaxRefillTimeFactor === 'number'

@@ -203,6 +203,7 @@ export class SpenchWorker {
                 sampleRate: this.sampleRate,
                 logger: shared.logger,
                 loader: shared.loader!,
+                settings: shared.settings!,
             });
 
             if (instance instanceof SpenchError) {
