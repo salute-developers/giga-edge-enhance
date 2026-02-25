@@ -1,4 +1,5 @@
 #include "spench/util/onnx/denoise_onnx_runner.h"
+#include <algorithm>
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
 #include "spench/submodules/modelencryption/lib/include/crypto.h"
@@ -31,25 +32,32 @@ void SpenchQOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
   }
   inputs.clear();
 
-  ResizeIfNeededInPlace(denoise_context->noisy_mag,        m_model_input_shapes[0]);   // noisy_mag_in [1,1,769,1]
-  ResizeIfNeededInPlace(denoise_context->fullband_hidden,  m_model_input_shapes[1]);   // fb_h
-  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_psd, m_model_input_shapes[2]);
-  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_pg,  m_model_input_shapes[3]);
-  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_psd, m_model_input_shapes[4]);
-  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_pg,  m_model_input_shapes[5]);
-  ResizeIfNeededInPlace(denoise_context->fb_conv1_buf,     m_model_input_shapes[6]);
-  ResizeIfNeededInPlace(denoise_context->fb_conv3_buf,     m_model_input_shapes[7]);
-
   const uint32_t num_feats = static_cast<uint32_t>(m_model_input_shapes[0][2]);
   if (mag.size() < num_feats) {
     throw std::runtime_error("mag size is smaller than expected");
   }
-  std::fill(denoise_context->noisy_mag.begin(),
-            denoise_context->noisy_mag.end(),
-            0.0f);
-  for (uint32_t f = 0; f < num_feats; ++f) {
-    denoise_context->noisy_mag[f] = mag[f];
+  if (num_feats == 0) {
+    throw std::runtime_error("Invalid model input shape: num_feats is zero");
   }
+  if (mag.size() % num_feats != 0) {
+    throw std::runtime_error("mag size is not divisible by num_feats");
+  }
+  const uint32_t num_frames = static_cast<uint32_t>(mag.size() / num_feats);
+
+  std::vector<std::vector<int64_t>> resolved_input_shapes = m_model_input_shapes;
+  SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], num_frames);
+
+  ResizeIfNeededInPlace(denoise_context->noisy_mag,        resolved_input_shapes[0]);   // noisy_mag_in [1,1,769,T]
+  ResizeIfNeededInPlace(denoise_context->fullband_hidden,  resolved_input_shapes[1]);   // fb_h
+  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_psd, resolved_input_shapes[2]);
+  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_pg,  resolved_input_shapes[3]);
+  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_psd, resolved_input_shapes[4]);
+  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_pg,  resolved_input_shapes[5]);
+  ResizeIfNeededInPlace(denoise_context->fb_conv1_buf,     resolved_input_shapes[6]);
+  ResizeIfNeededInPlace(denoise_context->fb_conv3_buf,     resolved_input_shapes[7]);
+
+  std::copy(mag.begin(), mag.end(), denoise_context->noisy_mag.begin());
+
   inputs.push_back(&denoise_context->noisy_mag);
   inputs.push_back(&denoise_context->fullband_hidden);
   inputs.push_back(&denoise_context->fb_snr_noise_psd);
@@ -60,9 +68,9 @@ void SpenchQOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
   inputs.push_back(&denoise_context->fb_conv3_buf);
 }
 
-void SpenchQOnnxRunner::InitOutputTensors(spench::SpenchTaskData& data) {
-  ResizeIfNeededInPlace(data.new_spectrogram.real, m_model_output_shapes[4], 2);
-  ResizeIfNeededInPlace(data.new_spectrogram.imag, m_model_output_shapes[4], 2);
+void SpenchQOnnxRunner::InitOutputTensors(spench::SpenchTaskData& data, uint32_t out_shape) {
+    ResizeIfNeededInPlace(data.new_spectrogram.real, {out_shape}, 2);
+    ResizeIfNeededInPlace(data.new_spectrogram.imag, {out_shape}, 2);
 }
 
 void SpenchQOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
@@ -81,11 +89,20 @@ void SpenchQOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
     std::vector<std::vector<float>*> inputs;
     std::vector<float> mag = denoise_data.input_spectrogram[0].getMagnitude();
+    const uint32_t num_feats = static_cast<uint32_t>(m_model_input_shapes[0][2]);
+    if (mag.size() % num_feats != 0) {
+        throw std::runtime_error("mag size is not divisible by num_feats");
+    }
+    const uint32_t num_frames = static_cast<uint32_t>(mag.size() / num_feats);
+
+    std::vector<std::vector<int64_t>> resolved_input_shapes = m_model_input_shapes;
+    SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], num_frames);
+
     PrepareInputInPlace(mag, inputs, denoise_context);
-    InitOutputTensors(denoise_data);
+    InitOutputTensors(denoise_data, num_feats * num_frames * 2);
     std::vector<Ort::Value> outputs;
 
-    Run(inputs, outputs);
+    Run(inputs, outputs, resolved_input_shapes);
     ParseResults<float>(outputs, denoise_data);
 
     if (denoise_context->prev_features.size() < m_model_params.m_network_input_ctx_len) {

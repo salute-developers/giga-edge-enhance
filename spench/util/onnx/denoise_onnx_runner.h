@@ -14,7 +14,7 @@
 namespace util {
 namespace onnx {
 class SpenchQOnnxRunner: public BaseOnnxRunner {
-  void InitOutputTensors(spench::SpenchTaskData& data);
+  void InitOutputTensors(spench::SpenchTaskData& data, uint32_t num_frames = 1);
 
   template<typename T>
   void ParseResults(std::vector<Ort::Value>& network_output, spench::SpenchTaskData& data) {
@@ -79,14 +79,11 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
     dummy_task.m_data.context = ctx.get();
     std::vector<std::vector<T>*> inputs;
     InitOutputTensors(dummy_task.m_data);
-    auto shape0 = m_model_input_shapes[0];
-    for (auto& d : shape0) {
-      if (d < 0) d = 1;
-    }
-    uint64_t multi = std::accumulate(shape0.begin(),
-                                     shape0.end(),
-                                     uint64_t{1},
-                                     std::multiplies<uint64_t>());
+
+    uint64_t multi = std::abs(std::accumulate(m_model_input_shapes[0].begin(),
+                                              m_model_input_shapes[0].end(),
+                                              int32_t{1},
+                                              std::multiplies<int32_t>()));
     std::vector<T> mag(multi, 1e-4);
     PrepareInputInPlace(mag, inputs, dummy_task.m_data.context);
 

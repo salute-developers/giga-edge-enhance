@@ -109,6 +109,21 @@ void BaseOnnxRunner::InitModel(const std::shared_ptr<spench::NetworkConfig> conf
   }
 }
 
+int32_t BaseOnnxRunner::GetSingleDynamicAxis(const std::vector<int64_t>& shape, const char* tensor_debug_name) {
+  int32_t found = -1;
+  for (size_t i = 0; i < shape.size(); ++i) {
+    if (shape[i] < 0) {
+      if (found >= 0) {
+        std::stringstream iss;
+        iss << "Tensor has more than one dynamic dim (-1): " << tensor_debug_name;
+        // throw OnnxValidationException(iss.str());
+      }
+      found = static_cast<int32_t>(i);
+    }
+  }
+  return found;
+}
+
 void BaseOnnxRunner::ValidateModel(const std::vector<std::string>& input_names,
                                    const std::vector<std::string>& output_names) {
   if (!m_session_ptr) {
@@ -134,6 +149,14 @@ void BaseOnnxRunner::ValidateModel(const std::vector<std::string>& input_names,
       inputs_names_same = false;
     }
   }
+
+  // Cache time axis (only dynamic dim) for each input tensor.
+  m_time_axis_in.resize(m_model_input_shapes.size(), -1);
+  for (size_t i = 0; i < m_model_input_shapes.size(); ++i) {
+    // English comment: dynamic time axis is encoded as -1 in ONNX shapes
+    m_time_axis_in[i] = GetSingleDynamicAxis(m_model_input_shapes[i], "input");
+  }
+
   if (!inputs_names_same) {
     std::stringstream iss;
     iss << "The model has inputs inconsisted with provided ones";
@@ -157,6 +180,7 @@ void BaseOnnxRunner::ValidateModel(const std::vector<std::string>& input_names,
       outputs_names_same = false;
     }
   }
+
   if (!outputs_names_same) {
     std::stringstream iss;
     iss << "The model has outputs inconsisted with provided ones";
@@ -165,31 +189,27 @@ void BaseOnnxRunner::ValidateModel(const std::vector<std::string>& input_names,
 }
 
 void BaseOnnxRunner::ResizeIfNeededInPlace(std::vector<float>& to_check,
-                                          std::vector<int64_t>& shape,
+                                          const std::vector<int64_t>& shape,
                                           uint32_t num_parts) {
-  if (to_check.size() != 0) return;
-  std::vector<int64_t> shape_copy = shape;
-  for (auto& d : shape_copy) {
-    if (d < 0) d = 1;
+  if (to_check.size() == 0) {
+    uint64_t multi = std::accumulate(shape.begin(),
+                                     shape.end(),
+                                     uint64_t{1},
+                                     std::multiplies<uint64_t>());
+    to_check.resize(multi / num_parts, 0.0f);
   }
-  uint64_t multi = std::accumulate(shape_copy.begin(), shape_copy.end(), uint64_t{1},
-                                   std::multiplies<uint64_t>());
-  if (num_parts == 0) num_parts = 1;
-  to_check.resize(multi / num_parts, 0.0f);
 }
 
 void BaseOnnxRunner::ResizeIfNeededInPlace(std::valarray<float>& to_check,
-                                          std::vector<int64_t>& shape,
+                                          const std::vector<int64_t>& shape,
                                           uint32_t num_parts) {
-  if (to_check.size() != 0) return;
-  std::vector<int64_t> shape_copy = shape;
-  for (auto& d : shape_copy) {
-    if (d < 0) d = 1;
+  if (to_check.size() == 0) {
+    uint64_t multi = std::accumulate(shape.begin(),
+                                     shape.end(),
+                                     uint64_t{1},
+                                     std::multiplies<uint64_t>());
+    to_check.resize(multi / num_parts, 0.0f);
   }
-  uint64_t multi = std::accumulate(shape_copy.begin(), shape_copy.end(), uint64_t{1},
-                                   std::multiplies<uint64_t>());
-  if (num_parts == 0) num_parts = 1;
-  to_check.resize(multi / num_parts, 0.0f);
 }
 
 }  // namespace onnx
