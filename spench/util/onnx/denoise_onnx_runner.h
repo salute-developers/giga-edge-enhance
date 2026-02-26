@@ -14,7 +14,7 @@
 namespace util {
 namespace onnx {
 class SpenchQOnnxRunner: public BaseOnnxRunner {
-  void InitOutputTensors(spench::SpenchTaskData& data);
+  void InitOutputTensors(spench::SpenchTaskData& data, uint32_t num_frames = 1);
 
   template<typename T>
   void ParseResults(std::vector<Ort::Value>& network_output, spench::SpenchTaskData& data) {
@@ -27,22 +27,36 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
 
     spench::DenoiseContextQ<T>* context = dynamic_cast<spench::DenoiseContextQ<T>*>(data.context);
     T* probabilities = network_output[0].GetTensorMutableData<T>();
-    context->fb_ctx.assign(probabilities,
-                                                  probabilities + context->fb_ctx.size());
-    probabilities = network_output[1].GetTensorMutableData<T>();
     context->fullband_hidden.assign(probabilities,
                                                   probabilities + context->fullband_hidden.size());
-    probabilities = network_output[2].GetTensorMutableData<T>();
+    probabilities = network_output[1].GetTensorMutableData<T>();
     context->fb_snr_noise_psd.assign(probabilities,
                                                   probabilities + context->fb_snr_noise_psd.size());
+    probabilities = network_output[2].GetTensorMutableData<T>();
+    context->fb_snr_noise_pg.assign(probabilities,
+                                                      probabilities + context->fb_snr_noise_pg.size());
     probabilities = network_output[3].GetTensorMutableData<T>();
     context->sb_snr_noise_psd.assign(probabilities,
                                                       probabilities + context->sb_snr_noise_psd.size());
     probabilities = network_output[4].GetTensorMutableData<T>();
+    context->sb_snr_noise_pg.assign(probabilities,
+                                                      probabilities + context->sb_snr_noise_pg.size());
+    probabilities = network_output[5].GetTensorMutableData<T>();
+    context->fb_conv1_buf.assign(probabilities,
+                                                      probabilities + context->fb_conv1_buf.size());
+    probabilities = network_output[6].GetTensorMutableData<T>();
+    context->fb_conv3_buf.assign(probabilities,
+                                                      probabilities + context->fb_conv3_buf.size());
+    probabilities = network_output[7].GetTensorMutableData<T>();
+    auto info = network_output[7].GetTensorTypeAndShapeInfo();
+    auto shape = info.GetShape();
+    const size_t bins = static_cast<size_t>(shape.at(1));
+    data.new_spectrogram.real.resize(bins);
+    data.new_spectrogram.imag.resize(bins);
 
-    for (uint64_t i = 0; i < 2 * data.new_spectrogram.real.size(); i += 2) {
-      data.new_spectrogram.real[i / 2] = probabilities[i];
-      data.new_spectrogram.imag[i / 2] = probabilities[i + 1];
+    for (uint64_t i = 0; i < bins; ++i) {
+      data.new_spectrogram.real[i] = probabilities[2*i];
+      data.new_spectrogram.imag[i] = probabilities[2*i + 1];
     }
   }
 
@@ -66,10 +80,10 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
     std::vector<std::vector<T>*> inputs;
     InitOutputTensors(dummy_task.m_data);
 
-    uint64_t multi = std::accumulate(m_model_input_shapes[0].begin(),
-                                     m_model_input_shapes[0].end(),
-                                     1,
-                                     std::multiplies<uint64_t>());
+    uint64_t multi = std::abs(std::accumulate(m_model_input_shapes[0].begin(),
+                                              m_model_input_shapes[0].end(),
+                                              int32_t{1},
+                                              std::multiplies<int32_t>()));
     std::vector<T> mag(multi, 1e-4);
     PrepareInputInPlace(mag, inputs, dummy_task.m_data.context);
 

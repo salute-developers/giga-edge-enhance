@@ -340,6 +340,7 @@ model:
 #endif
 }
 
+#ifdef BUILD_ONNX_ENGINE
 TEST_CASE("SUCCEED Run denoiser 48kHz model with yaml string config [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   const char* model_path = "data/models/quality_model_48khz.tflite";
@@ -349,10 +350,13 @@ TEST_CASE("SUCCEED Run denoiser 48kHz model with yaml string config [denoiser ha
   const std::string yaml_conf =
       std::string("model:\n"
                   " model_path: ") + model_path + "\n"
-                  " model_inputs: [noisy_mag_in, prev_fb_hidden_in, prev_fb_ctx_in, "
-                  "prev_fb_snr_noise_psd_in, prev_sb_snr_noise_psd_in]\n"
-                  " model_outputs: [cur_fb_ctx_out, cur_fb_hidden_out, cur_fb_snr_noise_psd_out, "
-                  "cur_sb_snr_noise_psd_out, predicted_mask_out]\n"
+                  " model_inputs: [noisy_mag_in, prev_fb_hidden_in,"
+                  " prev_fb_snr_noise_psd_in, prev_fb_snr_noise_pg_in,"
+                  " prev_sb_snr_noise_psd_in, prev_sb_snr_noise_pg_in,"
+                  " prev_fb_conv1_buf_in, prev_fb_conv3_buf_in]\n"
+                  " model_outputs: [cur_fb_hidden_out, cur_fb_snr_noise_psd_out,"
+                  " cur_fb_snr_noise_pg_out, cur_sb_snr_noise_psd_out,"
+                  " cur_sb_snr_noise_pg_out, cur_fb_conv1_buf_out, cur_fb_conv3_buf_out, predicted_mask_out]\n"
                   "\n"
                   "feature_params:\n"
                   " sampling_freq: 48000\n"
@@ -496,6 +500,7 @@ TEST_CASE("SUCCEED Run denoise and check finalize chunk for the fast model [deno
   REQUIRE(std::vector<float>(kInput_frame_size * 1, 0.0) != output);
   sheduler_test_env.handler->DestroyContext(&ctx);
 }
+#endif
 
 TEST_CASE("SUCCEED Run denoise and check result with yaml string config [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE

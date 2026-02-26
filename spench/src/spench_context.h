@@ -78,9 +78,12 @@ struct SpenchContext {
 template <typename T>
 struct DenoiseContextQ: public SpenchContext<T> {
   std::vector<T> fullband_hidden;
-  std::vector<T> fb_ctx;
   std::vector<T> fb_snr_noise_psd;
+  std::vector<T> fb_snr_noise_pg;
   std::vector<T> sb_snr_noise_psd;
+  std::vector<T> sb_snr_noise_pg;
+  std::vector<T> fb_conv1_buf;
+  std::vector<T> fb_conv3_buf;
   std::vector<float> noisy_mag;
 };
 
