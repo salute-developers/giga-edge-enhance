@@ -1,4 +1,5 @@
 #include <functional>
+#include <algorithm>
 #include <string>
 #include <memory>
 #include "spench/util/tflite/tflite_runner.h"
@@ -315,21 +316,27 @@ SpenchQTfliteRunner::SpenchQTfliteRunner(const YAML::Node& yaml_config,
 template<typename T>
 void SpenchQTfliteRunner::WarmUp() {
   spench::SpenchTask dummy_task;
-  std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>());
+  std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>());
   dummy_task.m_data.context = ctx.get();
 
-  std::vector<T> dummy_mag(m_model_input_size[0], 0.0);
-  std::vector<T> dummy_fb_h(m_model_input_size[1], 0.0);
-  std::vector<T> dummy_fb_c(m_model_input_size[2], 0.0);
-  std::vector<T> dummy_sb_h(m_model_input_size[3], 0.0);
-  std::vector<T> dummy_sb_c(m_model_input_size[4], 0.0);
+  std::vector<T> dummy_noisy_mag(m_model_input_size[0], 0.0);
+  std::vector<T> dummy_fb_hidden(m_model_input_size[1], 0.0);
+  std::vector<T> dummy_fb_snr_psd(m_model_input_size[2], -1.0);
+  std::vector<T> dummy_fb_snr_pg(m_model_input_size[3], -1.0);
+  std::vector<T> dummy_sb_snr_psd(m_model_input_size[4], -1.0);
+  std::vector<T> dummy_sb_snr_pg(m_model_input_size[5], -1.0);
+  std::vector<T> dummy_conv1_buf(m_model_input_size[6], 0.0);
+  std::vector<T> dummy_conv3_buf(m_model_input_size[7], 0.0);
 
   std::vector<std::vector<T>*> inputs;
-  inputs.push_back(&dummy_mag);
-  inputs.push_back(&dummy_fb_h);
-  inputs.push_back(&dummy_fb_c);
-  inputs.push_back(&dummy_sb_h);
-  inputs.push_back(&dummy_sb_c);
+  inputs.push_back(&dummy_noisy_mag);
+  inputs.push_back(&dummy_fb_hidden);
+  inputs.push_back(&dummy_fb_snr_psd);
+  inputs.push_back(&dummy_fb_snr_pg);
+  inputs.push_back(&dummy_sb_snr_psd);
+  inputs.push_back(&dummy_sb_snr_pg);
+  inputs.push_back(&dummy_conv1_buf);
+  inputs.push_back(&dummy_conv3_buf);
 
   BaseTfliteRunner::WarmUp<T>(inputs);
 }
@@ -338,33 +345,31 @@ void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
                                               std::vector<std::vector<float>*>& inputs,
                                               spench::SpenchContext<float>* context) {
   if (context == nullptr) {
-    throw("Context is not allocated!");
+    throw std::runtime_error("Context is not allocated!");
   }
   spench::DenoiseContextQ<float>* denoise_context =
                                       dynamic_cast<spench::DenoiseContextQ<float>*>(context);
-  ResizeIfNeededInPlace(denoise_context->noisy_mag,        m_model_input_size[0]);   // noisy_mag_in [1,1,769,1]
-  ResizeIfNeededInPlace(denoise_context->fullband_hidden,  m_model_input_size[1]);   // fb_h
+  if (!denoise_context) {
+    throw std::runtime_error("Invalid context type for SpenchQTfliteRunner");
+  }
+  inputs.clear();
+
+  const uint32_t num_feats = static_cast<uint32_t>(m_model_input_size[0]);  // 769
+  if (mag.size() < num_feats) {
+    throw std::runtime_error("mag size is smaller than expected");
+  }
+
+  ResizeIfNeededInPlace(denoise_context->noisy_mag,        m_model_input_size[0]);
+  ResizeIfNeededInPlace(denoise_context->fullband_hidden,  m_model_input_size[1]);
   ResizeIfNeededInPlace(denoise_context->fb_snr_noise_psd, m_model_input_size[2]);
   ResizeIfNeededInPlace(denoise_context->fb_snr_noise_pg,  m_model_input_size[3]);
   ResizeIfNeededInPlace(denoise_context->sb_snr_noise_psd, m_model_input_size[4]);
   ResizeIfNeededInPlace(denoise_context->sb_snr_noise_pg,  m_model_input_size[5]);
   ResizeIfNeededInPlace(denoise_context->fb_conv1_buf,     m_model_input_size[6]);
   ResizeIfNeededInPlace(denoise_context->fb_conv3_buf,     m_model_input_size[7]);
-  const TfLiteTensor* mag_tensor = m_model_inputs[0];
-  const uint32_t num_feats  = mag_tensor->dims->data[2];  // 769
-  const uint32_t num_frames = mag_tensor->dims->data[3];  // 5
-  uint32_t from, to;
-  for (uint32_t frame_i = 1; frame_i < num_frames; ++frame_i) {
-    for (uint32_t feat_i = 0; feat_i < num_feats; ++feat_i) {
-      from = frame_i + feat_i * num_frames;
-      to   = (frame_i - 1) + feat_i * num_frames;
-      denoise_context->noisy_mag[to] = denoise_context->noisy_mag[from];
-    }
-  }
-  for (uint32_t feat_i = 0; feat_i < num_feats; ++feat_i) {
-    to = num_frames - 1 + feat_i * num_frames;
-    denoise_context->noisy_mag[to] = mag[feat_i];
-  }
+
+  std::copy(mag.begin(), mag.begin() + num_feats, denoise_context->noisy_mag.begin());
+
   inputs.push_back(&denoise_context->noisy_mag);
   inputs.push_back(&denoise_context->fullband_hidden);
   inputs.push_back(&denoise_context->fb_snr_noise_psd);
@@ -446,7 +451,7 @@ void SpenchQTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
     std::vector<std::vector<float>> outputs;
     std::vector<float> mag = denoise_data.input_spectrogram[0].getMagnitude();
     SpenchQTfliteRunner::PrepareInputInPlace(mag, inputs, denoise_context);
-    SpenchQTfliteRunner::InitOutputTensors(denoise_data, m_model_output_size[4]);
+    SpenchQTfliteRunner::InitOutputTensors(denoise_data, m_model_output_size[7]);
 
     {
       std::lock_guard<std::mutex> lock(m_model_run_mutex);

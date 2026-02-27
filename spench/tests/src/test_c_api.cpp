@@ -461,18 +461,17 @@ TEST_CASE("FAIL Run inference with invalid chunk size with the best quality mode
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-#ifdef BUILD_ONNX_ENGINE
 TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  // #ifdef BUILD_TFLITE_ENGINE
-  //   auto test_data = std::move(TestCAPI().
-  //                              InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
-  //                              SetWav("rec_noise_001_48k.wav"));
-  // #else
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
+                               SetWav("rec_noise_001_48k.wav"));
+  #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetWav("rec_noise_001_48k.wav"));
-  // #endif
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
@@ -521,15 +520,15 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
 
 TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  // #ifdef BUILD_TFLITE_ENGINE
-  //   auto test_data = std::move(TestCAPI().
-  //                              InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
-  //                              SetPCMWav("rec_noise_001_48k.wav"));
-  // #else
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
+                               SetPCMWav("rec_noise_001_48k.wav"));
+  #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
-  // #endif
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
@@ -585,18 +584,17 @@ TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-
 TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  // #ifdef BUILD_TFLITE_ENGINE
-  //   auto test_data = std::move(TestCAPI().
-  //                              InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
-  //                              SetWav("rec_noise_001_48k.wav"));
-  // #else
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
+                               SetWav("rec_noise_001_48k.wav"));
+  #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetWav("rec_noise_001_48k.wav"));
-  // #endif
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
@@ -661,15 +659,15 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]")
 
 TEST_CASE("SUCCEED Get a last chunk with the best quality model and with the PCM data [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  // #ifdef BUILD_TFLITE_ENGINE
-  //   auto test_data = std::move(TestCAPI().
-  //                              InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
-  //                              SetPCMWav("rec_noise_001_48k.wav"));
-  // #else
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
+                               SetPCMWav("rec_noise_001_48k.wav"));
+  #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
-  // #endif
+  #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const uint32_t kChunk_size = 16;
@@ -739,7 +737,6 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model and with the PCM
 
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
-#endif
 
 TEST_CASE("FAIL Get statistic information with nullptr stat structure [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
@@ -781,7 +778,6 @@ TEST_CASE("FAIL Get statistic information with nullptr context [spench c api]") 
   REQUIRE(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 }
 
-#ifdef BUILD_ONNX_ENGINE
 TEST_CASE("SUCCEED Get statistic information [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   #ifdef BUILD_TFLITE_ENGINE
@@ -980,7 +976,6 @@ TEST_CASE("SUCCEED Run inference with the best quality 48 kHz model and 5 contex
     CHECK(contexts[i] == nullptr);
   }
 }
-#endif
 
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 5 contexts concurently [spench c api]") {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;

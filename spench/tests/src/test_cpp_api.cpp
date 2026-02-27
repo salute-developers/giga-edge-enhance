@@ -613,19 +613,18 @@ TEST_CASE("FAIL Run inference with invalid chunk size [spench c++ api]") {
   test_data.denoiser->DestroyContext(&ctx);
 }
 
-#ifdef BUILD_ONNX_ENGINE
 TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav file [spench c++ api]") {
-  // #ifdef BUILD_TFLITE_ENGINE
-  //   auto test_data =
-  //           std::move(TestFixture().
-  //                     InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml")).
-  //                     SetWav("rec_noise_001_48k.wav"));
-  // #else
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data =
+            std::move(TestFixture().
+                      InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml")).
+                      SetWav("rec_noise_001_48k.wav"));
+  #else
     auto test_data =
             std::move(TestFixture().
                       InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml")).
                       SetWav("rec_noise_001_48k.wav"));
-  // #endif
+  #endif
 
   std::vector<float> prediction;
   std::vector<float> reference_prediction;
@@ -653,9 +652,8 @@ TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav f
   const uint32_t warmup_samples = 768;
   prediction.erase(prediction.begin(), prediction.begin() + warmup_samples);
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.01);
+  IsVectorsClose(reference_prediction, prediction, 0.005);
 }
-#endif
 
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav file [spench c++ api]") {
   #ifdef BUILD_TFLITE_ENGINE
