@@ -26,7 +26,7 @@ class FeatureExtractor {
                          std::vector<ComplexNumber<T>>&);
   // input - real and image vectors (T)
   virtual void iSTFTApply(const ComplexNumber<T>& input_spec,
-                                            std::vector<T>& output_signal);
+                          std::vector<T>& output_signal);
   FeatureParams GetFeatureParams() const;
 
   // apply mask to real and imaginary parts
@@ -35,17 +35,13 @@ class FeatureExtractor {
                                 ComplexNumber<T>& predicted_mask);
 
  protected:
-  void STFTImpl(std::vector<T>& frames,
+  void STFTImpl(const std::vector<T>& frames,
                 std::vector<ComplexNumber<T>>& result);
 
-  void iSTFTImpl(ComplexNumber<T>& input_spec,
+  void iSTFTImpl(const ComplexNumber<T>& input_spec,
                  std::vector<T>& output_signal);
 
   void ValidatePowSpecParams() const;
-
-  std::vector<T> FrameDirectSignal(const std::vector<T>& input);
-
-  ComplexNumber<T> FrameInverseSignal(const ComplexNumber<T>& input_spec);
 
   // process mask for real and imaginary parts
   // predicted_mask will be changed

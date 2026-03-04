@@ -147,7 +147,7 @@ TEST_CASE("SUCCEED Create frame [denoiser handler]") {
                                           251.0, 250.0, 249.0, 250.0,
                                           251.0, 252.0, 253.0, 254.0, 255.0};
   std::vector<float> reversed_chunk;
-  spench::tools::PrepareFirstInputFrame(input_chunk, reversed_chunk);
+  spench::tools::PrepareFirstInputFrame(input_chunk, reversed_chunk, input_chunk.size());
   IsVectorsClose(reversed_chunk, gt_reversed_chunk, 1.0);
 }
 

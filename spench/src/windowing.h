@@ -18,7 +18,7 @@ class Windowing {
 
   std::vector<T> Apply(const std::vector<T>& input) const;
   void ApplyInPlace(std::vector<T>& input) const;
-
+  void ApplyFrameInPlace(T* frame, size_t frame_size) const;
   void sumSquareInPlace(std::vector<T>& input) const;
 
  private:

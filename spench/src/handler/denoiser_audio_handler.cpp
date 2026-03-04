@@ -129,12 +129,19 @@ SpenchRetCode DenoiserAudioHandler::InferFrame(std::unique_ptr<spench::SpenchTas
 }
 
 void DenoiserAudioHandler::FillInDataForProcessing(std::unique_ptr<spench::SpenchTask>& task_ptr,
-                                               std::vector<float>& input ) {
-  task_ptr->m_data.waveform = task_ptr->m_data.context->prev_input_chunk;
-  task_ptr->m_data.waveform.insert(task_ptr->m_data.waveform.end(),
-                                     input.begin(),
-                                     input.end());
-  task_ptr->m_data.context->prev_input_chunk = input;
+                                                   std::vector<float>& input) {
+  auto& ctx = *task_ptr->m_data.context;
+  auto& waveform = task_ptr->m_data.waveform;
+  uint32_t chunk_size = GetInputFrameSize();
+  // Build waveform = previous tail + current input.
+  waveform.clear();
+  waveform.reserve(ctx.prev_input_chunk.size() + input.size());
+  waveform.insert(waveform.end(), ctx.prev_input_chunk.begin(), ctx.prev_input_chunk.end());
+  waveform.insert(waveform.end(), input.begin(), input.end());
+
+  // Save the last chunk_size samples from input for the next call.
+  const std::size_t keep = std::min<std::size_t>(chunk_size, input.size());
+  ctx.prev_input_chunk.assign(input.end() - keep, input.end());
 }
 
 SpenchRetCode DenoiserAudioHandler::ProcessFrame(struct spench::SpenchContext<float>* ctx,
@@ -175,23 +182,32 @@ SpenchRetCode DenoiserAudioHandler::ProcessFrame(struct spench::SpenchContext<fl
   }
 
   if (ret_code == SpenchRetCode::SUCCESS) {
+    auto minimal_chunk_size = GetInputFrameSize();
+
     if (task_ptr->m_data.context->prev_input_chunk.size() == 0) {
-      task_ptr->m_data.context->prev_input_chunk = resampled_input_result;
+      task_ptr->m_data.context->prev_input_chunk.insert(task_ptr->m_data.context->prev_input_chunk.end(),
+                                                        resampled_input_result.end() - minimal_chunk_size,
+                                                        resampled_input_result.end());
 
       tools::PrepareFirstInputFrame(resampled_input_result,
-                                     task_ptr->m_data.waveform);
+                                     task_ptr->m_data.waveform, minimal_chunk_size);
     } else {
       FillInDataForProcessing(task_ptr, resampled_input_result);
     }
   }
 
   task_ptr->m_stage = PipelineStage::ORIG_CHUNK;
-
   if (ret_code == SpenchRetCode::SUCCESS) {
-    if (resampled_input_result.size() !=
-                      m_feature_extractor_runner_ptr->GetFrameHopSizeSamples()) {
+    if (resampled_input_result.size() %
+                        m_feature_extractor_runner_ptr->GetFrameHopSizeSamples() != 0) {
       ret_code = SpenchRetCode::ERR_INVALID_FRAME_SIZE;
       spdlog::error("Frame with invalid size {} provided", resampled_input_result.size());
+    } else if (resampled_input_result.size() %
+              m_feature_extractor_runner_ptr->GetFrameHopSizeSamples() >= max_number_of_time_frames_for_single_input) {
+      ret_code = SpenchRetCode::ERR_INVALID_FRAME_SIZE;
+      spdlog::error("Maximum frame length exeeded {}. Maximum is {} time frames (~32 min) of audio",
+                                                                      resampled_input_result.size(),
+                                                                      max_number_of_time_frames_for_single_input);
     } else {
       ret_code = InferFrame(task_ptr);
     }

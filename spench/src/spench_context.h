@@ -8,6 +8,7 @@
 #include <tuple>
 #include <memory>
 #include <utility>
+#include <algorithm>
 #include "spench/util/sound/sound_stream.h"
 #include "spench/stream_stat.h"
 
@@ -42,6 +43,39 @@ struct ComplexNumber {
     std::vector<T> vector_mag(std::begin(valarray_mag), std::end(valarray_mag));
     return vector_mag;
   }
+  void append(const ComplexNumber<T>& other) {
+    const std::size_t n0 = real.size();
+    const std::size_t n1 = other.real.size();
+
+    std::valarray<T> new_real(n0 + n1);
+    std::valarray<T> new_imag(n0 + n1);
+
+    std::copy(std::begin(real),  std::end(real),  &new_real[0]);
+    std::copy(std::begin(imag),  std::end(imag),  &new_imag[0]);
+
+    std::copy(std::begin(other.real), std::end(other.real), &new_real[0] + n0);
+    std::copy(std::begin(other.imag), std::end(other.imag), &new_imag[0] + n0);
+
+    real = std::move(new_real);
+    imag = std::move(new_imag);
+  }
+  // Writes magnitude into dst in (freq, time) layout:
+  // dst[f * num_frames + frame_idx] = magnitude[f]
+  void writeMagnitudeInterleaved(std::vector<float>& dst,
+                                std::size_t frame_idx,
+                                std::size_t num_frames) const {
+    const std::size_t n = real.size();
+
+    // dst must be pre-sized to n * num_frames
+    float* out = dst.data() + frame_idx;
+
+    for (std::size_t f = 0; f < n; ++f) {
+      const float re = static_cast<float>(real[f]);
+      const float im = static_cast<float>(imag[f]);
+      *out = std::sqrt(re * re + im * im);
+      out += num_frames;  // move to next freq bin, keep time as fastest axis
+    }
+  }
   std::vector<T> getSpec() {
     std::vector<float> result;
     result.reserve(real.size() + imag.size());
@@ -53,7 +87,36 @@ struct ComplexNumber {
 
     return result;
   }
+  size_t size() const {
+    return real.size();
+  }
+  bool empty() const {
+    return real.size() == 0 &&
+           imag.size() == 0;
+  }
 };
+
+template <typename T>
+static inline void UnpackComplexMask(
+    const T* src,                     // ORT buffer: [F, T, 2]
+    std::size_t num_feats,             // F
+    std::size_t num_frames,            // T
+    spench::ComplexNumber<float>& dst  // stores time-major: [t * F + f]
+) {
+  const std::size_t total = num_feats * num_frames;
+  dst.real.resize(total);
+  dst.imag.resize(total);
+
+  for (std::size_t t = 0; t < num_frames; ++t) {
+    const std::size_t dst_base = t * num_feats;
+
+    for (std::size_t f = 0; f < num_feats; ++f) {
+      const std::size_t src_idx = (f * num_frames + t) * 2;  // (f,t,0)
+      dst.real[dst_base + f] = static_cast<float>(src[src_idx]);
+      dst.imag[dst_base + f] = static_cast<float>(src[src_idx + 1]);
+    }
+  }
+}
 
 template <typename T>
 struct StreamCurrentMetrics {

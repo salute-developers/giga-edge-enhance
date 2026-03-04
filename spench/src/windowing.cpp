@@ -75,6 +75,21 @@ void Windowing<T>::ApplyInPlace(std::vector<T>& input) const {
 }
 
 template <typename T>
+void Windowing<T>::ApplyFrameInPlace(T* frame, size_t frame_size) const {
+  const size_t coef_len = m_window_periodic ? (m_window_length - 1) : m_window_length;
+
+  if (frame_size != coef_len) {
+    spdlog::error("Windowing: frame size ({}) does not match window length ({})",
+                  frame_size, coef_len);
+    throw std::invalid_argument("Windowing: frame size does not match window length");
+  }
+
+  for (size_t i = 0; i < frame_size; ++i) {
+    frame[i] *= m_coefs[i];
+  }
+}
+
+template <typename T>
 void Windowing<T>::sumSquareInPlace(std::vector<T>& input) const {
   T addition;
   uint64_t n = 0;

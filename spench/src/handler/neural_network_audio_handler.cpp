@@ -118,18 +118,22 @@ bool NeuralNetworkAudioHandler::IsZeroedVector(const std::vector<float>& v, floa
 
 namespace tools {
 
-void PrepareFirstInputFrame(const std::vector<float>& current_chunk, std::vector<float>& frame) {
+void PrepareFirstInputFrame(const std::vector<float>& current_chunk,
+                            std::vector<float>& frame,
+                            uint32_t frame_size) {
   if (frame.size() != 0) {
     spdlog::error("Zero length frame should be provided as output argument");
     return;
   }
-  frame.push_back(0);
-  for (auto rit = current_chunk.crbegin(); rit != current_chunk.crend(); ++rit) {
-    frame.emplace_back(*rit);
-  }
-  for (auto it = current_chunk.begin() + 1; it != current_chunk.end(); ++it) {
-    frame.emplace_back(*it);
-  }
+  frame.reserve(1 + frame_size + (current_chunk.size() - 1));
+  frame.emplace_back(0.0f);
+
+  const auto first_begin = current_chunk.begin();
+  const auto first_end   = first_begin + static_cast<std::ptrdiff_t>(frame_size);
+
+  std::reverse_copy(first_begin, first_end, std::back_inserter(frame));
+  // keep the original "skip the very first sample" behavior to avoid boundary duplication
+  frame.insert(frame.end(), current_chunk.begin() + 1, current_chunk.end());
 }
 
 }  // namespace tools

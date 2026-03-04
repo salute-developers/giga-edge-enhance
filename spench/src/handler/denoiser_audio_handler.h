@@ -48,6 +48,9 @@ class DenoiserAudioHandler : public NeuralNetworkAudioHandler {
   const spench::DenoiserModelAdviser<float>* adviser() const { return m_adviser.get(); }
 
  private:
+  // 30 min restriction
+  const uint64_t max_number_of_time_frames_for_single_input = 120000;
+  //
   std::unique_ptr<DenoiserModelAdviser<float>> m_adviser;
   SpenchRetCode InitAudioStreams(SpenchContext<float>* ctx,
                                  uint32_t input_sample_rate,

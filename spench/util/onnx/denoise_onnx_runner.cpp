@@ -47,8 +47,8 @@ void SpenchQOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
   std::vector<std::vector<int64_t>> resolved_input_shapes = m_model_input_shapes;
   SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], num_frames);
 
-  ResizeIfNeededInPlace(denoise_context->noisy_mag,        resolved_input_shapes[0]);   // noisy_mag_in [1,1,769,T]
-  ResizeIfNeededInPlace(denoise_context->fullband_hidden,  resolved_input_shapes[1]);   // fb_h
+  ResizeIfNeededInPlace(denoise_context->noisy_mag,        resolved_input_shapes[0]);  // noisy_mag_in [1,1,769,T]
+  ResizeIfNeededInPlace(denoise_context->fullband_hidden,  resolved_input_shapes[1]);
   ResizeIfNeededInPlace(denoise_context->fb_snr_noise_psd, resolved_input_shapes[2]);
   ResizeIfNeededInPlace(denoise_context->fb_snr_noise_pg,  resolved_input_shapes[3]);
   ResizeIfNeededInPlace(denoise_context->sb_snr_noise_psd, resolved_input_shapes[4]);
@@ -88,12 +88,23 @@ void SpenchQOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
 
   if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
     std::vector<std::vector<float>*> inputs;
-    std::vector<float> mag = denoise_data.input_spectrogram[0].getMagnitude();
-    const uint32_t num_feats = static_cast<uint32_t>(m_model_input_shapes[0][2]);
+    std::vector<float> mag;
+    const auto& specs = denoise_data.input_spectrogram;
+
+    const std::size_t num_feats  = specs.front().size();
+    const std::size_t num_frames = specs.size();
+
+    // Pre-size output buffer for (freq, time) layout: [F * T]
+    mag.resize(num_feats * num_frames);
+
+    // Fill mag so that time is the fastest axis: mag[f * T + t]
+    for (std::size_t t = 0; t < num_frames; ++t) {
+      specs[t].writeMagnitudeInterleaved(mag, t, num_frames);
+    }
+
     if (mag.size() % num_feats != 0) {
         throw std::runtime_error("mag size is not divisible by num_feats");
     }
-    const uint32_t num_frames = static_cast<uint32_t>(mag.size() / num_feats);
 
     std::vector<std::vector<int64_t>> resolved_input_shapes = m_model_input_shapes;
     SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], num_frames);

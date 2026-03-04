@@ -7,6 +7,7 @@
 #include <numeric>
 #include <tuple>
 #include <cassert>
+#include <utility>
 #include "spench/src/feature_params.h"
 
 namespace spench {
@@ -22,77 +23,52 @@ FeatureExtractor<T>::FeatureExtractor(const FeatureParams& params)
 }
 
 template <typename T>
-std::vector<T> FeatureExtractor<T>::FrameDirectSignal(const std::vector<T>& input) {
-  size_t frame_size = m_feat_params.NumFrameSizeSamples();
-  size_t frame_stride = m_feat_params.NumFrameStrideSamples();
-  size_t numframes = m_feat_params.NumFrames(input.size());
-
-  std::vector<T> frames(numframes * frame_size);
-  for (size_t f = 0; f < numframes; ++f) {
-    for (size_t i = 0; i < frame_size; ++i) {
-      frames[f * frame_size + i] = input[f * frame_stride + i];
-    }
-  }
-  return frames;
-}
-
-template <typename T>
 void FeatureExtractor<T>::STFTApply(const std::vector<T>& input,
                                     std::vector<ComplexNumber<T>>& result) {
-  std::vector<T> frames = FrameDirectSignal(input);
-  if (frames.empty()) {
+  if (input.empty()) {
     return;
   }
-  STFTImpl(frames, result);
-  return;
+  STFTImpl(input, result);
 }
 
 template <typename T>
-void FeatureExtractor<T>::STFTImpl(std::vector<T>& frames,
+void FeatureExtractor<T>::STFTImpl(const std::vector<T>& input,
                                    std::vector<ComplexNumber<T>>& result) {
-  size_t n_samples = static_cast<size_t>(m_feat_params.NumFrameSizeSamples());
-  size_t n_frames = frames.size() / n_samples;
-  size_t k = m_feat_params.PowSpecFeatSz();
-  m_windowing.ApplyInPlace(frames);
+  const size_t frame_size   = static_cast<size_t>(m_feat_params.NumFrameSizeSamples());
+  const size_t frame_stride = static_cast<size_t>(m_feat_params.NumFrameStrideSamples());
+  const size_t numframes    = static_cast<size_t>(m_feat_params.NumFrames(input.size()));
+  const size_t k            = static_cast<size_t>(m_feat_params.PowSpecFeatSz());
 
-  for (size_t f = 0; f < n_frames; ++f) {
+  if (numframes == 0) {
+    return;
+  }
+
+  result.reserve(result.size() + numframes);
+
+  std::vector<T> frame_buf(frame_size);
+
+  for (size_t f = 0; f < numframes; ++f) {
+    const size_t start = f * frame_stride;
+    // Copy raw frame (same indexing as old FrameDirectSignal()).
+    std::copy_n(input.data() + start, frame_size, frame_buf.data());
+    // Window this frame in place.
+    m_windowing.ApplyFrameInPlace(frame_buf.data(), frame_size);
     ComplexNumber<T> dft(k, k);
-    auto begin = frames.data() + f * n_samples;
     {
       std::lock_guard<std::mutex> lock(m_fft_mutex);
-      m_fft_calculator.CalculateSTFT(n_samples, begin, dft);
+      m_fft_calculator.CalculateSTFT(frame_size, frame_buf.data(), dft);
     }
-    result.push_back(dft);
+    result.push_back(std::move(dft));
   }
-  return;
-}
-
-template <typename T>
-ComplexNumber<T> FeatureExtractor<T>::FrameInverseSignal(
-                                                      const ComplexNumber<T>& input_spec) {
-  size_t k = m_feat_params.PowSpecFeatSz();
-  size_t frame_size = 2 * k;
-  size_t num_frames = m_feat_params.NumFrames(input_spec.real.size());
-
-  ComplexNumber<T> result(num_frames * frame_size, num_frames * frame_size);
-
-  for (size_t f = 0; f < num_frames; ++f) {
-    for (size_t i = 0; i < frame_size; ++i) {
-      result.real[f * frame_size + i] = input_spec.real[f * k + i];
-      result.imag[f * frame_size + i] = input_spec.imag[f * k + i];
-    }
-  }
-
-  return result;
 }
 
 template <typename T>
 void FeatureExtractor<T>::iSTFTApply(const ComplexNumber<T>& input_spec,
                                      std::vector<T>& output_signal) {
-  auto frames = FrameInverseSignal(input_spec);
-
-  iSTFTImpl(frames, output_signal);
-  return;
+  if (input_spec.empty()) {
+    return;
+  }
+  iSTFTImpl(input_spec, output_signal);
 }
 
 template <typename T>
@@ -112,41 +88,77 @@ void FeatureExtractor<T>::lookupAdd(const std::vector<T>& signal,
 }
 
 template <typename T>
-void FeatureExtractor<T>::iSTFTImpl(ComplexNumber<T>& input_spec,
+void FeatureExtractor<T>::iSTFTImpl(const ComplexNumber<T>& input_spec,
                                     std::vector<T>& output_signal) {
-  size_t n_feats = m_feat_params.PowSpecFeatSz();  // 257 for example
-  size_t hop_size = m_feat_params.NumFrameStrideSamples();  // 256 for example
+  const size_t n_feats   = m_feat_params.PowSpecFeatSz();
+  const size_t hop_size  = m_feat_params.NumFrameStrideSamples();
+  const size_t n_samples = m_feat_params.NumFrameSizeSamples();
+  const size_t win_frames = m_feat_params.frames_num_for_istft;  // == 2
+  size_t frames_count = input_spec.real.size() / n_feats;
 
-  size_t iter_size = m_feat_params.frames_num_for_istft * n_feats;
-  size_t n_frames = input_spec.real.size() / iter_size;  // can be > 2
+  if (win_frames != 2) {
+    throw std::runtime_error("iSTFTApply: expected frames_num_for_istft == 2");
+  }
+  if (frames_count < 2) {
+    return;
+  }
+  if (input_spec.real.size() != input_spec.imag.size()) {
+    throw std::runtime_error("iSTFTApply: real/imag size mismatch");
+  }
 
-  size_t n_samples = static_cast<size_t>(m_feat_params.NumFrameSizeSamples());
+  if (n_feats == 0 || (input_spec.real.size() % n_feats) != 0) {
+    throw std::runtime_error("iSTFTImpl: input_spec size is not multiple of n_feats");
+  }
 
-  std::vector<T> signal(n_samples * m_feat_params.frames_num_for_istft, 0.0);
-  std::vector<T> signal_lookuped(n_samples + hop_size * n_frames);
+  const size_t frames_in_buffer = input_spec.real.size() / n_feats;
 
-  for (size_t f = 0; f < n_frames; ++f) {
-    auto begin_real = &input_spec.real[f * iter_size];
-    auto begin_imag = &input_spec.imag[f * iter_size];
+  size_t frames_to_use = (frames_count == 0)
+      ? frames_in_buffer
+      : std::min<size_t>(frames_count, frames_in_buffer);
+
+  if (frames_to_use < 2) {
+    output_signal.clear();
+    return;
+  }
+
+  const size_t out_hops = frames_to_use - 1;
+  const size_t out_len  = out_hops * hop_size;
+  output_signal.assign(out_len, T(0));
+
+  std::vector<T> signal(n_samples * win_frames, T(0));
+  std::vector<T> lookuped(n_samples + hop_size * (win_frames - 1), T(0));
+
+  size_t out_pos = 0;
+
+  for (size_t f = 0; f + 1 < frames_count; ++f) {
+    const T* begin_real = &input_spec.real[f * n_feats];
+    const T* begin_imag = &input_spec.imag[f * n_feats];
+
     {
       std::lock_guard<std::mutex> lock(m_ifft_mutex);
       m_ifft_calculator.CalculateISTFT(n_feats, begin_real, begin_imag, signal);
     }
+
     // apply window (ifft_window, hann or hamm)
     // https://github.com/librosa/librosa/blob/a668dffeada59aa6dc4e05bbbec39ad42ac77bed/librosa/core/spectrum.py#L418
     m_windowing.ApplyInPlace(signal);
 
-    // https://github.com/librosa/librosa/blob/a668dffeada59aa6dc4e05bbbec39ad42ac77bed/librosa/core/spectrum.py#L421
-    std::fill(signal_lookuped.begin(), signal_lookuped.end(), 0.0);
-    lookupAdd(signal, signal_lookuped);
-
+    std::fill(lookuped.begin(), lookuped.end(), T(0));
+    lookupAdd(signal, lookuped);
     // apply window_sumsquare
     // https://github.com/librosa/librosa/blob/a668dffeada59aa6dc4e05bbbec39ad42ac77bed/librosa/core/spectrum.py#L426
-    m_windowing.sumSquareInPlace(signal_lookuped);
+    m_windowing.sumSquareInPlace(lookuped);
 
-    output_signal.insert(output_signal.end(),
-                         signal_lookuped.begin() + hop_size,
-                         signal_lookuped.begin() + n_samples * (m_feat_params.frames_num_for_istft - 1));
+    const auto src_begin = lookuped.begin() + hop_size;
+    const auto src_end   = src_begin + hop_size;
+
+    std::copy(src_begin, src_end, output_signal.begin() + out_pos);
+    out_pos += hop_size;
+  }
+
+  // sanity
+  if (out_pos != out_len) {
+    throw std::runtime_error("iSTFTApply: internal length mismatch");
   }
 }
 
@@ -222,6 +234,9 @@ void FeatureExtractor<T>::calcEnhancedPartsInPlace(const ComplexNumber<T>& input
 
   decompressCIRMInPlace(enhanced_spec);
 
+  if (enhanced_spec.size() != input_spec.size()) {
+    throw std::runtime_error("calcEnhancedPartsInPlace: enhanced_spec size != input_spec size");
+  }
   // Use only the module of the complex mask.
   // This will help prevent anomalies at the frame boundaries caused by the influence of the phase.
   const auto abs_mask = enhanced_spec.getMagnitude();

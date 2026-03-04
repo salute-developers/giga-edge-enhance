@@ -149,7 +149,7 @@ TEST_CASE("SUCCEED Create and process voice activity detector [voice activity de
       VadBuilder().set_sample_rate(fs).set_frame_len(frame_len).set_threshold(0.5).set_type(VadType::RNNOISE).create();
 
   dsplib::arr_real vad_state(num_frames);
-  for (int32_t i = 0; i < num_frames; ++i) {
+  for (int32_t i = 0; i < static_cast<int32_t>(num_frames); ++i) {
     const auto x = 1e-5 * dsplib::randn(frame_len);
     vad->process(x.to_vec());
     vad_state[i] = static_cast<int32_t>(vad->state().speech);

@@ -19,10 +19,10 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
   template<typename T>
   void ParseResults(std::vector<Ort::Value>& network_output, spench::SpenchTaskData& data) {
     if (m_model_params.m_model_outputs.size() != network_output.size()) {
-      throw("Model output error");
+      throw std::runtime_error("Model output error");
     }
     if (data.context == nullptr) {
-      throw("Context is not allocated!");
+      throw std::runtime_error("Context is not allocated!");
     }
 
     spench::DenoiseContextQ<T>* context = dynamic_cast<spench::DenoiseContextQ<T>*>(data.context);
@@ -50,14 +50,25 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
     probabilities = network_output[7].GetTensorMutableData<T>();
     auto info = network_output[7].GetTensorTypeAndShapeInfo();
     auto shape = info.GetShape();
-    const size_t bins = static_cast<size_t>(shape.at(1));
-    data.new_spectrogram.real.resize(bins);
-    data.new_spectrogram.imag.resize(bins);
 
-    for (uint64_t i = 0; i < bins; ++i) {
-      data.new_spectrogram.real[i] = probabilities[2*i];
-      data.new_spectrogram.imag[i] = probabilities[2*i + 1];
+    if (shape.empty() || shape.back() != 2) {
+      throw std::runtime_error("Invalid output shape: expected last dimension = 2 (complex)");
     }
+
+    const size_t num_feats = static_cast<size_t>(static_cast<size_t>(shape.at(1)));
+    const size_t total_elems = static_cast<size_t>(info.GetElementCount());
+
+    if (total_elems % 2 != 0) {
+      throw std::runtime_error("Invalid output buffer: element count is not divisible by 2");
+    }
+
+    const size_t complex_pairs = total_elems / 2;
+    if (complex_pairs % num_feats != 0) {
+      throw std::runtime_error("Invalid output buffer: complex pairs not divisible by num_feats");
+    }
+
+    const size_t num_frames = complex_pairs / num_feats;
+    UnpackComplexMask(probabilities, num_feats, num_frames, data.new_spectrogram);
   }
 
  public:
