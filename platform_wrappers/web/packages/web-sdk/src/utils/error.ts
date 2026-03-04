@@ -37,7 +37,7 @@ class SpenchError extends Error {
 
     /** @override */
     override get name() {
-        return this.constructor.name;
+        return 'SpenchError';
     }
 
     /** @override */
@@ -47,7 +47,11 @@ class SpenchError extends Error {
 }
 
 /** @extends SpenchError */
-class AssertionError extends SpenchError {}
+class AssertionError extends SpenchError {
+    override get name() {
+        return 'AssertionError';
+    }
+}
 
 /**
  * Asserts a condition and throws an {@link AssertionError} if the assertion fails.

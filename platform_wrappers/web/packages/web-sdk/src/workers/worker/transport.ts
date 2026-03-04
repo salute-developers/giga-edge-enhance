@@ -142,9 +142,7 @@ export class SharedMemoryTransport implements AbstractTransport {
 
     protected readonly outputBuffer: RingBuffer;
 
-    protected readonly pullSemaphore: BinarySemaphore;
-
-    protected readonly pushSemaphore: BinarySemaphore;
+    protected readonly semaphore: BinarySemaphore;
 
     protected stopped = false;
 
@@ -169,9 +167,7 @@ export class SharedMemoryTransport implements AbstractTransport {
         this.outputBuffer = new RingBuffer(outputSize, buffer, offset);
         offset += RingBuffer.getInternalBufferSize(outputSize);
 
-        this.pullSemaphore = new BinarySemaphore(buffer, offset);
-        offset += BinarySemaphore.INTERNAL_BUFFER_SIZE;
-        this.pushSemaphore = new BinarySemaphore(buffer, offset);
+        this.semaphore = new BinarySemaphore(buffer, offset);
 
         this.spin().catch(this.onError);
     }
@@ -181,12 +177,7 @@ export class SharedMemoryTransport implements AbstractTransport {
     }
 
     reset() {
-        this.pushSemaphore.lock();
-        this.inputBuffer.clear();
-        this.loopbackBuffer.clear();
-        this.pushSemaphore.unlock();
-
-        this.outputBuffer.clear();
+        // Let the worklet reset shared buffers
     }
 
     close() {
@@ -211,10 +202,10 @@ export class SharedMemoryTransport implements AbstractTransport {
             const input = new Float32Array(frameSize);
             const loopback = new Float32Array(frameSize);
 
-            this.pullSemaphore.lock();
+            this.semaphore.lock();
             const pulledInput = this.inputBuffer.pull(input);
             const pulledLoopback = this.loopbackBuffer.pull(loopback);
-            this.pullSemaphore.unlock();
+            this.semaphore.unlock();
 
             // Check for clear on worklet side case
             if (pulledInput === pulledLoopback && pulledInput === frameSize) {

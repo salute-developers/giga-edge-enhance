@@ -3,9 +3,17 @@ import { WorkerTelemetry } from '../../utils/telemetry';
 import { ResourceUrls } from '../../utils/ipc';
 import SpenchError from '../../utils/error';
 
-export class LoadError extends SpenchError {}
+export class LoadError extends SpenchError {
+    override get name() {
+        return 'LoadError';
+    }
+}
 
-export class ModelNotFoundError extends SpenchError {}
+export class ModelNotFoundError extends SpenchError {
+    override get name() {
+        return 'ModelNotFoundError';
+    }
+}
 
 class Loader {
     constructor(

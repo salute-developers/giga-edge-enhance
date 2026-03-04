@@ -9,7 +9,11 @@ import { areDspFeaturesEnabled, DspFeatures } from '../../utils/common';
 import { SpenchDspWorkletWrapper } from './wrapper';
 import { SpenchBaseWorkletProcessor } from './SpenchBaseWorkletProcessor';
 
-class InternalError extends SpenchError {}
+class InternalError extends SpenchError {
+    override get name() {
+        return 'InternalError';
+    }
+}
 
 export class SpenchDspWorkletProcessor extends SpenchBaseWorkletProcessor {
     protected readonly dspInputBuffer = new RingBuffer(2 * Math.ceil(SPENCH_FRAME_SIZE_SECONDS * sampleRate));

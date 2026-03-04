@@ -57,8 +57,8 @@ describe('SharedMemoryTransport', () => {
         expect(transport.push(largerInput, largerLoopback)).toBeUndefined();
 
         // Verify semaphore was used
-        expect((transport as any).pushSemaphore.lock).toHaveBeenCalledTimes(2);
-        expect((transport as any).pushSemaphore.unlock).toHaveBeenCalledTimes(2);
+        expect((transport as any).semaphore.lock).toHaveBeenCalledTimes(0);
+        expect((transport as any).semaphore.unlock).toHaveBeenCalledTimes(0);
     });
 
     it('pull reads from the output buffer', () => {
@@ -103,7 +103,7 @@ describe('SharedMemoryTransport', () => {
         expect(outputBuffer.size).toBe(0);
         expect((transport as any).inputBuffer.size).toBe(0);
         expect((transport as any).loopbackBuffer.size).toBe(0);
-        expect((transport as any).pullSemaphore.lock).toHaveBeenCalledTimes(1);
-        expect((transport as any).pullSemaphore.unlock).toHaveBeenCalledTimes(1);
+        expect((transport as any).semaphore.lock).toHaveBeenCalledTimes(1);
+        expect((transport as any).semaphore.unlock).toHaveBeenCalledTimes(1);
     });
 });

@@ -45,7 +45,11 @@ import { BinarySemaphore } from './utils/semaphore';
  * {@link SpenchAudioNode}. This error is a thin wrapper around {@link SpenchError}
  * that can be distinguished in the error handling logic.
  */
-export class SetFeaturesFailedError extends SpenchError {}
+export class SetFeaturesFailedError extends SpenchError {
+    override get name() {
+        return 'SetFeaturesFailedError';
+    }
+}
 
 /**
  * Possible causes for a low‑performance event emitted by the audio node.
@@ -513,13 +517,13 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
      * @param {MessageEvent<ControllerMessage>} event - Incoming message.
      * @returns {boolean} `true` if the message is handled.
      */
-    #handleCommonMessage(event: MessageEvent<ControllerMessage>): boolean {
+    #handleCommonMessage(event: MessageEvent<ControllerMessage>, origin: 'Worker' | 'AudioWorkletProcessor'): boolean {
         switch (event.data.type) {
             case CONTROLLER_MESSAGES.SET_FEATURES_RESULT:
                 return true;
             case CONTROLLER_MESSAGES.ERROR:
                 const { error } = event.data;
-                this.#handleError(new SpenchError(deserializeError(error)));
+                this.#handleError(new SpenchError(deserializeError(error)), origin);
 
                 return true;
             default:
@@ -557,7 +561,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
             buffer = new SharedArrayBuffer(
                 2 * RingBuffer.getInternalBufferSize(getInputBufferSize(sampleRate)) +
                     RingBuffer.getInternalBufferSize(getOutputBufferSize(sampleRate)) +
-                    2 * BinarySemaphore.INTERNAL_BUFFER_SIZE,
+                    BinarySemaphore.INTERNAL_BUFFER_SIZE,
             );
         } else {
             this.#logger.debug('Using MessageChannel transport');
@@ -593,7 +597,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
      * @param {MessageEvent<ControllerMessage>} event - Incoming message.
      */
     #handleWorkletMessage: Exclude<WorkletPort['onmessage'], null> = (event): void => {
-        if (this.#handleCommonMessage(event)) {
+        if (this.#handleCommonMessage(event, 'AudioWorkletProcessor')) {
             return;
         }
 
@@ -642,7 +646,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
      * @param {MessageEvent<ControllerMessage>} event - Incoming message.
      */
     #handleWorkerMessage: Exclude<WorkerPort['onmessage'], null> = (event): void => {
-        if (this.#handleCommonMessage(event)) {
+        if (this.#handleCommonMessage(event, 'Worker')) {
             return;
         }
 
@@ -655,20 +659,23 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
     }
 
     /** Central error handler that logs and destroys the node. */
-    #handleError = (error: SpenchError) => {
-        this.#logger.error(`${error} at SpenchAudioNode`);
+    #handleError = (error: SpenchError, origin: 'Worker' | 'AudioWorkletProcessor') => {
+        this.#logger.error(`${error} at SpenchAudioNode (${origin})`);
 
         this.destroy();
     };
 
     /** Handles processor‑level errors. */
-    #handleProcessorError = () => this.#handleError(new SpenchError('Error in AudioWorkletProcessor'));
+    #handleProcessorError = () =>
+        this.#handleError(new SpenchError('Error in AudioWorkletProcessor'), 'AudioWorkletProcessor');
 
     /** Handles worker errors. */
-    #handleWorkerError = (event: ErrorEvent) => this.#handleError(new SpenchError(event.error || event.message));
+    #handleWorkerError = (event: ErrorEvent) =>
+        this.#handleError(new SpenchError(event.error || event.message), 'Worker');
 
     /** Handles message‑serialization errors. */
-    #handleMessageError = () => this.#handleError(new SpenchError('Error serializing AudioWorkletProcessor message'));
+    #handleMessageError = () =>
+        this.#handleError(new SpenchError('Error serializing AudioWorkletProcessor message'), 'AudioWorkletProcessor');
 
     /** Responds to changes in the audio context state. */
     #handleContextStateChange = () => {

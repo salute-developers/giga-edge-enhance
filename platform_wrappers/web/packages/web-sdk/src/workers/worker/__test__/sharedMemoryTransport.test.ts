@@ -54,23 +54,6 @@ describe('SharedMemoryTransport', () => {
         expect((transport as any).outputBuffer.size).toBe(out.length);
     });
 
-    test('reset clears all buffers', () => {
-        const out = new Float32Array(50).fill(3);
-        transport.push(out);
-        // Write some input data directly (bypassing worker)
-        (transport as any).inputBuffer.push(out);
-        (transport as any).loopbackBuffer.push(out);
-
-        transport.reset();
-
-        expect((transport as any).outputBuffer.size).toBe(0);
-        expect((transport as any).inputBuffer.size).toBe(0);
-        expect((transport as any).loopbackBuffer.size).toBe(0);
-
-        expect((transport as any).pushSemaphore.lock).toHaveBeenCalledTimes(1);
-        expect((transport as any).pushSemaphore.unlock).toHaveBeenCalledTimes(1);
-    });
-
     test('close stops the spin loop', async () => {
         // const closeSpy = jest.spyOn(transport as any, 'spin').mockImplementation(async () => {
         //     /* do nothing */
@@ -98,8 +81,8 @@ describe('SharedMemoryTransport', () => {
         expect(received.input).toEqual(inputData);
         expect(received.loopback).toEqual(loopbackData);
 
-        expect((transport as any).pullSemaphore.lock).toHaveBeenCalledTimes(1);
-        expect((transport as any).pullSemaphore.unlock).toHaveBeenCalledTimes(1);
+        expect((transport as any).semaphore.lock).toHaveBeenCalledTimes(1);
+        expect((transport as any).semaphore.unlock).toHaveBeenCalledTimes(1);
     });
 
     test('spin does not emit when data is insufficient', async () => {

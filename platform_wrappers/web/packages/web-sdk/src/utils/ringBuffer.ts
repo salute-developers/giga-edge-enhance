@@ -178,7 +178,7 @@ export class RingBuffer {
 
             if (result !== 'timed-out') return true;
 
-            await new Promise((r) => setTimeout(r, SYNC_WAIT_TIMEOUT));
+            await new Promise((r) => setTimeout(r, 0));
         }
 
         return false;

@@ -17,7 +17,11 @@ import SpenchWorker from './worker';
 import { WASM_DSP_URL, WASM_URL } from './utils/resources';
 import { WORKLET_DSP_URL, WORKLET_URL } from './utils/jsResources';
 
-export class LoadError extends SpenchError {}
+export class LoadError extends SpenchError {
+    override get name() {
+        return 'LoadError';
+    }
+}
 
 async function preloadResource(url: string | URL): Promise<void> {
     const response = await fetch(url, { priority: 'low' });

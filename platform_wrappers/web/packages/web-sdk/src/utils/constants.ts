@@ -20,7 +20,7 @@ export const LP_CAUSE_THRESHOLD = 13;
 
 export const MEAN_PROCESS_TIME_COUNT = 60;
 
-export const MAX_SPIN_BLOCK_TIME_MS = 48;
+export const MAX_SPIN_BLOCK_TIME_MS = 500;
 
 export const INPUT_BUFFER_SECONDS = 0.064;
 
@@ -32,11 +32,11 @@ export const WORKLET_OUTPUT_BUFFER_MIN_LATENCY = 0.064;
 
 export const WORKLET_OUTPUT_BUFFER_STEP = 0.032;
 
-export const ASYNC_WAIT_TIMEOUT = 1000;
+export const ASYNC_WAIT_TIMEOUT = 100;
 
 export const SYNC_WAIT_TIMEOUT = 1;
 
-export const MAX_SEMAPHORE_WAIT_TIME_MS = 5000;
+export const MAX_SEMAPHORE_WAIT_TIME_MS = 500;
 
 export const MAX_MESSAGE_WAIT_TIME_MS = 5;
 

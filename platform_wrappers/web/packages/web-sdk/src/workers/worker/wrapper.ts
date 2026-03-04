@@ -14,7 +14,11 @@ import SpenchError from '../../utils/error';
 
 import Loader, { LoadError, ModelNotFoundError } from './loader';
 
-export class InternalError extends SpenchError {}
+export class InternalError extends SpenchError {
+    override get name() {
+        return 'InternalError';
+    }
+}
 
 interface CreateSpenchWrapperParams {
     sampleRate: number;

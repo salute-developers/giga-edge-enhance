@@ -104,9 +104,7 @@ export class SharedMemoryTransport implements AbstractTransport {
 
     protected readonly outputBuffer: RingBuffer;
 
-    protected readonly pullSemaphore: BinarySemaphore;
-
-    protected readonly pushSemaphore: BinarySemaphore;
+    protected readonly semaphore: BinarySemaphore;
 
     constructor(buffer: SharedArrayBuffer) {
         let offset = 0;
@@ -123,9 +121,7 @@ export class SharedMemoryTransport implements AbstractTransport {
         this.outputBuffer = new RingBuffer(outputSize, buffer, offset);
         offset += RingBuffer.getInternalBufferSize(outputSize);
 
-        this.pullSemaphore = new BinarySemaphore(buffer, offset);
-        offset += BinarySemaphore.INTERNAL_BUFFER_SIZE;
-        this.pushSemaphore = new BinarySemaphore(buffer, offset);
+        this.semaphore = new BinarySemaphore(buffer, offset);
     }
 
     get outputBufferSize(): number {
@@ -137,12 +133,8 @@ export class SharedMemoryTransport implements AbstractTransport {
     }
 
     push(inputChannel: Float32Array, loopbackChannel: Float32Array) {
-        this.pushSemaphore.lock();
-
         this.loopbackBuffer.push(loopbackChannel);
         this.inputBuffer.push(inputChannel);
-
-        this.pushSemaphore.unlock();
     }
 
     pull(output: Float32Array): boolean {
@@ -156,12 +148,12 @@ export class SharedMemoryTransport implements AbstractTransport {
     }
 
     reset() {
-        this.pullSemaphore.lock();
+        this.semaphore.lock();
 
         this.inputBuffer.clear();
         this.loopbackBuffer.clear();
 
-        this.pullSemaphore.unlock();
+        this.semaphore.unlock();
 
         this.outputBuffer.clear();
     }
