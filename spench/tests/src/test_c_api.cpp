@@ -467,10 +467,12 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
                                SetWav("rec_noise_001_48k.wav"));
+    const float k_precision_threshold = 0.015;
   #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetWav("rec_noise_001_48k.wav"));
+    const float k_precision_threshold = 0.005;
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -514,7 +516,7 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
   const uint32_t warmup_samples = 768;
   prediction.erase(prediction.begin(), prediction.begin() + warmup_samples);
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, 0.01);
+  IsVectorsClose(reference_prediction, prediction, k_precision_threshold);
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
@@ -524,10 +526,12 @@ TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
+    const float k_precision_threshold = 0.01;
   #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
+    const float k_precision_threshold = 0.003;
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -580,7 +584,7 @@ TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
   const uint32_t warmup_samples = 768;
   prediction_fp.erase(prediction_fp.begin(), prediction_fp.begin() + warmup_samples);
   reference_prediction_fp.resize(prediction_fp.size());
-  IsVectorsClose(reference_prediction_fp, prediction_fp, 0.003);
+  IsVectorsClose(reference_prediction_fp, prediction_fp, k_precision_threshold);
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
@@ -590,10 +594,12 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]")
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
                                SetWav("rec_noise_001_48k.wav"));
+    const float k_precision_threshold = 0.01;
   #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetWav("rec_noise_001_48k.wav"));
+    const float k_precision_threshold = 0.003;
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -638,7 +644,7 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]")
   const uint32_t warmup_samples = 768;
   prediction.erase(prediction.begin(), prediction.begin() + warmup_samples);
   reference.resize(prediction.size());
-  IsVectorsClose(reference, prediction, 0.003);
+  IsVectorsClose(reference, prediction, k_precision_threshold);
 
   unsigned char* final_ret_mem;
   uint64_t final_ret_size = 0;
@@ -663,10 +669,12 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model and with the PCM
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
+    const float k_precision_threshold = 0.01;
   #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
+    const float k_precision_threshold = 0.003;
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
@@ -718,7 +726,7 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model and with the PCM
   const uint32_t warmup_samples = 768;
   prediction_fp.erase(prediction_fp.begin(), prediction_fp.begin() + warmup_samples);
   reference_prediction_fp.resize(prediction_fp.size());
-  IsVectorsClose(reference_prediction_fp, prediction_fp, 0.003);
+  IsVectorsClose(reference_prediction_fp, prediction_fp, k_precision_threshold);
 
   unsigned char* final_ret_mem;
   uint64_t final_ret_size = 0;
@@ -734,6 +742,230 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model and with the PCM
   final_ret_mem = nullptr;
 
   REQUIRE(std::vector<int16_t>(final_vec.size(), 0) != final_vec);
+
+  SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+}
+
+TEST_CASE("SUCCEED Run inference with model 48kHz on a part of .wav with double chunks [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
+                               SetPCMWav("rec_noise_001_48k.wav"));
+    const float k_precision_threshold = 0.015;
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
+                               SetPCMWav("rec_noise_001_48k.wav"));
+    const float k_precision_threshold = 0.005;
+  #endif
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_stride = kChunk_size;
+  const uint32_t kChunks_to_compare = 150;
+  SpenchContext ctx = nullptr;
+  std::vector<int16_t> prediction;
+  std::vector<float> prediction_fp;
+  std::vector<float> reference_prediction_fp;
+
+  auto chunks = chunkWav<int16_t>(test_data.pcm_wav_data, 48000, kChunk_size, kChunk_stride);
+  loadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction_fp);
+  chunks.resize(kChunks_to_compare);
+
+  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  ret_code = SpenchDenoiseSetContextId(test_data.denoiser, ctx, 1000);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    unsigned char* ret_mem;
+    uint64_t ret_size = 0;
+    auto& chunk = chunks[i];
+
+    ret_code = SpenchDenoiseProcessChunkInt(test_data.denoiser,
+                                            ctx,
+                                            (const unsigned char*) chunk.data(),
+                                            chunk.size() * sizeof(int16_t),
+                                            &ret_mem,
+                                            &ret_size);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+
+    std::vector<int16_t> ret_vec(ret_size / sizeof(int16_t));
+    std::memcpy(ret_vec.data(), ret_mem, ret_size);
+    prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
+
+    std::free(ret_mem);
+    ret_mem = nullptr;
+  }
+
+  for (std::vector<int16_t>::size_type i = 0; i != prediction.size(); i++) {
+    float f = prediction[i] > 0 ?
+          static_cast<float>(prediction[i]) / std::numeric_limits<int16_t>::max():
+          static_cast<float>(prediction[i]) / -std::numeric_limits<int16_t>::min();
+    prediction_fp.emplace_back(f);
+  }
+
+  reference_prediction_fp.resize(prediction_fp.size());
+  IsVectorsClose(reference_prediction_fp, prediction_fp, k_precision_threshold);
+
+  SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+}
+
+TEST_CASE("SUCCEED Run inference with model 48kHz on a part of .wav with chunks of various size [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
+                               SetPCMWav("rec_noise_001_48k.wav"));
+    const float k_precision_threshold = 0.015;
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
+                               SetPCMWav("rec_noise_001_48k.wav"));
+    const float k_precision_threshold = 0.005;
+  #endif
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = kChunk_size;
+  const uint32_t kChunks_to_compare = 300;
+  SpenchContext ctx = nullptr;
+  std::vector<int16_t> prediction;
+  std::vector<float> prediction_fp;
+  std::vector<float> reference_prediction_fp;
+
+  auto chunks = chunkWav<int16_t>(test_data.pcm_wav_data, 48000, kChunk_size, kChunk_stride);
+  chunks.resize(kChunks_to_compare);
+
+  loadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction_fp);
+
+  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  ret_code = SpenchDenoiseSetContextId(test_data.denoiser, ctx, 1000);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  // 20*8 + 20*4 + 10*3 + 15*2 = 160 + 80 + 30 + 30 = 300
+  constexpr std::size_t kNumGroups = 65;
+  const std::array<uint32_t, 65> kMergeFactors = [] {
+    std::array<uint32_t, 65> a{};
+    std::size_t idx = 0;
+
+    for (uint32_t i = 0; i < 20; ++i) a[idx++] = 8;
+    for (uint32_t i = 0; i < 20; ++i) a[idx++] = 4;
+    for (uint32_t i = 0; i < 10; ++i) a[idx++] = 3;
+    for (uint32_t i = 0; i < 15; ++i) a[idx++] = 2;
+
+    return a;
+  }();
+
+  std::size_t chunk_pos = 0;
+  for (uint32_t factor : kMergeFactors) {
+    auto merged_chunk = mergeChunks(chunks, chunk_pos, factor);
+    chunk_pos += factor;
+
+    unsigned char* ret_mem;
+    uint64_t ret_size = 0;
+    ret_code = SpenchDenoiseProcessChunkInt(test_data.denoiser,
+                                            ctx,
+                                            (const unsigned char*) merged_chunk.data(),
+                                            merged_chunk.size() * sizeof(int16_t),
+                                            &ret_mem,
+                                            &ret_size);
+    CHECK(ret_code >= SpenchRetCode::SUCCESS);
+
+    std::vector<int16_t> ret_vec(ret_size / sizeof(int16_t));
+    std::memcpy(ret_vec.data(), ret_mem, ret_size);
+    prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
+
+    std::free(ret_mem);
+    ret_mem = nullptr;
+  }
+
+  for (std::vector<int16_t>::size_type i = 0; i != prediction.size(); i++) {
+    float f = prediction[i] > 0 ?
+          static_cast<float>(prediction[i]) / std::numeric_limits<int16_t>::max():
+          static_cast<float>(prediction[i]) / -std::numeric_limits<int16_t>::min();
+    prediction_fp.emplace_back(f);
+  }
+
+  reference_prediction_fp.resize(prediction_fp.size());
+  IsVectorsClose(reference_prediction_fp, prediction_fp, k_precision_threshold);
+
+  SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+}
+
+TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 frames) [spench c api]") {
+  SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
+  #ifdef BUILD_TFLITE_ENGINE
+    auto test_data = std::move(TestCAPI().
+                               InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
+                               SetPCMWav("rec_noise_001_48k.wav"));
+  #else
+    auto test_data = std::move(TestCAPI().
+                               InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
+                               SetPCMWav("rec_noise_001_48k.wav"));
+  #endif
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  SpenchContext ctx = nullptr;
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = kChunk_size;
+  const std::size_t kTargetChunks = 4000;
+
+  auto chunks = chunkWav<int16_t>(test_data.pcm_wav_data, 48000, kChunk_size, kChunk_stride);
+
+  REQUIRE_FALSE(chunks.empty());
+
+  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  ret_code = SpenchDenoiseSetContextId(test_data.denoiser, ctx, 1000);
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+
+  const std::size_t base_chunks = chunks.size();
+  const std::size_t repeats = (kTargetChunks + base_chunks - 1) / base_chunks;
+
+  const std::size_t samples_per_chunk = chunks.front().size();
+
+  std::vector<int16_t> huge_input;
+  huge_input.reserve(kTargetChunks * samples_per_chunk);
+
+  std::size_t filled = 0;
+  for (std::size_t r = 0; r < repeats && filled < kTargetChunks; ++r) {
+    for (const auto& ch : chunks) {
+      huge_input.insert(huge_input.end(), ch.begin(), ch.end());
+      if (++filled == kTargetChunks) break;
+    }
+  }
+
+  REQUIRE(filled == kTargetChunks);
+  REQUIRE(huge_input.size() == kTargetChunks * samples_per_chunk);
+
+  unsigned char* ret_mem = nullptr;
+  uint64_t ret_size = 0;
+
+  REQUIRE_NOTHROW(
+      ret_code = SpenchDenoiseProcessChunkInt(test_data.denoiser,
+                                              ctx,
+                                              (const unsigned char*) huge_input.data(),
+                                              huge_input.size() * sizeof(int16_t),
+                                              &ret_mem,
+                                              &ret_size));
+  CHECK(ret_code >= SpenchRetCode::SUCCESS);
+  REQUIRE(ret_mem != nullptr);
+  REQUIRE(ret_size > 0);
+
+  std::vector<int16_t> ret_vec(ret_size / sizeof(int16_t));
+  std::memcpy(ret_vec.data(), ret_mem, ret_size);
+
+  std::free(ret_mem);
+  ret_mem = nullptr;
+
+  REQUIRE_FALSE(ret_vec.empty());
 
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
 }

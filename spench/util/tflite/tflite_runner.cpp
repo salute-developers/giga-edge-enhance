@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <string>
 #include <memory>
+#include <sstream>
 #include "spench/util/tflite/tflite_runner.h"
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
@@ -89,62 +90,226 @@ void BaseTfliteRunner::InitModel(std::vector<std::string>& input_names,
   if (m_signature_runner->output_names().size() != output_names.size()) {
     throw TfliteValidationException("Model and config file have different number of outputs");
   }
-  for (auto const & name : input_names) {
-    m_model_inputs.push_back(m_signature_runner->input_tensor(name.c_str()));
-    uint16_t dims_num = m_model_inputs.back()->dims->size;
-    m_model_input_size.push_back(
-      std::accumulate(&m_model_inputs.back()->dims->data[0],
-                      &m_model_inputs.back()->dims->data[dims_num],
-                      uint64_t{1}, std::multiplies<uint64_t>()));
-  }
-  for (auto const & name : output_names) {
-    m_model_outputs.push_back(m_signature_runner->output_tensor(name.c_str()));
-    uint16_t dims_num = m_model_outputs.back()->dims->size;
-    m_model_output_size.push_back(
-      std::accumulate(&m_model_outputs.back()->dims->data[0],
-                      &m_model_outputs.back()->dims->data[dims_num],
-                      uint64_t{1}, std::multiplies<uint64_t>()));
-  }
+
+  m_model_input_names.assign(input_names.begin(), input_names.end());
+  m_model_output_names.assign(output_names.begin(), output_names.end());
+
+  RefreshTensorMetadata();
 }
 
 template<typename T>
-void BaseTfliteRunner::Run(std::vector<std::vector<T>*>& inputs) {
+void BaseTfliteRunner::Run(std::vector<std::vector<T>*>& inputs,
+                           const std::vector<std::vector<int32_t>>& input_shapes) {
   if (inputs.size() != m_model_inputs.size()) {
     throw TfliteValidationException("Model run failed. Number of inputs are differ.");
   }
-
-  T* data_ptr;
-  for (uint16_t i = 0; i < inputs.size(); ++i) {
-    if (m_model_input_size[i] != inputs[i]->size()) {
-      std::string err_msg = "Model run failed. Dim size of provided and model input #";
-      err_msg += std::to_string(i) + " are differ: ";
-      err_msg += std::to_string(m_model_input_size[i]) + " vs " + std::to_string(inputs[i]->size()) + "\n";
-      throw TfliteValidationException(err_msg);
-    }
-    data_ptr = tflite::GetTensorData<T>(m_model_inputs[i]);
-    std::memcpy(data_ptr, inputs[i]->data(), sizeof(T)*inputs[i]->size());
+  if (inputs.size() != input_shapes.size()) {
+    throw TfliteValidationException("Model run failed. Number of provided shapes are differ.");
   }
 
-  m_interpreter->Invoke();
+  ResizeInputsIfNeeded(input_shapes);
+
+  T* data_ptr = nullptr;
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    uint64_t expected_size = 0;
+
+    if (m_time_axis_in[i] >= 0) {
+      expected_size = ShapeProduct(input_shapes[i]);
+    } else {
+      expected_size = m_model_input_size[i];
+    }
+
+    if (expected_size != inputs[i]->size()) {
+      std::string err_msg = "Model run failed. Resolved dim size of provided and model input #";
+      err_msg += std::to_string(i) + " are differ: ";
+      err_msg += std::to_string(expected_size) + " vs " + std::to_string(inputs[i]->size());
+      throw TfliteValidationException(err_msg);
+    }
+
+    data_ptr = tflite::GetTensorData<T>(m_model_inputs[i]);
+    if (data_ptr == nullptr) {
+      throw TfliteValidationException("Failed to get input tensor buffer");
+    }
+    std::memcpy(data_ptr, inputs[i]->data(), sizeof(T) * inputs[i]->size());
+  }
+
+  if (m_signature_runner->Invoke() != kTfLiteOk) {
+    throw TfliteValidationException("Interpreter invoke failed");
+  }
+
+  RefreshTensorMetadata();
 }
 
 void BaseTfliteRunner::ResizeIfNeededInPlace(std::vector<float>& to_check,
                                              uint32_t shape) {
-  if (to_check.size() == 0) {
-    to_check.resize(shape, 0.0);
+  if (to_check.size() != shape) {
+    to_check.resize(shape, 0.0f);
   }
 }
 
 void BaseTfliteRunner::ResizeIfNeededInPlace(std::valarray<float>& to_check,
                                              uint32_t shape) {
-  if (to_check.size() == 0) {
-    to_check.resize(shape, 0.0);
+  if (to_check.size() != shape) {
+    to_check.resize(shape, 0.0f);
   }
 }
 
 void BaseTfliteRunner::InitOutputTensors(spench::SpenchTaskData& data, uint32_t size) {
   ResizeIfNeededInPlace(data.new_spectrogram.real, size / 2);
   ResizeIfNeededInPlace(data.new_spectrogram.imag, size / 2);
+}
+
+int32_t BaseTfliteRunner::GetSingleDynamicAxis(const TfLiteTensor* tensor,
+                                               const char* tensor_debug_name) {
+  if (tensor == nullptr) {
+    throw TfliteValidationException(std::string("Null tensor: ") + tensor_debug_name);
+  }
+
+  const TfLiteIntArray* sig = tensor->dims_signature;
+  if (sig == nullptr) {
+    return -1;
+  }
+
+  int32_t found = -1;
+  for (int i = 0; i < sig->size; ++i) {
+    if (sig->data[i] < 0) {
+      if (found >= 0) {
+        std::stringstream ss;
+        ss << "Tensor has more than one dynamic dim (-1): " << tensor_debug_name;
+        throw TfliteValidationException(ss.str());
+      }
+      found = i;
+    }
+  }
+  return found;
+}
+
+void BaseTfliteRunner::SetTimeDimIfDynamic(std::vector<int32_t>& shape,
+                                           int32_t time_axis,
+                                           int32_t num_frames) {
+  if (time_axis >= 0) {
+    shape[static_cast<size_t>(time_axis)] = num_frames;
+  }
+}
+
+uint64_t BaseTfliteRunner::ShapeProduct(const std::vector<int32_t>& shape) {
+  return std::accumulate(shape.begin(), shape.end(),
+                         uint64_t{1},
+                         [](uint64_t acc, int32_t dim) {
+                           if (dim <= 0) {
+                             throw TfliteValidationException("Resolved tensor shape contains non-positive dimension");
+                           }
+                           return acc * static_cast<uint64_t>(dim);
+                         });
+}
+
+void BaseTfliteRunner::RefreshTensorMetadata() {
+  m_model_inputs.clear();
+  m_model_outputs.clear();
+  m_model_input_shapes.clear();
+  m_model_output_shapes.clear();
+  m_model_input_size.clear();
+  m_model_output_size.clear();
+  m_time_axis_in.clear();
+
+  for (const auto& name : m_model_input_names) {
+    TfLiteTensor* t = m_signature_runner->input_tensor(name.c_str());
+    if (t == nullptr) {
+      throw TfliteValidationException("Failed to get input tensor: " + name);
+    }
+    if (t->dims == nullptr) {
+      throw TfliteValidationException("Input tensor has no dims: " + name);
+    }
+
+    m_model_inputs.push_back(t);
+    m_time_axis_in.push_back(GetSingleDynamicAxis(t, name.c_str()));
+
+    std::vector<int32_t> concrete_shape;
+    concrete_shape.reserve(static_cast<size_t>(t->dims->size));
+    for (int i = 0; i < t->dims->size; ++i) {
+      concrete_shape.push_back(t->dims->data[i]);
+    }
+
+    m_model_input_shapes.push_back(concrete_shape);
+    m_model_input_size.push_back(ShapeProduct(concrete_shape));
+  }
+
+  for (const auto& name : m_model_output_names) {
+    const TfLiteTensor* t = m_signature_runner->output_tensor(name.c_str());
+    if (t == nullptr) {
+      throw TfliteValidationException("Failed to get output tensor: " + name);
+    }
+    if (t->dims == nullptr) {
+      throw TfliteValidationException("Output tensor has no dims: " + name);
+    }
+
+    m_model_outputs.push_back(t);
+
+    std::vector<int32_t> concrete_shape;
+    concrete_shape.reserve(static_cast<size_t>(t->dims->size));
+    for (int i = 0; i < t->dims->size; ++i) {
+      concrete_shape.push_back(t->dims->data[i]);
+    }
+
+    m_model_output_shapes.push_back(concrete_shape);
+    m_model_output_size.push_back(ShapeProduct(concrete_shape));
+  }
+}
+
+void BaseTfliteRunner::ResizeInputsIfNeeded(const std::vector<std::vector<int32_t>>& input_shapes) {
+  if (input_shapes.size() != m_model_input_names.size()) {
+    throw TfliteValidationException("Resolved input shapes do not match number of model inputs");
+  }
+
+  bool need_resize = false;
+
+  for (size_t i = 0; i < input_shapes.size(); ++i) {
+    if (m_time_axis_in[i] < 0) {
+      continue;  // static input
+    }
+
+    TfLiteTensor* t = m_signature_runner->input_tensor(m_model_input_names[i].c_str());
+    if (t == nullptr || t->dims == nullptr) {
+      throw TfliteValidationException("Failed to inspect dynamic input tensor before resize");
+    }
+
+    if (static_cast<size_t>(t->dims->size) != input_shapes[i].size()) {
+      need_resize = true;
+      break;
+    }
+
+    for (int j = 0; j < t->dims->size; ++j) {
+      if (t->dims->data[j] != input_shapes[i][static_cast<size_t>(j)]) {
+        need_resize = true;
+        break;
+      }
+    }
+
+    if (need_resize) {
+      break;
+    }
+  }
+
+  if (!need_resize) {
+    return;
+  }
+
+  for (size_t i = 0; i < input_shapes.size(); ++i) {
+    if (m_time_axis_in[i] < 0) {
+      continue;  // resize only dynamic inputs
+    }
+
+    if (m_signature_runner->ResizeInputTensor(m_model_input_names[i].c_str(),
+                                              input_shapes[i]) != kTfLiteOk) {
+      throw TfliteValidationException("Failed to resize input tensor: " + m_model_input_names[i]);
+    }
+  }
+
+  if (m_signature_runner->AllocateTensors() != kTfLiteOk) {
+    throw TfliteValidationException("AllocateTensors failed after input resize");
+  }
+
+  RefreshTensorMetadata();
 }
 
 SpenchFTfliteRunner::SpenchFTfliteRunner(const YAML::Node& yaml_config,
@@ -189,8 +354,8 @@ void SpenchFTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
                                      dynamic_cast<spench::DenoiseContextF<float>*>(context);
 
   uint32_t from, to;
-  uint32_t num_feats = m_model_inputs[0]->dims->data[1];
-  uint32_t num_frames = m_model_inputs[0]->dims->data[2];
+  uint32_t num_feats = static_cast<uint32_t>(m_model_input_shapes[0][1]);
+  uint32_t num_frames = static_cast<uint32_t>(m_model_input_shapes[0][2]);
 
   if (denoise_context->noisy_mag.size() == 0) {
     // for the first frame of wav only
@@ -283,7 +448,7 @@ void SpenchFTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
 
     {
       std::lock_guard<std::mutex> lock(m_model_run_mutex);
-      Run(inputs);
+      Run(inputs, m_model_input_shapes);
       ParseResults<float>(denoise_data);
     }
 
@@ -315,18 +480,17 @@ SpenchQTfliteRunner::SpenchQTfliteRunner(const YAML::Node& yaml_config,
 
 template<typename T>
 void SpenchQTfliteRunner::WarmUp() {
-  spench::SpenchTask dummy_task;
-  std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>());
-  dummy_task.m_data.context = ctx.get();
+  std::vector<std::vector<int32_t>> resolved_input_shapes = m_model_input_shapes;
+  SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], 1);
 
-  std::vector<T> dummy_noisy_mag(m_model_input_size[0], 0.0);
-  std::vector<T> dummy_fb_hidden(m_model_input_size[1], 0.0);
-  std::vector<T> dummy_fb_snr_psd(m_model_input_size[2], -1.0);
-  std::vector<T> dummy_fb_snr_pg(m_model_input_size[3], -1.0);
-  std::vector<T> dummy_sb_snr_psd(m_model_input_size[4], -1.0);
-  std::vector<T> dummy_sb_snr_pg(m_model_input_size[5], -1.0);
-  std::vector<T> dummy_conv1_buf(m_model_input_size[6], 0.0);
-  std::vector<T> dummy_conv3_buf(m_model_input_size[7], 0.0);
+  std::vector<T> dummy_noisy_mag(ShapeProduct(resolved_input_shapes[0]), 0.0f);
+  std::vector<T> dummy_fb_hidden(m_model_input_size[1], 0.0f);
+  std::vector<T> dummy_fb_snr_psd(m_model_input_size[2], -1.0f);
+  std::vector<T> dummy_fb_snr_pg(m_model_input_size[3], -1.0f);
+  std::vector<T> dummy_sb_snr_psd(m_model_input_size[4], -1.0f);
+  std::vector<T> dummy_sb_snr_pg(m_model_input_size[5], -1.0f);
+  std::vector<T> dummy_conv1_buf(m_model_input_size[6], 0.0f);
+  std::vector<T> dummy_conv3_buf(m_model_input_size[7], 0.0f);
 
   std::vector<std::vector<T>*> inputs;
   inputs.push_back(&dummy_noisy_mag);
@@ -338,7 +502,9 @@ void SpenchQTfliteRunner::WarmUp() {
   inputs.push_back(&dummy_conv1_buf);
   inputs.push_back(&dummy_conv3_buf);
 
-  BaseTfliteRunner::WarmUp<T>(inputs);
+  for (int16_t i = 0; i < 3; ++i) {
+    Run(inputs, resolved_input_shapes);
+  }
 }
 
 void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
@@ -348,27 +514,40 @@ void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
     throw std::runtime_error("Context is not allocated!");
   }
   spench::DenoiseContextQ<float>* denoise_context =
-                                      dynamic_cast<spench::DenoiseContextQ<float>*>(context);
+      dynamic_cast<spench::DenoiseContextQ<float>*>(context);
   if (!denoise_context) {
     throw std::runtime_error("Invalid context type for SpenchQTfliteRunner");
   }
+
   inputs.clear();
 
-  const uint32_t num_feats = static_cast<uint32_t>(m_model_input_size[0]);  // 769
+  const uint32_t num_feats = static_cast<uint32_t>(m_model_input_shapes[0][1]);
+  if (num_feats == 0) {
+    throw std::runtime_error("Invalid model input shape: num_feats is zero");
+  }
   if (mag.size() < num_feats) {
     throw std::runtime_error("mag size is smaller than expected");
   }
+  if (mag.size() % num_feats != 0) {
+    throw std::runtime_error("mag size is not divisible by num_feats");
+  }
 
-  ResizeIfNeededInPlace(denoise_context->noisy_mag,        m_model_input_size[0]);
-  ResizeIfNeededInPlace(denoise_context->fullband_hidden,  m_model_input_size[1]);
-  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_psd, m_model_input_size[2]);
-  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_pg,  m_model_input_size[3]);
-  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_psd, m_model_input_size[4]);
-  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_pg,  m_model_input_size[5]);
-  ResizeIfNeededInPlace(denoise_context->fb_conv1_buf,     m_model_input_size[6]);
-  ResizeIfNeededInPlace(denoise_context->fb_conv3_buf,     m_model_input_size[7]);
+  const uint32_t num_frames = static_cast<uint32_t>(mag.size() / num_feats);
 
-  std::copy(mag.begin(), mag.begin() + num_feats, denoise_context->noisy_mag.begin());
+  std::vector<std::vector<int32_t>> resolved_input_shapes = m_model_input_shapes;
+  SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], static_cast<int32_t>(num_frames));
+
+  ResizeIfNeededInPlace(denoise_context->noisy_mag,
+                        static_cast<uint32_t>(ShapeProduct(resolved_input_shapes[0])));
+  ResizeIfNeededInPlace(denoise_context->fullband_hidden,  static_cast<uint32_t>(m_model_input_size[1]));
+  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_psd, static_cast<uint32_t>(m_model_input_size[2]));
+  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_pg,  static_cast<uint32_t>(m_model_input_size[3]));
+  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_psd, static_cast<uint32_t>(m_model_input_size[4]));
+  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_pg,  static_cast<uint32_t>(m_model_input_size[5]));
+  ResizeIfNeededInPlace(denoise_context->fb_conv1_buf,     static_cast<uint32_t>(m_model_input_size[6]));
+  ResizeIfNeededInPlace(denoise_context->fb_conv3_buf,     static_cast<uint32_t>(m_model_input_size[7]));
+
+  std::copy(mag.begin(), mag.end(), denoise_context->noisy_mag.begin());
 
   inputs.push_back(&denoise_context->noisy_mag);
   inputs.push_back(&denoise_context->fullband_hidden);
@@ -419,12 +598,27 @@ void SpenchQTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
         context->fb_conv3_buf.assign(const_output_ptr,
                                              const_output_ptr + context->fb_conv3_buf.size());
         break;
-      case 7:
-        for (uint64_t i = 0; i < m_model_output_size[output_idx]; i += 2) {
-          data.new_spectrogram.real[i / 2] = const_output_ptr[i];
-          data.new_spectrogram.imag[i / 2] = const_output_ptr[i + 1];
+      case 7: {
+        const TfLiteTensor* t = m_model_outputs[output_idx];
+        if (!t || !t->dims || t->dims->size < 3) {
+          throw std::runtime_error("Invalid output tensor #7: missing dims");
         }
+
+        const int last_dim = t->dims->data[t->dims->size - 1];
+        if (last_dim != 2) {
+          throw std::runtime_error("Invalid output shape: expected last dimension = 2 (complex)");
+        }
+
+        const size_t num_feats = static_cast<size_t>(t->dims->data[1]);
+        const size_t num_frames = static_cast<size_t>(t->dims->data[2]);
+
+        if (num_feats == 0 || num_frames == 0) {
+          throw std::runtime_error("Invalid output shape: zero-sized dynamic output");
+        }
+
+        UnpackComplexMask(const_output_ptr, num_feats, num_frames, data.new_spectrogram);
         break;
+      }
       default:
         std::string err_msg = "Error in parsing results. Unknown output_idx: ";
         err_msg += std::to_string(output_idx);
@@ -449,13 +643,27 @@ void SpenchQTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
   if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
     std::vector<std::vector<float>*> inputs;
     std::vector<std::vector<float>> outputs;
-    std::vector<float> mag = denoise_data.input_spectrogram[0].getMagnitude();
-    SpenchQTfliteRunner::PrepareInputInPlace(mag, inputs, denoise_context);
-    SpenchQTfliteRunner::InitOutputTensors(denoise_data, m_model_output_size[7]);
+    std::vector<float> mag;
+    const auto& specs = denoise_data.input_spectrogram;
 
+    const std::size_t num_feats  = specs.front().size();
+    const std::size_t num_frames = specs.size();
+
+    // Pre-size output buffer for (freq, time) layout: [F * T]
+    mag.resize(num_feats * num_frames);
+    // Fill mag so that time is the fastest axis: mag[f * T + t]
+    for (std::size_t t = 0; t < num_frames; ++t) {
+      specs[t].writeMagnitudeInterleaved(mag, t, num_frames);
+    }
+
+    std::vector<std::vector<int32_t>> resolved_input_shapes = m_model_input_shapes;
+    SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], static_cast<int32_t>(num_frames));
+
+    SpenchQTfliteRunner::PrepareInputInPlace(mag, inputs, denoise_context);
     {
       std::lock_guard<std::mutex> lock(m_model_run_mutex);
-      Run(inputs);
+      Run(inputs, resolved_input_shapes);
+      SpenchQTfliteRunner::InitOutputTensors(denoise_data, static_cast<uint32_t>(m_model_output_size[7]));
       ParseResults<float>(denoise_data);
     }
 

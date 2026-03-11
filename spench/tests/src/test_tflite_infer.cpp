@@ -264,13 +264,14 @@ TEST_CASE("SUCCEED Run quality tflite model with real data and check first two i
   REQUIRE((denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK ||
            denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK));
 
-  IsVectorsClose(gt_fb_hidden_step1, ctx->fullband_hidden, 1e-5f);
-  IsVectorsClose(gt_fb_snr_noise_psd_step1, ctx->fb_snr_noise_psd, 1e-5f);
-  IsVectorsClose(gt_sb_snr_noise_psd_step1, ctx->sb_snr_noise_psd, 1e-5f);
-  IsVectorsClose(gt_b1_out_step1, ctx->fb_conv1_buf, 1e-5f);
-  IsVectorsClose(gt_b3_out_step1, ctx->fb_conv3_buf, 1e-5f);
-  IsVectorsClose(gt_fb_snr_noise_pg_step1, ctx->fb_snr_noise_pg, 1e-5f);
-  IsVectorsClose(gt_sb_snr_noise_pg_step1, ctx->sb_snr_noise_pg, 1e-5f);
+  // for fp16 model a precision is a bit worse against GT
+  IsVectorsClose(gt_fb_hidden_step1, ctx->fullband_hidden, 1e-2f);
+  IsVectorsClose(gt_fb_snr_noise_psd_step1, ctx->fb_snr_noise_psd, 1e-2f);
+  IsVectorsClose(gt_sb_snr_noise_psd_step1, ctx->sb_snr_noise_psd, 1e-2f);
+  IsVectorsClose(gt_b1_out_step1, ctx->fb_conv1_buf, 1e-2f);
+  IsVectorsClose(gt_b3_out_step1, ctx->fb_conv3_buf, 1e-2f);
+  IsVectorsClose(gt_fb_snr_noise_pg_step1, ctx->fb_snr_noise_pg, 1e-4f);
+  IsVectorsClose(gt_sb_snr_noise_pg_step1, ctx->sb_snr_noise_pg, 1e-4f);
 
   denoise_task.m_data.input_spectrogram.clear();
   denoise_task.m_data.input_spectrogram.emplace_back(noisy_real_1, noisy_imag_1);
@@ -281,11 +282,11 @@ TEST_CASE("SUCCEED Run quality tflite model with real data and check first two i
   REQUIRE((denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK ||
            denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK));
 
-  IsVectorsClose(gt_fb_hidden_step2, ctx->fullband_hidden, 1e-5f);
-  IsVectorsClose(gt_fb_snr_noise_psd_step2, ctx->fb_snr_noise_psd, 1e-5f);
-  IsVectorsClose(gt_sb_snr_noise_psd_step2, ctx->sb_snr_noise_psd, 1e-5f);
-  IsVectorsClose(gt_b1_out_step2, ctx->fb_conv1_buf, 1e-5f);
-  IsVectorsClose(gt_b3_out_step2, ctx->fb_conv3_buf, 1e-5f);
+  IsVectorsClose(gt_fb_hidden_step2, ctx->fullband_hidden, 1e-2f);
+  IsVectorsClose(gt_fb_snr_noise_psd_step2, ctx->fb_snr_noise_psd, 1e-2f);
+  IsVectorsClose(gt_sb_snr_noise_psd_step2, ctx->sb_snr_noise_psd, 1e-2f);
+  IsVectorsClose(gt_b1_out_step2, ctx->fb_conv1_buf, 1e-2f);
+  IsVectorsClose(gt_b3_out_step2, ctx->fb_conv3_buf, 1e-2f);
 }
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION

@@ -98,6 +98,29 @@ std::vector<std::vector<InputType>> chunkWav(const std::vector<InputType>& wav,
   return chunks;
 }
 
+template <typename T>
+static std::vector<T> mergeChunks(const std::vector<std::vector<T>>& chunks,
+                                  std::size_t start,
+                                  std::size_t count) {
+  REQUIRE(start <= chunks.size());
+  REQUIRE(start + count <= chunks.size());
+
+  std::size_t total = 0;
+  for (std::size_t i = 0; i < count; ++i) {
+    total += chunks[start + i].size();
+  }
+
+  std::vector<T> merged;
+  merged.reserve(total);
+
+  for (std::size_t i = 0; i < count; ++i) {
+    const auto& c = chunks[start + i];
+    merged.insert(merged.end(), c.begin(), c.end());
+  }
+
+  return merged;
+}
+
 template <typename InputType>
 void loadBin(const char* path, uint32_t step_size_samples, std::vector<std::vector<InputType>>& output) {
   std::ifstream ifs(path, std::ios::binary);

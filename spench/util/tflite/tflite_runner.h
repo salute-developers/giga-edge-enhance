@@ -65,11 +65,24 @@ class BaseTfliteRunner {
                  const uint32_t num_threads, bool on_gpu);
 
   template<typename T>
-  void Run(std::vector<std::vector<T>*>& inputs);
+  void Run(std::vector<std::vector<T>*>& inputs,
+           const std::vector<std::vector<int32_t>>& input_shapes);
+
+  template<typename T>
+  void Run(std::vector<std::vector<T>*>& inputs) {
+    Run(inputs, m_model_input_shapes);
+  }
 
   void ResizeIfNeededInPlace(std::vector<float>& to_check, uint32_t shape);
   void ResizeIfNeededInPlace(std::valarray<float>& to_check, uint32_t shape);
   void InitOutputTensors(spench::SpenchTaskData& data, uint32_t size);
+
+  static int32_t GetSingleDynamicAxis(const TfLiteTensor* tensor, const char* tensor_debug_name);
+  static void SetTimeDimIfDynamic(std::vector<int32_t>& shape, int32_t time_axis, int32_t num_frames);
+  static uint64_t ShapeProduct(const std::vector<int32_t>& shape);
+
+  void RefreshTensorMetadata();
+  void ResizeInputsIfNeeded(const std::vector<std::vector<int32_t>>& input_shapes);
 
   template<typename T>
   void WarmUp(std::vector<std::vector<T>*>& inputs) {
@@ -91,6 +104,11 @@ class BaseTfliteRunner {
   std::vector<const TfLiteTensor*> m_model_outputs;
   tflite::SignatureRunner* m_signature_runner;
   spench::DenoiseModelParams m_model_params;
+  std::vector<std::vector<int32_t>> m_model_input_shapes;
+  std::vector<std::vector<int32_t>> m_model_output_shapes;
+  std::vector<int32_t> m_time_axis_in;
+  std::vector<std::string> m_model_input_names;
+  std::vector<std::string> m_model_output_names;
 };
 
 
