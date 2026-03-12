@@ -9,6 +9,7 @@
 #include <memory>
 #include <utility>
 #include <algorithm>
+#include <stdexcept>
 #include "spench/util/sound/sound_stream.h"
 #include "spench/stream_stat.h"
 
@@ -58,6 +59,93 @@ struct ComplexNumber {
 
     real = std::move(new_real);
     imag = std::move(new_imag);
+  }
+
+  void resize(std::size_t size) {
+    real.resize(size);
+    imag.resize(size);
+  }
+
+  void copyTo(ComplexNumber<T>& dst, std::size_t offset) const {
+    if (real.size() != imag.size()) {
+      throw std::runtime_error("ComplexNumber::CopyTo: real/imag size mismatch");
+    }
+    if (dst.real.size() != dst.imag.size()) {
+      throw std::runtime_error("ComplexNumber::CopyTo: destination real/imag size mismatch");
+    }
+    if (offset + real.size() > dst.real.size()) {
+      throw std::runtime_error("ComplexNumber::CopyTo: destination is too small");
+    }
+
+    std::copy(std::begin(real), std::end(real), &dst.real[0] + offset);
+    std::copy(std::begin(imag), std::end(imag), &dst.imag[0] + offset);
+  }
+
+  void copyFrameTo(ComplexNumber<T>& dst, std::size_t feat_num, std::size_t frame_idx) const {
+    if (real.size() != imag.size()) {
+      throw std::runtime_error("ComplexNumber::CopyFrameTo: real/imag size mismatch");
+    }
+    if (dst.real.size() != dst.imag.size()) {
+      throw std::runtime_error("ComplexNumber::CopyFrameTo: destination real/imag size mismatch");
+    }
+    if (feat_num == 0) {
+      throw std::runtime_error("ComplexNumber::CopyFrameTo: feat_num == 0");
+    }
+    if (dst.real.size() != feat_num) {
+      throw std::runtime_error("ComplexNumber::CopyFrameTo: destination size mismatch");
+    }
+
+    const std::size_t src_offset = frame_idx * feat_num;
+    if (src_offset + feat_num > real.size()) {
+      throw std::runtime_error("ComplexNumber::CopyFrameTo: frame index is out of range");
+    }
+
+    std::copy_n(&real[0] + src_offset, feat_num, &dst.real[0]);
+    std::copy_n(&imag[0] + src_offset, feat_num, &dst.imag[0]);
+  }
+
+  static ComplexNumber<T> concatParts(const std::vector<ComplexNumber<T>>& parts) {
+    if (parts.empty()) {
+      return {};
+    }
+
+    std::size_t total_size = 0;
+    for (const auto& part : parts) {
+      if (part.real.size() != part.imag.size()) {
+        throw std::runtime_error("ComplexNumber::Concat: real/imag size mismatch in part");
+      }
+      total_size += part.real.size();
+    }
+
+    ComplexNumber<T> result(static_cast<uint32_t>(total_size),
+                            static_cast<uint32_t>(total_size));
+
+    std::size_t offset = 0;
+    for (const auto& part : parts) {
+      part.copyTo(result, offset);
+      offset += part.real.size();
+    }
+
+    return result;
+  }
+
+  static ComplexNumber<T> concatWithHead(const ComplexNumber<T>& head,
+                                         const ComplexNumber<T>& tail) {
+    if (head.real.size() != head.imag.size()) {
+      throw std::runtime_error("ComplexNumber::ConcatWithHead: head real/imag size mismatch");
+    }
+    if (tail.real.size() != tail.imag.size()) {
+      throw std::runtime_error("ComplexNumber::ConcatWithHead: tail real/imag size mismatch");
+    }
+
+    const std::size_t total_size = head.real.size() + tail.real.size();
+    ComplexNumber<T> result(static_cast<uint32_t>(total_size),
+                            static_cast<uint32_t>(total_size));
+
+    head.copyTo(result, 0);
+    tail.copyTo(result, head.real.size());
+
+    return result;
   }
   // Writes magnitude into dst in (freq, time) layout:
   // dst[f * num_frames + frame_idx] = magnitude[f]

@@ -38,11 +38,7 @@ void FeatureExtractorRunner::ReadConfig(std::shared_ptr<spench::NetworkConfig> c
 
 spench::ComplexNumber<float>
 FeatureExtractorRunner::MergeInputSpectrogram(const std::vector<spench::ComplexNumber<float>>& frames) {
-  spench::ComplexNumber<float> merged;
-  for (const auto& frame : frames) {
-    merged.append(frame);
-  }
-  return merged;
+  return spench::ComplexNumber<float>::concatParts(frames);
 }
 
 void FeatureExtractorRunner::CalcEnhancedSpectrogram(const spench::ComplexNumber<float>& merged_spec,
@@ -78,38 +74,19 @@ bool FeatureExtractorRunner::HasPrevSpectrogram(const spench::SpenchContext<floa
 }
 
 spench::ComplexNumber<float>
-FeatureExtractorRunner::ExtractFrame(const spench::ComplexNumber<float>& spec,
-                                     uint32_t feat_num,
-                                     uint32_t frame_idx) {
-  spench::ComplexNumber<float> out(feat_num, feat_num);
-  const std::slice s(frame_idx * feat_num, feat_num, 1);
-  out.real = spec.real[s];
-  out.imag = spec.imag[s];
-  return out;
-}
-
-spench::ComplexNumber<float>
 FeatureExtractorRunner::BuildConcatWithPrev(const spench::ComplexNumber<float>& prev_spec,
                                             const spench::ComplexNumber<float>& new_spec,
                                             uint32_t input_chunk_num,
                                             uint32_t feat_num) {
-  // Layout:
-  //   concat frame 0   = prev_spec
-  //   concat frames 1..N = new_spec frames 0..N-1 (already sequential)
-  spench::ComplexNumber<float> concat(feat_num * (input_chunk_num + 1),
-                                      feat_num * (input_chunk_num + 1));
+  if (prev_spec.real.size() != feat_num || prev_spec.imag.size() != feat_num) {
+    throw std::runtime_error("BuildConcatWithPrev: prev_spec size mismatch");
+  }
+  if (new_spec.real.size() != feat_num * input_chunk_num ||
+      new_spec.imag.size() != feat_num * input_chunk_num) {
+    throw std::runtime_error("BuildConcatWithPrev: new_spec size mismatch");
+  }
 
-  // Copy prev into first frame.
-  const std::slice dst_prev(0, feat_num, 1);
-  concat.real[dst_prev] = prev_spec.real;
-  concat.imag[dst_prev] = prev_spec.imag;
-
-  // Copy entire new_spec into the tail in one shot (contiguous layout).
-  const std::slice dst_tail(feat_num, feat_num * input_chunk_num, 1);
-  concat.real[dst_tail] = new_spec.real;
-  concat.imag[dst_tail] = new_spec.imag;
-
-  return concat;
+  return spench::ComplexNumber<float>::concatWithHead(prev_spec, new_spec);
 }
 
 void FeatureExtractorRunner::UpdatePrevFromNewSpec(spench::SpenchContext<float>& ctx,
@@ -117,7 +94,16 @@ void FeatureExtractorRunner::UpdatePrevFromNewSpec(spench::SpenchContext<float>&
                                                    uint32_t input_chunk_num,
                                                    uint32_t feat_num) {
   // Always keep the last "new" frame as prev for the next iteration.
-  ctx.prev_spectrogram = ExtractFrame(new_spec, feat_num, input_chunk_num - 1);
+  if (input_chunk_num == 0) {
+    throw std::runtime_error("UpdatePrevFromNewSpec: input_chunk_num == 0");
+  }
+
+  if (ctx.prev_spectrogram.real.size() != feat_num ||
+      ctx.prev_spectrogram.imag.size() != feat_num) {
+    ctx.prev_spectrogram.resize(feat_num);
+  }
+
+  new_spec.copyFrameTo(ctx.prev_spectrogram, feat_num, input_chunk_num - 1);
 }
 
 void FeatureExtractorRunner::HandlePredictedMask(spench::SpenchTask* task) {
@@ -138,7 +124,12 @@ void FeatureExtractorRunner::HandlePredictedMask(spench::SpenchTask* task) {
   if (!HasPrevSpectrogram(ctx)) {
     if (input_chunk_num == 1) {
       // First ever chunk: store it as prev, nothing to output yet.
-      ctx.prev_spectrogram = ExtractFrame(d.new_spectrogram, feat_num, 0);
+      if (ctx.prev_spectrogram.real.size() != feat_num ||
+        ctx.prev_spectrogram.imag.size() != feat_num) {
+        ctx.prev_spectrogram.resize(feat_num);
+      }
+
+      d.new_spectrogram.copyFrameTo(ctx.prev_spectrogram, feat_num, 0);
       task->m_stage = PipelineStage::SKIPPED_CHUNK;
       return;
     }

@@ -53,12 +53,6 @@ class FeatureExtractorRunner {
 
   static bool HasPrevSpectrogram(const spench::SpenchContext<float>& ctx);
 
-  // Extracts a single frame (frame_idx) from a concatenated spectrogram.
-  static spench::ComplexNumber<float>
-  ExtractFrame(const spench::ComplexNumber<float>& spec,
-               uint32_t feat_num,
-               uint32_t frame_idx);
-
   // Builds concat spectrogram: [prev][new_0..new_{n-1}]
   static spench::ComplexNumber<float>
   BuildConcatWithPrev(const spench::ComplexNumber<float>& prev_spec,

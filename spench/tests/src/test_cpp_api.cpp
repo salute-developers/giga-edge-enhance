@@ -727,7 +727,7 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on a part of .wav with chunks 
   loadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction);
 
   // 20*8 + 20*4 + 10*3 + 15*2 = 160 + 80 + 30 + 30 = 300
-  constexpr std::size_t kNumGroups = 65;
+  // constexpr std::size_t kNumGroups = 65;
   const std::array<uint32_t, 65> kMergeFactors = [] {
     std::array<uint32_t, 65> a{};
     std::size_t idx = 0;
