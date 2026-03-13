@@ -177,44 +177,6 @@ describe('MessageTransport', () => {
         transport.close();
     });
 
-    test('clears input buffers when full and processes new frames correctly', async () => {
-        const channel = new MessageChannel();
-        const { port1, port2 } = channel;
-        const transport = new MessageTransport(port1 as any, SAMPLE_RATE, SPENCH_FRAME_SIZE_SECONDS, onFrameReceived);
-        port2.start();
-
-        const { inputBuffer } = transport as any;
-        const chunkSize = Math.ceil(TRANSPORT_SIZE_SECONDS * SAMPLE_RATE);
-
-        const freeBeforeOverflow = inputBuffer.free;
-        const numOverflowChunks = Math.ceil((freeBeforeOverflow + 1) / chunkSize);
-
-        // Send overflow chunks
-        for (let i = 0; i < numOverflowChunks; i++) {
-            const input = new Float32Array(chunkSize).fill(0.7);
-            const loopback = new Float32Array(chunkSize).fill(-0.7);
-
-            port2.postMessage({
-                type: WORKER_MESSAGES.INPUT,
-                input,
-                loopback,
-            });
-        }
-
-        // Let the transport run
-        await new Promise((r) => setTimeout(r, 0));
-
-        // chunk size
-        expect(inputBuffer.size).toBe(chunkSize);
-
-        // wait tick to process
-        await new Promise((r) => setTimeout(r, 0));
-
-        // After overflow the buffer should be cleared and only callback twice
-        expect(onFrameReceived).toHaveBeenCalledTimes(2);
-        transport.close();
-    });
-
     afterEach(() => {
         jest.clearAllMocks();
     });

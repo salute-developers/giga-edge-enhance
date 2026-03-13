@@ -85,11 +85,6 @@ export class MessageTransport implements AbstractTransport {
 
                 const { input, loopback } = event.data;
 
-                if (this.inputBuffer.free < input.length) {
-                    this.inputBuffer.clear();
-                    this.loopbackBuffer.clear();
-                }
-
                 this.inputBuffer.push(input);
                 this.loopbackBuffer.push(loopback);
 
