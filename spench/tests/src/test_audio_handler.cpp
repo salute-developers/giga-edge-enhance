@@ -151,7 +151,7 @@ TEST_CASE("SUCCEED Create frame [denoiser handler]") {
   IsVectorsClose(reversed_chunk, gt_reversed_chunk, 1.0);
 }
 
-TEST_CASE("FAIL Run denoiser handler with error for incorrect input length [denoiser handler]") {
+TEST_CASE("FAIL Run denoiser handler with error for small input length [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto sheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
@@ -167,6 +167,30 @@ TEST_CASE("FAIL Run denoiser handler with error for incorrect input length [deno
   spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
 
   const std::vector<float> kInput(128, 0.5);
+  std::vector<float> output;
+
+  SpenchRetCode ret_code =
+      sheduler_test_env.handler->ProcessFrame(ctx, kInput, output);
+  CHECK(ret_code == SpenchRetCode::ERR_INVALID_FRAME_SIZE);
+  sheduler_test_env.handler->DestroyContext(&ctx);
+}
+
+TEST_CASE("FAIL Run denoiser handler with error for incorrect input length [denoiser handler]") {
+#ifdef BUILD_TFLITE_ENGINE
+  auto sheduler_test_env = std::move(
+      TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
+                                        spench::DenoiserConfig>(
+          "default_configuration_best_quality_tflite_48khz.yaml"));
+#else
+  auto sheduler_test_env = std::move(
+      TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
+                                        spench::DenoiserConfig>(
+          "default_configuration_best_quality_onnx_48khz.yaml"));
+#endif
+
+  spench::SpenchContext<float>* ctx = sheduler_test_env.handler->CreateContext();
+
+  const std::vector<float> kInput(800, 0.5);
   std::vector<float> output;
 
   SpenchRetCode ret_code =
