@@ -12,7 +12,7 @@ struct TestCAPI {
   SpenchDenoise denoiser = nullptr;
   SpenchAudioProcess audio_proc = nullptr;
 
-  std::string kBase = "data/";
+  std::string data_root = "data/";
 
   TestCAPI() {}
   TestCAPI& operator=(const TestCAPI&) = delete;
@@ -29,14 +29,14 @@ struct TestCAPI {
   }
 
   TestCAPI& SetWav(const std::string& wav_path) {
-    std::string full_wav_path = kBase + "wavs/" + wav_path;
-    loadWavFx(full_wav_path.c_str(), wav_data, false);
+    std::string full_wav_path = data_root + "wavs/" + wav_path;
+    LoadWavFx(full_wav_path.c_str(), wav_data, false);
     return *this;
   }
 
   TestCAPI& SetPCMWav(const std::string& wav_path) {
-    std::string full_wav_path = kBase + "wavs/" + wav_path;
-    loadWavFx(full_wav_path.c_str(), pcm_wav_data);
+    std::string full_wav_path = data_root + "wavs/" + wav_path;
+    LoadWavFx(full_wav_path.c_str(), pcm_wav_data);
     return *this;
   }
 
@@ -44,7 +44,7 @@ struct TestCAPI {
                       SpenchRetCode& ret,
                       const std::string& password = "",
                       const std::string& checksum = "") {
-    std::string config_path = kBase + "config/" + config_name;
+    std::string config_path = data_root + "config/" + config_name;
     ret = password.empty() ?
       SpenchDenoiseInit(config_path.c_str(), &denoiser):
       SpenchEncryptedDenoiseInit(config_path.c_str(), password.c_str(),
@@ -54,7 +54,7 @@ struct TestCAPI {
 
   TestCAPI& InitAudioProcessor(const std::string& config_name,
                                SpenchRetCode& ret) {
-    std::string config_path = kBase + "config/" + config_name;
+    std::string config_path = data_root + "config/" + config_name;
     ret = SpenchAudioProcessInit(config_path.c_str(), &audio_proc);
     return *this;
   }
@@ -437,8 +437,8 @@ TEST_CASE("FAIL Run inference with invalid chunk size with the best quality mode
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 20;
-  const uint32_t kChunk_stride = 10;
+  const uint32_t chunk_size = 20;
+  const uint32_t chunk_stride = 10;
   unsigned char* ret;
   uint64_t ret_size = 0;
   std::vector<float> predictions(256);
@@ -447,7 +447,7 @@ TEST_CASE("FAIL Run inference with invalid chunk size with the best quality mode
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
 
-  auto chunks = chunkWav<float>(test_data.wav_data, 48000, kChunk_size, kChunk_stride);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 48000, chunk_size, chunk_stride);
   chunks.resize(1);
 
   ret_code = SpenchDenoiseProcessChunkFp(test_data.denoiser,
@@ -467,25 +467,25 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
                                SetWav("rec_noise_001_48k.wav"));
-    const float k_precision_threshold = 0.015;
+    const float precision_threshold = 0.015;
   #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetWav("rec_noise_001_48k.wav"));
-    const float k_precision_threshold = 0.005;
+    const float precision_threshold = 0.005;
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 300;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 300;
   SpenchContext ctx = nullptr;
   std::vector<float> prediction;
   std::vector<float> reference_prediction;
 
-  auto chunks = chunkWav<float>(test_data.wav_data, 48000, kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 48000, chunk_size, chunk_stride);
+  LoadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction);
+  chunks.resize(chunks_to_compare);
 
   ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -516,7 +516,7 @@ TEST_CASE("SUCCEED Run inference with the best quality model [spench c api]") {
   const uint32_t warmup_samples = 768;
   prediction.erase(prediction.begin(), prediction.begin() + warmup_samples);
   reference_prediction.resize(prediction.size());
-  IsVectorsClose(reference_prediction, prediction, k_precision_threshold);
+  IsVectorsClose(reference_prediction, prediction, precision_threshold);
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
@@ -526,26 +526,26 @@ TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
-    const float k_precision_threshold = 0.01;
+    const float precision_threshold = 0.01;
   #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
-    const float k_precision_threshold = 0.003;
+    const float precision_threshold = 0.003;
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 100;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 100;
   SpenchContext ctx = nullptr;
   std::vector<int16_t> prediction;
   std::vector<float> prediction_fp;
   std::vector<float> reference_prediction_fp;
 
-  auto chunks = chunkWav<int16_t>(test_data.pcm_wav_data, 48000, kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction_fp);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<int16_t>(test_data.pcm_wav_data, 48000, chunk_size, chunk_stride);
+  LoadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction_fp);
+  chunks.resize(chunks_to_compare);
 
   ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -584,7 +584,7 @@ TEST_CASE("SUCCEED Run inference with the PCM data [spench c api]") {
   const uint32_t warmup_samples = 768;
   prediction_fp.erase(prediction_fp.begin(), prediction_fp.begin() + warmup_samples);
   reference_prediction_fp.resize(prediction_fp.size());
-  IsVectorsClose(reference_prediction_fp, prediction_fp, k_precision_threshold);
+  IsVectorsClose(reference_prediction_fp, prediction_fp, precision_threshold);
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
@@ -594,26 +594,26 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]")
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
                                SetWav("rec_noise_001_48k.wav"));
-    const float k_precision_threshold = 0.01;
+    const float precision_threshold = 0.01;
   #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetWav("rec_noise_001_48k.wav"));
-    const float k_precision_threshold = 0.003;
+    const float precision_threshold = 0.003;
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 10;
-  const uint32_t kAudio_sample_rate = 48000;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 10;
+  const uint32_t audio_sample_rate = 48000;
   SpenchContext ctx = nullptr;
   std::vector<float> prediction;
   std::vector<float> reference;
 
-  auto chunks = chunkWav<float>(test_data.wav_data, kAudio_sample_rate, kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data, audio_sample_rate, chunk_size, chunk_stride);
+  LoadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference);
+  chunks.resize(chunks_to_compare);
 
   ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -644,7 +644,7 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model [spench c api]")
   const uint32_t warmup_samples = 768;
   prediction.erase(prediction.begin(), prediction.begin() + warmup_samples);
   reference.resize(prediction.size());
-  IsVectorsClose(reference, prediction, k_precision_threshold);
+  IsVectorsClose(reference, prediction, precision_threshold);
 
   unsigned char* final_ret_mem;
   uint64_t final_ret_size = 0;
@@ -669,26 +669,26 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model and with the PCM
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
-    const float k_precision_threshold = 0.01;
+    const float precision_threshold = 0.01;
   #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
-    const float k_precision_threshold = 0.003;
+    const float precision_threshold = 0.003;
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 10;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 10;
   SpenchContext ctx = nullptr;
   std::vector<int16_t> prediction;
   std::vector<float> prediction_fp;
   std::vector<float> reference_prediction_fp;
 
-  auto chunks = chunkWav<int16_t>(test_data.pcm_wav_data, 48000, kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction_fp);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<int16_t>(test_data.pcm_wav_data, 48000, chunk_size, chunk_stride);
+  LoadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction_fp);
+  chunks.resize(chunks_to_compare);
 
   ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -726,7 +726,7 @@ TEST_CASE("SUCCEED Get a last chunk with the best quality model and with the PCM
   const uint32_t warmup_samples = 768;
   prediction_fp.erase(prediction_fp.begin(), prediction_fp.begin() + warmup_samples);
   reference_prediction_fp.resize(prediction_fp.size());
-  IsVectorsClose(reference_prediction_fp, prediction_fp, k_precision_threshold);
+  IsVectorsClose(reference_prediction_fp, prediction_fp, precision_threshold);
 
   unsigned char* final_ret_mem;
   uint64_t final_ret_size = 0;
@@ -752,26 +752,26 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on a part of .wav with double 
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
-    const float k_precision_threshold = 0.015;
+    const float precision_threshold = 0.015;
   #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
-    const float k_precision_threshold = 0.005;
+    const float precision_threshold = 0.005;
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 32;
-  const uint32_t kChunk_stride = kChunk_size;
-  const uint32_t kChunks_to_compare = 150;
+  const uint32_t chunk_size = 32;
+  const uint32_t chunk_stride = chunk_size;
+  const uint32_t chunks_to_compare = 150;
   SpenchContext ctx = nullptr;
   std::vector<int16_t> prediction;
   std::vector<float> prediction_fp;
   std::vector<float> reference_prediction_fp;
 
-  auto chunks = chunkWav<int16_t>(test_data.pcm_wav_data, 48000, kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction_fp);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<int16_t>(test_data.pcm_wav_data, 48000, chunk_size, chunk_stride);
+  LoadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction_fp);
+  chunks.resize(chunks_to_compare);
 
   ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -808,7 +808,7 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on a part of .wav with double 
   }
 
   reference_prediction_fp.resize(prediction_fp.size());
-  IsVectorsClose(reference_prediction_fp, prediction_fp, k_precision_threshold);
+  IsVectorsClose(reference_prediction_fp, prediction_fp, precision_threshold);
 
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
@@ -819,27 +819,27 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on a part of .wav with chunks 
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_tflite_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
-    const float k_precision_threshold = 0.015;
+    const float precision_threshold = 0.015;
   #else
     auto test_data = std::move(TestCAPI().
                                InitDenoiser("default_configuration_best_quality_onnx_48khz.yaml", ret_code).
                                SetPCMWav("rec_noise_001_48k.wav"));
-    const float k_precision_threshold = 0.005;
+    const float precision_threshold = 0.005;
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = kChunk_size;
-  const uint32_t kChunks_to_compare = 300;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = chunk_size;
+  const uint32_t chunks_to_compare = 300;
   SpenchContext ctx = nullptr;
   std::vector<int16_t> prediction;
   std::vector<float> prediction_fp;
   std::vector<float> reference_prediction_fp;
 
-  auto chunks = chunkWav<int16_t>(test_data.pcm_wav_data, 48000, kChunk_size, kChunk_stride);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<int16_t>(test_data.pcm_wav_data, 48000, chunk_size, chunk_stride);
+  chunks.resize(chunks_to_compare);
 
-  loadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction_fp);
+  LoadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction_fp);
 
   ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -848,8 +848,8 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on a part of .wav with chunks 
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   // 20*8 + 20*4 + 10*3 + 15*2 = 160 + 80 + 30 + 30 = 300
-  // constexpr std::size_t kNumGroups = 65;
-  const std::array<uint32_t, 65> kMergeFactors = [] {
+  // constexpr std::size_t num_groups = 65;
+  const std::array<uint32_t, 65> merge_factors = [] {
     std::array<uint32_t, 65> a{};
     std::size_t idx = 0;
 
@@ -862,8 +862,8 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on a part of .wav with chunks 
   }();
 
   std::size_t chunk_pos = 0;
-  for (uint32_t factor : kMergeFactors) {
-    auto merged_chunk = mergeChunks(chunks, chunk_pos, factor);
+  for (uint32_t factor : merge_factors) {
+    auto merged_chunk = MergeChunks(chunks, chunk_pos, factor);
     chunk_pos += factor;
 
     unsigned char* ret_mem;
@@ -892,7 +892,7 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on a part of .wav with chunks 
   }
 
   reference_prediction_fp.resize(prediction_fp.size());
-  IsVectorsClose(reference_prediction_fp, prediction_fp, k_precision_threshold);
+  IsVectorsClose(reference_prediction_fp, prediction_fp, precision_threshold);
 
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
@@ -912,11 +912,11 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 fra
 
   SpenchContext ctx = nullptr;
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = kChunk_size;
-  const std::size_t kTargetChunks = 4000;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = chunk_size;
+  const std::size_t target_chunks = 4000;
 
-  auto chunks = chunkWav<int16_t>(test_data.pcm_wav_data, 48000, kChunk_size, kChunk_stride);
+  auto chunks = ChunkWav<int16_t>(test_data.pcm_wav_data, 48000, chunk_size, chunk_stride);
 
   REQUIRE_FALSE(chunks.empty());
 
@@ -927,23 +927,23 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 fra
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
   const std::size_t base_chunks = chunks.size();
-  const std::size_t repeats = (kTargetChunks + base_chunks - 1) / base_chunks;
+  const std::size_t repeats = (target_chunks + base_chunks - 1) / base_chunks;
 
   const std::size_t samples_per_chunk = chunks.front().size();
 
   std::vector<int16_t> huge_input;
-  huge_input.reserve(kTargetChunks * samples_per_chunk);
+  huge_input.reserve(target_chunks * samples_per_chunk);
 
   std::size_t filled = 0;
-  for (std::size_t r = 0; r < repeats && filled < kTargetChunks; ++r) {
+  for (std::size_t r = 0; r < repeats && filled < target_chunks; ++r) {
     for (const auto& ch : chunks) {
       huge_input.insert(huge_input.end(), ch.begin(), ch.end());
-      if (++filled == kTargetChunks) break;
+      if (++filled == target_chunks) break;
     }
   }
 
-  REQUIRE(filled == kTargetChunks);
-  REQUIRE(huge_input.size() == kTargetChunks * samples_per_chunk);
+  REQUIRE(filled == target_chunks);
+  REQUIRE(huge_input.size() == target_chunks * samples_per_chunk);
 
   unsigned char* ret_mem = nullptr;
   uint64_t ret_size = 0;
@@ -1023,14 +1023,14 @@ TEST_CASE("SUCCEED Get statistic information [spench c api]") {
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 100;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 100;
   SpenchContext ctx = nullptr;
   std::vector<float> predictions1;
 
-  auto chunks = chunkWav<float>(test_data.wav_data, 48000, kChunk_size, kChunk_stride);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 48000, chunk_size, chunk_stride);
+  chunks.resize(chunks_to_compare);
 
   ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1070,9 +1070,9 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 100;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 100;
   SpenchContext ctx1 = nullptr;
   SpenchContext ctx2 = nullptr;
   std::vector<float> predictions1;
@@ -1091,8 +1091,8 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
   CHECK(ret_code == SpenchRetCode::SUCCESS);
   CHECK(ctx1 != ctx2);
 
-  auto chunks = chunkWav<float>(test_data.wav_data, 48000, kChunk_size, kChunk_stride);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 48000, chunk_size, chunk_stride);
+  chunks.resize(chunks_to_compare);
 
   for (auto& chunk : chunks) {
     unsigned char* ret_mem1;
@@ -1147,16 +1147,16 @@ TEST_CASE("SUCCEED Run inference with the best quality 48 kHz model and 5 contex
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 100;
-  const uint16_t kNumber = 5;
-  std::vector<std::vector<float>> predictions(kNumber);
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 100;
+  const uint16_t context_count = 5;
+  std::vector<std::vector<float>> predictions(context_count);
   std::vector<std::thread> pool;
   std::vector<SpenchContext> contexts;
 
-  auto chunks = chunkWav<float>(test_data.wav_data, 48000, kChunk_size, kChunk_stride);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 48000, chunk_size, chunk_stride);
+  chunks.resize(chunks_to_compare);
 
   auto functor =
    [&test_data, &chunks](
@@ -1183,7 +1183,7 @@ TEST_CASE("SUCCEED Run inference with the best quality 48 kHz model and 5 contex
     }
   };
 
-  for (uint32_t i = 0; i < kNumber; ++i) {
+  for (uint32_t i = 0; i < context_count; ++i) {
     SpenchContext ctx = nullptr;
     ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
     CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1193,17 +1193,17 @@ TEST_CASE("SUCCEED Run inference with the best quality 48 kHz model and 5 contex
     pool.emplace_back(std::thread(functor, contexts.back(), std::ref(predictions.at(i))));
   }
 
-  for (uint32_t i = 0; i < kNumber; ++i) {
+  for (uint32_t i = 0; i < context_count; ++i) {
     if (pool[i].joinable()) {
         pool[i].join();
     }
   }
 
-  for (uint32_t i = 0; i < kNumber - 1; ++i) {
+  for (uint32_t i = 0; i < context_count - 1; ++i) {
     REQUIRE(predictions[i] == predictions[i+1]);
   }
 
-  for (uint32_t i = 0; i < kNumber; ++i) {
+  for (uint32_t i = 0; i < context_count; ++i) {
     SpenchDenoiseDestroyContext(test_data.denoiser, &(contexts[i]));
     CHECK(contexts[i] == nullptr);
   }
@@ -1222,16 +1222,16 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 5 contexts concu
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 100;
-  const uint16_t kNumber = 5;
-  std::vector<std::vector<float>> predictions(kNumber);
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 100;
+  const uint16_t context_count = 5;
+  std::vector<std::vector<float>> predictions(context_count);
   std::vector<std::thread> pool;
   std::vector<SpenchContext> contexts;
 
-  auto chunks = chunkWav<float>(test_data.wav_data, 24000, kChunk_size, kChunk_stride);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 24000, chunk_size, chunk_stride);
+  chunks.resize(chunks_to_compare);
 
   auto functor =
    [&test_data, &chunks](
@@ -1258,7 +1258,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 5 contexts concu
     }
   };
 
-  for (uint32_t i = 0; i < kNumber; ++i) {
+  for (uint32_t i = 0; i < context_count; ++i) {
     SpenchContext ctx = nullptr;
     ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
     CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1268,17 +1268,17 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 5 contexts concu
     pool.emplace_back(std::thread(functor, contexts.back(), std::ref(predictions.at(i))));
   }
 
-  for (uint32_t i = 0; i < kNumber; ++i) {
+  for (uint32_t i = 0; i < context_count; ++i) {
     if (pool[i].joinable()) {
         pool[i].join();
     }
   }
 
-  for (uint32_t i = 0; i < kNumber - 1; ++i) {
+  for (uint32_t i = 0; i < context_count - 1; ++i) {
     REQUIRE(predictions[i] == predictions[i+1]);
   }
 
-  for (uint32_t i = 0; i < kNumber; ++i) {
+  for (uint32_t i = 0; i < context_count; ++i) {
     SpenchDenoiseDestroyContext(test_data.denoiser, &(contexts[i]));
     CHECK(contexts[i] == nullptr);
   }
@@ -1298,17 +1298,17 @@ TEST_CASE("SUCCEED Run inference for the best quality model 16 khz and compare t
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 100;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 100;
   // average and max inference time in milli seconds for 16ms chunk
   float avg_upperbound = 25.0f;  // ms
   float max_upperbound = 40.0f;  // ms
 
   SpenchContext ctx = nullptr;
 
-  auto chunks = chunkWav<float>(test_data.wav_data, 16000, kChunk_size, kChunk_stride);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 16000, chunk_size, chunk_stride);
+  chunks.resize(chunks_to_compare);
 
   ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1360,16 +1360,16 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav fi
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 300;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 300;
   SpenchContext ctx = nullptr;
   std::vector<float> prediction;
   std::vector<float> reference_prediction;
 
-  auto chunks = chunkWav<float>(test_data.wav_data, 24000, kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/rec_denoised_fast_001_24k.wav", reference_prediction);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 24000, chunk_size, chunk_stride);
+  LoadWavFx("data/results/wavs/rec_denoised_fast_001_24k.wav", reference_prediction);
+  chunks.resize(chunks_to_compare);
 
   ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1416,16 +1416,16 @@ TEST_CASE("SUCCEED Run inference with the encrypted fast 24 kHz model on a part 
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 300;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 300;
   SpenchContext ctx = nullptr;
   std::vector<float> prediction;
   std::vector<float> reference_prediction;
 
-  auto chunks = chunkWav<float>(test_data.wav_data, 24000, kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/rec_denoised_fast_001_24k.wav", reference_prediction);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 24000, chunk_size, chunk_stride);
+  LoadWavFx("data/results/wavs/rec_denoised_fast_001_24k.wav", reference_prediction);
+  chunks.resize(chunks_to_compare);
 
   ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1473,16 +1473,16 @@ TEST_CASE("SUCCEED Run inference with the licensed encrypted fast 24 kHz model o
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 300;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 300;
   SpenchContext ctx = nullptr;
   std::vector<float> prediction;
   std::vector<float> reference_prediction;
 
-  auto chunks = chunkWav<float>(test_data.wav_data, 24000, kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/rec_denoised_fast_001_24k.wav", reference_prediction);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 24000, chunk_size, chunk_stride);
+  LoadWavFx("data/results/wavs/rec_denoised_fast_001_24k.wav", reference_prediction);
+  chunks.resize(chunks_to_compare);
 
   ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1560,17 +1560,17 @@ TEST_CASE("SUCCEED Run inference for the fast 24 kHz model and compare time with
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 100;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 100;
   // average and max inference time in milli seconds for 16ms chunk
   float avg_upperbound = 15.0f;  // ms
   float max_upperbound = 20.0f;  // ms
 
   SpenchContext ctx = nullptr;
 
-  auto chunks = chunkWav<float>(test_data.wav_data, 24000, kChunk_size, kChunk_stride);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 24000, chunk_size, chunk_stride);
+  chunks.resize(chunks_to_compare);
 
   ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
@@ -1623,28 +1623,28 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resamplin
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 200;
-  const uint32_t kAudio_src_sample_rate = 48000;
-  const uint32_t kAudio_dst_sample_rate = 24000;
-  const uint32_t kTotal_size = kChunk_size * kChunks_to_compare
-                                           * kAudio_dst_sample_rate / 1000;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 200;
+  const uint32_t audio_src_sample_rate = 48000;
+  const uint32_t audio_dst_sample_rate = 24000;
+  const uint32_t total_size = chunk_size * chunks_to_compare
+                                           * audio_dst_sample_rate / 1000;
   std::vector<float> prediction;
   std::vector<float> reference;
 
   SpenchContext ctx = nullptr;
 
-  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, kAudio_src_sample_rate, kAudio_dst_sample_rate);
+  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, audio_src_sample_rate, audio_dst_sample_rate);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
   ret_code = SpenchDenoiseSetContextId(test_data.denoiser, ctx, 1000);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                kAudio_src_sample_rate,
-                                kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/test1_24_enhanced.wav", reference);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data,
+                                audio_src_sample_rate,
+                                chunk_size, chunk_stride);
+  LoadWavFx("data/results/wavs/test1_24_enhanced.wav", reference);
+  chunks.resize(chunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem = nullptr;
@@ -1668,7 +1668,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resamplin
   }
   // remove context zeroes as reference does not include that
   prediction.erase(prediction.begin(),
-                   prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
+                   prediction.begin() + audio_dst_sample_rate * chunk_size / 1000);
   //
   unsigned char* final_ret_mem;
   uint64_t final_ret_size = 0;
@@ -1687,8 +1687,8 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resamplin
   REQUIRE(std::vector<float>(final_vec.size(), 0.0) != final_vec);
   prediction.insert(prediction.end(), final_vec.begin(), final_vec.end());
 
-  reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
-  prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
+  reference.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
+  prediction.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
 
   IsVectorsClose(reference, prediction, 0.03);
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
@@ -1707,28 +1707,28 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with output resampli
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 200;
-  const uint32_t kAudio_src_sample_rate = 24000;
-  const uint32_t kAudio_dst_sample_rate = 48000;
-  const uint32_t kTotal_size = kChunk_size * kChunks_to_compare
-                                           * kAudio_dst_sample_rate / 1000;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 200;
+  const uint32_t audio_src_sample_rate = 24000;
+  const uint32_t audio_dst_sample_rate = 48000;
+  const uint32_t total_size = chunk_size * chunks_to_compare
+                                           * audio_dst_sample_rate / 1000;
   std::vector<float> prediction;
   std::vector<float> reference;
 
   SpenchContext ctx = nullptr;
 
-  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, kAudio_src_sample_rate, kAudio_dst_sample_rate);
+  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, audio_src_sample_rate, audio_dst_sample_rate);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
   ret_code = SpenchDenoiseSetContextId(test_data.denoiser, ctx, 1000);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                kAudio_src_sample_rate,
-                                kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/test1_48_enhanced_upsampled.wav", reference);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data,
+                                audio_src_sample_rate,
+                                chunk_size, chunk_stride);
+  LoadWavFx("data/results/wavs/test1_48_enhanced_upsampled.wav", reference);
+  chunks.resize(chunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem = nullptr;
@@ -1752,7 +1752,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with output resampli
   }
   // remove context zeroes as reference does not include that
   prediction.erase(prediction.begin(),
-                   prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
+                   prediction.begin() + audio_dst_sample_rate * chunk_size / 1000);
 
   unsigned char* final_ret_mem;
   uint64_t final_ret_size = 0;
@@ -1772,8 +1772,8 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with output resampli
 
   prediction.insert(prediction.end(), final_vec.begin(), final_vec.end());
 
-  reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
-  prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
+  reference.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
+  prediction.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
 
   IsVectorsClose(reference, prediction, 0.03);
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
@@ -1792,28 +1792,28 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kChunks_to_compare = 100;
-  const uint32_t kAudio_src_sample_rate = 48000;
-  const uint32_t kAudio_dst_sample_rate = 48000;
-  const uint32_t kTotal_size = kChunk_size * kChunks_to_compare
-                                           * kAudio_dst_sample_rate / 1000;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 100;
+  const uint32_t audio_src_sample_rate = 48000;
+  const uint32_t audio_dst_sample_rate = 48000;
+  const uint32_t total_size = chunk_size * chunks_to_compare
+                                           * audio_dst_sample_rate / 1000;
   std::vector<float> prediction;
   std::vector<float> reference;
 
   SpenchContext ctx = nullptr;
 
-  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, kAudio_src_sample_rate, kAudio_dst_sample_rate);
+  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, audio_src_sample_rate, audio_dst_sample_rate);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
   ret_code = SpenchDenoiseSetContextId(test_data.denoiser, ctx, 1000);
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                kAudio_src_sample_rate,
-                                kChunk_size, kChunk_stride);
-  loadWavFx("data/results/wavs/test1_48_enhanced_upsampled.wav", reference);
-  chunks.resize(kChunks_to_compare);
+  auto chunks = ChunkWav<float>(test_data.wav_data,
+                                audio_src_sample_rate,
+                                chunk_size, chunk_stride);
+  LoadWavFx("data/results/wavs/test1_48_enhanced_upsampled.wav", reference);
+  chunks.resize(chunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem = nullptr;
@@ -1837,7 +1837,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
   }
   // remove context zeroes as reference does not include that
   prediction.erase(prediction.begin(),
-                   prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
+                   prediction.begin() + audio_dst_sample_rate * chunk_size / 1000);
   //
   unsigned char* final_ret_mem;
   uint64_t final_ret_size = 0;
@@ -1857,8 +1857,8 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
 
   prediction.insert(prediction.end(), final_vec.begin(), final_vec.end());
 
-  reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
-  prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
+  reference.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
+  prediction.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
 
   IsVectorsClose(reference, prediction, 0.03);
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
@@ -1878,12 +1878,12 @@ TEST_CASE("FAIL Run inference with the fast 24 kHz model with input resampling [
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kAudio_src_sample_rate = 48000;
-  const uint32_t kAudio_dst_sample_rate = 24000;
+  const uint32_t audio_src_sample_rate = 48000;
+  const uint32_t audio_dst_sample_rate = 24000;
 
   SpenchContext ctx = nullptr;
 
-  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, kAudio_src_sample_rate, kAudio_dst_sample_rate);
+  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, audio_src_sample_rate, audio_dst_sample_rate);
   CHECK(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
@@ -1902,12 +1902,12 @@ TEST_CASE("FAIL Run inference with the fast 24 kHz model with output resampling 
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kAudio_src_sample_rate = 24000;
-  const uint32_t kAudio_dst_sample_rate = 48000;
+  const uint32_t audio_src_sample_rate = 24000;
+  const uint32_t audio_dst_sample_rate = 48000;
 
   SpenchContext ctx = nullptr;
 
-  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, kAudio_src_sample_rate, kAudio_dst_sample_rate);
+  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, audio_src_sample_rate, audio_dst_sample_rate);
   CHECK(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
@@ -1926,12 +1926,12 @@ TEST_CASE("FAIL Run inference with the fast 24 kHz model with input and output r
   #endif
   CHECK(ret_code == SpenchRetCode::SUCCESS);
 
-  const uint32_t kAudio_src_sample_rate = 48000;
-  const uint32_t kAudio_dst_sample_rate = 48000;
+  const uint32_t audio_src_sample_rate = 48000;
+  const uint32_t audio_dst_sample_rate = 48000;
 
   SpenchContext ctx = nullptr;
 
-  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, kAudio_src_sample_rate, kAudio_dst_sample_rate);
+  ret_code = SpenchDenoiseCreateContext(test_data.denoiser, &ctx, audio_src_sample_rate, audio_dst_sample_rate);
   CHECK(ret_code == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 
   SpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
@@ -1952,19 +1952,19 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [s
                              InitAudioProcessor("default_configuration_fast_tflite_rc_enabled_24khz.yaml", ret_code).
                              SetWav("test1_48_noised.wav"));
   SpenchAudioProcessAddRc(test_data.audio_proc);
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kAudio_src_sample_rate = 48000;
-  const uint32_t kChunks_to_compare = 200;
-  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t audio_src_sample_rate = 48000;
+  const uint32_t chunks_to_compare = 200;
+  constexpr uint32_t source_data_size = chunks_to_compare * (audio_src_sample_rate / 1000) * 16;
   std::vector<float> prediction;
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                kAudio_src_sample_rate,
-                                kChunk_size, kChunk_stride);
+  auto chunks = ChunkWav<float>(test_data.wav_data,
+                                audio_src_sample_rate,
+                                chunk_size, chunk_stride);
   std::vector<float> reference(test_data.wav_data.begin(),
                                test_data.wav_data.begin() + source_data_size);
   std::vector<float> greater_than_0_9;
-  chunks.resize(kChunks_to_compare);
+  chunks.resize(chunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem = nullptr;
@@ -2009,21 +2009,21 @@ TEST_CASE("SUCCEED Run AudioProcessing for pcm16 data with reading RC parameters
                              InitAudioProcessor("default_configuration_fast_tflite_rc_enabled_24khz.yaml", ret_code).
                              SetPCMWav("test1_48_noised.wav"));
   SpenchAudioProcessAddRc(test_data.audio_proc);
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kAudio_src_sample_rate = 48000;
-  const uint32_t kChunks_to_compare = 200;
-  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t audio_src_sample_rate = 48000;
+  const uint32_t chunks_to_compare = 200;
+  constexpr uint32_t source_data_size = chunks_to_compare * (audio_src_sample_rate / 1000) * 16;
   std::vector<int16_t> prediction;
   std::vector<float> prediction_fp;
   std::vector<float> reference_fp;
-  auto chunks = chunkWav<int16_t>(test_data.pcm_wav_data,
-                                kAudio_src_sample_rate,
-                                kChunk_size, kChunk_stride);
-  loadWavFx("data/wavs/test1_48_noised.wav", reference_fp);
+  auto chunks = ChunkWav<int16_t>(test_data.pcm_wav_data,
+                                audio_src_sample_rate,
+                                chunk_size, chunk_stride);
+  LoadWavFx("data/wavs/test1_48_noised.wav", reference_fp);
   reference_fp.resize(source_data_size);
   std::vector<float> greater_than_0_9;
-  chunks.resize(kChunks_to_compare);
+  chunks.resize(chunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem = nullptr;
@@ -2076,19 +2076,19 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [spench c api]
                              InitAudioProcessor("default_configuration_fast_tflite_rc_enabled_24khz.yaml", ret_code).
                              SetWav("test1_48_noised.wav"));
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kAudio_src_sample_rate = 48000;
-  const uint32_t kChunks_to_compare = 200;
-  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t audio_src_sample_rate = 48000;
+  const uint32_t chunks_to_compare = 200;
+  constexpr uint32_t source_data_size = chunks_to_compare * (audio_src_sample_rate / 1000) * 16;
   std::vector<float> prediction;
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                kAudio_src_sample_rate,
-                                kChunk_size, kChunk_stride);
+  auto chunks = ChunkWav<float>(test_data.wav_data,
+                                audio_src_sample_rate,
+                                chunk_size, chunk_stride);
   std::vector<float> reference(test_data.wav_data.begin(),
                                test_data.wav_data.begin() + source_data_size);
   std::vector<float> greater_than_0_8;
-  chunks.resize(kChunks_to_compare);
+  chunks.resize(chunks_to_compare);
   SpenchAudioProcessAddRcWithParam(test_data.audio_proc, 48000, -4, 10, 0.05, 300, 5);
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem = nullptr;
@@ -2215,7 +2215,7 @@ TEST_CASE("SUCCEED VAD LC does not normalize pure noise to target [spench c api]
   REQUIRE(ret_code == SpenchRetCode::SUCCESS);
 
   // Pure noise for the whole duration.
-  const auto in = noise(num_samples, 0.01f);
+  const auto in = Noise(num_samples, 0.01f);
 
   dsplib::arr_real out;
   for (uint32_t i = 0; i < static_cast<uint32_t>(num_frames); ++i) {
@@ -2246,11 +2246,11 @@ TEST_CASE("SUCCEED VAD LC does not normalize pure noise to target [spench c api]
   }
 
   // If VAD works, pure noise should not be driven close to target_db.
-  const float rms_out = rmsDb(out);
+  const float rms_out = RmsDb(out);
   REQUIRE(std::abs(rms_out - target_db) > 6.0f);
 
   // Also, the output should not be excessively amplified vs input.
-  const float rms_in = rmsDb(in);
+  const float rms_in = RmsDb(in);
   REQUIRE((rms_out - rms_in) < 10.0f);
 
   SpenchAudioProcessFree(test_data.audio_proc);
@@ -2270,7 +2270,7 @@ TEST_CASE("SUCCEED VAD LC reaches target for speech under different input gains 
   const uint32_t use_vad = 1;
 
   // "Speech-like" synthetic signal.
-  const auto base = tone(fs, num_samples, 220.0f, 0.05f) + tone(fs, num_samples, 440.0f, 0.02f);
+  const auto base = Tone(fs, num_samples, 220.0f, 0.05f) + Tone(fs, num_samples, 440.0f, 0.02f);
 
   const dsplib::arr_real gains_db = {-20, -10, 0, 10};
   for (auto gdb : gains_db) {
@@ -2316,7 +2316,7 @@ TEST_CASE("SUCCEED VAD LC reaches target for speech under different input gains 
     // Use the tail segment to allow the controller to accumulate stats and settle.
     const int32_t t_start = 4 * static_cast<int32_t>(fs);
     const auto out_tail = out.slice(t_start, num_samples);
-    const float rms_tail = rmsDb(out_tail);
+    const float rms_tail = RmsDb(out_tail);
     REQUIRE(std::abs(rms_tail - target_db) < 4.0f);
 
     SpenchAudioProcessFree(test_data.audio_proc);
@@ -2330,19 +2330,19 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [
                              InitAudioProcessor("default_configuration_fast_tflite_agc_enabled_24khz.yaml", ret_code).
                              SetWav("test1_48_noised.wav"));
   SpenchAudioProcessAddAgc(test_data.audio_proc);
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kAudio_src_sample_rate = 48000;
-  const uint32_t kChunks_to_compare = 200;
-  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t audio_src_sample_rate = 48000;
+  const uint32_t chunks_to_compare = 200;
+  constexpr uint32_t source_data_size = chunks_to_compare * (audio_src_sample_rate / 1000) * 16;
   std::vector<float> prediction;
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                kAudio_src_sample_rate,
-                                kChunk_size, kChunk_stride);
+  auto chunks = ChunkWav<float>(test_data.wav_data,
+                                audio_src_sample_rate,
+                                chunk_size, chunk_stride);
   std::vector<float> reference(test_data.wav_data.begin(),
                                test_data.wav_data.begin() + source_data_size);
   std::vector<float> greater_than_1;
-  chunks.resize(kChunks_to_compare);
+  chunks.resize(chunks_to_compare);
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem = nullptr;
@@ -2383,18 +2383,18 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [spench c api
                              InitAudioProcessor("default_configuration_fast_tflite_agc_enabled_24khz.yaml", ret_code).
                              SetWav("test1_48_noised.wav"));
 
-  const uint32_t kChunk_size = 16;
-  const uint32_t kChunk_stride = 16;
-  const uint32_t kAudio_src_sample_rate = 48000;
-  const uint32_t kChunks_to_compare = 200;
-  constexpr uint32_t source_data_size = kChunks_to_compare * (kAudio_src_sample_rate / 1000) * 16;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t audio_src_sample_rate = 48000;
+  const uint32_t chunks_to_compare = 200;
+  constexpr uint32_t source_data_size = chunks_to_compare * (audio_src_sample_rate / 1000) * 16;
   std::vector<float> prediction;
-  auto chunks = chunkWav<float>(test_data.wav_data,
-                                kAudio_src_sample_rate,
-                                kChunk_size, kChunk_stride);
+  auto chunks = ChunkWav<float>(test_data.wav_data,
+                                audio_src_sample_rate,
+                                chunk_size, chunk_stride);
   std::vector<float> reference(test_data.wav_data.begin(),
                                test_data.wav_data.begin() + source_data_size);
-  chunks.resize(kChunks_to_compare);
+  chunks.resize(chunks_to_compare);
   SpenchAudioProcessAddAgcWithParam(test_data.audio_proc, 48000, 0.9, 20.0);
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem = nullptr;

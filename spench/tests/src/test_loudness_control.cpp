@@ -167,33 +167,33 @@ TEST_CASE("FAIL LoudnessControlBuilder create without sample rate [Loudness cont
 }
 
 TEST_CASE("FAIL LoudnessControlBuilder create with unknown method returns nullptr [Loudness control]") {
-  const uint32_t kFs = 16000;
+  const uint32_t sample_rate = 16000;
   auto lc = LoudnessControlBuilder()
-                .set_sample_rate(kFs)
+                .set_sample_rate(sample_rate)
                 .set_method(static_cast<ILoudnessControl::Method>(777))
                 .create();
   REQUIRE(lc == nullptr);
 }
 
 TEST_CASE("SUCCEED LoudnessControlBuilder default method is SIMPLE [Loudness control]") {
-  const uint32_t kFs = 16000;
-  auto lc = LoudnessControlBuilder().set_sample_rate(kFs).create();
+  const uint32_t sample_rate = 16000;
+  auto lc = LoudnessControlBuilder().set_sample_rate(sample_rate).create();
   REQUIRE(lc != nullptr);
   REQUIRE(lc->method() == ILoudnessControl::SIMPLE);
 }
 
 TEST_CASE("SUCCEED SIMPLE bypass keeps gain = 1 for first samples [Loudness control]") {
-  const uint32_t kFs = 1000;
-  const float kTargetLufs = -23.0f;
-  const float kMaxGainDb = 40.0f;
-  const float kBypassTimeSec = 0.05f;  // 50 samples
+  const uint32_t sample_rate = 1000;
+  const float target_lufs = -23.0f;
+  const float max_gain_db = 40.0f;
+  const float bypass_time_sec = 0.05f;  // 50 samples
 
   auto lc = LoudnessControlBuilder()
                 .set_method(ILoudnessControl::SIMPLE)
-                .set_sample_rate(kFs)
-                .set_target_level(kTargetLufs)
-                .set_max_gain(kMaxGainDb)
-                .set_bypass_time(kBypassTimeSec)
+                .set_sample_rate(sample_rate)
+                .set_target_level(target_lufs)
+                .set_max_gain(max_gain_db)
+                .set_bypass_time(bypass_time_sec)
                 .create();
   REQUIRE(lc != nullptr);
   REQUIRE(lc->method() == ILoudnessControl::SIMPLE);
@@ -219,15 +219,15 @@ REQUIRE(_mean_abs(out3) < _mean_abs(in3) * 0.98f);
 }
 
 TEST_CASE("SUCCEED SIMPLE max_gain clamps commanded gain [Loudness control]") {
-  const uint32_t kFs = 16000;
-  const float kTargetLufs = -15.0f;
-  const float kMaxGainDb = 6.0f;
+  const uint32_t sample_rate = 16000;
+  const float target_lufs = -15.0f;
+  const float max_gain_db = 6.0f;
 
   auto lc = LoudnessControlBuilder()
                 .set_method(ILoudnessControl::SIMPLE)
-                .set_sample_rate(kFs)
-                .set_target_level(kTargetLufs)
-                .set_max_gain(kMaxGainDb)
+                .set_sample_rate(sample_rate)
+                .set_target_level(target_lufs)
+                .set_max_gain(max_gain_db)
                 .set_bypass_time(0.0f)
                 .create();
   REQUIRE(lc != nullptr);
@@ -239,39 +239,39 @@ TEST_CASE("SUCCEED SIMPLE max_gain clamps commanded gain [Loudness control]") {
   }
 
   auto s = lc->state();
-  REQUIRE(s.current_gain_db_smoothed <= kMaxGainDb + 0.5f);
-  REQUIRE(s.current_gain_db_smoothed >= -kMaxGainDb - 0.5f);
+  REQUIRE(s.current_gain_db_smoothed <= max_gain_db + 0.5f);
+  REQUIRE(s.current_gain_db_smoothed >= -max_gain_db - 0.5f);
   REQUIRE(s.longterm_max_lufs >= s.longterm_min_lufs);
 }
 
 TEST_CASE("SUCCEED VADBASE method and state fields are sane [Loudness control]") {
-  const uint32_t kFs = 16000;
-  const float kTargetLufs = -15.0f;
-  const float kMaxGainDb = 30.0f;
+  const uint32_t sample_rate = 16000;
+  const float target_lufs = -15.0f;
+  const float max_gain_db = 30.0f;
 
   auto lc = LoudnessControlBuilder()
                 .set_method(ILoudnessControl::VADBASE)
-                .set_sample_rate(kFs)
-                .set_target_level(kTargetLufs)
-                .set_max_gain(kMaxGainDb)
+                .set_sample_rate(sample_rate)
+                .set_target_level(target_lufs)
+                .set_max_gain(max_gain_db)
                 .set_post_processing(false)
                 .create();
   REQUIRE(lc != nullptr);
   REQUIRE(lc->method() == ILoudnessControl::VADBASE);
 
-  const uint32_t kFrameLen = kFs / 100;
+  const uint32_t frame_len = sample_rate / 100;
 
   for (int32_t i = 0; i < 200; ++i) {
     float v = (i < 50) ? 0.001f : 0.2f;
-    auto in = _const_vec(kFrameLen, v);
+    auto in = _const_vec(frame_len, v);
     (void)lc->process(in);
   }
 
   auto s = lc->state();
   REQUIRE(std::isfinite(s.current_gain_db_smoothed));
   REQUIRE(std::isfinite(s.last_short_term_lufs.value_or(0.0f)));
-  REQUIRE(s.current_gain_db_smoothed <= kMaxGainDb + 1.0f);
-  REQUIRE(s.current_gain_db_smoothed >= -kMaxGainDb - 1.0f);
+  REQUIRE(s.current_gain_db_smoothed <= max_gain_db + 1.0f);
+  REQUIRE(s.current_gain_db_smoothed >= -max_gain_db - 1.0f);
 
   if (s.longterm_max_lufs > -79.9f || s.longterm_min_lufs < -0.1f) {
     REQUIRE(s.longterm_max_lufs >= s.longterm_min_lufs);
@@ -279,15 +279,15 @@ TEST_CASE("SUCCEED VADBASE method and state fields are sane [Loudness control]")
 }
 
 TEST_CASE("SUCCEED VADBASE limiter prevents clipping when postprocessing enabled [Loudness control]") {
-  const uint32_t kFs = 16000;
-  const float kTargetLufs = -15.0f;
-  const float kMaxGainDb = 30.0f;
+  const uint32_t sample_rate = 16000;
+  const float target_lufs = -15.0f;
+  const float max_gain_db = 30.0f;
 
   auto lc = LoudnessControlBuilder()
                 .set_method(ILoudnessControl::VADBASE)
-                .set_sample_rate(kFs)
-                .set_target_level(kTargetLufs)
-                .set_max_gain(kMaxGainDb)
+                .set_sample_rate(sample_rate)
+                .set_target_level(target_lufs)
+                .set_max_gain(max_gain_db)
                 .set_post_processing(true)
                 .create();
   REQUIRE(lc != nullptr);
@@ -297,15 +297,15 @@ TEST_CASE("SUCCEED VADBASE limiter prevents clipping when postprocessing enabled
 
   REQUIRE(out.size() == in.size());
 
-  const float kLimiterMag = dsplib::db2mag(-1.0f);
-  REQUIRE(_max_abs(out) <= kLimiterMag + 5e-3f);
+  const float limiter_mag = dsplib::db2mag(-1.0f);
+  REQUIRE(_max_abs(out) <= limiter_mag + 5e-3f);
 }
 
 TEST_CASE("SUCCEED process with empty input returns empty output [Loudness control]") {
-  const uint32_t kFs = 16000;
+  const uint32_t sample_rate = 16000;
   auto lc = LoudnessControlBuilder()
                 .set_method(ILoudnessControl::VADBASE)
-                .set_sample_rate(kFs)
+                .set_sample_rate(sample_rate)
                 .set_target_level(-15.0f)
                 .set_max_gain(30.0f)
                 .set_post_processing(false)

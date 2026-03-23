@@ -8,27 +8,27 @@
 #include <dsplib.h>
 
 #pragma pack(push, 1)
-typedef struct WAV_HEADER {
-  uint8_t chunkID[4];    // "RIFF"
-  uint32_t chunkSize;
-  uint8_t format[4];     // "WAVE"
-} WavHeader;
+struct WavHeader {
+  uint8_t chunk_id[4];  // "RIFF"
+  uint32_t chunk_size;
+  uint8_t format[4];  // "WAVE"
+};
 
-typedef struct WAV_FMT_CHUNK {
-  uint8_t subchunk1ID[4];  // "fmt "
-  uint32_t subchunk1Size;
-  uint16_t audioFormat;    // PCM = 1
-  uint16_t numChannels;
-  uint32_t sampleRate;
-  uint32_t byteRate;
-  uint16_t blockAlign;
-  uint16_t bitsPerSample;
-} WavFmtChunk;
+struct WavFmtChunk {
+  uint8_t subchunk1_id[4];  // "fmt "
+  uint32_t subchunk1_size;
+  uint16_t audio_format;  // PCM = 1
+  uint16_t num_channels;
+  uint32_t sample_rate;
+  uint32_t byte_rate;
+  uint16_t block_align;
+  uint16_t bits_per_sample;
+};
 
-typedef struct WAV_DATA_CHUNK {
-  uint8_t subchunk2ID[4];  // "data"
-  uint32_t subchunk2Size;
-} WavDataChunk;
+struct WavDataChunk {
+  uint8_t subchunk2_id[4];  // "data"
+  uint32_t subchunk2_size;
+};
 #pragma pack(pop)
 
 template <typename InputType, typename OutputType>
@@ -55,40 +55,49 @@ std::vector<OutputType> LoadVectorFromBinaryFile(const std::string& fname) {
 }
 
 template <typename InputType>
-void SaveVectorToBinaryFile(const std::string& fname, const std::vector<InputType>& data) {
+void SaveVectorToBinaryFile(const std::string& fname,
+                            const std::vector<InputType>& data) {
   std::ofstream f(fname, std::ios::binary);
-  f.write(reinterpret_cast<const char*>(data.data()), sizeof(InputType) * data.size());
+  f.write(reinterpret_cast<const char*>(data.data()),
+          sizeof(InputType) * data.size());
 }
 
-void loadWavFx(const char* path, std::vector<float>&, float keepUnnorm = false);
-void loadWavFx(const char* path, std::vector<int16_t>&);
+void LoadWavFx(const char* path, std::vector<float>& wav_data,
+               float keep_unnorm = false);
+void LoadWavFx(const char* path, std::vector<int16_t>& wav_data);
 
-void IsVectorsClose(const std::vector<float>& v1, const std::vector<float>& v2, float eps);
-void IsVectorsClose(const std::vector<int16_t>& v1, const std::vector<int16_t>& v2, float eps);
+void IsVectorsClose(const std::vector<float>& v1,
+                    const std::vector<float>& v2, float eps);
+void IsVectorsClose(const std::vector<int16_t>& v1,
+                    const std::vector<int16_t>& v2, float eps);
 
-void IsVectorsClose(const std::vector<float>& v1, const std::valarray<float>& v2, float eps);
+void IsVectorsClose(const std::vector<float>& v1,
+                    const std::valarray<float>& v2, float eps);
 
 template <typename InputType>
-std::vector<std::vector<InputType>> chunkWav(const std::vector<InputType>& wav,
-                                             int32_t sample_rate,
-                                             int32_t chunk_size_ms,
-                                             int32_t stride_ms) {
+std::vector<std::vector<InputType>> ChunkWav(const std::vector<InputType>& wav,
+                                              int32_t sample_rate,
+                                              int32_t chunk_size_ms,
+                                              int32_t stride_ms) {
   std::vector<std::vector<InputType>> chunks;
 
-  size_t step_size_samples = std::floor((sample_rate * chunk_size_ms) / 1000.0f);
-  size_t hop_window_samples = std::floor((sample_rate * stride_ms) / 1000.0f);
+  size_t step_size_samples =
+      std::floor((sample_rate * chunk_size_ms) / 1000.0f);
+  size_t hop_window_samples =
+      std::floor((sample_rate * stride_ms) / 1000.0f);
   if (step_size_samples > wav.size()) {
     return {wav};
   }
 
-  size_t num_steps = (wav.size() + step_size_samples - 1) / hop_window_samples;
+  size_t num_steps =
+      (wav.size() + step_size_samples - 1) / hop_window_samples;
   chunks.reserve(num_steps);
   for (size_t step = 0; step < num_steps; ++step) {
-     std::vector<InputType> wav_chunk(wav.begin() + std::min(step * hop_window_samples, wav.size()),
-                                      wav.begin() + std::min(step * hop_window_samples +
-                                                                    step_size_samples, wav.size()));
+    std::vector<InputType> wav_chunk(
+        wav.begin() + std::min(step * hop_window_samples, wav.size()),
+        wav.begin() +
+            std::min(step * hop_window_samples + step_size_samples, wav.size()));
 
-    // padding
     if (wav_chunk.size() < step_size_samples) {
       std::vector<InputType> zeroes(step_size_samples - wav_chunk.size(), 0);
       wav_chunk.insert(wav_chunk.end(), zeroes.begin(), zeroes.end());
@@ -99,9 +108,8 @@ std::vector<std::vector<InputType>> chunkWav(const std::vector<InputType>& wav,
 }
 
 template <typename T>
-static std::vector<T> mergeChunks(const std::vector<std::vector<T>>& chunks,
-                                  std::size_t start,
-                                  std::size_t count) {
+static std::vector<T> MergeChunks(const std::vector<std::vector<T>>& chunks,
+                                std::size_t start, std::size_t count) {
   REQUIRE(start <= chunks.size());
   REQUIRE(start + count <= chunks.size());
 
@@ -122,7 +130,8 @@ static std::vector<T> mergeChunks(const std::vector<std::vector<T>>& chunks,
 }
 
 template <typename InputType>
-void loadBin(const char* path, uint32_t step_size_samples, std::vector<std::vector<InputType>>& output) {
+void LoadBin(const char* path, uint32_t step_size_samples,
+             std::vector<std::vector<InputType>>& output) {
   std::ifstream ifs(path, std::ios::binary);
 
   ifs.seekg(0, std::ios::end);
@@ -132,13 +141,14 @@ void loadBin(const char* path, uint32_t step_size_samples, std::vector<std::vect
   int16_t loops = fsize / (step_size_samples * sizeof(InputType));
   for (int16_t i = 0; i < loops; ++i) {
     std::vector<InputType> stft_tensor(step_size_samples, 0.0);
-    ifs.read(reinterpret_cast<char*>(stft_tensor.data()), step_size_samples * sizeof(InputType));
+    ifs.read(reinterpret_cast<char*>(stft_tensor.data()),
+             step_size_samples * sizeof(InputType));
     output.emplace_back(stft_tensor);
   }
 }
 
 template <typename InputType>
-void loadBin(const char* path, std::vector<InputType>& output) {
+void LoadBin(const char* path, std::vector<InputType>& output) {
   std::ifstream ifs(path, std::ios::binary);
 
   ifs.seekg(0, std::ios::end);
@@ -146,11 +156,12 @@ void loadBin(const char* path, std::vector<InputType>& output) {
   ifs.seekg(0, ifs.beg);
 
   output.resize(fsize / sizeof(InputType));
-  ifs.read(reinterpret_cast<char*>(output.data()), output.size() * sizeof(InputType));
+  ifs.read(reinterpret_cast<char*>(output.data()),
+           output.size() * sizeof(InputType));
 }
 
 template <typename InputType>
-void loadBin(const char* path, std::valarray<InputType>& output) {
+void LoadBin(const char* path, std::valarray<InputType>& output) {
   std::ifstream ifs(path, std::ios::binary);
 
   ifs.seekg(0, std::ios::end);
@@ -158,12 +169,13 @@ void loadBin(const char* path, std::valarray<InputType>& output) {
   ifs.seekg(0, ifs.beg);
 
   output.resize(fsize / sizeof(InputType));
-  ifs.read(reinterpret_cast<char*>(&output[0]), output.size() * sizeof(InputType));
+  ifs.read(reinterpret_cast<char*>(&output[0]),
+           output.size() * sizeof(InputType));
 }
 
-dsplib::arr_real DumbRIR(int n);
+dsplib::arr_real DumbRir(int n);
 
-dsplib::arr_real tone(uint32_t fs, int32_t n, float f_hz, float amp);
-dsplib::arr_real noise(int32_t n, float amp);
-float rmsDb(const dsplib::arr_real& x);
-float maxAbs(const dsplib::arr_real& x);
+dsplib::arr_real Tone(uint32_t fs, int32_t n, float f_hz, float amp);
+dsplib::arr_real Noise(int32_t n, float amp);
+float RmsDb(const dsplib::arr_real& x);
+float MaxAbs(const dsplib::arr_real& x);

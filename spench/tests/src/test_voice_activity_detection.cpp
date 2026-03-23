@@ -62,13 +62,13 @@ TEST_CASE("FAIL Create returns nullptr for unknown VAD type [voice activity dete
 }
 
 TEST_CASE("SUCCEED Builder setters affect created VAD instance [voice activity detection]") {
-  constexpr uint32_t kFs = 48000;
+  constexpr uint32_t sample_rate = 48000;
 
-  auto vad = VadBuilder().set_type(VadType::RNNOISE).set_sample_rate(kFs).set_threshold(0.25f).create();
+  auto vad = VadBuilder().set_type(VadType::RNNOISE).set_sample_rate(sample_rate).set_threshold(0.25f).create();
 
   REQUIRE(vad != nullptr);
-  REQUIRE(vad->sample_rate() == kFs);
-  REQUIRE(vad->delay() == (kFs * 10U) / 1000U);
+  REQUIRE(vad->sample_rate() == sample_rate);
+  REQUIRE(vad->delay() == (sample_rate * 10U) / 1000U);
   REQUIRE(vad->frame_len() > 0);
 }
 

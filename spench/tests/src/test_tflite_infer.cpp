@@ -8,7 +8,7 @@
 struct TestTfliteRunner {
   std::unique_ptr<util::tf_lite::BaseTfliteRunner> denoiser_runner;
 
-  const std::string kBase = "data/";
+  const std::string data_root = "data/";
 
  public:
   uint16_t frame_size_ms = 16;
@@ -19,7 +19,7 @@ struct TestTfliteRunner {
                                const std::string& password = "",
                                const std::string& checksum = "",
                                uint16_t num_threads = 1) {
-    std::string file_path = kBase + "config/" + yaml_config_name;
+    std::string file_path = data_root + "config/" + yaml_config_name;
     YAML::Node node = YAML::LoadFile(file_path);
     // bool on_gpu = node["inference"]["gpu"].as<bool>(false);
     std::string model_type = node["inference"]["model_type"].as<std::string>("best_quality");
@@ -42,14 +42,14 @@ struct TestTfliteRunner {
 
   TestTfliteRunner& LoadDataFromBin(const std::string& dump,
                         std::vector<float>& output) {
-    std::string full_wav_path = kBase + "binary/" + dump;
-    loadBin(full_wav_path.c_str(), output);
+    std::string full_wav_path = data_root + "binary/" + dump;
+    LoadBin(full_wav_path.c_str(), output);
     return *this;
   }
   TestTfliteRunner& LoadDataFromBin(const std::string& dump,
                         std::valarray<float>& output) {
-    std::string full_wav_path = kBase + "binary/" + dump;
-    loadBin(full_wav_path.c_str(), output);
+    std::string full_wav_path = data_root + "binary/" + dump;
+    LoadBin(full_wav_path.c_str(), output);
     return *this;
   }
 };

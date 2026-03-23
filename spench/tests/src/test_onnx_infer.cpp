@@ -19,7 +19,7 @@ void CreateConstInputsWithGivenShapes(
   uint32_t i = 0;
   for (auto& shape : input_shapes) {
     auto length = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<int64_t>());
-    const auto kMemoryInfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
+    const auto memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
 
     auto type = (types == std::nullopt) ?
                   ONNXTensorElementDataType::ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT :
@@ -34,7 +34,7 @@ void CreateConstInputsWithGivenShapes(
     if (type == ONNXTensorElementDataType::ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT) {
       const_allocated_data.emplace_back(std::vector<float>(length, 1.0));
       tensors.emplace_back(Ort::Value::CreateTensor
-                                        (kMemoryInfo,
+                                        (memory_info,
                                           const_allocated_data.back().data(),
                                           const_allocated_data.back().size() * sizeof(float),
                                           shape_copy.data(),
@@ -43,7 +43,7 @@ void CreateConstInputsWithGivenShapes(
     } else {
       const_allocated_data.emplace_back(std::vector<float>(length, 0.0));
       tensors.emplace_back(Ort::Value::CreateTensor
-                                        (kMemoryInfo,
+                                        (memory_info,
                                           reinterpret_cast<int64_t*>(const_allocated_data.back().data()),
                                           const_allocated_data.back().size() * sizeof(int64_t),
                                           shape_copy.data(),
@@ -64,7 +64,7 @@ void FreeNames(Ort::AllocatorWithDefaultOptions& allocator,
 struct TestOnnx {
   std::unique_ptr<Ort::Session> denoiser;
 
-  const std::string kBase = "data/";
+  const std::string data_root = "data/";
 
   const std::size_t nattempts = 100;
 
@@ -82,7 +82,7 @@ struct TestOnnx {
   }
 
   TestOnnx& InitModel(const std::string& model_name) {
-    std::string full_model_path = kBase + "models/" + model_name;
+    std::string full_model_path = data_root + "models/" + model_name;
 
     denoiser = std::unique_ptr<Ort::Session>(new Ort::Session(session_env,
                                                               full_model_path.c_str(),
@@ -100,7 +100,7 @@ struct TestOnnx {
 struct TestOnnxRunner {
   std::unique_ptr<util::onnx::BaseOnnxRunner> spench_model_runner;
 
-  const std::string kBase = "data/";
+  const std::string data_root = "data/";
 
  public:
   uint16_t frame_size_ms = 16;
@@ -110,7 +110,7 @@ struct TestOnnxRunner {
   TestOnnxRunner& InitRunner(const std::string& yaml_config_name,
                              const std::string& password = "",
                              const std::string& checksum = "") {
-    std::string file_path = kBase + "config/" + yaml_config_name;
+    std::string file_path = data_root + "config/" + yaml_config_name;
     auto reader = spench::FileConfigReader(file_path);
     bool on_gpu = reader.params()["inference"]["gpu"].as<bool>(false);
     std::string model_type = reader.params()["inference"]["model_type"].as<std::string>("best_speed");
@@ -147,14 +147,14 @@ struct TestOnnxRunner {
 
   TestOnnxRunner& LoadDataFromBin(const std::string& dump,
                         std::vector<float>& output) {
-    std::string full_wav_path = kBase + "binary/" + dump;
-    loadBin(full_wav_path.c_str(), output);
+    std::string full_wav_path = data_root + "binary/" + dump;
+    LoadBin(full_wav_path.c_str(), output);
     return *this;
   }
   TestOnnxRunner& LoadDataFromBin(const std::string& dump,
                         std::valarray<float>& output) {
-    std::string full_wav_path = kBase + "binary/" + dump;
-    loadBin(full_wav_path.c_str(), output);
+    std::string full_wav_path = data_root + "binary/" + dump;
+    LoadBin(full_wav_path.c_str(), output);
     return *this;
   }
 };
