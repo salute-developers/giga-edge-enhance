@@ -21,7 +21,8 @@ class InferenceRunner {
   typedef enum class ModelType {
     DENOISER_BEST_QUALITY = 0,
     DENOISER_BEST_SPEED = 1,
-    DEREVERBERATOR_BASE = 2
+    DENOISER_BEST_SPEED_NEW = 2,
+    DEREVERBERATOR_BASE = 3
   } ModelTypeEnum;
   InferenceRunner() = delete;
   InferenceRunner& operator=(const InferenceRunner&) = delete;
@@ -55,6 +56,8 @@ class InferenceRunner {
       return ModelType::DENOISER_BEST_QUALITY;
     } else if (type == "best_speed") {
       return ModelType::DENOISER_BEST_SPEED;
+    } else if (type == "best_speed_new") {
+      return ModelType::DENOISER_BEST_SPEED_NEW;
     } else if (type == "remove_reverb") {
       return ModelType::DEREVERBERATOR_BASE;
     }

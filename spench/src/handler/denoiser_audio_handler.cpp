@@ -23,9 +23,15 @@ DenoiserAudioHandler::~DenoiserAudioHandler() = default;
 
 SpenchContext<float>* DenoiserAudioHandler::CreateContext(uint32_t input_sample_rate,
                                                           uint32_t output_sample_rate) {
-  auto ctx = (m_inference_runner_ptr->GetModelType() == InferenceRunner::ModelType::DENOISER_BEST_QUALITY) ?
-                                    dynamic_cast<SpenchContext<float>*>(new DenoiseContextQ<float>()):
-                                    dynamic_cast<SpenchContext<float>*>(new DenoiseContextF<float>());
+  SpenchContext<float>* ctx = nullptr;
+  if (m_inference_runner_ptr->GetModelType() == InferenceRunner::ModelType::DENOISER_BEST_QUALITY) {
+    ctx = dynamic_cast<SpenchContext<float>*>(new DenoiseContextQ<float>());
+  } else if (m_inference_runner_ptr->GetModelType() == InferenceRunner::ModelType::DENOISER_BEST_SPEED) {
+    ctx = dynamic_cast<SpenchContext<float>*>(new DenoiseContextF<float>());
+  } else {
+    ctx = dynamic_cast<SpenchContext<float>*>(new DenoiseContextSF<float>());
+  }
+
   if (input_sample_rate == 0) {
     input_sample_rate = dynamic_cast<spench::DenoiserConfig*>(m_config.get())->samplingFreq();
   }

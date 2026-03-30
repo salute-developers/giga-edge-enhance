@@ -247,6 +247,15 @@ struct DenoiseContextF: public SpenchContext<T> {
 };
 
 template <typename T>
+struct DenoiseContextSF: public SpenchContext<T> {
+  std::vector<T> fullband_hidden_state;
+  std::vector<T> fullband_cell_state;
+  std::vector<T> fb_conv1_buf;
+  std::vector<T> fb_conv3_buf;
+  std::vector<float> noisy_mag;
+};
+
+template <typename T>
 struct DereverbContext: public SpenchContext<T> {
   std::vector<T> noisy_spec;
   std::vector<T> prev_out;

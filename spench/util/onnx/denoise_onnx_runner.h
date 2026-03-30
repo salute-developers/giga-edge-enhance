@@ -171,5 +171,116 @@ class SpenchFOnnxRunner: public BaseOnnxRunner {
     BaseOnnxRunner::WarmUp<T>(inputs);
   }
 };
+
+class SpenchSFOnnxRunner : public BaseOnnxRunner {
+  void InitOutputTensors(spench::SpenchTaskData& data, uint32_t out_shape = 1);
+
+  template<typename T>
+  void ParseResults(std::vector<Ort::Value>& network_output, spench::SpenchTaskData& data) {
+    if (m_model_params.m_model_outputs.size() != network_output.size()) {
+      throw std::runtime_error("Model output error");
+    }
+    if (data.context == nullptr) {
+      throw std::runtime_error("Context is not allocated!");
+    }
+
+    spench::DenoiseContextSF<T>* context =
+        dynamic_cast<spench::DenoiseContextSF<T>*>(data.context);
+    if (!context) {
+      throw std::runtime_error("Invalid context type for SpenchSFOnnxRunner");
+    }
+
+    // fb_h
+    T* probabilities = network_output[0].GetTensorMutableData<T>();
+    context->fullband_hidden_state.assign(
+        probabilities,
+        probabilities + context->fullband_hidden_state.size());
+
+    // fb_c
+    probabilities = network_output[1].GetTensorMutableData<T>();
+    context->fullband_cell_state.assign(
+        probabilities,
+        probabilities + context->fullband_cell_state.size());
+
+    // fb_conv1_buf
+    probabilities = network_output[2].GetTensorMutableData<T>();
+    context->fb_conv1_buf.assign(
+        probabilities,
+        probabilities + context->fb_conv1_buf.size());
+
+    // fb_conv3_buf
+    probabilities = network_output[3].GetTensorMutableData<T>();
+    context->fb_conv3_buf.assign(
+        probabilities,
+        probabilities + context->fb_conv3_buf.size());
+
+    // complex mask output with dynamic time dimension
+    probabilities = network_output[4].GetTensorMutableData<T>();
+    auto info = network_output[4].GetTensorTypeAndShapeInfo();
+    auto shape = info.GetShape();
+
+    if (shape.empty() || shape.back() != 2) {
+      throw std::runtime_error(
+          "Invalid output shape: expected last dimension = 2 (complex)");
+    }
+
+    const size_t num_feats = static_cast<size_t>(shape.at(1));
+    const size_t total_elems = static_cast<size_t>(info.GetElementCount());
+
+    if (total_elems % 2 != 0) {
+      throw std::runtime_error(
+          "Invalid output buffer: element count is not divisible by 2");
+    }
+
+    const size_t complex_pairs = total_elems / 2;
+    if (complex_pairs % num_feats != 0) {
+      throw std::runtime_error(
+          "Invalid output buffer: complex pairs not divisible by num_feats");
+    }
+
+    const size_t num_frames = complex_pairs / num_feats;
+    UnpackComplexMask(probabilities, num_feats, num_frames, data.new_spectrogram);
+  }
+
+ public:
+  SpenchSFOnnxRunner() = delete;
+  virtual ~SpenchSFOnnxRunner() = default;
+  explicit SpenchSFOnnxRunner(const std::shared_ptr<spench::NetworkConfig> config,
+                              const std::string& password,
+                              const std::string& checksum,
+                              uint32_t inference_engine_threads = 1,
+                              bool on_gpu = false);
+
+  void PrepareInputInPlace(std::vector<float>& mag,
+                           std::vector<std::vector<float>*>& inputs,
+                           spench::SpenchContext<float>* denoise_context) override;
+
+  void Infer(spench::SpenchTask* denoise_task) override;
+
+  template<typename T>
+  void WarmUp() {
+    spench::SpenchTask dummy_task;
+    std::unique_ptr<spench::DenoiseContextSF<float>> ctx(new spench::DenoiseContextSF<float>());
+    dummy_task.m_data.context = ctx.get();
+
+    std::vector<std::vector<T>*> inputs;
+    InitOutputTensors(dummy_task.m_data);
+
+    std::vector<std::vector<int64_t>> resolved_input_shapes = m_model_input_shapes;
+    SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], 1);
+
+    uint64_t multi = static_cast<uint64_t>(std::abs(std::accumulate(
+        resolved_input_shapes[0].begin(),
+        resolved_input_shapes[0].end(),
+        int32_t{1},
+        std::multiplies<int32_t>())));
+
+    std::vector<T> dummy_mag(multi, static_cast<T>(1e-4));
+    PrepareInputInPlace(dummy_mag, inputs, dummy_task.m_data.context);
+
+    BaseOnnxRunner::WarmUp<T>(inputs);
+  }
+};
+
 }  // namespace onnx
 }  // namespace util

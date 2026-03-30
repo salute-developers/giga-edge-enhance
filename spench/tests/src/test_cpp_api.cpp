@@ -1237,6 +1237,243 @@ model:
 }
 
 #ifdef BUILD_ONNX_ENGINE
+TEST_CASE("SUCCEED Run inference with the super fast 8 kHz model with yaml string config [spench c++ api]") {
+    static constexpr char yaml[] = R"(
+model:
+  model_path: data/models/fast_quant_model_8khz.onnx
+  model_inputs: ["noisy_mag_in", "prev_fb_h_in", "prev_fb_c_in", "prev_fb_conv1_buf_in", "prev_fb_conv3_buf_in"]
+  model_outputs: ["cur_fb_h_out", "cur_fb_c_out", "cur_fb_conv1_buf_out", "cur_fb_conv3_buf_out", "predicted_mask_out"]
+
+feature_params:
+  # sampling rate
+  sampling_freq: 8000
+
+inference:
+  gpu: false
+  engine_num_threads: 1
+  model_type: best_speed_new)";
+
+  auto test_data = std::move(TestFixture().
+                              InitDenoiser(std::string(yaml)).
+                              SetWav("rec_noise_002_8k.wav"));
+
+  const uint32_t kChunk_size = 16;
+  const uint32_t kChunk_stride = 16;
+  const uint32_t kChunks_to_compare = 300;
+  const uint32_t kAudio_src_sample_rate = 8000;
+  const uint32_t kAudio_dst_sample_rate = 8000;
+  const uint32_t kTotal_size = kChunk_size * kChunks_to_compare
+                                           * kAudio_dst_sample_rate / 1000;
+  SpenchRetCode ret_code;
+  std::vector<float> prediction;
+  std::vector<float> reference;
+  spench::SpenchContext<float>* ctx =
+                          test_data.denoiser->CreateContext(kAudio_src_sample_rate,
+                                                              kAudio_dst_sample_rate);
+
+  auto chunks = chunkWav<float>(test_data.wav_data,
+                                kAudio_src_sample_rate,
+                                kChunk_size, kChunk_stride);
+  loadWavFx("data/results/wavs/rec_denoised_fast_002_8kHz_quant_8kHz.wav", reference);
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
+    if (ret_code >= SpenchRetCode::SUCCESS) {
+      prediction.insert(prediction.end(), ret.begin(), ret.end());
+    }
+  }
+  // remove context zeroes as reference does not include that
+  prediction.erase(prediction.begin(),
+                   prediction.begin() + kAudio_dst_sample_rate * kChunk_size / 1000);
+  //
+  std::vector<float> ret;
+  ret_code = test_data.denoiser->GetFinalChunk(ret, ctx);
+
+  CHECK(ret_code == SpenchRetCode::SUCCESS);
+  REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
+
+  prediction.insert(prediction.end(), ret.begin(), ret.end());
+
+  reference.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
+  prediction.resize(std::min(kTotal_size, static_cast<uint32_t>(prediction.size())));
+
+  IsVectorsClose(reference, prediction, 0.008);
+  test_data.denoiser->DestroyContext(&ctx);
+}
+
+TEST_CASE("SUCCEED Run inference with the super fast 8 kHz on a part of .wav with double chunks [spench c++ api]") {
+  static constexpr char yaml[] = R"(
+model:
+  model_path: data/models/fast_quant_model_8khz.onnx
+  model_inputs: ["noisy_mag_in", "prev_fb_h_in", "prev_fb_c_in", "prev_fb_conv1_buf_in", "prev_fb_conv3_buf_in"]
+  model_outputs: ["cur_fb_h_out", "cur_fb_c_out", "cur_fb_conv1_buf_out", "cur_fb_conv3_buf_out", "predicted_mask_out"]
+
+feature_params:
+  # sampling rate
+  sampling_freq: 8000
+
+inference:
+  gpu: false
+  engine_num_threads: 1
+  model_type: best_speed_new)";
+
+  auto test_data = std::move(TestFixture().
+                              InitDenoiser(std::string(yaml)).
+                              SetWav("rec_noise_002_8k.wav"));
+
+  std::vector<float> prediction;
+  std::vector<float> reference;
+  spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext();
+
+  const uint32_t kChunk_size = 32;
+  const uint32_t kChunk_stride = kChunk_size;
+  const uint32_t kChunks_to_compare = 150;
+  auto chunks = chunkWav<float>(test_data.wav_data,
+                                test_data.denoiser->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
+  loadWavFx("data/results/wavs/rec_denoised_fast_002_8kHz_quant_8kHz.wav", reference);
+
+  chunks.resize(kChunks_to_compare);
+
+  for (uint32_t i = 0; i < chunks.size(); ++i) {
+    auto& chunk = chunks[i];
+    std::vector<float> ret;
+    test_data.denoiser->ProcessChunk(chunk, ret, ctx);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+  test_data.denoiser->DestroyContext(&ctx);
+  reference.resize(prediction.size());
+  IsVectorsClose(reference, prediction, 0.008);
+}
+
+TEST_CASE("SUCCEED Run inference with the super fast 8 kHz with chunks of various size [spench c++ api]") {
+  static constexpr char yaml[] = R"(
+model:
+  model_path: data/models/fast_quant_model_8khz.onnx
+  model_inputs: ["noisy_mag_in", "prev_fb_h_in", "prev_fb_c_in", "prev_fb_conv1_buf_in", "prev_fb_conv3_buf_in"]
+  model_outputs: ["cur_fb_h_out", "cur_fb_c_out", "cur_fb_conv1_buf_out", "cur_fb_conv3_buf_out", "predicted_mask_out"]
+
+feature_params:
+  # sampling rate
+  sampling_freq: 8000
+
+inference:
+  gpu: false
+  engine_num_threads: 1
+  model_type: best_speed_new)";
+
+  auto test_data = std::move(TestFixture().
+                              InitDenoiser(std::string(yaml)).
+                              SetWav("rec_noise_002_8k.wav"));
+
+  std::vector<float> prediction;
+  std::vector<float> reference;
+
+  spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext();
+
+  const uint32_t kChunk_size = 16;          // ms
+  const uint32_t kChunk_stride = kChunk_size;
+  const uint32_t kChunks_to_compare = 300;
+
+  auto chunks = chunkWav<float>(test_data.wav_data,
+                                test_data.denoiser->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
+  chunks.resize(kChunks_to_compare);
+
+  loadWavFx("data/results/wavs/rec_denoised_fast_002_8kHz_quant_8kHz.wav", reference);
+
+  // 20*8 + 20*4 + 10*3 + 15*2 = 160 + 80 + 30 + 30 = 300
+  const std::array<uint32_t, 65> kMergeFactors = [] {
+    std::array<uint32_t, 65> a{};
+    std::size_t idx = 0;
+
+    for (uint32_t i = 0; i < 20; ++i) a[idx++] = 8;
+    for (uint32_t i = 0; i < 20; ++i) a[idx++] = 4;
+    for (uint32_t i = 0; i < 10; ++i) a[idx++] = 3;
+    for (uint32_t i = 0; i < 15; ++i) a[idx++] = 2;
+
+    return a;
+  }();
+
+  std::size_t chunk_pos = 0;
+  for (uint32_t factor : kMergeFactors) {
+    auto merged_chunk = mergeChunks(chunks, chunk_pos, factor);
+    chunk_pos += factor;
+
+    std::vector<float> ret;
+    test_data.denoiser->ProcessChunk(merged_chunk, ret, ctx);
+    prediction.insert(prediction.end(), ret.begin(), ret.end());
+  }
+
+  test_data.denoiser->DestroyContext(&ctx);
+
+  reference.resize(prediction.size());
+  // ToDo (artsokol) why is presicion worse
+  IsVectorsClose(reference, prediction, 0.01);
+}
+
+TEST_CASE("SUCCEED Run inference with the super fast 8 kHz on huge single chunk (16000 frames) [spench c++ api]") {
+  static constexpr char yaml[] = R"(
+model:
+  model_path: data/models/fast_quant_model_8khz.onnx
+  model_inputs: ["noisy_mag_in", "prev_fb_h_in", "prev_fb_c_in", "prev_fb_conv1_buf_in", "prev_fb_conv3_buf_in"]
+  model_outputs: ["cur_fb_h_out", "cur_fb_c_out", "cur_fb_conv1_buf_out", "cur_fb_conv3_buf_out", "predicted_mask_out"]
+
+feature_params:
+  # sampling rate
+  sampling_freq: 8000
+
+inference:
+  gpu: false
+  engine_num_threads: 1
+  model_type: best_speed_new)";
+
+  auto test_data = std::move(TestFixture().
+                              InitDenoiser(std::string(yaml)).
+                              SetWav("rec_noise_002_8k.wav"));
+
+  spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext();
+
+  const uint32_t kChunk_size = 16;                 // ms
+  const uint32_t kChunk_stride = kChunk_size;
+  const std::size_t kTargetChunks = 16000;
+
+  auto chunks = chunkWav<float>(test_data.wav_data,
+                                test_data.denoiser->GetModelSampleRate(),
+                                kChunk_size, kChunk_stride);
+
+  REQUIRE_FALSE(chunks.empty());
+
+  const std::size_t base_chunks = chunks.size();
+  const std::size_t repeats = (kTargetChunks + base_chunks - 1) / base_chunks;
+
+  const std::size_t samples_per_chunk = chunks.front().size();
+
+  std::vector<float> huge_input;
+  huge_input.reserve(kTargetChunks * samples_per_chunk);
+
+  std::size_t filled = 0;
+  for (std::size_t r = 0; r < repeats && filled < kTargetChunks; ++r) {
+    for (const auto& ch : chunks) {
+      huge_input.insert(huge_input.end(), ch.begin(), ch.end());
+      if (++filled == kTargetChunks) break;
+    }
+  }
+
+  REQUIRE(filled == kTargetChunks);
+  REQUIRE(huge_input.size() == kTargetChunks * samples_per_chunk);
+
+  std::vector<float> ret;
+  REQUIRE_NOTHROW(test_data.denoiser->ProcessChunk(huge_input, ret, ctx));
+
+  REQUIRE_FALSE(ret.empty());
+
+  test_data.denoiser->DestroyContext(&ctx);
+}
+
 TEST_CASE("SUCCEED Run inference with the packed fast 24 kHz denoiser model [spench c++ api]") {
   auto bundle = std::make_shared<spench::PackedModelReader>(read_file("data/models/packed_fast_model.spench"));
   auto test_data = std::move(TestFixture().
