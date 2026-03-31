@@ -173,13 +173,15 @@ TEST_CASE("SUCCEED Create RangeControl and check process method [sound]") {
 }
 
 #ifndef BUILD_WITHOUT_SOXR
-TEST_CASE("FAIL Create resampler with equal sample rates [sound]") {
+TEST_CASE("SUCCEED Resampler identity when sample rates match [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().
                                     Init(16, 16, 48000, 48000));
 
-  CHECK_THROWS_WITH(util::sound::Resampler(voice_utils.src_sample_rate,
-                                                voice_utils.dst_sample_rate, 1),
-                    "BuildResampler: in_rate equals out_rate.");
+  util::sound::Resampler r(voice_utils.src_sample_rate, voice_utils.dst_sample_rate, 1);
+  const std::vector<float> in{0.1f, -0.2f, 0.3f};
+  REQUIRE(r.process(in) == in);
+  REQUIRE(r.flush().empty());
+  REQUIRE(r.accumulated_delay_ms() == 0.f);
 }
 
 TEST_CASE("SUCCEED Run offline audio downsampling 48kHz -> 24kHz [sound]") {

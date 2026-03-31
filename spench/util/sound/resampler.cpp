@@ -9,6 +9,8 @@
 #include <stdexcept>
 #include <string>
 
+#include <spdlog/spdlog.h>
+
 namespace util {
 namespace sound {
 
@@ -17,9 +19,15 @@ namespace sound {
 class ResamplerImpl {
  public:
   ResamplerImpl(size_t in_rate, size_t out_rate, size_t channels) : m_in_rate{in_rate}, m_out_rate{out_rate} {
+    // Same rate: pass-through (SoundStream always owns a Resampler; soxr is unnecessary).
     if (in_rate == out_rate) {
-      throw std::runtime_error("BuildResampler: in_rate equals out_rate.");
+      m_pass_through = true;
+      spdlog::info("Resampler pass-through: input rate equals output rate ({} Hz); soxr not constructed "
+                    "({} channel(s))",
+                    in_rate, channels);
+      return;
     }
+
     soxr_error_t err;
 
     // Enable VR (variable-rate) only if 44100 Hz is involved (either side).
@@ -41,6 +49,9 @@ class ResamplerImpl {
   }
 
   bool set_io_ratio(double io_ratio) {
+    if (m_pass_through) {
+      return true;
+    }
     if (!m_rsmp) {
       return false;
     }
@@ -49,6 +60,9 @@ class ResamplerImpl {
   }
 
   std::vector<float> process(const std::vector<float>& v) {
+    if (m_pass_through) {
+      return v;
+    }
     if (!m_rsmp) {
       throw std::runtime_error("ResampleVec: resampler is null!");
     }
@@ -81,6 +95,9 @@ class ResamplerImpl {
   }
 
   std::vector<float> flush() {
+    if (m_pass_through) {
+      return {};
+    }
     if (!m_rsmp) {
       throw std::runtime_error("ResampleVec: resampler is null!");
     }
@@ -100,6 +117,9 @@ class ResamplerImpl {
   }
 
   float accumulated_delay_ms() const noexcept {
+    if (m_pass_through) {
+      return 0;
+    }
     double ms = 0;
     if (m_in_rate != m_out_rate) {
       const double d = soxr_delay(m_rsmp.get());  // in output samples
@@ -111,6 +131,7 @@ class ResamplerImpl {
   }
 
  private:
+  bool m_pass_through{false};
   std::shared_ptr<soxr> m_rsmp;
   size_t m_in_rate{1};
   size_t m_out_rate{1};
