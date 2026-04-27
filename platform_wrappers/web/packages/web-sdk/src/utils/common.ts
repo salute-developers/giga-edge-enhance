@@ -76,6 +76,9 @@ export type Features<M extends ModelsTmpl> = MainFeatures<M> & DspFeatures;
  *                                          the audio thread.
  * @property useVadNormalization           Use Voice Activity Detection feature for
  *                                          the normalization feature.
+ * @property unstable_reverseProcessingOrder
+ *                                      (Experimental) Reverse processing order of ML
+ *                                          and DSP features.
  * @property unstable_customNormalizationConfig
  *                                      (Experimental) Custom configuration string for
  *                                      the normalization feature.
@@ -93,6 +96,7 @@ export type Settings = {
     forceSharedMemory: boolean;
     dspOnAudioThread: boolean;
     useVadNormalization: boolean;
+    unstable_reverseProcessingOrder: boolean;
     unstable_customNormalizationConfig?: string;
     unstable_customAECConfig?: string;
 };
@@ -102,6 +106,7 @@ export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Setti
         ...settings,
         dspOnAudioThread: Boolean(settings.dspOnAudioThread),
         useVadNormalization: Boolean(settings.useVadNormalization),
+        unstable_reverseProcessingOrder: Boolean(settings.unstable_reverseProcessingOrder),
         fetchRetries: typeof settings.fetchRetries === 'number' ? settings.fetchRetries : DEFAULT_FETCH_RETRIES,
         lowPerformanceMaxRefillTimeFactor:
             typeof settings.lowPerformanceMaxRefillTimeFactor === 'number'

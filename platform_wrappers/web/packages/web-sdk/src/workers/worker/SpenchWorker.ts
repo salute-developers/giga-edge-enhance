@@ -243,9 +243,9 @@ export class SpenchWorker {
 
         const startTime = performance.now();
 
-        if (this.dspFeaturesEnabled) {
+        if (!shared.settings?.unstable_reverseProcessingOrder && this.dspFeaturesEnabled) {
             assert(this.dspInstance, 'DSP instance must exist before processing');
-            output = this.dspInstance.process(input, loopback);
+            output = this.dspInstance.process(output, loopback);
 
             if (!output.length) {
                 return;
@@ -255,6 +255,15 @@ export class SpenchWorker {
         if (this.mainFeaturesEnabled) {
             assert(this.instance, 'Spench instance must exist before processing');
             output = this.instance.process(output);
+
+            if (!output.length) {
+                return;
+            }
+        }
+
+        if (shared.settings?.unstable_reverseProcessingOrder && this.dspFeaturesEnabled) {
+            assert(this.dspInstance, 'DSP instance must exist before processing');
+            output = this.dspInstance.process(output, loopback);
 
             if (!output.length) {
                 return;
