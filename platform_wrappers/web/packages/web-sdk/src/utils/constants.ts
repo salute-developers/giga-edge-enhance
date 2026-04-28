@@ -63,7 +63,8 @@ ${
     !settings.useVadNormalization
         ? ''
         : `
-    use_vad: true`
+    use_vad: true
+    target_level_db: -18.0`
 }
   dynamic_range_compressor_ctrl:
     sample_rate: ${sampleRate}
