@@ -101,7 +101,7 @@ class NetworkConfig : public PipelineConfig {
  protected:
   NetworkConfig(std::shared_ptr<spench::PackedModelReader> bundle,
                 std::string default_config)
-      : PipelineConfig(StringConfigReader(bundle->getConfig()),
+      : PipelineConfig(StringConfigReader(bundle->config()),
                        std::move(default_config)),
         bundle_(std::move(bundle)) {}
 

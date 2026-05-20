@@ -342,7 +342,7 @@ const std::vector<uint8_t>& NetworkConfig::getModel() const {
   if (!isModelBundled() || bundle_ == nullptr) {
     throw std::runtime_error("the model is not bundled or not present");
   }
-  return bundle_->getModel();
+  return bundle_->model();
 }
 
 // -----------------------------------------------------------------------------
