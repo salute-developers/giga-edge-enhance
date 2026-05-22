@@ -121,6 +121,7 @@ sound_processing:
     bypass_time: 0.1
     max_gain_db: 30
     use_vad: false
+    post_processing: true
   limiter_ctrl:
     sample_rate: 48000
     threshold: -3.0

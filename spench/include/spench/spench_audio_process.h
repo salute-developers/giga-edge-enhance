@@ -122,14 +122,16 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
    *  \param: An target peak value (db).
    *  \param: A value of the time in sec bypassed for Loudness controll configuring
    *  \param: A max output signal value (db). 0db means that range control do not provide control effect.
-   *  \param: If LC should use VAD for voice detection this option shpuld be enabled. Provide more accurate work,
-   *          but has a small impact on CPU consumption
+   *  \param use_vad: If true, LC uses VAD for voice detection (more accurate, slightly higher CPU use).
+   *          Default is false (VAD off).
+   *  \param post_processing: If true, enables the compressor/limiter chain after loudness
+   *          normalization. If false (default), only gain-based loudness control is applied (no post chain).
    *  \return: SpenchAudioProcess object reference.
    *  \ingroup group_cpp
    */
 
   SpenchAudioProcess& AddLC(uint32_t audio_sample_rate, float target_level_db = -23, float bypass_time = 3,
-                            float max_gain_db = 40, bool use_vad = false);
+                            float max_gain_db = 40, bool use_vad = false, bool post_processing = false);
 
   /**
    *  \brief: Create and Add Loudness Control object to Audio Process with default parameters

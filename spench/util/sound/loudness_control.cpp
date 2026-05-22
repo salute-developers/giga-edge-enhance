@@ -68,12 +68,18 @@ class LoudnessStat {
 
 class LoudnessControlImpl : public ILoudnessControl {
  public:
-  explicit LoudnessControlImpl(uint32_t sample_rate, float target_level = -23.0f, float bypass_time = 3.0f,
-                               float max_gain = 40.0f)
+  explicit LoudnessControlImpl(uint32_t sample_rate, float target_level = -23.0f, bool postprocess = false,
+                               float bypass_time = 3.0f, float max_gain = 40.0f)
       : m_target_db{target_level}, m_max_gain_db{max_gain} {
     m_mtr = std::make_shared<LoudnessMeter>(sample_rate);
     m_stat = std::make_shared<LoudnessStat>();
     m_bypass_counter = static_cast<int64_t>(bypass_time * static_cast<float>(sample_rate));
+
+    // dynamic post-processing
+    if (postprocess) {
+      m_comp = std::make_shared<dsplib::Compressor>(sample_rate, target_level + COMP_OFFSET, COMP_RATIO, COMP_KNEE);
+      m_limit = std::make_shared<dsplib::Limiter>(sample_rate, LIMITER_THRESHOLD);
+    }
   }
 
 
@@ -101,6 +107,18 @@ class LoudnessControlImpl : public ILoudnessControl {
     }
 
     out *= m_gain;
+
+    // apply compressor
+    // TODO(vayulis): add makeup gain
+    if (m_comp) {
+      out = m_comp->process(out).out;
+    }
+
+    // apply limiter
+    if (m_limit) {
+      out = m_limit->process(out).out;
+    }
+
     return out.to_vec();
   }
 
@@ -125,6 +143,9 @@ class LoudnessControlImpl : public ILoudnessControl {
   const float m_max_gain_db;
   float m_gain_db{0.0f};
   float m_gain{1.0f};
+
+  std::shared_ptr<dsplib::Compressor> m_comp;
+  std::shared_ptr<dsplib::Limiter> m_limit;
 
   std::optional<float> m_last_short_term;  // cached from meter
 };
@@ -344,7 +365,8 @@ class LoudnessControlImpl : public ILoudnessControl {
 std::unique_ptr<ILoudnessControl> LoudnessControlBuilder::create() {
   if (m_method == ILoudnessControl::SIMPLE) {
     return std::make_unique<legacy::LoudnessControlImpl>(m_sample_rate.value(), m_target_level_db.value(),
-                                                         m_bypass_time.value(), m_max_gain_db.value());
+                                                         m_postprocessing.value(), m_bypass_time.value(),
+                                                         m_max_gain_db.value());
   }
   if (m_method == ILoudnessControl::VADBASE) {
     return std::make_unique<LoudnessControlImpl>(m_sample_rate.value(), m_target_level_db.value(),

@@ -346,7 +346,8 @@ SpenchRetCode SpenchAudioProcessAddLcWithParam(SpenchAudioProcess model,
                                                float              target_level_db,
                                                float              bypass_time,
                                                float              max_gain_db,
-                                               uint32_t           use_vad) {
+                                               uint32_t           use_vad,
+                                               uint32_t           post_processing) {
   if (model == nullptr) {
     return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
@@ -354,7 +355,8 @@ SpenchRetCode SpenchAudioProcessAddLcWithParam(SpenchAudioProcess model,
                                                          target_level_db,
                                                          bypass_time,
                                                          max_gain_db,
-                                                         use_vad > 0 ? true : false);
+                                                         use_vad > 0 ? true : false,
+                                                         post_processing > 0);
   return SpenchRetCode::SUCCESS;
 }
 

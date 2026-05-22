@@ -299,12 +299,16 @@ SPENCH_API SpenchRetCode SpenchAudioProcessAddLc(SpenchAudioProcess model);
  * \param use_vad           If LC should use VAD for voice detection this option shpuld be enabled (1).
  *                          Provide more accurate work, but has a small impact on CPU consumption.
  *                          By default VAD is deactivated (0)
+ * \param post_processing   When non-zero, enable compressor/limiter after normalization (1 = on). When zero,
+ *                          disable (0 = off). Default product behavior is off; pass 0 only if you need
+ *                          gain-only loudness control.
  * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
  * \ingroup group_c
  */
 SPENCH_API SpenchRetCode SpenchAudioProcessAddLcWithParam(SpenchAudioProcess model, u_int32_t audio_sample_rate,
                                                           float target_level_db, float bypass_time,
-                                                          float max_gain_db, u_int32_t use_vad);
+                                                          float max_gain_db, u_int32_t use_vad,
+                                                          u_int32_t post_processing);
 
 /* --------------------------- Newly Added Functions ------------------------ */
 

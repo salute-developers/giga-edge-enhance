@@ -127,16 +127,20 @@ typedef struct LoudnessParameters : public Parameters {
                  float tgt,
                  float b_time,
                  float max,
-                 bool vad) : sample_rate(sr),
+                 bool vad,
+                 bool post = false) : sample_rate(sr),
                               target_level_db(tgt),
                               bypass_time(b_time),
                               max_gain_db(max),
-                              use_vad(vad) {}
+                              use_vad(vad),
+                              post_processing(post) {}
   uint32_t sample_rate = 48000;
   float target_level_db = -15;
   float bypass_time = 1.0;
   float max_gain_db = 30;
   bool use_vad = false;
+  /// When true, run compressor and limiter after the loudness normalization stage (both SIMPLE and VAD modes).
+  bool post_processing = false;
 } LoudnessParametersStruct;
 
 class AudioProcItem {

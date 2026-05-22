@@ -866,7 +866,7 @@ TEST_CASE("SUCCEED Create and run audio processing with Limiter specific paramet
 
 TEST_CASE("SUCCEED Create and run LoudnessControl with default parameters [audio processing handler]") {
   auto env = std::move(TestAudioProcessing().InitAudioProcessing());
-  env.getAudioProc().addLC({48000, -15, 30, 3, false});
+  env.getAudioProc().addLC({48000, -15, 30, 3, false, false});
 
   constexpr int32_t fs = 48000;
   constexpr int32_t chunk_ms = 16;
@@ -1024,9 +1024,11 @@ sound_processing:
     release_time: 0.2
   loudness_ctrl:
     sample_rate: 48000
-    target_level_db: -3.0
+    target_level_db: -15.0
     bypass_time: 0.2
     max_gain_db: 20
+    use_vad: false
+    post_processing: true
   limiter_ctrl:
     sample_rate: 24000
     threshold: -2.0
@@ -1034,10 +1036,8 @@ sound_processing:
     attack_time: 0.1
     release_time: 0.2
 )";
-  // Construct from YAML string
-  auto env = std::move(TestAudioProcessing().
-                       InitAudioProcessing(std::string(change)).
-                       SetWav("test1_48_noised.wav"));
+  // Construct from YAML string (no need to load a wav — this test only checks init + add*).
+  auto env = std::move(TestAudioProcessing().InitAudioProcessing(std::string(change)));
 
   // Build a small chain reading params from YAML
   REQUIRE_NOTHROW(env.getAudioProc().addRC());

@@ -405,10 +405,13 @@ void AudioProcessorConfigYamlBlock::validateSection(
     }
 
     if (f.kind == Kind::kScalar) {
-      if (!n.IsScalar()) {
-        spdlog::critical("Config reading error. {} is not a scalar!", fq);
+      // Treat as scalar: numbers, bools, strings. Some yaml-cpp versions report bool/float as
+      // !IsScalar() while they are still single leaf values — reject only structured types.
+      if (n.IsMap() || n.IsSequence()) {
+        spdlog::critical("Config reading error. {} is not a scalar (expected leaf value, got map/sequence)",
+                         fq);
         throw std::runtime_error("Config reading error. " + fq +
-                                 " is not a scalar!");
+                                 " is not a scalar (expected leaf value, got map/sequence)!");
       }
     } else if (f.kind == Kind::kSequence) {
       if (!n.IsSequence()) {
@@ -477,7 +480,8 @@ void AudioProcessorConfig::validate() const {
        {"target_level_db", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
        {"bypass_time", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
        {"max_gain_db", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
-       {"use_vad", AudioProcessorConfigYamlBlock::Kind::kScalar, true}});
+       {"use_vad", AudioProcessorConfigYamlBlock::Kind::kScalar, true},
+       {"post_processing", AudioProcessorConfigYamlBlock::Kind::kScalar, false}});
 
   AudioProcessorConfigYamlBlock::validateSection(
       sp["limiter_ctrl"], "sound_processing.limiter_ctrl",

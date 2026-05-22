@@ -193,6 +193,7 @@ TEST_CASE("SUCCEED SIMPLE bypass keeps gain = 1 for first samples [Loudness cont
                 .set_sample_rate(sample_rate)
                 .set_target_level(target_lufs)
                 .set_max_gain(max_gain_db)
+                .set_post_processing(false)
                 .set_bypass_time(bypass_time_sec)
                 .create();
   REQUIRE(lc != nullptr);
@@ -228,6 +229,7 @@ TEST_CASE("SUCCEED SIMPLE max_gain clamps commanded gain [Loudness control]") {
                 .set_sample_rate(sample_rate)
                 .set_target_level(target_lufs)
                 .set_max_gain(max_gain_db)
+                .set_post_processing(false)
                 .set_bypass_time(0.0f)
                 .create();
   REQUIRE(lc != nullptr);

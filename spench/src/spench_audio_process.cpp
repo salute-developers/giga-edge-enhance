@@ -156,8 +156,10 @@ SpenchAudioProcess& SpenchAudioProcess::AddLC(uint32_t audio_sample_rate,
                                               float target_level_db,
                                               float bypass_time,
                                               float max_gain_db,
-                                              bool vad) {
-  m_dsp->addLC({audio_sample_rate, target_level_db, bypass_time, max_gain_db, vad});
+                                              bool vad,
+                                              bool post_processing) {
+  m_dsp->addLC(
+      {audio_sample_rate, target_level_db, bypass_time, max_gain_db, vad, post_processing});
   return *this;
 }
 

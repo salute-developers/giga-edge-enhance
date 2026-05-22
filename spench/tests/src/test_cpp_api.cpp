@@ -1807,7 +1807,7 @@ TEST_CASE("SUCCEED Run AudioProcessing LC with parameters passed via constructor
   const     int32_t target_db = -23;
   const     int32_t max_gain_db = 40;
 
-  test_data.dsp->AddLC(fs, target_db, bypass_time, max_gain_db);
+  test_data.dsp->AddLC(fs, target_db, bypass_time, max_gain_db, false, false);
 
   const auto tt = dsplib::arange(num_samples) / fs;
   const auto in = 0.5 * sin(2 * dsplib::pi * 440.0 * tt);
@@ -1854,8 +1854,9 @@ TEST_CASE("SUCCEED LC with VAD prevents clipping on loud input [spench c++ api]"
   const int32_t target_db = -15;
   const int32_t max_gain_db = 30;
   const bool use_vad = true;
+  const bool use_postprocessing = true;
 
-  test_data.dsp->AddLC(fs, target_db, bypass_time, max_gain_db, use_vad);
+  test_data.dsp->AddLC(fs, target_db, bypass_time, max_gain_db, use_vad, use_postprocessing);
 
   // Very loud input intended to trigger limiter (if enabled in this high-level path).
   const auto in = Tone(fs, num_samples, 220.0f, 2.0f);

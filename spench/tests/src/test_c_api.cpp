@@ -2141,7 +2141,7 @@ auto test_data = std::move(TestCAPI().
   const     int32_t max_gain_db = 40;
   const     uint32_t use_vad = false;
 
-  SpenchAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db, use_vad);
+  SpenchAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db, use_vad, 0);
 
   const auto tt = dsplib::arange(num_samples) / fs;
   const auto in = 0.5 * sin(2 * dsplib::pi * 440.0 * tt);
@@ -2211,7 +2211,10 @@ TEST_CASE("SUCCEED VAD LC does not normalize pure noise to target [spench c api]
   const float max_gain_db = 30.0f;
   const uint32_t use_vad = 1;
 
-  ret_code = SpenchAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db, use_vad);
+  ret_code = SpenchAudioProcessAddLcWithParam(test_data.audio_proc, fs,
+                                              target_db, bypass_time,
+                                              max_gain_db, use_vad,
+                                              100);
   REQUIRE(ret_code == SpenchRetCode::SUCCESS);
 
   // Pure noise for the whole duration.
@@ -2280,7 +2283,10 @@ TEST_CASE("SUCCEED VAD LC reaches target for speech under different input gains 
     REQUIRE(ret_code == SpenchRetCode::SUCCESS);
     REQUIRE(test_data.audio_proc != nullptr);
 
-    ret_code = SpenchAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db, use_vad);
+    ret_code = SpenchAudioProcessAddLcWithParam(test_data.audio_proc, fs,
+                                                target_db, bypass_time,
+                                                max_gain_db, use_vad,
+                                                gdb * 100);
     REQUIRE(ret_code == SpenchRetCode::SUCCESS);
 
     const auto in = base * dsplib::db2mag(gdb);

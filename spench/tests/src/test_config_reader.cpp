@@ -571,6 +571,7 @@ TEST_CASE("SUCCESS AudioProcessorConfig generic getter returns defaults [audio p
   REQUIRE(cfg->get<float>("loudness_ctrl", "target_level_db") == Approx(-15.0f));
   REQUIRE(cfg->get<float>("loudness_ctrl", "bypass_time") == Approx(0.1f));
   REQUIRE(cfg->get<float>("loudness_ctrl", "max_gain_db") == Approx(30.0f));
+  REQUIRE(cfg->get<bool>("loudness_ctrl", "post_processing") == true);
 
   REQUIRE(cfg->get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
   REQUIRE(cfg->get<float>("limiter_ctrl", "threshold") == Approx(-3.0f));
@@ -596,6 +597,21 @@ sound_processing:
   REQUIRE(cfg->get<float>("limiter_ctrl", "threshold") == Approx(-1.5f));
   REQUIRE(cfg->get<uint32_t>("loudness_ctrl", "sample_rate") == 48000u);
   REQUIRE(cfg->get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
+  REQUIRE(cfg->get<bool>("loudness_ctrl", "post_processing") == true);
+}
+
+TEST_CASE("SUCCESS AudioProcessorConfig loudness_ctrl post_processing can be set false [audio processing reader]") {
+  const std::string override_yaml = R"(
+sound_processing:
+  loudness_ctrl:
+    post_processing: false
+)";
+
+  auto base = spench::StringConfigReader(override_yaml);
+  std::unique_ptr<spench::AudioProcessorConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<spench::AudioProcessorConfig>(base));
+
+  REQUIRE(cfg->get<bool>("loudness_ctrl", "post_processing") == false);
 }
 
 TEST_CASE("SUCCESS AudioProcessorConfig getters return defaults [audio processing reader]") {
@@ -632,6 +648,7 @@ TEST_CASE("SUCCESS AudioProcessorConfig getters return defaults [audio processin
   REQUIRE(cfg->get<float>("loudness_ctrl", "target_level_db") == Approx(-15.0f));
   REQUIRE(cfg->get<float>("loudness_ctrl", "bypass_time") == Approx(0.1f));
   REQUIRE(cfg->get<float>("loudness_ctrl", "max_gain_db") == Approx(30.0f));
+  REQUIRE(cfg->get<bool>("loudness_ctrl", "post_processing") == true);
 
   REQUIRE(cfg->get<uint32_t>("limiter_ctrl", "sample_rate") == 48000u);
   REQUIRE(cfg->get<float>("limiter_ctrl", "threshold") == Approx(-3.0f));
