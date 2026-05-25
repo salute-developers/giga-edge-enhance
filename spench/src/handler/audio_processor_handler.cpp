@@ -108,8 +108,8 @@ void AudioProcLC::SetParameters(const ParametersStruct* params) {
   m_lc = util::sound::LoudnessControlBuilder()
               .set_sample_rate(m_sr)
               .set_method(p->use_vad ?
-                          util::sound::ILoudnessControl::VADBASE :
-                          util::sound::ILoudnessControl::SIMPLE)
+                          util::sound::ILoudnessControl::vadbase :
+                          util::sound::ILoudnessControl::simple)
               .set_max_gain(p->max_gain_db)
               .set_target_level(p->target_level_db)
               .set_post_processing(p->post_processing)

@@ -36,56 +36,56 @@ class StatCollector {
 
   explicit StatCollector(std::string name, uint32_t sample_rate,
                          double window_seconds, Options opts = Options::All())
-      : m_name(std::move(name)), m_sr(sample_rate), m_win_sec(window_seconds), m_opt(opts) {
-    if (m_win_sec <= 0.0) { m_win_sec = 1.0; }
-    if (m_sr == 0) { m_sr = 1; }
-    m_win_samples = to_samples(m_win_sec, m_sr);
-    if (m_win_samples == 0) { m_win_samples = 1; }
+      : name_(std::move(name)), sr_(sample_rate), win_sec_(window_seconds), opt_(opts) {
+    if (win_sec_ <= 0.0) { win_sec_ = 1.0; }
+    if (sr_ == 0) { sr_ = 1; }
+    win_samples_ = to_samples(win_sec_, sr_);
+    if (win_samples_ == 0) { win_samples_ = 1; }
   }
 
   std::optional<Stat> update(float value, size_t samples_in_value) noexcept {
-    if (m_opt.need_min)  { m_min = m_min ? std::min(*m_min, value) : value; }
-    if (m_opt.need_max)  { m_max = m_max ? std::max(*m_max, value) : value; }
-    if (m_opt.need_mean) { m_sum += value; ++m_count; }
+    if (opt_.need_min)  { min_ = min_ ? std::min(*min_, value) : value; }
+    if (opt_.need_max)  { max_ = max_ ? std::max(*max_, value) : value; }
+    if (opt_.need_mean) { sum_ += value; ++count_; }
     if (needs_order_stats()) {
       maybe_reserve(samples_in_value);
-      m_vals.push_back(value);
+      vals_.push_back(value);
     }
-    m_elapsed_samples += samples_in_value;
+    elapsed_samples_ += samples_in_value;
     return try_flush_();
   }
 
   // NEW: advance time only (no value)
   std::optional<Stat> advance(size_t samples_in_value) noexcept {
-    m_elapsed_samples += samples_in_value;
+    elapsed_samples_ += samples_in_value;
     return try_flush_();
   }
 
   Stat current() const { return compute_stat_current_copy(); }
 
-  std::optional<Stat> last() const noexcept { return m_last; }
+  std::optional<Stat> last() const noexcept { return last_; }
 
-  std::string name() const noexcept { return m_name; }
-  double window_seconds() const noexcept { return m_win_sec; }
+  std::string name() const noexcept { return name_; }
+  double window_seconds() const noexcept { return win_sec_; }
 
   double progress_seconds() const noexcept {
-    if (m_sr == 0) { return 0.0; }
-    return static_cast<double>(m_elapsed_samples) / static_cast<double>(m_sr);
+    if (sr_ == 0) { return 0.0; }
+    return static_cast<double>(elapsed_samples_) / static_cast<double>(sr_);
   }
 
   void set_window_seconds(double win_sec) {
-    m_win_sec = (win_sec > 0.0 ? win_sec : 1.0);
-    if (m_sr == 0) { m_sr = 1; }
-    m_win_samples = to_samples(m_win_sec, m_sr);
-    if (m_win_samples == 0) { m_win_samples = 1; }
+    win_sec_ = (win_sec > 0.0 ? win_sec : 1.0);
+    if (sr_ == 0) { sr_ = 1; }
+    win_samples_ = to_samples(win_sec_, sr_);
+    if (win_samples_ == 0) { win_samples_ = 1; }
     reset_window(ResetMode::Hard);
   }
 
  private:
   std::optional<Stat> try_flush_() noexcept {
-    if (m_elapsed_samples >= m_win_samples) {
+    if (elapsed_samples_ >= win_samples_) {
       Stat s = compute_stat_flush_inplace();     // O(n) via nth_element
-      m_last = s;
+      last_ = s;
       reset_window(ResetMode::KeepOverrun);
       return s;
     }
@@ -98,13 +98,13 @@ class StatCollector {
   }
 
   bool needs_order_stats() const noexcept {
-    return m_opt.need_median || m_opt.need_q5 || m_opt.need_q95;
+    return opt_.need_median || opt_.need_q5 || opt_.need_q95;
   }
 
   void maybe_reserve(size_t samples_in_value) {
-    if (m_vals.capacity() == 0 && samples_in_value > 0) {
-      const size_t est = static_cast<size_t>((m_win_samples + samples_in_value - 1) / samples_in_value);
-      m_vals.reserve(std::max<size_t>(est, 16));
+    if (vals_.capacity() == 0 && samples_in_value > 0) {
+      const size_t est = static_cast<size_t>((win_samples_ + samples_in_value - 1) / samples_in_value);
+      vals_.reserve(std::max<size_t>(est, 16));
     }
   }
 
@@ -146,69 +146,69 @@ class StatCollector {
 
   Stat compute_stat_current_copy() const {
     Stat s;
-    if (m_opt.need_min) { s.min = m_min; }
-    if (m_opt.need_max) { s.max = m_max; }
-    if (m_opt.need_mean && m_count > 0) {
-      s.mean = static_cast<float>(m_sum / static_cast<double>(m_count));
+    if (opt_.need_min) { s.min = min_; }
+    if (opt_.need_max) { s.max = max_; }
+    if (opt_.need_mean && count_ > 0) {
+      s.mean = static_cast<float>(sum_ / static_cast<double>(count_));
     }
-    if (needs_order_stats() && !m_vals.empty()) {
-      std::vector<float> vals = m_vals;  // copy for non-destructive selection
-      if (m_opt.need_median) { s.median = select_median_linear(vals); }
-      if (m_opt.need_q95) { s.q95 = select_quantile_linear(vals, 0.95f); }
-      if (m_opt.need_q5) { s.q5 = select_quantile_linear(vals, 0.05f); }
+    if (needs_order_stats() && !vals_.empty()) {
+      std::vector<float> vals = vals_;  // copy for non-destructive selection
+      if (opt_.need_median) { s.median = select_median_linear(vals); }
+      if (opt_.need_q95) { s.q95 = select_quantile_linear(vals, 0.95f); }
+      if (opt_.need_q5) { s.q5 = select_quantile_linear(vals, 0.05f); }
     }
     return s;
   }
 
   Stat compute_stat_flush_inplace() {
     Stat s;
-    if (m_opt.need_min) { s.min = m_min; }
-    if (m_opt.need_max) { s.max = m_max; }
-    if (m_opt.need_mean && m_count > 0) {
-      s.mean = static_cast<float>(m_sum / static_cast<double>(m_count));
+    if (opt_.need_min) { s.min = min_; }
+    if (opt_.need_max) { s.max = max_; }
+    if (opt_.need_mean && count_ > 0) {
+      s.mean = static_cast<float>(sum_ / static_cast<double>(count_));
     }
-    if (needs_order_stats() && !m_vals.empty()) {
-      if (m_opt.need_median) { s.median = select_median_linear(m_vals); }
-      if (m_opt.need_q95) { s.q95 = select_quantile_linear(m_vals, 0.95f); }
-      if (m_opt.need_q5) { s.q5 = select_quantile_linear(m_vals, 0.05f); }
+    if (needs_order_stats() && !vals_.empty()) {
+      if (opt_.need_median) { s.median = select_median_linear(vals_); }
+      if (opt_.need_q95) { s.q95 = select_quantile_linear(vals_, 0.95f); }
+      if (opt_.need_q5) { s.q5 = select_quantile_linear(vals_, 0.05f); }
     }
     return s;
   }
 
   void reset_window(ResetMode mode) noexcept {
-    m_min.reset();
-    m_max.reset();
-    m_sum = 0.0;
-    m_count = 0;
-    m_vals.clear();
+    min_.reset();
+    max_.reset();
+    sum_ = 0.0;
+    count_ = 0;
+    vals_.clear();
 
     if (mode == ResetMode::KeepOverrun) {
-      if (m_win_samples == 0) { m_elapsed_samples = 0; return; }
-      if (m_elapsed_samples >= m_win_samples) {
-        m_elapsed_samples -= m_win_samples;
-        if (m_elapsed_samples >= m_win_samples) { m_elapsed_samples %= m_win_samples; }
+      if (win_samples_ == 0) { elapsed_samples_ = 0; return; }
+      if (elapsed_samples_ >= win_samples_) {
+        elapsed_samples_ -= win_samples_;
+        if (elapsed_samples_ >= win_samples_) { elapsed_samples_ %= win_samples_; }
       }
     } else {
-      m_elapsed_samples = 0;
+      elapsed_samples_ = 0;
     }
   }
 
   // State
-  std::string m_name;
-  uint32_t m_sr;
-  double m_win_sec;
-  Options m_opt;
+  std::string name_;
+  uint32_t sr_;
+  double win_sec_;
+  Options opt_;
 
-  size_t m_win_samples{0};
-  size_t m_elapsed_samples{0};
+  size_t win_samples_{0};
+  size_t elapsed_samples_{0};
 
-  std::optional<float> m_min;
-  std::optional<float> m_max;
-  double m_sum{0.0};
-  uint32_t m_count{0};
-  std::vector<float> m_vals;
+  std::optional<float> min_;
+  std::optional<float> max_;
+  double sum_{0.0};
+  uint32_t count_{0};
+  std::vector<float> vals_;
 
-  std::optional<Stat> m_last;
+  std::optional<Stat> last_;
 };
 
 }  // namespace util::sound

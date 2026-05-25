@@ -72,7 +72,7 @@ TEST_CASE("Loudness control on keyboard clicks [Loudness control]") {
 
   auto lc = LoudnessControlBuilder()
                 .set_sample_rate(fs)
-                .set_method(ILoudnessControl::VADBASE)
+                .set_method(ILoudnessControl::vadbase)
                 .set_target_level(target_lufs)
                 .set_max_gain(max_gain_db)
                 .set_post_processing(true)
@@ -123,7 +123,7 @@ TEST_CASE("Loudness control for speech + noise [Loudness control]") {
 
     auto lc = LoudnessControlBuilder()
                   .set_sample_rate(fs)
-                  .set_method(ILoudnessControl::VADBASE)
+                  .set_method(ILoudnessControl::vadbase)
                   .set_target_level(target_lufs)
                   .set_max_gain(max_gain_db)
                   .set_post_processing(false)
@@ -158,7 +158,7 @@ TEST_CASE("Loudness control for speech + noise [Loudness control]") {
 TEST_CASE("FAIL LoudnessControlBuilder create without sample rate [Loudness control]") {
   REQUIRE_THROWS_AS(
       (LoudnessControlBuilder()
-           .set_method(ILoudnessControl::VADBASE)
+           .set_method(ILoudnessControl::vadbase)
            .set_target_level(-15.0f)
            .set_max_gain(30.0f)
            .set_post_processing(false)
@@ -179,7 +179,7 @@ TEST_CASE("SUCCEED LoudnessControlBuilder default method is SIMPLE [Loudness con
   const uint32_t sample_rate = 16000;
   auto lc = LoudnessControlBuilder().set_sample_rate(sample_rate).create();
   REQUIRE(lc != nullptr);
-  REQUIRE(lc->method() == ILoudnessControl::SIMPLE);
+  REQUIRE(lc->method() == ILoudnessControl::simple);
 }
 
 TEST_CASE("SUCCEED SIMPLE bypass keeps gain = 1 for first samples [Loudness control]") {
@@ -189,7 +189,7 @@ TEST_CASE("SUCCEED SIMPLE bypass keeps gain = 1 for first samples [Loudness cont
   const float bypass_time_sec = 0.05f;  // 50 samples
 
   auto lc = LoudnessControlBuilder()
-                .set_method(ILoudnessControl::SIMPLE)
+                .set_method(ILoudnessControl::simple)
                 .set_sample_rate(sample_rate)
                 .set_target_level(target_lufs)
                 .set_max_gain(max_gain_db)
@@ -197,7 +197,7 @@ TEST_CASE("SUCCEED SIMPLE bypass keeps gain = 1 for first samples [Loudness cont
                 .set_bypass_time(bypass_time_sec)
                 .create();
   REQUIRE(lc != nullptr);
-  REQUIRE(lc->method() == ILoudnessControl::SIMPLE);
+  REQUIRE(lc->method() == ILoudnessControl::simple);
 
 const std::vector<float> in1 = _const_vec(25, 1.0f);
 auto out1 = lc->process(in1);
@@ -225,7 +225,7 @@ TEST_CASE("SUCCEED SIMPLE max_gain clamps commanded gain [Loudness control]") {
   const float max_gain_db = 6.0f;
 
   auto lc = LoudnessControlBuilder()
-                .set_method(ILoudnessControl::SIMPLE)
+                .set_method(ILoudnessControl::simple)
                 .set_sample_rate(sample_rate)
                 .set_target_level(target_lufs)
                 .set_max_gain(max_gain_db)
@@ -252,14 +252,14 @@ TEST_CASE("SUCCEED VADBASE method and state fields are sane [Loudness control]")
   const float max_gain_db = 30.0f;
 
   auto lc = LoudnessControlBuilder()
-                .set_method(ILoudnessControl::VADBASE)
+                .set_method(ILoudnessControl::vadbase)
                 .set_sample_rate(sample_rate)
                 .set_target_level(target_lufs)
                 .set_max_gain(max_gain_db)
                 .set_post_processing(false)
                 .create();
   REQUIRE(lc != nullptr);
-  REQUIRE(lc->method() == ILoudnessControl::VADBASE);
+  REQUIRE(lc->method() == ILoudnessControl::vadbase);
 
   const uint32_t frame_len = sample_rate / 100;
 
@@ -286,7 +286,7 @@ TEST_CASE("SUCCEED VADBASE limiter prevents clipping when postprocessing enabled
   const float max_gain_db = 30.0f;
 
   auto lc = LoudnessControlBuilder()
-                .set_method(ILoudnessControl::VADBASE)
+                .set_method(ILoudnessControl::vadbase)
                 .set_sample_rate(sample_rate)
                 .set_target_level(target_lufs)
                 .set_max_gain(max_gain_db)
@@ -306,7 +306,7 @@ TEST_CASE("SUCCEED VADBASE limiter prevents clipping when postprocessing enabled
 TEST_CASE("SUCCEED process with empty input returns empty output [Loudness control]") {
   const uint32_t sample_rate = 16000;
   auto lc = LoudnessControlBuilder()
-                .set_method(ILoudnessControl::VADBASE)
+                .set_method(ILoudnessControl::vadbase)
                 .set_sample_rate(sample_rate)
                 .set_target_level(-15.0f)
                 .set_max_gain(30.0f)

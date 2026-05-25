@@ -35,17 +35,17 @@ SpenchRetCode AudioEchoCancelationHandler::DoStart() {
       return SpenchRetCode::ERR_CONF_FILE_PROBLEM;
     }
 
-    m_canceler = util::echo::EchoCancelerBuilder()
-                     .SetSampleRate(aec->sampleRate())
-                     .SetFilterLen(aec->filterLen())
-                     .SetFrameLen(aec->frameLen())
-                     .SetType(aec->type())
-                     .SetResidualEchoSuppression(aec->residualEchoSuppressionEnabled())
-                     .SetDelayCompensator(aec->delayCompensatorEnabled())
-                     .SetEchoPreMute(aec->echoPremute())
-                     .Create();
+    canceler_ = util::echo::EchoCancelerBuilder()
+                     .set_sample_rate(aec->sampleRate())
+                     .set_filter_len(aec->filterLen())
+                     .set_frame_len(aec->frameLen())
+                     .set_type(aec->type())
+                     .set_residual_echo_suppression(aec->residualEchoSuppressionEnabled())
+                     .set_delay_compensator(aec->delayCompensatorEnabled())
+                     .set_echo_premute(aec->echoPremute())
+                     .create();
 
-    if (!m_canceler) {
+    if (!canceler_) {
       spdlog::error("Failed to create EchoCanceler");
       return SpenchRetCode::ERR_CONF_FILE_PROBLEM;
     }
@@ -60,31 +60,31 @@ SpenchRetCode AudioEchoCancelationHandler::DoStart() {
 }
 
 void AudioEchoCancelationHandler::DoStop() {
-  m_canceler.reset();
+  canceler_.reset();
 }
 
-const uint32_t AudioEchoCancelationHandler::GetSampleRate() {
+const uint32_t AudioEchoCancelationHandler::get_sample_rate() {
   auto* aec = dynamic_cast<AecConfig*>(m_config.get());
   return aec ? aec->sampleRate() : 0;
 }
 
-const uint16_t AudioEchoCancelationHandler::GetFilterLength() {
+const uint16_t AudioEchoCancelationHandler::get_filter_length() {
   auto* aec = dynamic_cast<AecConfig*>(m_config.get());
   return aec ? aec->filterLen() : 0;
 }
 
-const uint16_t AudioEchoCancelationHandler::GetFrameLength() {
+const uint16_t AudioEchoCancelationHandler::get_frame_length() {
   auto* aec = dynamic_cast<AecConfig*>(m_config.get());
   return aec ? aec->frameLen() : 0;
 }
 
-void AudioEchoCancelationHandler::Process(const std::vector<float>& mic,
+void AudioEchoCancelationHandler::process(const std::vector<float>& mic,
                                           const std::vector<float>& lbk,
                                           std::vector<float>& out) {
-  if (!m_canceler) {
+  if (!canceler_) {
     throw std::runtime_error("EchoCanceler is not initialized!");
   }
-  m_canceler->Process(mic, lbk, out);
+  canceler_->process(mic, lbk, out);
 }
 
 SpenchRetCode AudioEchoCancelationHandler::ProcessFrame(struct spench::SpenchContext<float>*,
@@ -92,11 +92,11 @@ SpenchRetCode AudioEchoCancelationHandler::ProcessFrame(struct spench::SpenchCon
                                                         const std::vector<float>& lbk_frame,
                                                         std::vector<float>& out) {
   try {
-    if (!m_canceler) {
+    if (!canceler_) {
       spdlog::error("EchoCanceler is not initialized!");
       return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    m_canceler->Process(mic_frame, lbk_frame, out);
+    canceler_->process(mic_frame, lbk_frame, out);
     return SpenchRetCode::SUCCESS;
   } catch (const std::exception& e) {
     spdlog::error("{}", e.what());

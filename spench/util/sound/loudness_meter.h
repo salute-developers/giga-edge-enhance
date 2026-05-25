@@ -31,15 +31,15 @@ class LoudnessMeter {
    */
   void update(const std::vector<float>& x);
 
-  [[nodiscard]] const State& state() const noexcept { return m_state; }
+  [[nodiscard]] const State& state() const noexcept { return state_; }
 
   size_t stride() const noexcept;
 
  private:
-  std::shared_ptr<WeightingFilter> m_wflt;
-  std::shared_ptr<PowerMeter> m_mm_meter;
-  std::shared_ptr<PowerMeter> m_st_meter;
-  State m_state;
+  std::shared_ptr<WeightingFilter> wflt_;
+  std::shared_ptr<PowerMeter> mm_meter_;
+  std::shared_ptr<PowerMeter> st_meter_;
+  State state_;
 };
 
 }  // namespace util::sound

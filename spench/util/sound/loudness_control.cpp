@@ -18,17 +18,17 @@ namespace util::sound {
 
 namespace {
 
-constexpr float VAD_THRESHOLD = 0.8;  // rnnoise vad threshold
-constexpr float VAD_MFLT_WIN = 0.1;   // median filter (in sec) for rnnoise VAD
+constexpr float vad_threshold = 0.8;  // rnnoise vad threshold
+constexpr float vad_mflt_win = 0.1;   // median filter (in sec) for rnnoise VAD
 
-constexpr float SPEECH_ACTIVITY_LOG = 3.0;  // speech activity buffer len (in sec)
+constexpr float speech_activity_log = 3.0;  // speech activity buffer len (in sec)
 
-constexpr float COMP_OFFSET = 6.0;  // offset (db) for compressor threshold relatively target LUFS
-constexpr float COMP_RATIO = 3;
-constexpr float COMP_KNEE = 5;
-constexpr float LIMITER_THRESHOLD = -1;
+constexpr float comp_offset = 6.0;  // offset (db) for compressor threshold relatively target LUFS
+constexpr float comp_ratio = 3;
+constexpr float comp_knee = 5;
+constexpr float limiter_threshold = -1;
 
-constexpr float NOISE_FLOOR_DB = -80;
+constexpr float noise_floor_db = -80;
 
 }  // namespace
 
@@ -69,16 +69,16 @@ class LoudnessStat {
 class LoudnessControlImpl : public ILoudnessControl {
  public:
   explicit LoudnessControlImpl(uint32_t sample_rate, float target_level = -23.0f, bool postprocess = false,
-                               float bypass_time = 3.0f, float max_gain = 40.0f)
-      : m_target_db{target_level}, m_max_gain_db{max_gain} {
-    m_mtr = std::make_shared<LoudnessMeter>(sample_rate);
-    m_stat = std::make_shared<LoudnessStat>();
-    m_bypass_counter = static_cast<int64_t>(bypass_time * static_cast<float>(sample_rate));
+                              float bypass_time = 3.0f, float max_gain = 40.0f)
+      : target_db_{target_level}, max_gain_db_{max_gain} {
+    mtr_ = std::make_shared<LoudnessMeter>(sample_rate);
+    stat_ = std::make_shared<LoudnessStat>();
+    bypass_counter_ = static_cast<int64_t>(bypass_time * static_cast<float>(sample_rate));
 
     // dynamic post-processing
     if (postprocess) {
-      m_comp = std::make_shared<dsplib::Compressor>(sample_rate, target_level + COMP_OFFSET, COMP_RATIO, COMP_KNEE);
-      m_limit = std::make_shared<dsplib::Limiter>(sample_rate, LIMITER_THRESHOLD);
+      comp_ = std::make_shared<dsplib::Compressor>(sample_rate, target_level + COMP_OFFSET, COMP_RATIO, COMP_KNEE);
+      limit_ = std::make_shared<dsplib::Limiter>(sample_rate, LIMITER_THRESHOLD);
     }
   }
 
@@ -86,68 +86,66 @@ class LoudnessControlImpl : public ILoudnessControl {
   [[nodiscard]] std::vector<float> process(const std::vector<float>& x) {
     dsplib::arr_real out(x);
 
-    m_mtr->update(x);
-    auto short_term = m_mtr->state().short_term.value_or(NOISE_FLOOR_DB);
-    m_last_short_term = short_term;
-    m_stat->update(short_term);
+    mtr_->update(x);
+    auto short_term = mtr_->state().short_term.value_or(noise_floor_db);
+    last_short_term_ = short_term;
+    stat_->update(short_term);
 
     // limit max gain
-    float db = m_target_db - m_stat->max_power();
-    db = std::min(db, m_max_gain_db);
-    db = std::max(db, -m_max_gain_db);
+    float db = target_db_ - stat_->max_power();
+    db = std::min(db, max_gain_db_);
+    db = std::max(db, -max_gain_db_);
 
     // smooth gain value
-    m_gain_db = static_cast<float>((m_gain_db * 0.9f) + (db * 0.1f));
-    m_gain = dsplib::db2mag(m_gain_db);
+    gain_db_ = static_cast<float>((gain_db_ * 0.9f) + (db * 0.1f));
+    gain_ = dsplib::db2mag(gain_db_);
 
     // ignore some first data
-    if (m_bypass_counter > 0) {
-      m_bypass_counter -= static_cast<int64_t>(x.size());
-      m_gain = 1.0f;
+    if (bypass_counter_ > 0) {
+      bypass_counter_ -= static_cast<int64_t>(x.size());
+      gain_ = 1.0f;
     }
-
-    out *= m_gain;
+    out *= gain_;
 
     // apply compressor
     // TODO(vayulis): add makeup gain
-    if (m_comp) {
-      out = m_comp->process(out).out;
+    if (comp_) {
+      out = comp_->process(out).out;
     }
 
     // apply limiter
-    if (m_limit) {
-      out = m_limit->process(out).out;
+    if (limit_) {
+      out = limit_->process(out).out;
     }
-
     return out.to_vec();
   }
 
   [[nodiscard]] State state() const noexcept final {
     State s{};
-    s.current_gain_db_smoothed = m_gain_db;
-    s.last_short_term_lufs = m_last_short_term;
-    s.longterm_max_lufs = m_stat->max_power();
-    s.longterm_min_lufs = m_stat->min_power();
-    s.bypass_active = (m_bypass_counter > 0);
+    s.current_gain_db_smoothed = gain_db_;
+    s.last_short_term_lufs = last_short_term_;
+    s.longterm_max_lufs = stat_->max_power();
+    s.longterm_min_lufs = stat_->min_power();
+    s.bypass_active = (bypass_counter_ > 0);
     return s;
   }
 
-  Method method() const noexcept final { return ILoudnessControl::SIMPLE; }
+  Method method() const noexcept final { return ILoudnessControl::simple; }
 
 
  private:
-  std::shared_ptr<LoudnessMeter> m_mtr;
-  std::shared_ptr<LoudnessStat> m_stat;
-  int64_t m_bypass_counter{0};
-  const float m_target_db;
-  const float m_max_gain_db;
-  float m_gain_db{0.0f};
-  float m_gain{1.0f};
+  std::shared_ptr<LoudnessMeter> mtr_;
+  std::shared_ptr<LoudnessStat> stat_;
+  int64_t bypass_counter_{0};
+  float target_db_;
+  float max_gain_db_;
+  float gain_db_{0.0f};
+  float gain_{1.0f};
 
-  std::shared_ptr<dsplib::Compressor> m_comp;
-  std::shared_ptr<dsplib::Limiter> m_limit;
+  std::shared_ptr<dsplib::Compressor> comp_;
+  std::shared_ptr<dsplib::Limiter> limit_;
 
-  std::optional<float> m_last_short_term;  // cached from meter
+  std::optional<float> last_short_term_;  // cached from meter
 };
 
 }  // namespace legacy
@@ -155,13 +153,13 @@ class LoudnessControlImpl : public ILoudnessControl {
 class SmoothValue {
  public:
   explicit SmoothValue(size_t update_period, float init, float min, float max, float attack = 0.1, float release = 0.05)
-      : m_period{update_period},
-        m_value{init},
-        m_target{init},
-        m_min{min},
-        m_max{max},
-        m_attack{attack},
-        m_release{release} {
+      : period_{update_period},
+        value_{init},
+        target_{init},
+        min_{min},
+        max_{max},
+        attack_{attack},
+        release_{release} {
     DSPLIB_ASSERT(attack >= 0 && attack <= 1.0, "`attack` must be in range [0, 1]");
     DSPLIB_ASSERT(release >= 0 && release <= 1.0, "`release` must be in range [0, 1]");
   }
@@ -169,72 +167,72 @@ class SmoothValue {
   dsplib::arr_real update(size_t count) {
     dsplib::arr_real out(count);
     for (size_t i = 0; i < count; ++i) {
-      m_step++;
-      if (m_step == m_period) {
-        m_step = 0;
-        if (m_target > m_value) {
-          m_value = (m_target * m_attack) + (m_value * (1 - m_attack));
+      step_++;
+      if (step_ == period_) {
+        step_ = 0;
+        if (target_ > value_) {
+          value_ = (target_ * attack_) + (value_ * (1 - attack_));
         } else {
-          m_value = (m_target * m_release) + (m_value * (1 - m_release));
+          value_ = (target_ * release_) + (value_ * (1 - release_));
         }
 
-        m_value = std::max(m_value, m_min);
-        m_value = std::min(m_value, m_max);
+        value_ = std::max(value_, min_);
+        value_ = std::min(value_, max_);
       }
-      out[i] = m_value;
+      out[i] = value_;
     }
     return out;
   }
 
-  void set(float value) noexcept { m_target = value; }
+  void set(float value) noexcept { target_ = value; }
 
-  [[nodiscard]] float get() const noexcept { return m_value; }
+  [[nodiscard]] float get() const noexcept { return value_; }
 
  private:
-  size_t m_period;
-  size_t m_step{0};
-  float m_value;
-  float m_target;
-  float m_min;
-  float m_max;
-  float m_attack;
-  float m_release;
+  size_t period_;
+  size_t step_{0};
+  float value_;
+  float target_;
+  float min_;
+  float max_;
+  float attack_;
+  float release_;
 };
 
 
 class LoudnessControlImpl : public ILoudnessControl {
  public:
   LoudnessControlImpl(uint32_t sample_rate, float target_level, float max_gain, bool postprocess, float bypass)
-      : m_fs{sample_rate}, m_target_db{target_level}, m_current_db{target_level} {
-    m_mtr = std::make_shared<LoudnessMeter>(m_fs);
+      : fs_{sample_rate}, target_db_{target_level}, current_db_{target_level} {
+    mtr_ = std::make_shared<LoudnessMeter>(fs_);
 
-    m_skip_counter = static_cast<int64_t>(sample_rate * bypass);
+    skip_counter_ = static_cast<int64_t>(sample_rate * bypass);
 
     // internal processing chunk size (10 ms)
-    m_frame_len = m_fs / 100;
+    frame_len_ = fs_ / 100;
 
     // voice activity detector
-    m_vad = VadBuilder().set_sample_rate(m_fs).set_frame_len(m_frame_len).set_type(VadType::rnnoise).create();
+    vad_ = VadBuilder().set_sample_rate(fs_).set_frame_len(frame_len_).set_type(VadType::rnnoise).create();
 
     // median filter for VAD output
     {
-      const size_t dlen = (m_fs * VAD_MFLT_WIN) / m_frame_len;
-      m_vadflt = std::make_shared<BinaryMedfilt>(dlen, VAD_THRESHOLD, false);
+      const size_t dlen = (fs_ * vad_mflt_win) / frame_len_;
+      vadflt_ = std::make_shared<BinaryMedfilt>(dlen, vad_threshold, false);
     }
 
     // compensate delay for VAD median filter
     {
-      const size_t dlen = (m_fs * VAD_MFLT_WIN / 2) / m_frame_len;
-      m_cdelay = std::make_shared<dsplib::Delay<float>>(dsplib::ones(dlen) * NOISE_FLOOR_DB);
+      const size_t dlen = (fs_ * vad_mflt_win / 2) / frame_len_;
+      cdelay_ = std::make_shared<dsplib::Delay<float>>(dsplib::ones(dlen) * noise_floor_db);
     }
 
     // smooth gain controller
-    m_gain_ctrl = std::make_shared<SmoothValue>(m_frame_len, 0, -max_gain, max_gain);
+    gain_ctrl_ = std::make_shared<SmoothValue>(frame_len_, 0, -max_gain, max_gain);
 
     // dynamic post-processing
     if (postprocess) {
-      m_comp = std::make_shared<dsplib::Compressor>(m_fs, target_level + COMP_OFFSET, COMP_RATIO, COMP_KNEE);
-      m_limit = std::make_shared<dsplib::Limiter>(m_fs, LIMITER_THRESHOLD);
+      comp_ = std::make_shared<dsplib::Compressor>(fs_, target_level + comp_offset, comp_ratio, comp_knee);
+      limit_ = std::make_shared<dsplib::Limiter>(fs_, limiter_threshold);
     }
   }
 
@@ -242,136 +240,138 @@ class LoudnessControlImpl : public ILoudnessControl {
     dsplib::arr_real out(x);
 
     // processing input by 10 ms chunks
-    m_buf.write(x);
-    while (m_buf.size() >= m_frame_len) {
-      auto dx = m_buf.read(m_frame_len);
+    buf_.write(x);
+    while (buf_.size() >= frame_len_) {
+      auto dx = buf_.read(frame_len_);
 
       // in bypass mode update stat is not allow
-      if (m_skip_counter > 0) {
-        m_skip_counter -= m_frame_len;
+      if (skip_counter_ > 0) {
+        skip_counter_ -= frame_len_;
       }
 
       // voice activity detector
       {
-        auto [_, vad_score] = m_vad->process(dx);
-        bool is_speech = m_vadflt->process(vad_score);
+        auto [_, vad_score] = vad_->process(dx);
+        bool is_speech = vadflt_->process(vad_score);
 
-        bool is_speech_to_noise = !is_speech && m_is_speech;
-        bool is_noise_to_speech = is_speech && !m_is_speech;
+        bool is_speech_to_noise = !is_speech && is_speech_;
+        bool is_noise_to_speech = is_speech && !is_speech_;
 
-        m_is_speech = is_speech;
+        is_speech_ = is_speech;
 
         // TODO(vayulis): dont allow stat if noise before speech was louder
-        m_allow_stat = (is_speech_to_noise || m_is_speech) && !is_noise_to_speech && (m_skip_counter <= 0);
+        allow_stat_ = (is_speech_to_noise || is_speech_) && !is_noise_to_speech && (skip_counter_ <= 0);
       }
 
       // loudness meter
       {
-        m_mtr->update(dx);
-        auto state = m_mtr->state();
+        mtr_->update(dx);
+        auto state = mtr_->state();
 
         // use momentary power (400 ms window)
         // short term metric (3 sec) can capture near speech noises
         bool is_valid_meas = state.momentary.has_value();
-        auto pow_db = state.momentary.value_or(NOISE_FLOOR_DB);
+        auto pow_db = state.momentary.value_or(noise_floor_db);
 
         // delay module must be always processing
-        auto dl_pow_db = m_cdelay->process(dsplib::arr_real{pow_db})[0];
+        auto dl_pow_db = cdelay_->process(dsplib::arr_real{pow_db})[0];
 
         // update loudness stat
-        if (is_valid_meas && m_allow_stat) {
-          if (m_peakstory) {
-            m_peakstory->push(dl_pow_db);
-            m_current_db = quantile(m_peakstory->data(), 0.9);
+        if (is_valid_meas && allow_stat_) {
+          if (peakstory_) {
+            peakstory_->push(dl_pow_db);
+            current_db_ = quantile(peakstory_->data(), 0.9);
 
             // update global min/max stat
-            m_max_lufs = std::max(m_current_db, m_max_lufs);
-            m_min_lufs = std::min(m_current_db, m_min_lufs);
+            max_lufs_ = std::max(current_db_, max_lufs_);
+            min_lufs_ = std::min(current_db_, min_lufs_);
           } else {
             // trick: first word attack
-            if (!m_peakstory) {
-              _init_peakstory(dl_pow_db);
+            if (!peakstory_) {
+              init_peakstory(dl_pow_db);
             }
-            m_current_db = dl_pow_db;
+            current_db_ = dl_pow_db;
           }
         }
       }
 
       // adaptive current peak loudness to target
-      m_gain_ctrl->set(m_target_db - m_current_db);
+      gain_ctrl_->set(target_db_ - current_db_);
     }
 
     // apply normalization gain
-    auto gain = dsplib::db2mag(m_gain_ctrl->update(x.size()));
+    auto gain = dsplib::db2mag(gain_ctrl_->update(x.size()));
     out *= gain;
 
     // apply compressor
     // TODO(vayulis): add makeup gain
-    if (m_comp) {
-      out = m_comp->process(out).out;
+    if (comp_) {
+      out = comp_->process(out).out;
     }
 
     // apply limiter
-    if (m_limit) {
-      out = m_limit->process(out).out;
+    if (limit_) {
+      out = limit_->process(out).out;
     }
 
     return out.to_vec();
   }
 
-  Method method() const noexcept final { return ILoudnessControl::VADBASE; }
+  Method method() const noexcept final { return ILoudnessControl::vadbase; }
 
   State state() const noexcept final {
     State s{};
-    s.current_gain_db_smoothed = m_gain_ctrl->get();
-    s.last_short_term_lufs = m_current_db;
-    s.longterm_max_lufs = m_max_lufs;
-    s.longterm_min_lufs = m_min_lufs;
+    s.current_gain_db_smoothed = gain_ctrl_->get();
+    s.last_short_term_lufs = current_db_;
+    s.longterm_max_lufs = max_lufs_;
+    s.longterm_min_lufs = min_lufs_;
     return s;
   }
 
 
  private:
-  void _init_peakstory(float init) {
-    const size_t dlen = (m_fs * SPEECH_ACTIVITY_LOG) / m_frame_len;
-    m_peakstory = std::make_shared<CycleBuffer>(dlen, init);
+  void init_peakstory(float init) {
+    const size_t dlen = (fs_ * speech_activity_log) / frame_len_;
+    peakstory_ = std::make_shared<CycleBuffer>(dlen, init);
   }
 
-  size_t m_fs;
-  uint32_t m_frame_len;
-  int64_t m_skip_counter{0};
+  size_t fs_;
+  uint32_t frame_len_;
+  int64_t skip_counter_{0};
 
-  FIFOBuffer<float> m_buf;
+  FIFOBuffer<float> buf_;
 
-  float m_target_db;
-  float m_current_db;
-  float m_max_lufs{-80};
-  float m_min_lufs{0};
+  float target_db_;
+  float current_db_;
+  float max_lufs_{-80};
+  float min_lufs_{0};
 
-  bool m_is_speech{false};
-  bool m_allow_stat{false};
+  bool is_speech_{false};
+  bool allow_stat_{false};
 
-  std::shared_ptr<LoudnessMeter> m_mtr;
-  std::shared_ptr<SmoothValue> m_gain_ctrl;
-  std::shared_ptr<CycleBuffer> m_peakstory;
-  std::shared_ptr<dsplib::Delay<float>> m_cdelay;  /// to compensate BinaryMedfilt delay
-  std::shared_ptr<IVad> m_vad;
-  std::shared_ptr<BinaryMedfilt> m_vadflt;
+  std::shared_ptr<LoudnessMeter> mtr_;
+  std::shared_ptr<SmoothValue> gain_ctrl_;
+  std::shared_ptr<CycleBuffer> peakstory_;
+  std::shared_ptr<dsplib::Delay<float>> cdelay_;  /// to compensate BinaryMedfilt delay
+  std::shared_ptr<IVad> vad_;
+  std::shared_ptr<BinaryMedfilt> vadflt_;
 
-  std::shared_ptr<dsplib::Compressor> m_comp;
-  std::shared_ptr<dsplib::Limiter> m_limit;
+  std::shared_ptr<dsplib::Compressor> comp_;
+  std::shared_ptr<dsplib::Limiter> limit_;
 };
 
 std::unique_ptr<ILoudnessControl> LoudnessControlBuilder::create() {
-  if (m_method == ILoudnessControl::SIMPLE) {
-    return std::make_unique<legacy::LoudnessControlImpl>(m_sample_rate.value(), m_target_level_db.value(),
-                                                         m_postprocessing.value(), m_bypass_time.value(),
-                                                         m_max_gain_db.value());
+
+  if (method_ == ILoudnessControl::simple) {
+    return std::make_unique<legacy::LoudnessControlImpl>(sample_rate_.value(), target_level_db_.value(),
+                                                         bypass_time_.value(), max_gain_db_.value(),
+                                                         max_gain_db_.value());
+
   }
-  if (m_method == ILoudnessControl::VADBASE) {
-    return std::make_unique<LoudnessControlImpl>(m_sample_rate.value(), m_target_level_db.value(),
-                                                 m_max_gain_db.value(), m_postprocessing.value(),
-                                                 m_bypass_time.value_or(0.5));
+  if (method_ == ILoudnessControl::vadbase) {
+    return std::make_unique<LoudnessControlImpl>(sample_rate_.value(), target_level_db_.value(),
+                                                 max_gain_db_.value(), postprocessing_.value(),
+                                                 bypass_time_.value_or(0.5));
   }
   return nullptr;
 }

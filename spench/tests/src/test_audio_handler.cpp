@@ -417,7 +417,7 @@ TEST_CASE("SUCCEED Check finalize chunk for the best quality model "
 
   spench::SpenchContext<float>* ctx = scheduler_test_env.handler->CreateContext();
   uint16_t input_frame_size =
-      ctx->input_sound_stream_ptr->m_in.FrameSizeSamples();
+      ctx->input_sound_stream_ptr->input.frame_size_samples();
   std::vector<float> output;
 
   SpenchRetCode ret_code =
@@ -446,7 +446,7 @@ TEST_CASE("SUCCEED Run denoise and check finalize a chunk for the best quality m
   spench::DenoiseContextQ<float>* ctx_q =
       dynamic_cast<spench::DenoiseContextQ<float>*>(ctx);
   uint16_t input_frame_size =
-      ctx->input_sound_stream_ptr->m_in.FrameSizeSamples();
+      ctx->input_sound_stream_ptr->input.frame_size_samples();
   const std::vector<float> input1(input_frame_size, 0.5);
   std::vector<float> output;
 

@@ -644,7 +644,7 @@ uint16_t AecConfig::frameLen() const {
 
 util::echo::EchoCancelerType AecConfig::type() const {
   // validate() guarantees "speex".
-  return util::echo::EchoCancelerType::SPEEX;
+  return util::echo::EchoCancelerType::speex;
 }
 
 }  // namespace spench

@@ -18,19 +18,19 @@ class AudioEchoCancelationHandler : public BaseAudioHandler {
   AudioEchoCancelationHandler& operator=(const AudioEchoCancelationHandler&) = delete;
   AudioEchoCancelationHandler(const AudioEchoCancelationHandler&) = delete;
   AudioEchoCancelationHandler(AudioEchoCancelationHandler&& orig) noexcept
-      : BaseAudioHandler(std::move(orig)), m_canceler(std::move(orig.m_canceler)) {}
+      : BaseAudioHandler(std::move(orig)), canceler_(std::move(orig.canceler_)) {}
 
   explicit AudioEchoCancelationHandler(std::shared_ptr<AecConfig> config);
 
   // Convenience API preserved
-  void Process(const std::vector<float>& mic, const std::vector<float>& lbk, std::vector<float>& out);
-  std::vector<float> Process(const std::vector<float>& mic, const std::vector<float>& lbk) {
+  void process(const std::vector<float>& mic, const std::vector<float>& lbk, std::vector<float>& out);
+  std::vector<float> process(const std::vector<float>& mic, const std::vector<float>& lbk) {
     std::vector<float> out;
-    Process(mic, lbk, out);
+    process(mic, lbk, out);
     return out;
   }
   std::vector<float> operator()(const std::vector<float>& mic, const std::vector<float>& lbk) {
-    return Process(mic, lbk);
+    return process(mic, lbk);
   }
 
 
@@ -47,16 +47,16 @@ class AudioEchoCancelationHandler : public BaseAudioHandler {
     return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
 
-  const uint32_t GetSampleRate();
-  const uint16_t GetFilterLength();
-  const uint16_t GetFrameLength();
+  const uint32_t get_sample_rate();
+  const uint16_t get_filter_length();
+  const uint16_t get_frame_length();
 
  protected:
   SpenchRetCode DoStart() override;
   void DoStop() override;
 
  private:
-  std::unique_ptr<util::echo::IEchoCanceler> m_canceler;
+  std::unique_ptr<util::echo::IEchoCanceler> canceler_;
   SpenchRetCode LoadConfiguration(const std::string& config_path);
 };
 }  // namespace spench

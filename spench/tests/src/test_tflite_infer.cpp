@@ -84,7 +84,7 @@ TEST_CASE("SUCCEED Run relu model dummy inference [tflite]") {
   IsVectorsClose(output, gt_vector, 0.0000001);
 }
 
-TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with fast tflite model (audio 24 kHz) [tflite runner]") {
+TEST_CASE("SUCCEED Run prepare_input_in_place on one real frame with fast tflite model (audio 24 kHz) [tflite runner]") {
   auto data = std::move(TestTfliteRunner()
       .InitRunner("default_configuration_fast_tflite_24khz.yaml"));
   std::vector<float> noisy_mag_5_old;
@@ -100,7 +100,7 @@ TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with fast tflite mo
   spench::SpenchContext<float>* denoise_contex = ctx.get();
   ctx.get()->noisy_mag = noisy_mag_5_old;
   IsVectorsClose(ctx.get()->noisy_mag, noisy_mag_5_old, 0.000001);
-  data.denoiser_runner->PrepareInputInPlace(noisy_mag_1_new, inputs, denoise_contex);
+  data.denoiser_runner->prepare_input_in_place(noisy_mag_1_new, inputs, denoise_contex);
 
   IsVectorsClose(ctx.get()->noisy_mag, noisy_mag_5_new, 0.000001);
 }
@@ -173,7 +173,7 @@ TEST_CASE("SUCCEED Run fast tflite model with real data and check first two iter
   denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
 
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.denoiser_runner->Infer(&denoise_task);
+  data.denoiser_runner->infer(&denoise_task);
 
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
@@ -185,7 +185,7 @@ TEST_CASE("SUCCEED Run fast tflite model with real data and check first two iter
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
   denoise_task.m_data.context = ctx.get();
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.denoiser_runner->Infer(&denoise_task);
+  data.denoiser_runner->infer(&denoise_task);
 
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
   IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.00001);
@@ -259,7 +259,7 @@ TEST_CASE("SUCCEED Run quality tflite model with real data and check first two i
   IsVectorsClose(gt_b1_in_step1, ctx->fb_conv1_buf, 1e-5f);
   IsVectorsClose(gt_b3_in_step1, ctx->fb_conv3_buf, 1e-5f);
 
-  data.denoiser_runner->Infer(&denoise_task);
+  data.denoiser_runner->infer(&denoise_task);
 
   REQUIRE((denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK ||
            denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK));
@@ -277,7 +277,7 @@ TEST_CASE("SUCCEED Run quality tflite model with real data and check first two i
   denoise_task.m_data.input_spectrogram.emplace_back(noisy_real_1, noisy_imag_1);
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 
-  data.denoiser_runner->Infer(&denoise_task);
+  data.denoiser_runner->infer(&denoise_task);
 
   REQUIRE((denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK ||
            denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK));
@@ -316,7 +316,7 @@ TEST_CASE("SUCCEED Run encrypted model with real data and check first two iterat
   denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
 
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.denoiser_runner->Infer(&denoise_task);
+  data.denoiser_runner->infer(&denoise_task);
 
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
@@ -328,7 +328,7 @@ TEST_CASE("SUCCEED Run encrypted model with real data and check first two iterat
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
   denoise_task.m_data.context = ctx.get();
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.denoiser_runner->Infer(&denoise_task);
+  data.denoiser_runner->infer(&denoise_task);
 
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
   IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.00001);
@@ -365,7 +365,7 @@ TEST_CASE("SUCCEED Run licensed encrypted model and check first two iterations (
   denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
 
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.denoiser_runner->Infer(&denoise_task);
+  data.denoiser_runner->infer(&denoise_task);
 
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
@@ -377,7 +377,7 @@ TEST_CASE("SUCCEED Run licensed encrypted model and check first two iterations (
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
   denoise_task.m_data.context = ctx.get();
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.denoiser_runner->Infer(&denoise_task);
+  data.denoiser_runner->infer(&denoise_task);
 
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
   IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.00001);
@@ -414,7 +414,7 @@ TEST_CASE("SUCCEED Run licensed encrypted model w/o lic check (24 kHz) [tflite r
   denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
 
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.denoiser_runner->Infer(&denoise_task);
+  data.denoiser_runner->infer(&denoise_task);
 
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
@@ -426,7 +426,7 @@ TEST_CASE("SUCCEED Run licensed encrypted model w/o lic check (24 kHz) [tflite r
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
   denoise_task.m_data.context = ctx.get();
   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.denoiser_runner->Infer(&denoise_task);
+  data.denoiser_runner->infer(&denoise_task);
 
   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
   IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.00001);
@@ -453,7 +453,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 48kHz and with differen
     auto ts_1 = std::chrono::steady_clock::now();
     for (size_t i = 0; i < nattempts; ++i) {
       auto start = std::chrono::steady_clock::now();
-      data.denoiser_runner->_TestRun<float>(inputs);
+      data.denoiser_runner->test_run<float>(inputs);
       auto stop = std::chrono::steady_clock::now();
       timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
     }
@@ -488,7 +488,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
     auto ts_1 = std::chrono::steady_clock::now();
     for (size_t i = 0; i < nattempts; ++i) {
       auto start = std::chrono::steady_clock::now();
-      data.denoiser_runner->_TestRun<float>(inputs);
+      data.denoiser_runner->test_run<float>(inputs);
       auto stop = std::chrono::steady_clock::now();
       timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
     }
@@ -542,7 +542,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
 //   denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
 //   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 
-//   data.denoiser_runner->Infer(&denoise_task);
+//   data.denoiser_runner->infer(&denoise_task);
 
 //   REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
 //   IsVectorsClose(gt_real, denoise_task.m_data.new_spectrogram.real, 0.000001);
@@ -577,7 +577,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
 //   uint64_t hop_size = static_cast<uint64_t>(data.sample_rate * data.frame_size_ms / 1000);
 //   denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
 
-//   data.denoiser_runner->Infer(&denoise_task);
+//   data.denoiser_runner->infer(&denoise_task);
 //   REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
 
 //   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
@@ -594,14 +594,14 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
 //   denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
 //   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 
-//   data.denoiser_runner->Infer(&denoise_task);
+//   data.denoiser_runner->infer(&denoise_task);
 //   REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
 //   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
 //                                                  denoise_task.m_data.enhanced_wav);
 //   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 //   denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
 
-//   data.denoiser_runner->Infer(&denoise_task);
+//   data.denoiser_runner->infer(&denoise_task);
 //   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
 //   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
 //                                                  denoise_task.m_data.enhanced_wav);
@@ -609,7 +609,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
 //   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
 //   denoise_task.m_data.enhanced_wav.assign(hop_size, 1.0);
 
-//   data.denoiser_runner->Infer(&denoise_task);
+//   data.denoiser_runner->infer(&denoise_task);
 //   REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
 //   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 1.0) ==
 //                                                  denoise_task.m_data.enhanced_wav);
@@ -634,7 +634,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
 //     auto ts_1 = std::chrono::steady_clock::now();
 //     for (size_t i = 0; i < nattempts; ++i) {
 //       auto start = std::chrono::steady_clock::now();
-//       data.denoiser_runner->_TestRun<float>(inputs);
+//       data.denoiser_runner->test_run<float>(inputs);
 //       auto stop = std::chrono::steady_clock::now();
 //       timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
 //     }

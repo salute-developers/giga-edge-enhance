@@ -41,23 +41,23 @@ class BaseTfliteRunner {
                   bool on_gpu = false);
   virtual ~BaseTfliteRunner();
 
-  virtual void Infer(spench::SpenchTask* denoise_task) = 0;
+  virtual void infer(spench::SpenchTask* denoise_task) = 0;
   // change two last arguments
-  virtual void PrepareInputInPlace(std::vector<float>& mag,
+  virtual void prepare_input_in_place(std::vector<float>& mag,
                                    std::vector<std::vector<float>*>& inputs,
                                    spench::SpenchContext<float>* denoise_context) = 0;
   template<typename T>
-  void _TestRun(std::vector<std::vector<T>*>& inputs) {Run(inputs);}
-  virtual uint32_t GetFutureContextLen() {
-    return m_model_params.m_network_input_ctx_len;
+  void test_run(std::vector<std::vector<T>*>& inputs) {run(inputs);}
+  virtual uint32_t get_future_context_len() {
+    return model_params_.m_network_input_ctx_len;
   }
 
  protected:
-  void ReadConfig(const YAML::Node& yaml_config) {
-    m_model_params.ReadModelNode(yaml_config);
+  void read_config(const YAML::Node& yaml_config) {
+    model_params_.ReadModelNode(yaml_config);
   }
 
-  void InitModel(std::vector<std::string>& input_names,
+  void init_model(std::vector<std::string>& input_names,
                  std::vector<std::string>& output_names,
                  const std::string& model_path,
                  const std::string& password,
@@ -65,50 +65,50 @@ class BaseTfliteRunner {
                  const uint32_t num_threads, bool on_gpu);
 
   template<typename T>
-  void Run(std::vector<std::vector<T>*>& inputs,
+  void run(std::vector<std::vector<T>*>& inputs,
            const std::vector<std::vector<int32_t>>& input_shapes);
 
   template<typename T>
-  void Run(std::vector<std::vector<T>*>& inputs) {
-    Run(inputs, m_model_input_shapes);
+  void run(std::vector<std::vector<T>*>& inputs) {
+    run(inputs, model_input_shapes_);
   }
 
-  void ResizeIfNeededInPlace(std::vector<float>& to_check, uint32_t shape);
-  void ResizeIfNeededInPlace(std::valarray<float>& to_check, uint32_t shape);
-  void InitOutputTensors(spench::SpenchTaskData& data, uint32_t size);
+  void resize_if_needed_in_place(std::vector<float>& to_check, uint32_t shape);
+  void resize_if_needed_in_place(std::valarray<float>& to_check, uint32_t shape);
+  void init_output_tensors(spench::SpenchTaskData& data, uint32_t size);
 
-  static int32_t GetSingleDynamicAxis(const TfLiteTensor* tensor, const char* tensor_debug_name);
-  static void SetTimeDimIfDynamic(std::vector<int32_t>& shape, int32_t time_axis, int32_t num_frames);
-  static uint64_t ShapeProduct(const std::vector<int32_t>& shape);
+  static int32_t get_single_dynamic_axis(const TfLiteTensor* tensor, const char* tensor_debug_name);
+  static void set_time_dim_if_dynamic(std::vector<int32_t>& shape, int32_t time_axis, int32_t num_frames);
+  static uint64_t shape_product(const std::vector<int32_t>& shape);
 
-  void RefreshTensorMetadata();
-  void ResizeInputsIfNeeded(const std::vector<std::vector<int32_t>>& input_shapes);
+  void refresh_tensor_metadata();
+  void resize_inputs_if_needed(const std::vector<std::vector<int32_t>>& input_shapes);
 
   template<typename T>
-  void WarmUp(std::vector<std::vector<T>*>& inputs) {
+  void warm_up(std::vector<std::vector<T>*>& inputs) {
     for (int16_t i = 0; i < 3; ++i) {
-      Run(inputs);
+      run(inputs);
     }
   }
 
  public:
-  std::vector<uint64_t> m_model_input_size;
-  std::vector<uint64_t> m_model_output_size;
+  std::vector<uint64_t> input_tensor_sizes;
+  std::vector<uint64_t> output_tensor_sizes;
 
  protected:
-  std::mutex m_model_run_mutex;
-  std::unique_ptr<tflite::FlatBufferModel> m_model = nullptr;
-  std::unique_ptr<tflite::Interpreter> m_interpreter = nullptr;
-  std::unique_ptr<std::vector<char> > m_model_data = nullptr;
-  std::vector<TfLiteTensor*> m_model_inputs;
-  std::vector<const TfLiteTensor*> m_model_outputs;
-  tflite::SignatureRunner* m_signature_runner;
-  spench::DenoiseModelParams m_model_params;
-  std::vector<std::vector<int32_t>> m_model_input_shapes;
-  std::vector<std::vector<int32_t>> m_model_output_shapes;
-  std::vector<int32_t> m_time_axis_in;
-  std::vector<std::string> m_model_input_names;
-  std::vector<std::string> m_model_output_names;
+  std::mutex model_run_mutex_;
+  std::unique_ptr<tflite::FlatBufferModel> model_ = nullptr;
+  std::unique_ptr<tflite::Interpreter> interpreter_ = nullptr;
+  std::unique_ptr<std::vector<char> > model_data_ = nullptr;
+  std::vector<TfLiteTensor*> model_inputs_;
+  std::vector<const TfLiteTensor*> model_outputs_;
+  tflite::SignatureRunner* signature_runner_;
+  spench::DenoiseModelParams model_params_;
+  std::vector<std::vector<int32_t>> model_input_shapes_;
+  std::vector<std::vector<int32_t>> model_output_shapes_;
+  std::vector<int32_t> time_axis_in_;
+  std::vector<std::string> model_input_names_;
+  std::vector<std::string> model_output_names_;
 };
 
 
@@ -121,14 +121,14 @@ class SpenchFTfliteRunner: public BaseTfliteRunner {
                                const std::string& checksum,
                                uint32_t inference_engine_threads = 1,
                                bool on_gpu = false);
-  void Infer(spench::SpenchTask* denoise_task);
+  void infer(spench::SpenchTask* denoise_task);
  protected:
-  template<typename T> void WarmUp();
-  void PrepareInputInPlace(std::vector<float>& mag,
+  template<typename T> void warm_up();
+  void prepare_input_in_place(std::vector<float>& mag,
                            std::vector<std::vector<float>*>& inputs,
                            spench::SpenchContext<float>* context);
   template<typename T>
-  void ParseResults(spench::SpenchTaskData& data);
+  void parse_results(spench::SpenchTaskData& data);
 };
 
 class SpenchQTfliteRunner: public BaseTfliteRunner {
@@ -140,14 +140,14 @@ class SpenchQTfliteRunner: public BaseTfliteRunner {
                                const std::string& checksum,
                                uint32_t inference_engine_threads = 1,
                                bool on_gpu = false);
-  void Infer(spench::SpenchTask* denoise_task);
+  void infer(spench::SpenchTask* denoise_task);
  protected:
-  template<typename T> void WarmUp();
-  void PrepareInputInPlace(std::vector<float>& mag,
+  template<typename T> void warm_up();
+  void prepare_input_in_place(std::vector<float>& mag,
                            std::vector<std::vector<float>*>& inputs,
                            spench::SpenchContext<float>* context);
   template<typename T>
-  void ParseResults(spench::SpenchTaskData& data);
+  void parse_results(spench::SpenchTaskData& data);
 };
 
 }  // namespace tf_lite

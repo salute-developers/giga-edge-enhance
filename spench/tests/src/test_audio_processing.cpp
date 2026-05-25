@@ -761,12 +761,12 @@ TEST_CASE("SUCCEED Create and process speex echo canceler [echo canceling]") {
   constexpr int32_t filter_len = 8192;
 
   auto echo = util::echo::EchoCancelerBuilder()
-                  .SetSampleRate(fs)
-                  .SetFilterLen(filter_len)
-                  .SetFrameLen(frame_len)
-                  .SetType(util::echo::EchoCancelerType::SPEEX)
-                  .SetDelayCompensator(true)
-                  .Create();
+                  .set_sample_rate(fs)
+                  .set_filter_len(filter_len)
+                  .set_frame_len(frame_len)
+                  .set_type(util::echo::EchoCancelerType::speex)
+                  .set_delay_compensator(true)
+                  .create();
 
   // loopback - noise, speech - sinus
   auto rir_flt = dsplib::FirFilterR(DumbRir(filter_len * 0.7));
@@ -792,7 +792,7 @@ TEST_CASE("SUCCEED Create and process speex echo canceler [echo canceling]") {
     const int32_t t2 = t1 + frame_len;
     const auto d = *mic.slice(t1, t2);
     const auto x = *ref.slice(t1, t2);
-    const auto y = echo->Process(d.to_vec(), x.to_vec());
+    const auto y = echo->process(d.to_vec(), x.to_vec());
     out |= dsplib::arr_real(y);
   }
 

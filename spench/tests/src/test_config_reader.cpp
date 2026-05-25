@@ -500,7 +500,7 @@ echo_cancellation:
   REQUIRE(cfg->residualEchoSuppressionEnabled()   == false);
   REQUIRE(cfg->delayCompensatorEnabled()          == false);
   REQUIRE(cfg->frameLen()                         == uint16_t(std::round(44.1f*32)));
-  REQUIRE(cfg->type()                             == util::echo::EchoCancelerType::SPEEX);
+  REQUIRE(cfg->type()                             == util::echo::EchoCancelerType::speex);
 }
 
 TEST_CASE("SUCCESS AecConfig partial override uses defaults [aec config reader]") {
@@ -520,7 +520,7 @@ echo_cancellation:
   REQUIRE(cfg->delayCompensatorEnabled()          == true);
   // default chunk_len_ms=16 → frameLen = round(32 * 16) = 512
   REQUIRE(cfg->frameLen()                         == 512u);
-  REQUIRE(cfg->type()                             == util::echo::EchoCancelerType::SPEEX);
+  REQUIRE(cfg->type()                             == util::echo::EchoCancelerType::speex);
 }
 
 TEST_CASE("FAIL AecConfig invalid type throws [aec config reader]") {

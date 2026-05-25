@@ -404,7 +404,7 @@ class AudioProcLC : public AudioProcItemWithStats {
   AudioProcLC() {
     m_lc = util::sound::LoudnessControlBuilder()
                .set_sample_rate(m_sr)
-               .set_method(util::sound::ILoudnessControl::SIMPLE)
+               .set_method(util::sound::ILoudnessControl::simple)
                .create();
 
   stats_configure(m_sr, m_stats_window_sec, {{"input_lufs", Options::All()}, {"gain_db", Options::All()}});}

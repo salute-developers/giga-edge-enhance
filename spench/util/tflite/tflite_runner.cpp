@@ -23,13 +23,13 @@ BaseTfliteRunner::BaseTfliteRunner(std::vector<std::string>& input_names,
                                    const std::string& checksum,
                                    const uint32_t num_threads, bool on_gpu) {
   (void)(on_gpu);
-  InitModel(input_names, output_names,
+  init_model(input_names, output_names,
             model_path, password,
             checksum, num_threads,
             on_gpu);
 }
 
-void BaseTfliteRunner::InitModel(std::vector<std::string>& input_names,
+void BaseTfliteRunner::init_model(std::vector<std::string>& input_names,
                                  std::vector<std::string>& output_names,
                                  const std::string& model_path,
                                  const std::string& password,
@@ -37,7 +37,7 @@ void BaseTfliteRunner::InitModel(std::vector<std::string>& input_names,
                                  const uint32_t num_threads, bool on_gpu) {
   (void)(on_gpu);
   if (password.empty() && checksum.empty()) {
-    m_model = tflite::FlatBufferModel::VerifyAndBuildFromFile(model_path.c_str());
+    model_ = tflite::FlatBufferModel::VerifyAndBuildFromFile(model_path.c_str());
   } else {
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
     modelencryption::Decryptor decryptor;
@@ -47,76 +47,76 @@ void BaseTfliteRunner::InitModel(std::vector<std::string>& input_names,
       if (!checksum.empty()) {
         license_checksum.reset(new modelencryption::Checksum(hasher.DeserializeChecksum(checksum.c_str())));
       }
-      std::vector<uint8_t> modelData =
+      std::vector<uint8_t> model_data =
                               decryptor.DecryptFile(model_path, modelencryption::Key(password), license_checksum.get());
-      m_model_data = std::make_unique<std::vector<char>>(modelData.data(), modelData.data()+modelData.size());
+      model_data_ = std::make_unique<std::vector<char>>(model_data.data(), model_data.data()+model_data.size());
     } catch (const std::exception& ex) {
       std::string err_message = std::string("Model reading error. Detailes: ")
                                 + ex.what();
       throw TfliteValidationException(err_message);
     }
-    m_model = tflite::FlatBufferModel::VerifyAndBuildFromBuffer(m_model_data->data(),
-                                                                m_model_data->size());
+    model_ = tflite::FlatBufferModel::VerifyAndBuildFromBuffer(model_data_->data(),
+                                                                model_data_->size());
 #else
     throw TfliteValidationException("Password must be empty or library should be built with encryption support");
 #endif
   }
 
-  if (m_model == nullptr) {
+  if (model_ == nullptr) {
     throw TfliteValidationException("Model reading error. There is problem with checkpoint file.");
   }
 
   tflite::ops::builtin::BuiltinOpResolver resolver;
-  tflite::InterpreterBuilder builder(*m_model, resolver);
+  tflite::InterpreterBuilder builder(*model_, resolver);
 
   if (builder.SetNumThreads(num_threads) != kTfLiteOk) {
     throw TfliteValidationException("Can not set number of threads");
   }
-  if (builder(&m_interpreter) != kTfLiteOk) {
+  if (builder(&interpreter_) != kTfLiteOk) {
     throw TfliteValidationException("Interpreter creation error. Can not create interpreter");
   }
-  if (m_interpreter->AllocateTensors() != kTfLiteOk) {
+  if (interpreter_->AllocateTensors() != kTfLiteOk) {
     throw TfliteValidationException("Interpreter tensor allocation error");
   }
 
-  m_signature_runner = m_interpreter->GetSignatureRunner("serving_default");
-  if (m_signature_runner == nullptr) {
+  signature_runner_ = interpreter_->GetSignatureRunner("serving_default");
+  if (signature_runner_ == nullptr) {
     throw TfliteValidationException("Model does not has required 'serving_default' signature");
   }
 
-  if (m_signature_runner->input_names().size() != input_names.size()) {
+  if (signature_runner_->input_names().size() != input_names.size()) {
     throw TfliteValidationException("Model and config file have different number of inputs");
   }
-  if (m_signature_runner->output_names().size() != output_names.size()) {
+  if (signature_runner_->output_names().size() != output_names.size()) {
     throw TfliteValidationException("Model and config file have different number of outputs");
   }
 
-  m_model_input_names.assign(input_names.begin(), input_names.end());
-  m_model_output_names.assign(output_names.begin(), output_names.end());
+  model_input_names_.assign(input_names.begin(), input_names.end());
+  model_output_names_.assign(output_names.begin(), output_names.end());
 
-  RefreshTensorMetadata();
+  refresh_tensor_metadata();
 }
 
 template<typename T>
-void BaseTfliteRunner::Run(std::vector<std::vector<T>*>& inputs,
+void BaseTfliteRunner::run(std::vector<std::vector<T>*>& inputs,
                            const std::vector<std::vector<int32_t>>& input_shapes) {
-  if (inputs.size() != m_model_inputs.size()) {
+  if (inputs.size() != model_inputs_.size()) {
     throw TfliteValidationException("Model run failed. Number of inputs are differ.");
   }
   if (inputs.size() != input_shapes.size()) {
     throw TfliteValidationException("Model run failed. Number of provided shapes are differ.");
   }
 
-  ResizeInputsIfNeeded(input_shapes);
+  resize_inputs_if_needed(input_shapes);
 
   T* data_ptr = nullptr;
   for (size_t i = 0; i < inputs.size(); ++i) {
     uint64_t expected_size = 0;
 
-    if (m_time_axis_in[i] >= 0) {
-      expected_size = ShapeProduct(input_shapes[i]);
+    if (time_axis_in_[i] >= 0) {
+      expected_size = shape_product(input_shapes[i]);
     } else {
-      expected_size = m_model_input_size[i];
+      expected_size = input_tensor_sizes[i];
     }
 
     if (expected_size != inputs[i]->size()) {
@@ -126,40 +126,40 @@ void BaseTfliteRunner::Run(std::vector<std::vector<T>*>& inputs,
       throw TfliteValidationException(err_msg);
     }
 
-    data_ptr = tflite::GetTensorData<T>(m_model_inputs[i]);
+    data_ptr = tflite::GetTensorData<T>(model_inputs_[i]);
     if (data_ptr == nullptr) {
       throw TfliteValidationException("Failed to get input tensor buffer");
     }
     std::memcpy(data_ptr, inputs[i]->data(), sizeof(T) * inputs[i]->size());
   }
 
-  if (m_signature_runner->Invoke() != kTfLiteOk) {
+  if (signature_runner_->Invoke() != kTfLiteOk) {
     throw TfliteValidationException("Interpreter invoke failed");
   }
 
-  RefreshTensorMetadata();
+  refresh_tensor_metadata();
 }
 
-void BaseTfliteRunner::ResizeIfNeededInPlace(std::vector<float>& to_check,
+void BaseTfliteRunner::resize_if_needed_in_place(std::vector<float>& to_check,
                                              uint32_t shape) {
   if (to_check.size() != shape) {
     to_check.resize(shape, 0.0f);
   }
 }
 
-void BaseTfliteRunner::ResizeIfNeededInPlace(std::valarray<float>& to_check,
+void BaseTfliteRunner::resize_if_needed_in_place(std::valarray<float>& to_check,
                                              uint32_t shape) {
   if (to_check.size() != shape) {
     to_check.resize(shape, 0.0f);
   }
 }
 
-void BaseTfliteRunner::InitOutputTensors(spench::SpenchTaskData& data, uint32_t size) {
-  ResizeIfNeededInPlace(data.new_spectrogram.real, size / 2);
-  ResizeIfNeededInPlace(data.new_spectrogram.imag, size / 2);
+void BaseTfliteRunner::init_output_tensors(spench::SpenchTaskData& data, uint32_t size) {
+  resize_if_needed_in_place(data.new_spectrogram.real, size / 2);
+  resize_if_needed_in_place(data.new_spectrogram.imag, size / 2);
 }
 
-int32_t BaseTfliteRunner::GetSingleDynamicAxis(const TfLiteTensor* tensor,
+int32_t BaseTfliteRunner::get_single_dynamic_axis(const TfLiteTensor* tensor,
                                                const char* tensor_debug_name) {
   if (tensor == nullptr) {
     throw TfliteValidationException(std::string("Null tensor: ") + tensor_debug_name);
@@ -184,7 +184,7 @@ int32_t BaseTfliteRunner::GetSingleDynamicAxis(const TfLiteTensor* tensor,
   return found;
 }
 
-void BaseTfliteRunner::SetTimeDimIfDynamic(std::vector<int32_t>& shape,
+void BaseTfliteRunner::set_time_dim_if_dynamic(std::vector<int32_t>& shape,
                                            int32_t time_axis,
                                            int32_t num_frames) {
   if (time_axis >= 0) {
@@ -192,7 +192,7 @@ void BaseTfliteRunner::SetTimeDimIfDynamic(std::vector<int32_t>& shape,
   }
 }
 
-uint64_t BaseTfliteRunner::ShapeProduct(const std::vector<int32_t>& shape) {
+uint64_t BaseTfliteRunner::shape_product(const std::vector<int32_t>& shape) {
   return std::accumulate(shape.begin(), shape.end(),
                          uint64_t{1},
                          [](uint64_t acc, int32_t dim) {
@@ -203,17 +203,17 @@ uint64_t BaseTfliteRunner::ShapeProduct(const std::vector<int32_t>& shape) {
                          });
 }
 
-void BaseTfliteRunner::RefreshTensorMetadata() {
-  m_model_inputs.clear();
-  m_model_outputs.clear();
-  m_model_input_shapes.clear();
-  m_model_output_shapes.clear();
-  m_model_input_size.clear();
-  m_model_output_size.clear();
-  m_time_axis_in.clear();
+void BaseTfliteRunner::refresh_tensor_metadata() {
+  model_inputs_.clear();
+  model_outputs_.clear();
+  model_input_shapes_.clear();
+  model_output_shapes_.clear();
+  input_tensor_sizes.clear();
+  output_tensor_sizes.clear();
+  time_axis_in_.clear();
 
-  for (const auto& name : m_model_input_names) {
-    TfLiteTensor* t = m_signature_runner->input_tensor(name.c_str());
+  for (const auto& name : model_input_names_) {
+    TfLiteTensor* t = signature_runner_->input_tensor(name.c_str());
     if (t == nullptr) {
       throw TfliteValidationException("Failed to get input tensor: " + name);
     }
@@ -221,8 +221,8 @@ void BaseTfliteRunner::RefreshTensorMetadata() {
       throw TfliteValidationException("Input tensor has no dims: " + name);
     }
 
-    m_model_inputs.push_back(t);
-    m_time_axis_in.push_back(GetSingleDynamicAxis(t, name.c_str()));
+    model_inputs_.push_back(t);
+    time_axis_in_.push_back(get_single_dynamic_axis(t, name.c_str()));
 
     std::vector<int32_t> concrete_shape;
     concrete_shape.reserve(static_cast<size_t>(t->dims->size));
@@ -230,12 +230,12 @@ void BaseTfliteRunner::RefreshTensorMetadata() {
       concrete_shape.push_back(t->dims->data[i]);
     }
 
-    m_model_input_shapes.push_back(concrete_shape);
-    m_model_input_size.push_back(ShapeProduct(concrete_shape));
+    model_input_shapes_.push_back(concrete_shape);
+    input_tensor_sizes.push_back(shape_product(concrete_shape));
   }
 
-  for (const auto& name : m_model_output_names) {
-    const TfLiteTensor* t = m_signature_runner->output_tensor(name.c_str());
+  for (const auto& name : model_output_names_) {
+    const TfLiteTensor* t = signature_runner_->output_tensor(name.c_str());
     if (t == nullptr) {
       throw TfliteValidationException("Failed to get output tensor: " + name);
     }
@@ -243,7 +243,7 @@ void BaseTfliteRunner::RefreshTensorMetadata() {
       throw TfliteValidationException("Output tensor has no dims: " + name);
     }
 
-    m_model_outputs.push_back(t);
+    model_outputs_.push_back(t);
 
     std::vector<int32_t> concrete_shape;
     concrete_shape.reserve(static_cast<size_t>(t->dims->size));
@@ -251,24 +251,24 @@ void BaseTfliteRunner::RefreshTensorMetadata() {
       concrete_shape.push_back(t->dims->data[i]);
     }
 
-    m_model_output_shapes.push_back(concrete_shape);
-    m_model_output_size.push_back(ShapeProduct(concrete_shape));
+    model_output_shapes_.push_back(concrete_shape);
+    output_tensor_sizes.push_back(shape_product(concrete_shape));
   }
 }
 
-void BaseTfliteRunner::ResizeInputsIfNeeded(const std::vector<std::vector<int32_t>>& input_shapes) {
-  if (input_shapes.size() != m_model_input_names.size()) {
+void BaseTfliteRunner::resize_inputs_if_needed(const std::vector<std::vector<int32_t>>& input_shapes) {
+  if (input_shapes.size() != model_input_names_.size()) {
     throw TfliteValidationException("Resolved input shapes do not match number of model inputs");
   }
 
   bool need_resize = false;
 
   for (size_t i = 0; i < input_shapes.size(); ++i) {
-    if (m_time_axis_in[i] < 0) {
+    if (time_axis_in_[i] < 0) {
       continue;  // static input
     }
 
-    TfLiteTensor* t = m_signature_runner->input_tensor(m_model_input_names[i].c_str());
+    TfLiteTensor* t = signature_runner_->input_tensor(model_input_names_[i].c_str());
     if (t == nullptr || t->dims == nullptr) {
       throw TfliteValidationException("Failed to inspect dynamic input tensor before resize");
     }
@@ -295,21 +295,21 @@ void BaseTfliteRunner::ResizeInputsIfNeeded(const std::vector<std::vector<int32_
   }
 
   for (size_t i = 0; i < input_shapes.size(); ++i) {
-    if (m_time_axis_in[i] < 0) {
+    if (time_axis_in_[i] < 0) {
       continue;  // resize only dynamic inputs
     }
 
-    if (m_signature_runner->ResizeInputTensor(m_model_input_names[i].c_str(),
+    if (signature_runner_->ResizeInputTensor(model_input_names_[i].c_str(),
                                               input_shapes[i]) != kTfLiteOk) {
-      throw TfliteValidationException("Failed to resize input tensor: " + m_model_input_names[i]);
+      throw TfliteValidationException("Failed to resize input tensor: " + model_input_names_[i]);
     }
   }
 
-  if (m_signature_runner->AllocateTensors() != kTfLiteOk) {
+  if (signature_runner_->AllocateTensors() != kTfLiteOk) {
     throw TfliteValidationException("AllocateTensors failed after input resize");
   }
 
-  RefreshTensorMetadata();
+  refresh_tensor_metadata();
 }
 
 SpenchFTfliteRunner::SpenchFTfliteRunner(const YAML::Node& yaml_config,
@@ -317,23 +317,23 @@ SpenchFTfliteRunner::SpenchFTfliteRunner(const YAML::Node& yaml_config,
                                          const std::string& checksum,
                                          uint32_t inference_engine_threads, bool on_gpu) :
                                          BaseTfliteRunner::BaseTfliteRunner() {
-    ReadConfig(yaml_config);
-    InitModel(m_model_params.m_model_inputs, m_model_params.m_model_outputs,
-              m_model_params.m_model_path, password, checksum, inference_engine_threads,
+    read_config(yaml_config);
+    init_model(model_params_.m_model_inputs, model_params_.m_model_outputs,
+              model_params_.m_model_path, password, checksum, inference_engine_threads,
               on_gpu);
-    WarmUp<float>();
+    warm_up<float>();
 }
 
 template<typename T>
-void SpenchFTfliteRunner::WarmUp() {
+void SpenchFTfliteRunner::warm_up() {
   spench::SpenchTask dummy_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>());
   dummy_task.m_data.context = ctx.get();
 
-  std::vector<T> dummy_mag(m_model_input_size[0], 0.0);
-  std::vector<T> dummy_fb_h(m_model_input_size[1], 0.0);
-  std::vector<T> dummy_fb_c(m_model_input_size[2], 0.0);
-  std::vector<T> dummy_prev_fb_out(m_model_input_size[3], 0.0);
+  std::vector<T> dummy_mag(input_tensor_sizes[0], 0.0);
+  std::vector<T> dummy_fb_h(input_tensor_sizes[1], 0.0);
+  std::vector<T> dummy_fb_c(input_tensor_sizes[2], 0.0);
+  std::vector<T> dummy_prev_fb_out(input_tensor_sizes[3], 0.0);
 
   std::vector<std::vector<T>*> inputs;
   inputs.push_back(&dummy_mag);
@@ -341,10 +341,10 @@ void SpenchFTfliteRunner::WarmUp() {
   inputs.push_back(&dummy_fb_c);
   inputs.push_back(&dummy_prev_fb_out);
 
-  BaseTfliteRunner::WarmUp<T>(inputs);
+  BaseTfliteRunner::warm_up<T>(inputs);
 }
 
-void SpenchFTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
+void SpenchFTfliteRunner::prepare_input_in_place(std::vector<float>& mag,
                                             std::vector<std::vector<float>*>& inputs,
                                             spench::SpenchContext<float>* context) {
   if (context == nullptr) {
@@ -354,12 +354,12 @@ void SpenchFTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
                                      dynamic_cast<spench::DenoiseContextF<float>*>(context);
 
   uint32_t from, to;
-  uint32_t num_feats = static_cast<uint32_t>(m_model_input_shapes[0][1]);
-  uint32_t num_frames = static_cast<uint32_t>(m_model_input_shapes[0][2]);
+  uint32_t num_feats = static_cast<uint32_t>(model_input_shapes_[0][1]);
+  uint32_t num_frames = static_cast<uint32_t>(model_input_shapes_[0][2]);
 
   if (denoise_context->noisy_mag.size() == 0) {
     // for the first frame of wav only
-    denoise_context->noisy_mag.resize(m_model_input_size[0]);
+    denoise_context->noisy_mag.resize(input_tensor_sizes[0]);
   } else {
     // for the next frames forget 1 frame out of num_frames (5) and move remaining to the left
     for (uint32_t frame_i = 1; frame_i < num_frames; ++frame_i) {
@@ -377,10 +377,10 @@ void SpenchFTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
     denoise_context->noisy_mag[to] = mag[feat_i];
   }
 
-  ResizeIfNeededInPlace(denoise_context->noisy_mag, m_model_input_size[0]);  // noisy_mag_5
-  ResizeIfNeededInPlace(denoise_context->fullband_hidden, m_model_input_size[1]);  // fb_h
-  ResizeIfNeededInPlace(denoise_context->fullband_cell_state, m_model_input_size[2]);  // fb_c
-  ResizeIfNeededInPlace(denoise_context->prev_fb_out, m_model_input_size[3]);  // new_fb_out_5
+  resize_if_needed_in_place(denoise_context->noisy_mag, input_tensor_sizes[0]);  // noisy_mag_5
+  resize_if_needed_in_place(denoise_context->fullband_hidden, input_tensor_sizes[1]);  // fb_h
+  resize_if_needed_in_place(denoise_context->fullband_cell_state, input_tensor_sizes[2]);  // fb_c
+  resize_if_needed_in_place(denoise_context->prev_fb_out, input_tensor_sizes[3]);  // new_fb_out_5
 
   inputs.push_back(&denoise_context->noisy_mag);
   inputs.push_back(&denoise_context->fullband_hidden);
@@ -389,15 +389,15 @@ void SpenchFTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
 }
 
 template<typename T>
-void SpenchFTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
+void SpenchFTfliteRunner::parse_results(spench::SpenchTaskData& data) {
   if (data.context == nullptr) {
     throw("Context is not allocated!");
   }
   spench::DenoiseContextF<T>* context = dynamic_cast<spench::DenoiseContextF<T>*>(data.context);
 
   const T* const_output_ptr;
-  for (uint16_t output_idx = 0; output_idx < m_model_output_size.size(); output_idx++) {
-    const_output_ptr = tflite::GetTensorData<T>(m_model_outputs[output_idx]);
+  for (uint16_t output_idx = 0; output_idx < output_tensor_sizes.size(); output_idx++) {
+    const_output_ptr = tflite::GetTensorData<T>(model_outputs_[output_idx]);
     switch (output_idx) {
       case 0:
         context->fullband_hidden.assign(const_output_ptr,
@@ -412,7 +412,7 @@ void SpenchFTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
                                       const_output_ptr + context->prev_fb_out.size());
         break;
       case 3:
-        for (uint64_t i = 0; i < m_model_output_size[3]; i += 2) {
+        for (uint64_t i = 0; i < output_tensor_sizes[3]; i += 2) {
           data.new_spectrogram.real[i / 2] = const_output_ptr[i];
           data.new_spectrogram.imag[i / 2] = const_output_ptr[i + 1];
         }
@@ -425,7 +425,7 @@ void SpenchFTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
   }
 }
 
-void SpenchFTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
+void SpenchFTfliteRunner::infer(spench::SpenchTask* denoise_task) {
   if (denoise_task == nullptr || denoise_task->m_data.context == nullptr) {
     throw("Task data or context are not initialized!");
   }
@@ -434,7 +434,7 @@ void SpenchFTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
   }
   auto& denoise_data = denoise_task->m_data;
   auto& denoise_context = denoise_data.context;
-  if (denoise_context->prev_features.size() > m_model_params.m_network_input_ctx_len) {
+  if (denoise_context->prev_features.size() > model_params_.m_network_input_ctx_len) {
     denoise_context->prev_features.pop();
   }
   denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
@@ -443,20 +443,20 @@ void SpenchFTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
     std::vector<std::vector<float>*> inputs;
     std::vector<std::vector<float>> outputs;
     std::vector<float> mag = denoise_data.input_spectrogram[0].getMagnitude();
-    SpenchFTfliteRunner::PrepareInputInPlace(mag, inputs, denoise_context);
-    SpenchFTfliteRunner::InitOutputTensors(denoise_data, m_model_output_size[3]);
+    SpenchFTfliteRunner::prepare_input_in_place(mag, inputs, denoise_context);
+    SpenchFTfliteRunner::init_output_tensors(denoise_data, output_tensor_sizes[3]);
 
     {
-      std::lock_guard<std::mutex> lock(m_model_run_mutex);
-      Run(inputs, m_model_input_shapes);
-      ParseResults<float>(denoise_data);
+      std::lock_guard<std::mutex> lock(model_run_mutex_);
+      run(inputs, model_input_shapes_);
+      parse_results<float>(denoise_data);
     }
 
     if (denoise_context->prev_spectrogram.real.size() == 0) {
       denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
       std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
       denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
-    } else if (denoise_context->prev_features.size() > m_model_params.m_network_input_ctx_len + 1) {
+    } else if (denoise_context->prev_features.size() > model_params_.m_network_input_ctx_len + 1) {
       throw("Incorrect number of previous states!");
     } else {
       denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
@@ -471,26 +471,26 @@ SpenchQTfliteRunner::SpenchQTfliteRunner(const YAML::Node& yaml_config,
                                          const std::string& checksum,
                                          uint32_t inference_engine_threads, bool on_gpu) :
                                          BaseTfliteRunner::BaseTfliteRunner() {
-    ReadConfig(yaml_config);
-    InitModel(m_model_params.m_model_inputs, m_model_params.m_model_outputs,
-              m_model_params.m_model_path, password, checksum,
+    read_config(yaml_config);
+    init_model(model_params_.m_model_inputs, model_params_.m_model_outputs,
+              model_params_.m_model_path, password, checksum,
               inference_engine_threads, on_gpu);
-    WarmUp<float>();
+    warm_up<float>();
 }
 
 template<typename T>
-void SpenchQTfliteRunner::WarmUp() {
-  std::vector<std::vector<int32_t>> resolved_input_shapes = m_model_input_shapes;
-  SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], 1);
+void SpenchQTfliteRunner::warm_up() {
+  std::vector<std::vector<int32_t>> resolved_input_shapes = model_input_shapes_;
+  set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], 1);
 
-  std::vector<T> dummy_noisy_mag(ShapeProduct(resolved_input_shapes[0]), 0.0f);
-  std::vector<T> dummy_fb_hidden(m_model_input_size[1], 0.0f);
-  std::vector<T> dummy_fb_snr_psd(m_model_input_size[2], -1.0f);
-  std::vector<T> dummy_fb_snr_pg(m_model_input_size[3], -1.0f);
-  std::vector<T> dummy_sb_snr_psd(m_model_input_size[4], -1.0f);
-  std::vector<T> dummy_sb_snr_pg(m_model_input_size[5], -1.0f);
-  std::vector<T> dummy_conv1_buf(m_model_input_size[6], 0.0f);
-  std::vector<T> dummy_conv3_buf(m_model_input_size[7], 0.0f);
+  std::vector<T> dummy_noisy_mag(shape_product(resolved_input_shapes[0]), 0.0f);
+  std::vector<T> dummy_fb_hidden(input_tensor_sizes[1], 0.0f);
+  std::vector<T> dummy_fb_snr_psd(input_tensor_sizes[2], -1.0f);
+  std::vector<T> dummy_fb_snr_pg(input_tensor_sizes[3], -1.0f);
+  std::vector<T> dummy_sb_snr_psd(input_tensor_sizes[4], -1.0f);
+  std::vector<T> dummy_sb_snr_pg(input_tensor_sizes[5], -1.0f);
+  std::vector<T> dummy_conv1_buf(input_tensor_sizes[6], 0.0f);
+  std::vector<T> dummy_conv3_buf(input_tensor_sizes[7], 0.0f);
 
   std::vector<std::vector<T>*> inputs;
   inputs.push_back(&dummy_noisy_mag);
@@ -503,11 +503,11 @@ void SpenchQTfliteRunner::WarmUp() {
   inputs.push_back(&dummy_conv3_buf);
 
   for (int16_t i = 0; i < 3; ++i) {
-    Run(inputs, resolved_input_shapes);
+    run(inputs, resolved_input_shapes);
   }
 }
 
-void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
+void SpenchQTfliteRunner::prepare_input_in_place(std::vector<float>& mag,
                                               std::vector<std::vector<float>*>& inputs,
                                               spench::SpenchContext<float>* context) {
   if (context == nullptr) {
@@ -521,7 +521,7 @@ void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
 
   inputs.clear();
 
-  const uint32_t num_feats = static_cast<uint32_t>(m_model_input_shapes[0][1]);
+  const uint32_t num_feats = static_cast<uint32_t>(model_input_shapes_[0][1]);
   if (num_feats == 0) {
     throw std::runtime_error("Invalid model input shape: num_feats is zero");
   }
@@ -534,18 +534,18 @@ void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
 
   const uint32_t num_frames = static_cast<uint32_t>(mag.size() / num_feats);
 
-  std::vector<std::vector<int32_t>> resolved_input_shapes = m_model_input_shapes;
-  SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], static_cast<int32_t>(num_frames));
+  std::vector<std::vector<int32_t>> resolved_input_shapes = model_input_shapes_;
+  set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], static_cast<int32_t>(num_frames));
 
-  ResizeIfNeededInPlace(denoise_context->noisy_mag,
-                        static_cast<uint32_t>(ShapeProduct(resolved_input_shapes[0])));
-  ResizeIfNeededInPlace(denoise_context->fullband_hidden,  static_cast<uint32_t>(m_model_input_size[1]));
-  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_psd, static_cast<uint32_t>(m_model_input_size[2]));
-  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_pg,  static_cast<uint32_t>(m_model_input_size[3]));
-  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_psd, static_cast<uint32_t>(m_model_input_size[4]));
-  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_pg,  static_cast<uint32_t>(m_model_input_size[5]));
-  ResizeIfNeededInPlace(denoise_context->fb_conv1_buf,     static_cast<uint32_t>(m_model_input_size[6]));
-  ResizeIfNeededInPlace(denoise_context->fb_conv3_buf,     static_cast<uint32_t>(m_model_input_size[7]));
+  resize_if_needed_in_place(denoise_context->noisy_mag,
+                        static_cast<uint32_t>(shape_product(resolved_input_shapes[0])));
+  resize_if_needed_in_place(denoise_context->fullband_hidden,  static_cast<uint32_t>(input_tensor_sizes[1]));
+  resize_if_needed_in_place(denoise_context->fb_snr_noise_psd, static_cast<uint32_t>(input_tensor_sizes[2]));
+  resize_if_needed_in_place(denoise_context->fb_snr_noise_pg,  static_cast<uint32_t>(input_tensor_sizes[3]));
+  resize_if_needed_in_place(denoise_context->sb_snr_noise_psd, static_cast<uint32_t>(input_tensor_sizes[4]));
+  resize_if_needed_in_place(denoise_context->sb_snr_noise_pg,  static_cast<uint32_t>(input_tensor_sizes[5]));
+  resize_if_needed_in_place(denoise_context->fb_conv1_buf,     static_cast<uint32_t>(input_tensor_sizes[6]));
+  resize_if_needed_in_place(denoise_context->fb_conv3_buf,     static_cast<uint32_t>(input_tensor_sizes[7]));
 
   std::copy(mag.begin(), mag.end(), denoise_context->noisy_mag.begin());
 
@@ -560,15 +560,15 @@ void SpenchQTfliteRunner::PrepareInputInPlace(std::vector<float>& mag,
 }
 
 template<typename T>
-void SpenchQTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
+void SpenchQTfliteRunner::parse_results(spench::SpenchTaskData& data) {
   if (data.context == nullptr) {
     throw("Context is not allocated!");
   }
   spench::DenoiseContextQ<T>* context = dynamic_cast<spench::DenoiseContextQ<T>*>(data.context);
 
   const T* const_output_ptr;
-  for (uint16_t output_idx = 0; output_idx < m_model_output_size.size(); output_idx++) {
-    const_output_ptr = tflite::GetTensorData<T>(m_model_outputs[output_idx]);
+  for (uint16_t output_idx = 0; output_idx < output_tensor_sizes.size(); output_idx++) {
+    const_output_ptr = tflite::GetTensorData<T>(model_outputs_[output_idx]);
     switch (output_idx) {
       case 0:
         context->fullband_hidden.assign(const_output_ptr,
@@ -599,7 +599,7 @@ void SpenchQTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
                                              const_output_ptr + context->fb_conv3_buf.size());
         break;
       case 7: {
-        const TfLiteTensor* t = m_model_outputs[output_idx];
+        const TfLiteTensor* t = model_outputs_[output_idx];
         if (!t || !t->dims || t->dims->size < 3) {
           throw std::runtime_error("Invalid output tensor #7: missing dims");
         }
@@ -627,7 +627,7 @@ void SpenchQTfliteRunner::ParseResults(spench::SpenchTaskData& data) {
   }
 }
 
-void SpenchQTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
+void SpenchQTfliteRunner::infer(spench::SpenchTask* denoise_task) {
   if (denoise_task == nullptr || denoise_task->m_data.context == nullptr) {
     throw("Task data or context are not initialized!");
   }
@@ -636,7 +636,7 @@ void SpenchQTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
   }
   auto& denoise_data = denoise_task->m_data;
   auto& denoise_context = denoise_data.context;
-  if (denoise_context->prev_features.size() > m_model_params.m_network_input_ctx_len) {
+  if (denoise_context->prev_features.size() > model_params_.m_network_input_ctx_len) {
     denoise_context->prev_features.pop();
   }
 
@@ -656,22 +656,22 @@ void SpenchQTfliteRunner::Infer(spench::SpenchTask* denoise_task) {
       specs[t].writeMagnitudeInterleaved(mag, t, num_frames);
     }
 
-    std::vector<std::vector<int32_t>> resolved_input_shapes = m_model_input_shapes;
-    SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], static_cast<int32_t>(num_frames));
+    std::vector<std::vector<int32_t>> resolved_input_shapes = model_input_shapes_;
+    set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], static_cast<int32_t>(num_frames));
 
-    SpenchQTfliteRunner::PrepareInputInPlace(mag, inputs, denoise_context);
+    SpenchQTfliteRunner::prepare_input_in_place(mag, inputs, denoise_context);
     {
-      std::lock_guard<std::mutex> lock(m_model_run_mutex);
-      Run(inputs, resolved_input_shapes);
-      SpenchQTfliteRunner::InitOutputTensors(denoise_data, static_cast<uint32_t>(m_model_output_size[7]));
-      ParseResults<float>(denoise_data);
+      std::lock_guard<std::mutex> lock(model_run_mutex_);
+      run(inputs, resolved_input_shapes);
+      SpenchQTfliteRunner::init_output_tensors(denoise_data, static_cast<uint32_t>(output_tensor_sizes[7]));
+      parse_results<float>(denoise_data);
     }
 
-    if (denoise_context->prev_features.size() < m_model_params.m_network_input_ctx_len) {
+    if (denoise_context->prev_features.size() < model_params_.m_network_input_ctx_len) {
       denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
       std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
       denoise_task->m_stage = spench::PipelineStage::SKIPPED_CHUNK;
-    } else if (denoise_context->prev_features.size() == m_model_params.m_network_input_ctx_len &&
+    } else if (denoise_context->prev_features.size() == model_params_.m_network_input_ctx_len &&
                denoise_context->prev_spectrogram.real.size() == 0) {
       denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
       std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);

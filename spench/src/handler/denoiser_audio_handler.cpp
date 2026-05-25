@@ -60,18 +60,18 @@ SpenchRetCode DenoiserAudioHandler::InitAudioStreams(SpenchContext<float>* ctx,
     try {
       if (!ctx->input_sound_stream_ptr) {
         ctx->input_sound_stream_ptr =
-                  util::sound::BuildSoundStream(input_sample_rate,
+                  util::sound::build_sound_stream(input_sample_rate,
                               dynamic_cast<spench::DenoiserConfig*>(m_config.get())->samplingFreq(),
                               dynamic_cast<spench::DenoiserConfig*>(m_config.get())->frameStrideMs(),
-                                                       util::sound::TemplateType::INPUT);
+                                                       util::sound::TemplateType::input);
       }
       if (!ctx->output_sound_stream_ptr) {
         ctx->output_sound_stream_ptr =
-          util::sound::BuildSoundStream(
+          util::sound::build_sound_stream(
                                 dynamic_cast<spench::DenoiserConfig*>(m_config.get())->samplingFreq(),
                                 output_sample_rate,
                                 dynamic_cast<spench::DenoiserConfig*>(m_config.get())->frameStrideMs(),
-                                util::sound::TemplateType::OUTPUT);
+                                util::sound::TemplateType::output);
       }
     } catch(const std::exception& e) {
       spdlog::error("{}", e.what());
@@ -113,7 +113,7 @@ SpenchRetCode DenoiserAudioHandler::InferFrame(std::unique_ptr<spench::SpenchTas
 
   if (ret_code == SpenchRetCode::SUCCESS) {
     try {
-      m_inference_runner_ptr->Infer(task_ptr.get());
+      m_inference_runner_ptr->infer(task_ptr.get());
     } catch(const std::exception& e) {
       spdlog::error("{}", e.what());
       ret_code = SpenchRetCode::ERR_INFERENCE_PROBLEM;
@@ -169,10 +169,10 @@ SpenchRetCode DenoiserAudioHandler::ProcessFrame(struct spench::SpenchContext<fl
   std::vector<float> resampled_input_result;
   try {
     resampled_input_result =
-          task_ptr->m_data.context->input_sound_stream_ptr->ReadChunk(input_audio_frame);
+          task_ptr->m_data.context->input_sound_stream_ptr->read_chunk(input_audio_frame);
     // --- NEW: warn on input-stream accumulated delay ---
     double in_delay_ms = 0.0;
-    if (task_ptr->m_data.context->input_sound_stream_ptr->ShouldWarnDelay(delay_warn_ms,
+    if (task_ptr->m_data.context->input_sound_stream_ptr->should_warn_delay(delay_warn_ms,
                                                                           warn_interval_ms,
                                                                           &in_delay_ms)) {
       spdlog::warn("Input sound_stream accumulated delay {:.2f} ms exceeds {:.0f} ms",
@@ -232,10 +232,10 @@ SpenchRetCode DenoiserAudioHandler::ProcessFrame(struct spench::SpenchContext<fl
   if (ret_code >= SpenchRetCode::SUCCESS) {
     try {
       auto result =
-            task_ptr->m_data.context->output_sound_stream_ptr->ReadChunk(task_ptr->m_data.enhanced_wav);
+            task_ptr->m_data.context->output_sound_stream_ptr->read_chunk(task_ptr->m_data.enhanced_wav);
       // --- NEW: warn on output-stream accumulated delay ---
       double out_delay_ms = 0.0;
-      if (task_ptr->m_data.context->output_sound_stream_ptr->ShouldWarnDelay(delay_warn_ms,
+      if (task_ptr->m_data.context->output_sound_stream_ptr->should_warn_delay(delay_warn_ms,
                                                                              warn_interval_ms,
                                                                              &out_delay_ms)) {
         spdlog::warn("Output sound_stream accumulated delay {:.2f} ms exceeds {:.0f} ms",
@@ -262,7 +262,7 @@ SpenchRetCode DenoiserAudioHandler::FinalizeInference(struct spench::SpenchConte
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
 
   const std::vector<float>
-              zero_input_audio_frame(ctx->input_sound_stream_ptr->m_in.FrameSizeSamples(), 0.0);
+              zero_input_audio_frame(ctx->input_sound_stream_ptr->input.frame_size_samples(), 0.0);
   uint32_t number_of_zero_contexts = m_inference_runner_ptr->GetModelFutureContextLen() + 1;
   // flush model context
   for (uint32_t i = 0; i < number_of_zero_contexts; ++i) {
@@ -281,7 +281,7 @@ SpenchRetCode DenoiserAudioHandler::FinalizeInference(struct spench::SpenchConte
   // flush input resampler
   {
     std::vector<float> last_input_resampled_data =
-                              ctx->input_sound_stream_ptr->FinalizeStream();
+                              ctx->input_sound_stream_ptr->finalize_stream();
 
     // we left last number_of_zero_contexts chunks in last_input_resampled_data as it got from zeroed vector
     for (uint32_t i = 0; last_input_resampled_data.size() >
@@ -311,7 +311,7 @@ SpenchRetCode DenoiserAudioHandler::FinalizeInference(struct spench::SpenchConte
     }
 
     std::vector<float> output_resampled_data =
-                              ctx->output_sound_stream_ptr->ReadChunk(last_audio_frames_for_upsample);
+                              ctx->output_sound_stream_ptr->read_chunk(last_audio_frames_for_upsample);
     enhanced_audio_frames.insert(enhanced_audio_frames.end(),
                                 output_resampled_data.begin(),
                                 output_resampled_data.end());
@@ -321,7 +321,7 @@ SpenchRetCode DenoiserAudioHandler::FinalizeInference(struct spench::SpenchConte
   // flush output resampler
   {
     std::vector<float> flushed_upsampled_data =
-                              ctx->output_sound_stream_ptr->FinalizeStream();
+                              ctx->output_sound_stream_ptr->finalize_stream();
     enhanced_audio_frames.insert(enhanced_audio_frames.end(),
                                   flushed_upsampled_data.begin(),
                                   flushed_upsampled_data.end());

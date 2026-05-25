@@ -16,7 +16,7 @@ class BiquadSection {
   // explicit numeric constructor
   explicit BiquadSection(double b0, double b1, double b2,
                          double a1, double a2) noexcept
-      : m_b0{b0}, m_b1{b1}, m_b2{b2}, m_a1{a1}, m_a2{a2} {}
+      : b0{b0}, b1{b1}, b2{b2}, a1{a1}, a2{a2} {}
 
   // constructor from single-precision coeff arrays (cast → double once)
   explicit BiquadSection(const std::array<float, 3>& num,
@@ -37,24 +37,24 @@ class BiquadSection {
     const double xd = static_cast<double>(x);
 
     // Direct-Form II T in *double*
-    const double y  = m_u1 + m_b0 * xd;
-    m_u1            = m_b1 * xd - m_a1 * y + m_u2;
-    m_u2            = m_b2 * xd - m_a2 * y;
+    const double y  = u1_ + b0 * xd;
+    u1_            = b1 * xd - a1 * y + u2_;
+    u2_            = b2 * xd - a2 * y;
 
     return static_cast<float>(y);     // cast back for the caller
   }
 
  private:
   // coeffs (double precision)
-  const double m_b0;
-  const double m_b1;
-  const double m_b2;
-  const double m_a1;
-  const double m_a2;
+  const double b0;
+  const double b1;
+  const double b2;
+  const double a1;
+  const double a2;
 
   // state (double precision)
-  double m_u1{0};
-  double m_u2{0};
+  double u1_{0};
+  double u2_{0};
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ class SOSFilter {
   SOSFilter(const std::vector<std::array<float, 3>>& num,
             const std::vector<std::array<float, 3>>& den,
             const std::vector<float>&                 scale)
-      : m_scale{scale} {
+      : scale_{scale} {
     DSPLIB_ASSERT((num.size() == den.size()) &&
                   (num[0].size() == den[0].size()),
                   "filter size error");
@@ -73,26 +73,26 @@ class SOSFilter {
                   "scale size error");
 
     for (size_t i = 0; i < num.size(); ++i)
-      m_iirs.emplace_back(num[i], den[i]);   // uses new double-precision ctor
+      iirs_.emplace_back(num[i], den[i]);   // uses new double-precision ctor
   }
 
   SOSFilter(const std::vector<std::array<float, 3>>& num,
             const std::vector<std::array<float, 3>>& den,
             float scale = 1.0f)
-      : SOSFilter{num, den, m_scale_array(num.size(), scale)} {}
+      : SOSFilter{num, den, scale_array(num.size(), scale)} {}
 
   SOSFilter(const std::array<float, 3>& num,
             const std::array<float, 3>& den,
             float scale = 1.0f)
-      : SOSFilter{{num}, {den}, m_scale_array(1, scale)} {}
+      : SOSFilter{{num}, {den}, scale_array(1, scale)} {}
 
   // single-sample processing
   float process(float x) noexcept {
-    double y = static_cast<double>(x) * static_cast<double>(m_scale[0]);
+    double y = static_cast<double>(x) * static_cast<double>(scale_[0]);
 
-    for (size_t k = 0; k < m_iirs.size(); ++k) {
-      y = static_cast<double>(m_iirs[k].process(static_cast<float>(y)));
-      y *= static_cast<double>(m_scale[k + 1]);
+    for (size_t k = 0; k < iirs_.size(); ++k) {
+      y = static_cast<double>(iirs_[k].process(static_cast<float>(y)));
+      y *= static_cast<double>(scale_[k + 1]);
     }
     return static_cast<float>(y);
   }
@@ -105,10 +105,10 @@ class SOSFilter {
   }
 
  private:
-  const std::vector<float>          m_scale;   // keep as float, fine here
-  std::vector<BiquadSection>        m_iirs;
+  std::vector<float>          scale_;   // keep as float, fine here
+  std::vector<BiquadSection>        iirs_;
 
-  static std::vector<float> m_scale_array(size_t nsect, float scale) {
+  static std::vector<float> scale_array(size_t nsect, float scale) {
     std::vector<float> r(nsect + 1U, 1.0f);
     r[0] = scale;
     return r;
@@ -120,31 +120,31 @@ class SOSFilter {
 // ──────────────────────────────────────────────────────────────────────────────
 class WeightingFilter {
  public:
-  enum class Type { Raw, K };
+  enum class Type { raw, k };
 
   explicit WeightingFilter(size_t sample_rate,
-                           Type   type = Type::K) : m_type{type} {
-    if (type != Type::K) return;   // Raw: leave m_filter nullptr
+                           Type   type = Type::k) : type_{type} {
+    if (type != Type::k) return;   // Raw: leave filter_ nullptr
 
     switch (sample_rate) {
       case 16000:  make_k_filter_16k();  break;
       case 24000:  make_k_filter_24k();  break;
       case 44100:  make_k_filter_44k1(); break;
       case 48000:  make_k_filter_48k();  break;
-      default:     m_type = Type::Raw;   // unsupported Fs
+      default:     type_ = Type::raw;   // unsupported Fs
     }
   }
 
-  [[nodiscard]] Type type() const noexcept { return m_type; }
+  [[nodiscard]] Type type() const noexcept { return type_; }
 
   std::vector<float> process(const std::vector<float>& x) noexcept {
-    if (!m_filter) return x;      // Raw or unsupported Fs
-    return m_filter->process(x);
+    if (!filter_) return x;      // Raw or unsupported Fs
+    return filter_->process(x);
   }
 
  private:
-  std::shared_ptr<SOSFilter> m_filter;
-  Type                       m_type{Type::Raw};
+  std::shared_ptr<SOSFilter> filter_;
+  Type                       type_{Type::raw};
 
   /* ===== K-weighting tables (Matlab’s weightingFilter) =============== */
   void make_k_filter_16k() {
@@ -154,7 +154,7 @@ class WeightingFilter {
     const std::vector<std::array<float, 3>> den = {
       {1, -1.10153376910700, 0.394912368749864},
       {1, -1.97028952800443, 0.970510490535844}};
-    m_filter = std::make_shared<SOSFilter>(num, den, std::vector<float>{1, 1, 1});
+    filter_ = std::make_shared<SOSFilter>(num, den, std::vector<float>{1, 1, 1});
   }
 
   void make_k_filter_24k() {
@@ -164,7 +164,7 @@ class WeightingFilter {
     const std::vector<std::array<float, 3>> den = {
       {1, -1.39023460519282, 0.536838481260398},
       {1, -1.98014412622893, 0.980242817859277}};
-    m_filter = std::make_shared<SOSFilter>(num, den, std::vector<float>{1, 1, 1});
+    filter_ = std::make_shared<SOSFilter>(num, den, std::vector<float>{1, 1, 1});
   }
 
   void make_k_filter_44k1() {
@@ -174,7 +174,7 @@ class WeightingFilter {
     const std::vector<std::array<float, 3>> den = {
       {1, -1.66365511325602, 0.712595428073225},
       {1, -1.98916967362980, 0.989199035787039}};
-    m_filter = std::make_shared<SOSFilter>(num, den, std::vector<float>{1, 1, 1});
+    filter_ = std::make_shared<SOSFilter>(num, den, std::vector<float>{1, 1, 1});
   }
 
   void make_k_filter_48k() {
@@ -184,7 +184,7 @@ class WeightingFilter {
     const std::vector<std::array<float, 3>> den = {
       {1, -1.69065929318241, 0.732480774215850},
       {1, -1.99004745483398, 0.990072250366210}};
-    m_filter = std::make_shared<SOSFilter>(num, den, std::vector<float>{1, 1, 1});
+    filter_ = std::make_shared<SOSFilter>(num, den, std::vector<float>{1, 1, 1});
   }
 };
 

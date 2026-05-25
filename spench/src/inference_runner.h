@@ -35,11 +35,11 @@ class InferenceRunner {
                   bool gpu);
   ~InferenceRunner();
 
-  void Infer(spench::SpenchTask* denoise_task);
+  void infer(spench::SpenchTask* denoise_task);
 
   const ModelType GetModelType() {return m_model_type;}
   uint32_t GetModelFutureContextLen() {
-    return m_engine_runner_ptr->GetFutureContextLen();
+    return m_engine_runner_ptr->get_future_context_len();
   }
 
  protected:

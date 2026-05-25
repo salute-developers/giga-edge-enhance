@@ -44,7 +44,7 @@ SpenchAudioEchoCancelation::SpenchAudioEchoCancelation(SpenchAudioEchoCancelatio
 std::vector<float>  SpenchAudioEchoCancelation::process(const std::vector<float>& input,
                                                         const std::vector<float>& loopback,
                                                         std::vector<float>& ret) {
-  m_aec->Process(input, loopback, ret);
+  m_aec->process(input, loopback, ret);
   return ret;
 }
 
@@ -57,7 +57,7 @@ std::vector<int16_t>  SpenchAudioEchoCancelation::process(const std::vector<int1
 
   tools::convertPCM16ToFloat32(input16, input);
   tools::convertPCM16ToFloat32(loopback16, loopback);
-  m_aec->Process(input, loopback, output);
+  m_aec->process(input, loopback, output);
   tools::convertFloat32ToPCM16(output, ret16);
   return ret16;
 }
@@ -174,12 +174,12 @@ void SpenchAudioEchoCancelation::convertFromInterleaved(const std::vector<float>
 }
 
 const uint32_t SpenchAudioEchoCancelation::GetSampleRate() {
-  return this->m_aec->GetSampleRate();
+  return this->m_aec->get_sample_rate();
 }
 const uint16_t SpenchAudioEchoCancelation::GetFilterLength() {
-  return this->m_aec->GetFilterLength();
+  return this->m_aec->get_filter_length();
 }
 const uint16_t SpenchAudioEchoCancelation::GetFrameLength() {
-  return this->m_aec->GetFrameLength();
+  return this->m_aec->get_frame_length();
 }
 }  // namespace spench
