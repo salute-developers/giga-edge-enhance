@@ -27,10 +27,10 @@ class IVad {
   [[nodiscard]] virtual uint32_t delay() const noexcept { return 0; }
 };
 
-enum class VadType { SIMPLE, RNNOISE };
+enum class VadType { simple, rnnoise };
 
 struct VadConfig {
-  VadType type{VadType::SIMPLE};
+  VadType type{VadType::simple};
   uint32_t sample_rate{16000};
   float threshold{0.5};
   std::optional<uint32_t> frame_len;

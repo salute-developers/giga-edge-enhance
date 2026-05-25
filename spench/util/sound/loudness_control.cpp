@@ -214,7 +214,7 @@ class LoudnessControlImpl : public ILoudnessControl {
     m_frame_len = m_fs / 100;
 
     // voice activity detector
-    m_vad = VadBuilder().set_sample_rate(m_fs).set_frame_len(m_frame_len).set_type(VadType::RNNOISE).create();
+    m_vad = VadBuilder().set_sample_rate(m_fs).set_frame_len(m_frame_len).set_type(VadType::rnnoise).create();
 
     // median filter for VAD output
     {
