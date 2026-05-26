@@ -1,8 +1,11 @@
 import { RingBuffer } from '../../utils/ringBuffer';
 import { CustomPort, WORKER_MESSAGES, WorkerMessage, WORKLET_MESSAGES, WorkletMessage } from '../../utils/ipc';
+import { Settings } from '../../utils/common';
 import {
-    getInputBufferSize,
-    getOutputBufferSize,
+    getBufferSize,
+    getInputBufferSeconds,
+    getOutputBufferSeconds,
+    getProcessingChunkSizeSeconds,
     MAX_MESSAGE_WAIT_TIME_MS,
     MAX_SPIN_BLOCK_TIME_MS,
     TRANSPORT_SIZE_SECONDS,
@@ -37,19 +40,21 @@ export class MessageTransport implements AbstractTransport {
     constructor(
         protected readonly port: WorkletPort,
         protected readonly sampleRate: number,
-        protected readonly frameSize: number,
+        protected readonly settings: Settings,
         protected readonly onFrameReceived: (payload: Payload) => void,
     ) {
-        this.inputBuffer = new RingBuffer(2 * getInputBufferSize(sampleRate));
-        this.loopbackBuffer = new RingBuffer(2 * getInputBufferSize(sampleRate));
-        this.outputBuffer = new RingBuffer(2 * Math.ceil(TRANSPORT_SIZE_SECONDS * sampleRate));
+        const inputBufferSize = getBufferSize(sampleRate, getInputBufferSeconds(settings));
+
+        this.inputBuffer = new RingBuffer(inputBufferSize);
+        this.loopbackBuffer = new RingBuffer(inputBufferSize);
+        this.outputBuffer = new RingBuffer(inputBufferSize);
         this.port.addEventListener('message', this.handleWorkletMessage);
         this.port.start();
     }
 
     push(output: Float32Array): void {
         this.outputBuffer.push(output);
-        const transferChunkSize = Math.ceil(TRANSPORT_SIZE_SECONDS * this.sampleRate);
+        const transferChunkSize = getBufferSize(this.sampleRate, TRANSPORT_SIZE_SECONDS);
 
         while (this.outputBuffer.size >= transferChunkSize) {
             const chunk = new Float32Array(transferChunkSize);
@@ -105,7 +110,7 @@ export class MessageTransport implements AbstractTransport {
     };
 
     protected async process() {
-        const frameSize = Math.ceil(this.frameSize * this.sampleRate);
+        const frameSize = getBufferSize(this.sampleRate, getProcessingChunkSizeSeconds(this.settings));
         let partitionTimestamp = performance.now();
 
         while (this.inputBuffer.size >= frameSize) {
@@ -144,14 +149,14 @@ export class SharedMemoryTransport implements AbstractTransport {
     constructor(
         buffer: SharedArrayBuffer,
         protected readonly sampleRate: number,
-        protected readonly frameSize: number,
+        protected readonly settings: Settings,
         protected readonly onFrameReceived: (payload: Payload) => void,
         protected readonly onError: (error: Error) => void,
     ) {
         let offset = 0;
-        const inputSize = getInputBufferSize(sampleRate);
+        const inputSize = getBufferSize(sampleRate, getInputBufferSeconds(settings));
         const inputABSize = RingBuffer.getInternalBufferSize(inputSize);
-        const outputSize = getOutputBufferSize(sampleRate);
+        const outputSize = getBufferSize(sampleRate, getOutputBufferSeconds(settings));
 
         this.inputBuffer = new RingBuffer(inputSize, buffer);
         offset += inputABSize;
@@ -183,7 +188,7 @@ export class SharedMemoryTransport implements AbstractTransport {
         let partitionTimestamp = performance.now();
 
         while (!this.stopped) {
-            const frameSize = Math.ceil(this.frameSize * this.sampleRate);
+            const frameSize = getBufferSize(this.sampleRate, getProcessingChunkSizeSeconds(this.settings));
             const inputSize = this.inputBuffer.size;
             const loopbackSize = this.loopbackBuffer.size;
             const hasSufficientData = inputSize >= frameSize && loopbackSize >= frameSize;

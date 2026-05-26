@@ -1,10 +1,6 @@
 import { serializeError } from 'serialize-error';
 
-import {
-    WORKLET_OUTPUT_BUFFER_MIN_LATENCY,
-    OUTPUT_BUFFER_SECONDS,
-    MAX_WORKER_BLOCK_TIME_SECONDS,
-} from '../../utils/constants';
+import { WORKLET_OUTPUT_BUFFER_MIN_LATENCY, MAX_WORKER_BLOCK_TIME_SECONDS } from '../../utils/constants';
 import { assert } from '../../utils/error';
 import {
     CONTROLLER_MESSAGES,
@@ -169,11 +165,9 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
             ...this.refillTimes.filter((t) => currentTime - t <= this.settings.lowPerformanceWindowSeconds),
             currentTime,
         ];
-        this.currentBufferThreshold = Math.min(
-            (this.refillTimes.length - 1) * this.settings.latencyIncreaseStep + this.settings.minLatency,
-            OUTPUT_BUFFER_SECONDS,
-        );
-        this.transport!.outputBufferMaxSize = this.currentBufferThreshold;
+        this.currentBufferThreshold =
+            Math.max(this.refillTimes.length - 1, 0) * this.settings.latencyIncreaseStep + this.settings.minLatency;
+        this.transport!.outputBufferMaxSizeSeconds = this.currentBufferThreshold;
         this.logger.debug(`Setting output buffer size to ${this.currentBufferThreshold} seconds`);
 
         if (this.refillTimes.length >= this.settings.lowPerformanceMaxRefillTimes) {
@@ -226,6 +220,8 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
         return false;
     }
 
+    protected onInit(): void {}
+
     protected readonly handleControllerMessage = (event: MessageEvent<WorkletMessage>) => {
         try {
             if (this.handleControllerMessageDerived(event)) {
@@ -240,6 +236,7 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
                     this.telemetry = getWorkletTelemetry(isTelemetryEnabled, this.controllerPort);
                     this.settings = settings;
                     this.currentBufferThreshold = settings.minLatency;
+                    this.onInit();
                     this.logger.debug('init data received');
 
                     return;
@@ -258,13 +255,13 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
                     this.workerPort.addEventListener('message', this.handleWorkerMessage);
 
                     if (buffer) {
-                        this.transport = new SharedMemoryTransport(buffer);
+                        this.transport = new SharedMemoryTransport(buffer, this.settings);
                     } else {
-                        this.transport = new MessageTransport(workerPort, this.telemetry, this.onError);
+                        this.transport = new MessageTransport(workerPort, this.settings, this.telemetry, this.onError);
                     }
 
                     this.workerPort.start();
-                    this.transport.outputBufferMaxSize = this.currentBufferThreshold;
+                    this.transport.outputBufferMaxSizeSeconds = this.currentBufferThreshold;
 
                     return;
                 case WORKLET_MESSAGES.RESET:

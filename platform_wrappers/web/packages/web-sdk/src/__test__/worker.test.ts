@@ -82,9 +82,12 @@ const dummySettings = {
     lowPerformanceMaxRefillTimeFactor: 1,
     minLatency: 0,
     latencyIncreaseStep: 0,
+    maxProcessingChunkSeconds: 0.016,
     sharedMemoryEnabled: true,
     forceSharedMemory: false,
     dspOnAudioThread: false,
+    useVadNormalization: false,
+    unstable_reverseProcessingOrder: false,
     unstable_customNormalizationConfig: undefined,
     unstable_customAECConfig: undefined,
 } as Settings;
@@ -191,6 +194,7 @@ describe('SpenchWorker', () => {
 
         const { msg, transfer } = mockWorker.receivedMessages[0];
         expect(msg.type).toBe(SELF_WORKER_MESSAGES.INIT);
+        expect(msg.settings).toBe(dummySettings);
 
         // Resources must contain the URLs of the WASM binaries.
         expect(msg.resources).toMatchObject({

@@ -28,11 +28,12 @@ import {
     isSharedMemorySupported,
 } from './utils/common';
 import {
+    getBufferSize,
+    getInputBufferSeconds,
+    getOutputBufferSeconds,
     LP_CAUSE_THRESHOLD,
     SPENCH_DSP_WORKLET_NAME,
     SPENCH_WORKLET_NAME,
-    getInputBufferSize,
-    getOutputBufferSize,
 } from './utils/constants';
 import SpenchWorker from './worker';
 import Loader, { LoadError } from './loader';
@@ -545,6 +546,8 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         this.#initStartTime = performance.now();
 
         const { sampleRate } = super.context;
+        const inputBufferSeconds = getInputBufferSeconds(this.#settings);
+        const outputBufferSeconds = getOutputBufferSeconds(this.#settings);
         const worker = await this.#loader.loadWorker();
         this.#loader.preloadedWorker = undefined;
 
@@ -559,8 +562,8 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         if (this.#useSharedMemory) {
             this.#logger.debug('Using SharedArrayBuffer transport');
             buffer = new SharedArrayBuffer(
-                2 * RingBuffer.getInternalBufferSize(getInputBufferSize(sampleRate)) +
-                    RingBuffer.getInternalBufferSize(getOutputBufferSize(sampleRate)) +
+                2 * RingBuffer.getInternalBufferSize(getBufferSize(sampleRate, inputBufferSeconds)) +
+                    RingBuffer.getInternalBufferSize(getBufferSize(sampleRate, outputBufferSeconds)) +
                     BinarySemaphore.INTERNAL_BUFFER_SIZE,
             );
         } else {

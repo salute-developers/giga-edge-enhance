@@ -1,10 +1,10 @@
 import { serializeError } from 'serialize-error';
 
-import { SPENCH_FRAME_SIZE_SECONDS } from '../../utils/constants';
 import { RingBuffer } from '../../utils/ringBuffer';
 import SpenchError, { assert } from '../../utils/error';
 import { CONTROLLER_MESSAGES, WORKLET_MESSAGES, WorkletMessage } from '../../utils/ipc';
 import { areDspFeaturesEnabled, DspFeatures } from '../../utils/common';
+import { getBufferSize, getInputBufferSeconds, getProcessingChunkSizeSeconds } from '../../utils/constants';
 
 import { SpenchDspWorkletWrapper } from './wrapper';
 import { SpenchBaseWorkletProcessor } from './SpenchBaseWorkletProcessor';
@@ -16,11 +16,11 @@ class InternalError extends SpenchError {
 }
 
 export class SpenchDspWorkletProcessor extends SpenchBaseWorkletProcessor {
-    protected readonly dspInputBuffer = new RingBuffer(2 * Math.ceil(SPENCH_FRAME_SIZE_SECONDS * sampleRate));
+    protected dspInputBuffer = new RingBuffer(getBufferSize(sampleRate, getInputBufferSeconds(this.settings)));
 
-    protected readonly dspLoopbackBuffer = new RingBuffer(2 * Math.ceil(SPENCH_FRAME_SIZE_SECONDS * sampleRate));
+    protected dspLoopbackBuffer = new RingBuffer(getBufferSize(sampleRate, getInputBufferSeconds(this.settings)));
 
-    protected readonly dspOutputBuffer = new RingBuffer(2 * Math.ceil(SPENCH_FRAME_SIZE_SECONDS * sampleRate));
+    protected dspOutputBuffer = new RingBuffer(getBufferSize(sampleRate, getInputBufferSeconds(this.settings)));
 
     protected instance: SpenchDspWorkletWrapper | undefined;
 
@@ -32,7 +32,7 @@ export class SpenchDspWorkletProcessor extends SpenchBaseWorkletProcessor {
 
     protected override processOnAudioThread(inputs: Float32Array[][], outputs: Float32Array[][]): void {
         assert(this.instance, 'dsp instance must be initialized before processing');
-        const frameSize = Math.ceil(SPENCH_FRAME_SIZE_SECONDS * sampleRate);
+        const frameSize = getBufferSize(sampleRate, getProcessingChunkSizeSeconds(this.settings));
         const [input, loopback] = inputs;
         const [output] = outputs;
         const [inputChannel] = input;
@@ -59,6 +59,14 @@ export class SpenchDspWorkletProcessor extends SpenchBaseWorkletProcessor {
     protected override timerTick() {
         super.timerTick();
         this.instance?.tick();
+    }
+
+    protected override onInit(): void {
+        const bufferSize = getBufferSize(sampleRate, getInputBufferSeconds(this.settings));
+
+        this.dspInputBuffer = new RingBuffer(bufferSize);
+        this.dspLoopbackBuffer = new RingBuffer(bufferSize);
+        this.dspOutputBuffer = new RingBuffer(bufferSize);
     }
 
     protected override handleControllerMessageDerived(event: MessageEvent<WorkletMessage>): boolean {

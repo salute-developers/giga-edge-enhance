@@ -60,12 +60,13 @@ export type Features<M extends ModelsTmpl> = MainFeatures<M> & DspFeatures;
  * @property lowPerformanceMaxRefillTimes  The maximum number of buffer refills allowed
  *                                          before the low‑performance event is emitted.
  * @property lowPerformanceMaxRefillTimeFactor
- *                                      A scaling factor applied to the output buffer size
- *                                      after each refill.
- * @property minLatency                    The initial buffer latency (in ms) before any
+ *                                      A output buffer size x this factor = max refill time
+ *                                      to wait by the audio thread before stopping.
+ * @property minLatency                    The initial buffer latency (in seconds) before any
  *                                          expansion occurs.
- * @property latencyIncreaseStep           The amount (in ms) by which the latency is
+ * @property latencyIncreaseStep           The amount (in seconds) by which the latency is
  *                                          increased on each step.
+ * @property maxProcessingChunkSeconds     The maximum processing chunk size (in seconds).
  * @property fetchRetries                  The maximum number of retry attempts for
  *                                          fetching resources before giving up.
  * @property sharedMemoryEnabled           Whether to use `SharedArrayBuffer` when the
@@ -91,6 +92,7 @@ export type Settings = {
     lowPerformanceMaxRefillTimeFactor: number;
     minLatency: number;
     latencyIncreaseStep: number;
+    maxProcessingChunkSeconds: number;
     fetchRetries: number;
     sharedMemoryEnabled: boolean;
     forceSharedMemory: boolean;
@@ -129,6 +131,8 @@ export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Setti
             typeof settings.latencyIncreaseStep === 'number'
                 ? settings.latencyIncreaseStep
                 : WORKLET_OUTPUT_BUFFER_STEP,
+        maxProcessingChunkSeconds:
+            typeof settings.maxProcessingChunkSeconds === 'number' ? settings.maxProcessingChunkSeconds : 0.016,
     };
 }
 

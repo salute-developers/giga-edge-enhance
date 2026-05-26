@@ -1,8 +1,9 @@
 /* eslint-disable no-var */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { SharedMemoryTransport } from '../transport';
+import { getSettingsWithDefaults } from '../../../utils/common';
+import { getBufferSize, getOutputBufferSeconds, SPENCH_FRAME_SIZE_SECONDS } from '../../../utils/constants';
 import { RingBuffer } from '../../../utils/ringBuffer';
-import { getInputBufferSize, getOutputBufferSize } from '../../../utils/constants';
+import { SharedMemoryTransport } from '../transport';
 
 jest.mock('../../../utils/semaphore', () => {
     return {
@@ -17,15 +18,16 @@ jest.mock('../../../utils/semaphore', () => {
 
 describe('SharedMemoryTransport', () => {
     const sampleRate = 48000;
+    const settings = getSettingsWithDefaults();
     beforeAll(() => {
         (globalThis as any).sampleRate = sampleRate;
     });
 
     const createTransport = () => {
-        const inputSize = getInputBufferSize(sampleRate);
+        const inputSize = getBufferSize(sampleRate, SPENCH_FRAME_SIZE_SECONDS * 2);
         const inputABSize = RingBuffer.getInternalBufferSize(inputSize);
 
-        const outputSize = getOutputBufferSize(sampleRate);
+        const outputSize = getBufferSize(sampleRate, getOutputBufferSeconds(settings));
         const outputABSize = RingBuffer.getInternalBufferSize(outputSize);
 
         const bufferSize =
@@ -35,7 +37,7 @@ describe('SharedMemoryTransport', () => {
 
         const sab = new SharedArrayBuffer(bufferSize);
 
-        const transport = new SharedMemoryTransport(sab);
+        const transport = new SharedMemoryTransport(sab, settings);
 
         return { transport, sab };
     };
@@ -43,7 +45,7 @@ describe('SharedMemoryTransport', () => {
     it('push writes to buffers even when full', async () => {
         const { transport } = createTransport();
 
-        const inputSize = getInputBufferSize(sampleRate);
+        const inputSize = getBufferSize(sampleRate, SPENCH_FRAME_SIZE_SECONDS * 2);
         const inputData = new Float32Array(inputSize).fill(0.1);
         const loopbackData = new Float32Array(inputSize).fill(0.2);
 
@@ -64,7 +66,7 @@ describe('SharedMemoryTransport', () => {
     it('pull reads from the output buffer', () => {
         const { transport } = createTransport();
 
-        const outputSize = getOutputBufferSize(sampleRate);
+        const outputSize = getBufferSize(sampleRate, getOutputBufferSeconds(settings));
         const output = new Float32Array(outputSize);
 
         // Initially pull should fail
@@ -85,13 +87,13 @@ describe('SharedMemoryTransport', () => {
     it('reset clears all buffers', () => {
         const { transport } = createTransport();
 
-        const inputSize = getInputBufferSize(sampleRate);
+        const inputSize = getBufferSize(sampleRate, SPENCH_FRAME_SIZE_SECONDS * 2);
         const inputData = new Float32Array(inputSize).fill(0.5);
         const loopbackData = new Float32Array(inputSize).fill(0.6);
 
         transport.push(inputData, loopbackData);
 
-        const outputSize = getOutputBufferSize(sampleRate);
+        const outputSize = getBufferSize(sampleRate, getOutputBufferSeconds(settings));
         const output = new Float32Array(outputSize);
         const outputBuffer = (transport as any).outputBuffer as RingBuffer;
         outputBuffer.push(new Float32Array(outputSize).fill(0.9));

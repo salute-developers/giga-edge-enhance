@@ -2,12 +2,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { MessageChannel } from 'node:worker_threads';
 
-import { SPENCH_FRAME_SIZE_SECONDS, TRANSPORT_SIZE_SECONDS } from '../../../utils/constants';
+import { getSettingsWithDefaults } from '../../../utils/common';
+import { getBufferSize, SPENCH_FRAME_SIZE_SECONDS, TRANSPORT_SIZE_SECONDS } from '../../../utils/constants';
 import { CustomPort, WORKER_MESSAGES, WORKLET_MESSAGES } from '../../../utils/ipc';
 import { MessageTransport, Payload } from '../transport';
 
 const SAMPLE_RATE = 48000;
-const FRAME_SIZE = SPENCH_FRAME_SIZE_SECONDS; // samples per frame
+const SETTINGS = getSettingsWithDefaults();
 
 /**
  * A tiny EventTarget that implements the subset of CustomPort that the transport uses.
@@ -50,10 +51,10 @@ describe('MessageTransport', () => {
     });
 
     test('push sends complete chunks to worklet', async () => {
-        const transport = new MessageTransport(port, SAMPLE_RATE, FRAME_SIZE, onFrameReceived);
+        const transport = new MessageTransport(port, SAMPLE_RATE, SETTINGS, onFrameReceived);
 
         // Create a buffer that is exactly two chunks long
-        const chunkSize = Math.ceil(TRANSPORT_SIZE_SECONDS * SAMPLE_RATE);
+        const chunkSize = getBufferSize(SAMPLE_RATE, TRANSPORT_SIZE_SECONDS);
         const totalSize = chunkSize * 2;
         const output = new Float32Array(totalSize).fill(1);
 
@@ -74,10 +75,10 @@ describe('MessageTransport', () => {
     test('handles partial frames from worklet and emits full frames', async () => {
         const channel = new MessageChannel();
         const { port1, port2 } = channel;
-        const transport = new MessageTransport(port1 as any, SAMPLE_RATE, SPENCH_FRAME_SIZE_SECONDS, onFrameReceived);
+        const transport = new MessageTransport(port1 as any, SAMPLE_RATE, SETTINGS, onFrameReceived);
         port2.start();
 
-        const frameSize = Math.ceil(SPENCH_FRAME_SIZE_SECONDS * SAMPLE_RATE);
+        const frameSize = getBufferSize(SAMPLE_RATE, SPENCH_FRAME_SIZE_SECONDS);
         const input = new Float32Array(frameSize).fill(0.5);
         const loopback = new Float32Array(frameSize).fill(-0.5);
 
@@ -111,8 +112,7 @@ describe('MessageTransport', () => {
     });
 
     test('reset clears buffers', () => {
-        const transport = new MessageTransport(port, SAMPLE_RATE, FRAME_SIZE, onFrameReceived);
-
+        const transport = new MessageTransport(port, SAMPLE_RATE, SETTINGS, onFrameReceived);
         const output = new Float32Array(100).fill(2);
         transport.push(output);
         // The output buffer should now contain data
@@ -128,7 +128,7 @@ describe('MessageTransport', () => {
         const closeMock = jest.fn();
         const testPort = new MockPort() as any;
         testPort.close = closeMock;
-        const transport = new MessageTransport(testPort, SAMPLE_RATE, FRAME_SIZE, onFrameReceived);
+        const transport = new MessageTransport(testPort, SAMPLE_RATE, SETTINGS, onFrameReceived);
 
         transport.close();
         expect(closeMock).toHaveBeenCalled();
@@ -137,10 +137,10 @@ describe('MessageTransport', () => {
     test('schedules heavy callbacks only once per event loop tick', async () => {
         const channel = new MessageChannel();
         const { port1, port2 } = channel;
-        const transport = new MessageTransport(port1 as any, SAMPLE_RATE, SPENCH_FRAME_SIZE_SECONDS, onFrameReceived);
+        const transport = new MessageTransport(port1 as any, SAMPLE_RATE, SETTINGS, onFrameReceived);
         port2.start();
 
-        const frameSize = Math.ceil(SPENCH_FRAME_SIZE_SECONDS * SAMPLE_RATE);
+        const frameSize = getBufferSize(SAMPLE_RATE, SPENCH_FRAME_SIZE_SECONDS);
         const input = new Float32Array(frameSize).fill(0.5);
         const loopback = new Float32Array(frameSize).fill(-0.5);
 

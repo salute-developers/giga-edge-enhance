@@ -1,12 +1,19 @@
 /* eslint-disable no-var */
 // packages/web-sdk/src/workers/worker/sharedMemoryTransport.test.ts
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { getInputBufferSize, getOutputBufferSize, SPENCH_FRAME_SIZE_SECONDS } from '../../../utils/constants';
+import { getSettingsWithDefaults } from '../../../utils/common';
+import {
+    getBufferSize,
+    getInputBufferSeconds,
+    getOutputBufferSeconds,
+    SPENCH_FRAME_SIZE_SECONDS,
+} from '../../../utils/constants';
 import { RingBuffer } from '../../../utils/ringBuffer';
 import { SharedMemoryTransport, Payload } from '../transport';
 
 const SAMPLE_RATE = 48000;
-const FRAME_SIZE = SPENCH_FRAME_SIZE_SECONDS; // samples per frame
+const FRAME_SIZE = SPENCH_FRAME_SIZE_SECONDS;
+const SETTINGS = getSettingsWithDefaults();
 
 jest.mock('../../../utils/semaphore', () => {
     return {
@@ -25,9 +32,9 @@ jest.mock('../../../utils/semaphore', () => {
  * tests stay in sync with the production code.
  */
 function createSharedBuffer(sampleRate: number): SharedArrayBuffer {
-    const inputSize = getInputBufferSize(sampleRate);
+    const inputSize = getBufferSize(sampleRate, getInputBufferSeconds(SETTINGS));
     const inputABSize = RingBuffer.getInternalBufferSize(inputSize);
-    const outputSize = getOutputBufferSize(sampleRate);
+    const outputSize = getBufferSize(sampleRate, getOutputBufferSeconds(SETTINGS));
     const outputABSize = RingBuffer.getInternalBufferSize(outputSize);
     const semaphoreSize = Int32Array.BYTES_PER_ELEMENT;
 
@@ -44,7 +51,7 @@ describe('SharedMemoryTransport', () => {
     beforeEach(() => {
         buffer = createSharedBuffer(SAMPLE_RATE);
         onFrameReceived = jest.fn();
-        transport = new SharedMemoryTransport(buffer, SAMPLE_RATE, FRAME_SIZE, onFrameReceived, () => {});
+        transport = new SharedMemoryTransport(buffer, SAMPLE_RATE, SETTINGS, onFrameReceived, () => {});
     });
 
     test('push outputs are written to the ring buffer', () => {
@@ -63,7 +70,7 @@ describe('SharedMemoryTransport', () => {
     });
 
     test('spins and emits a frame when sufficient data is present', async () => {
-        const frameSize = Math.ceil(FRAME_SIZE * SAMPLE_RATE);
+        const frameSize = getBufferSize(SAMPLE_RATE, FRAME_SIZE);
 
         const inputData = new Float32Array(frameSize).fill(1.1);
         const loopbackData = new Float32Array(frameSize).fill(2.2);
@@ -86,7 +93,7 @@ describe('SharedMemoryTransport', () => {
     });
 
     test('spin does not emit when data is insufficient', async () => {
-        const frameSize = Math.ceil(FRAME_SIZE * SAMPLE_RATE);
+        const frameSize = getBufferSize(SAMPLE_RATE, FRAME_SIZE);
         const half = Math.floor(frameSize / 2);
 
         const inputData = new Float32Array(half).fill(1.1);

@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { MessageTransport } from '../transport';
+import { getSettingsWithDefaults } from '../../../utils/common';
+import { getBufferSize, TRANSPORT_SIZE_SECONDS } from '../../../utils/constants';
 import { WORKER_MESSAGES, WORKLET_MESSAGES } from '../../../utils/ipc';
-import { TRANSPORT_SIZE_SECONDS } from '../../../utils/constants';
 import { getWorkletTelemetry } from '../../../utils/telemetry';
+import { MessageTransport } from '../transport';
 
 // ---------- Helpers ----------
 class DummyPort {
@@ -26,6 +27,7 @@ class DummyPort {
 // ---------- Test suite ----------
 describe('MessageTransport', () => {
     const sampleRate = 48000;
+    const settings = getSettingsWithDefaults();
     // Keep the global sampleRate for the code under test
     beforeAll(() => {
         (globalThis as any).sampleRate = sampleRate;
@@ -37,16 +39,16 @@ describe('MessageTransport', () => {
         const telemetrySpy = jest.spyOn(telemetry, 'frameReceived');
 
         const onError = jest.fn();
-        const transport = new MessageTransport(port as any, telemetry, onError);
+        const transport = new MessageTransport(port as any, settings, telemetry, onError);
 
         return { transport, port, telemetry, telemetrySpy, onError };
     };
 
-    it('pushes data in chunks of TRANSPORT_SIZE_SECONDS', () => {
+    it('pushes data in chunks derived from processing size', () => {
         const { transport, port } = makeTransport();
 
         // Prepare input data larger than the transfer chunk
-        const chunkSize = Math.ceil(0.5 * TRANSPORT_SIZE_SECONDS * sampleRate);
+        const chunkSize = getBufferSize(sampleRate, 0.5 * TRANSPORT_SIZE_SECONDS);
         const inputChunk = new Float32Array(chunkSize * 2); // two frames
         const loopbackChunk = new Float32Array(chunkSize * 2);
         inputChunk.fill(0.1);
@@ -91,7 +93,7 @@ describe('MessageTransport', () => {
     it('reset clears buffers', () => {
         const { transport, port } = makeTransport();
 
-        const chunkSize = Math.ceil(TRANSPORT_SIZE_SECONDS * sampleRate);
+        const chunkSize = getBufferSize(sampleRate, TRANSPORT_SIZE_SECONDS);
         const input = new Float32Array(chunkSize);
         const loopback = new Float32Array(chunkSize);
 

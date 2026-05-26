@@ -26,7 +26,6 @@ import {
     ModelsTmpl,
     Settings,
 } from '../../utils/common';
-import { SPENCH_FRAME_SIZE_SECONDS } from '../../utils/constants';
 
 import Loader, { LoadError } from './loader';
 import { InternalError, SpenchDspWrapper, SpenchWrapper } from './wrapper';
@@ -82,12 +81,12 @@ export class SpenchWorker {
             this.transport = new SharedMemoryTransport(
                 buffer!,
                 sampleRate,
-                SPENCH_FRAME_SIZE_SECONDS,
+                shared.settings!,
                 this.handleFrame,
                 this.onError,
             );
         } else {
-            this.transport = new MessageTransport(workletPort, sampleRate, SPENCH_FRAME_SIZE_SECONDS, this.handleFrame);
+            this.transport = new MessageTransport(workletPort, sampleRate, shared.settings!, this.handleFrame);
         }
         this.controllerPort.addEventListener('message', this.handleControllerMessage);
         this.controllerPort.start();

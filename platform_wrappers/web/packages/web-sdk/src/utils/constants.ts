@@ -2,9 +2,11 @@ import type { Settings } from './common';
 
 export const SPENCH_FRAME_SIZE_SECONDS = 0.016;
 
-export const TRANSPORT_SIZE_SECONDS = SPENCH_FRAME_SIZE_SECONDS * 2;
+export const TRANSPORT_SIZE_SECONDS = SPENCH_FRAME_SIZE_SECONDS;
 
-export const HEAP_SIZE = 2048;
+export const SPENCH_FRAME_SIZE_STEP_SECONDS = SPENCH_FRAME_SIZE_SECONDS;
+
+export const HEAP_SIZE = 24576;
 
 export const FEATURE_SWITCH_CACHE_MILLISECONDS = 60 * 1000;
 
@@ -47,12 +49,29 @@ export const SPENCH_WORKLET_NAME = 'spench-processor';
 
 export const SPENCH_DSP_WORKLET_NAME = 'spench-dsp-processor';
 
-export function getInputBufferSize(sampleRate: number) {
-    return Math.ceil(sampleRate * INPUT_BUFFER_SECONDS);
+export function getBufferSize(sampleRate: number, seconds: number) {
+    return Math.ceil(sampleRate * seconds);
 }
 
-export function getOutputBufferSize(sampleRate: number) {
-    return Math.ceil(sampleRate * OUTPUT_BUFFER_SECONDS);
+export function getProcessingChunkSizeSeconds(settings: Settings) {
+    const chunkSeconds = Math.min(settings.maxProcessingChunkSeconds, settings.minLatency);
+
+    if (!Number.isFinite(chunkSeconds) || chunkSeconds <= SPENCH_FRAME_SIZE_STEP_SECONDS) {
+        return SPENCH_FRAME_SIZE_STEP_SECONDS;
+    }
+
+    return Math.max(
+        Math.floor(chunkSeconds / SPENCH_FRAME_SIZE_STEP_SECONDS) * SPENCH_FRAME_SIZE_STEP_SECONDS,
+        SPENCH_FRAME_SIZE_STEP_SECONDS,
+    );
+}
+
+export function getInputBufferSeconds(settings: Settings) {
+    return getProcessingChunkSizeSeconds(settings) * 2;
+}
+
+export function getOutputBufferSeconds(settings: Settings) {
+    return Math.max(settings.lowPerformanceMaxRefillTimes - 1, 0) * settings.latencyIncreaseStep + settings.minLatency;
 }
 
 export const getDefaultNormalizationConfig = (sampleRate: number, settings: Settings) => `
