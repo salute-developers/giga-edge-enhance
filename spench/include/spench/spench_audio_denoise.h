@@ -212,6 +212,6 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
   std::vector<int16_t> operator()(std::vector<int16_t>& ret16, SpenchContext<float>* ctx) final;
 
  private:
-  std::unique_ptr<DenoiserAudioHandler> m_handler;
+  std::unique_ptr<DenoiserAudioHandler> handler_;
 };
 }  // namespace spench

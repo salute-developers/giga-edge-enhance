@@ -22,12 +22,12 @@ class DenoiserAudioHandler : public NeuralNetworkAudioHandler {
                        const std::string& password,
                        const std::string& checksum);
 
-  SpenchContext<float>* CreateContext(uint32_t input_sample_rate = 0,
+  SpenchContext<float>* create_context(uint32_t input_sample_rate = 0,
                                       uint32_t output_sample_rate = 0) override;
 
-  void DestroyContext(SpenchContext<float>** ctx) override {
+  void destroy_context(SpenchContext<float>** ctx) override {
     if (*ctx != nullptr) {
-      DestroyAudioStreams(*ctx);
+      destroy_audio_streams(*ctx);
       delete *ctx;
     }
     *ctx = nullptr;
@@ -35,29 +35,29 @@ class DenoiserAudioHandler : public NeuralNetworkAudioHandler {
 
   ~DenoiserAudioHandler() override;
 
-  SpenchRetCode ProcessFrame(struct spench::SpenchContext<float>* ctx,
+  SpenchRetCode process_frame(struct spench::SpenchContext<float>* ctx,
                              const std::vector<float>& input_audio_frame,
                              std::vector<float>& enhanced_audio_frame) override;
 
-  SpenchRetCode FinalizeInference(struct spench::SpenchContext<float>* ctx,
+  SpenchRetCode finalize_inference(struct spench::SpenchContext<float>* ctx,
                                   std::vector<float>& enhanced_audio_frame) override;
 
-  StatInfo GetStatInfo(const struct spench::SpenchContext<float>* ctx) override;
+  StatInfo get_stat_info(const struct spench::SpenchContext<float>* ctx) override;
 
-  spench::DenoiserModelAdviser<float>*       adviser()       { return m_adviser.get(); }
-  const spench::DenoiserModelAdviser<float>* adviser() const { return m_adviser.get(); }
+  spench::DenoiserModelAdviser<float>*       adviser()       { return adviser_.get(); }
+  const spench::DenoiserModelAdviser<float>* adviser() const { return adviser_.get(); }
 
  private:
   // 30 min restriction
   const uint64_t max_number_of_time_frames_for_single_input = 120000;
   //
-  std::unique_ptr<DenoiserModelAdviser<float>> m_adviser;
-  SpenchRetCode InitAudioStreams(SpenchContext<float>* ctx,
+  std::unique_ptr<DenoiserModelAdviser<float>> adviser_;
+  SpenchRetCode init_audio_streams(SpenchContext<float>* ctx,
                                  uint32_t input_sample_rate,
                                  uint32_t output_sample_rate);
-  SpenchRetCode DestroyAudioStreams(SpenchContext<float>* ctx);
-  SpenchRetCode InferFrame(std::unique_ptr<spench::SpenchTask>& task_ptr) override;
-  void          FillInDataForProcessing(std::unique_ptr<spench::SpenchTask>& task_ptr,
+  SpenchRetCode destroy_audio_streams(SpenchContext<float>* ctx);
+  SpenchRetCode infer_frame(std::unique_ptr<spench::SpenchTask>& task_ptr) override;
+  void          fill_in_data_for_processing(std::unique_ptr<spench::SpenchTask>& task_ptr,
                                         std::vector<float>& input) override;
 };
 }  // namespace spench

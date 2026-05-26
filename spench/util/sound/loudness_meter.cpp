@@ -73,8 +73,8 @@ void LoudnessMeter::update(const std::vector<float>& x) {
   // momentary power
   auto mm = mm_meter_->process(kx);
   if (mm.has_value()) {
-    auto m_p = -0.691F + dsplib::pow2db(*mm + eps);
-    state_.momentary = m_p;
+    auto p_ = -0.691F + dsplib::pow2db(*mm + eps);
+    state_.momentary = p_;
   }
 
   // short-term power

@@ -169,7 +169,7 @@ TEST_CASE("SUCCEED Convert pcm to float point [spench c++ api]") {
   std::vector<float> ref_float = {0.0, 1.0, -1.0, 0.06103, -0.1526};
   std::vector<float> converted_float;
 
-  spench::tools::convertPCM16ToFloat32(pcm16, converted_float);
+  spench::tools::convert_pcm16_to_float32(pcm16, converted_float);
 
   IsVectorsClose(ref_float, converted_float, 0.001);
 }
@@ -179,7 +179,7 @@ TEST_CASE("SUCCEED Convert float point to pcm [spench c++ api]") {
   std::vector<int16_t> ref_pcm = {0, 32767, -32767, 2000, -5000};
   std::vector<int16_t> converted_pcm;
 
-  spench::tools::convertFloat32ToPCM16(float_point32, converted_pcm);
+  spench::tools::convert_float32_to_pcm16(float_point32, converted_pcm);
 
   REQUIRE(ref_pcm == converted_pcm);
 }

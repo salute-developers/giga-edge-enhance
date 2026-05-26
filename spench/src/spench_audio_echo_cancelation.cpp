@@ -10,14 +10,14 @@
 
 namespace spench {
 
-SpenchAudioEchoCancelation::SpenchAudioEchoCancelation(const char* config) : m_aec(nullptr) {
+SpenchAudioEchoCancelation::SpenchAudioEchoCancelation(const char* config) : aec_(nullptr) {
   std::string config_file(config);
   if (!config_file.empty() && std::filesystem::exists(config_file)) {
-    m_aec = std::make_unique<spench::AudioEchoCancelationHandler>(
+    aec_ = std::make_unique<spench::AudioEchoCancelationHandler>(
             std::make_shared<spench::AecConfig>(spench::FileConfigReader(config)));
   } else if (config_file.empty()) {
     spdlog::info("SpenchAudioEchoCancelation input config is empty. Use default values");
-    m_aec = std::make_unique<spench::AudioEchoCancelationHandler>(
+    aec_ = std::make_unique<spench::AudioEchoCancelationHandler>(
                 std::make_shared<spench::AecConfig>());
   } else {
     spdlog::error("Invalid or missing config file.");
@@ -27,24 +27,24 @@ SpenchAudioEchoCancelation::SpenchAudioEchoCancelation(const char* config) : m_a
 }
 
 SpenchAudioEchoCancelation::SpenchAudioEchoCancelation(const std::string& yaml_conf)
-: m_aec(nullptr) {
-  m_aec = std::make_unique<spench::AudioEchoCancelationHandler>(
+: aec_(nullptr) {
+  aec_ = std::make_unique<spench::AudioEchoCancelationHandler>(
             std::make_shared<spench::AecConfig>(spench::StringConfigReader(yaml_conf)));
 
   spdlog::info("Create Spench echo cancelation from yaml string");
 }
 
 SpenchAudioEchoCancelation::~SpenchAudioEchoCancelation() {
-  m_aec.reset();
+  aec_.reset();
 }
 
 SpenchAudioEchoCancelation::SpenchAudioEchoCancelation(SpenchAudioEchoCancelation&& other) noexcept
-    : m_aec(std::move(other.m_aec)) {}
+    : aec_(std::move(other.aec_)) {}
 
 std::vector<float>  SpenchAudioEchoCancelation::process(const std::vector<float>& input,
                                                         const std::vector<float>& loopback,
                                                         std::vector<float>& ret) {
-  m_aec->process(input, loopback, ret);
+  aec_->process(input, loopback, ret);
   return ret;
 }
 
@@ -55,10 +55,10 @@ std::vector<int16_t>  SpenchAudioEchoCancelation::process(const std::vector<int1
   std::vector<float> loopback;
   std::vector<float> output;
 
-  tools::convertPCM16ToFloat32(input16, input);
-  tools::convertPCM16ToFloat32(loopback16, loopback);
-  m_aec->process(input, loopback, output);
-  tools::convertFloat32ToPCM16(output, ret16);
+  tools::convert_pcm16_to_float32(input16, input);
+  tools::convert_pcm16_to_float32(loopback16, loopback);
+  aec_->process(input, loopback, output);
+  tools::convert_float32_to_pcm16(output, ret16);
   return ret16;
 }
 
@@ -87,9 +87,9 @@ SpenchRetCode SpenchAudioEchoCancelation::ProcessChunk(const std::vector<int16_t
   std::vector<float> interleaved_chunk;
   std::vector<float> output;
 
-  tools::convertPCM16ToFloat32(interleaved_chunk16, interleaved_chunk);
+  tools::convert_pcm16_to_float32(interleaved_chunk16, interleaved_chunk);
   this->ProcessChunk(interleaved_chunk, output);
-  tools::convertFloat32ToPCM16(output, ret16);
+  tools::convert_float32_to_pcm16(output, ret16);
   return SpenchRetCode::SUCCESS;
 }
 
@@ -174,12 +174,12 @@ void SpenchAudioEchoCancelation::convertFromInterleaved(const std::vector<float>
 }
 
 const uint32_t SpenchAudioEchoCancelation::GetSampleRate() {
-  return this->m_aec->get_sample_rate();
+  return this->aec_->get_sample_rate();
 }
 const uint16_t SpenchAudioEchoCancelation::GetFilterLength() {
-  return this->m_aec->get_filter_length();
+  return this->aec_->get_filter_length();
 }
 const uint16_t SpenchAudioEchoCancelation::GetFrameLength() {
-  return this->m_aec->get_frame_length();
+  return this->aec_->get_frame_length();
 }
 }  // namespace spench

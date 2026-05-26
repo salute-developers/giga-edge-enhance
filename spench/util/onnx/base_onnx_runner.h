@@ -43,7 +43,7 @@ class BaseOnnxRunner {
                                    spench::SpenchContext<float>* denoise_context) = 0;
 
   virtual uint32_t get_future_context_len() {
-    return model_params_.m_network_input_ctx_len;
+    return model_params_.network_input_ctx_len;
   }
 
  protected:
@@ -117,7 +117,7 @@ class BaseOnnxRunner {
   }
 
   void read_config(const YAML::Node& yaml_config) {
-    model_params_.ReadModelNode(yaml_config);
+    model_params_.read_model_node(yaml_config);
   }
 
  protected:

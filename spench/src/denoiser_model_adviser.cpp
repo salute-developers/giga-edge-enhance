@@ -11,7 +11,7 @@ template <typename T>
 T DenoiserModelAdviser<T>::calcSnrEstimation(const ComplexNumber<T>& input_spec,
                                              const ComplexNumber<T>& enhanced_spec,
                                              StreamCurrentMetrics<T>& metrics) {
-  double eps = static_cast<double>(this->m_eps);
+  double eps = static_cast<double>(this->eps_);
 
   if (input_spec.real.size() != input_spec.imag.size() ||
       enhanced_spec.real.size() != enhanced_spec.imag.size() ||
@@ -36,7 +36,7 @@ T DenoiserModelAdviser<T>::calcSnrEstimation(const ComplexNumber<T>& input_spec,
 
   metrics.e1_max = std::max(metrics.e1_max, static_cast<T>(E1));
 
-  if (E1 > static_cast<double>(metrics.e1_max) * this->m_snr_vad_threshold) {
+  if (E1 > static_cast<double>(metrics.e1_max) * this->snr_vad_threshold_) {
     metrics.speech_energy_avg = static_cast<T>(
             (static_cast<double>(metrics.speech_energy_avg) * 0.95) + (E1 * 0.05));
   } else {

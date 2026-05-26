@@ -22,45 +22,45 @@ class FeatureExtractor {
   virtual ~FeatureExtractor() = default;
 
   // input - input speech signal (T)
-  virtual void STFTApply(const std::vector<T>& input,
+  virtual void stft_apply(const std::vector<T>& input,
                          std::vector<ComplexNumber<T>>&);
   // input - real and image vectors (T)
-  virtual void iSTFTApply(const ComplexNumber<T>& input_spec,
+  virtual void istft_apply(const ComplexNumber<T>& input_spec,
                           std::vector<T>& output_signal);
-  FeatureParams GetFeatureParams() const;
+  FeatureParams feature_params() const;
 
   // apply mask to real and imaginary parts
   // last 2 vectors (real, imag) of input_spec will be changed
-  void calcEnhancedPartsInPlace(const ComplexNumber<T>& input_spec,
+  void calc_enhanced_parts_in_place(const ComplexNumber<T>& input_spec,
                                 ComplexNumber<T>& predicted_mask);
 
  protected:
-  void STFTImpl(const std::vector<T>& frames,
+  void stft_impl(const std::vector<T>& frames,
                 std::vector<ComplexNumber<T>>& result);
 
-  void iSTFTImpl(const ComplexNumber<T>& input_spec,
+  void istft_impl(const ComplexNumber<T>& input_spec,
                  std::vector<T>& output_signal);
 
-  void ValidatePowSpecParams() const;
+  void validate_pow_spec_params() const;
 
   // process mask for real and imaginary parts
   // predicted_mask will be changed
-  void decompressCIRMInPlace(ComplexNumber<T>& predicted_mask);
+  void decompress_cirm_in_place(ComplexNumber<T>& predicted_mask);
 
-  std::valarray<T> boolToT(const std::valarray<bool> b);
-  void apply_decompressCIRMInPlace(std::valarray<T>& mask_part);
+  std::valarray<T> bool_to_t(const std::valarray<bool> b);
+  void apply_decompress_cirm_in_place(std::valarray<T>& mask_part);
 
-  void lookupAdd(const std::vector<T>& signal,
+  void lookup_add(const std::vector<T>& signal,
                  std::vector<T>& output_signal);
 
-  FeatureParams m_feat_params;
-  Windowing<T> m_windowing;
-  std::mutex m_fft_mutex;
-  FftCalculator<T> m_fft_calculator;
-  std::mutex m_ifft_mutex;
-  iFftCalculator<T> m_ifft_calculator;
-  const T m_cirmK = static_cast<T>(10.0);
-  const T m_cirmLimit = static_cast<T>(9.9);
+  FeatureParams feat_params_;
+  Windowing<T> windowing_;
+  std::mutex fft_mutex_;
+  FftCalculator<T> fft_calculator_;
+  std::mutex ifft_mutex_;
+  iFftCalculator<T> ifft_calculator_;
+  T cirm_k_{static_cast<T>(10.0)};
+  T cirm_limit_{static_cast<T>(9.9)};
 };
 
 }  // namespace fe

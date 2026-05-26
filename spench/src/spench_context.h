@@ -38,7 +38,7 @@ struct ComplexNumber {
     real(init_real.data(), init_real.size()), imag(init_imag.data(), init_imag.size())
   {}
 
-  std::vector<T> getMagnitude() {
+  std::vector<T> get_magnitude() {
     std::valarray<T> exp(2, real.size());
     std::valarray<T> valarray_mag = std::sqrt(std::pow(real, exp) + std::pow(imag, exp));
     std::vector<T> vector_mag(std::begin(valarray_mag), std::end(valarray_mag));
@@ -66,7 +66,7 @@ struct ComplexNumber {
     imag.resize(size);
   }
 
-  void copyTo(ComplexNumber<T>& dst, std::size_t offset) const {
+  void copy_to(ComplexNumber<T>& dst, std::size_t offset) const {
     if (real.size() != imag.size()) {
       throw std::runtime_error("ComplexNumber::CopyTo: real/imag size mismatch");
     }
@@ -81,7 +81,7 @@ struct ComplexNumber {
     std::copy(std::begin(imag), std::end(imag), &dst.imag[0] + offset);
   }
 
-  void copyFrameTo(ComplexNumber<T>& dst, std::size_t feat_num, std::size_t frame_idx) const {
+  void copy_frame_to(ComplexNumber<T>& dst, std::size_t feat_num, std::size_t frame_idx) const {
     if (real.size() != imag.size()) {
       throw std::runtime_error("ComplexNumber::CopyFrameTo: real/imag size mismatch");
     }
@@ -104,7 +104,7 @@ struct ComplexNumber {
     std::copy_n(&imag[0] + src_offset, feat_num, &dst.imag[0]);
   }
 
-  static ComplexNumber<T> concatParts(const std::vector<ComplexNumber<T>>& parts) {
+  static ComplexNumber<T> concat_parts(const std::vector<ComplexNumber<T>>& parts) {
     if (parts.empty()) {
       return {};
     }
@@ -122,14 +122,14 @@ struct ComplexNumber {
 
     std::size_t offset = 0;
     for (const auto& part : parts) {
-      part.copyTo(result, offset);
+      part.copy_to(result, offset);
       offset += part.real.size();
     }
 
     return result;
   }
 
-  static ComplexNumber<T> concatWithHead(const ComplexNumber<T>& head,
+  static ComplexNumber<T> concat_with_head(const ComplexNumber<T>& head,
                                          const ComplexNumber<T>& tail) {
     if (head.real.size() != head.imag.size()) {
       throw std::runtime_error("ComplexNumber::ConcatWithHead: head real/imag size mismatch");
@@ -142,14 +142,14 @@ struct ComplexNumber {
     ComplexNumber<T> result(static_cast<uint32_t>(total_size),
                             static_cast<uint32_t>(total_size));
 
-    head.copyTo(result, 0);
-    tail.copyTo(result, head.real.size());
+    head.copy_to(result, 0);
+    tail.copy_to(result, head.real.size());
 
     return result;
   }
   // Writes magnitude into dst in (freq, time) layout:
   // dst[f * num_frames + frame_idx] = magnitude[f]
-  void writeMagnitudeInterleaved(std::vector<float>& dst,
+  void write_magnitude_interleaved(std::vector<float>& dst,
                                 std::size_t frame_idx,
                                 std::size_t num_frames) const {
     const std::size_t n = real.size();
@@ -164,7 +164,7 @@ struct ComplexNumber {
       out += num_frames;  // move to next freq bin, keep time as fastest axis
     }
   }
-  std::vector<T> getSpec() {
+  std::vector<T> get_spec() {
     std::vector<float> result;
     result.reserve(real.size() + imag.size());
 
@@ -185,7 +185,7 @@ struct ComplexNumber {
 };
 
 template <typename T>
-static inline void UnpackComplexMask(
+static inline void unpack_complex_mask(
     const T* src,                     // ORT buffer: [F, T, 2]
     std::size_t num_feats,             // F
     std::size_t num_frames,            // T

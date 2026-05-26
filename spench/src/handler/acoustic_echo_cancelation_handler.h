@@ -35,13 +35,13 @@ class AudioEchoCancelationHandler : public BaseAudioHandler {
 
 
   // BaseAudioHandler integration
-  SpenchRetCode ProcessFrame(struct spench::SpenchContext<float>* ctx,
+  SpenchRetCode process_frame(struct spench::SpenchContext<float>* ctx,
                              const std::vector<float>& mic_frame,
                              const std::vector<float>& lbk_frame,
                              std::vector<float>& out) override;
 
   // Explicitly mark single-input as unsupported for AEC
-  SpenchRetCode ProcessFrame(struct spench::SpenchContext<float>*,
+  SpenchRetCode process_frame(struct spench::SpenchContext<float>*,
                              const std::vector<float>&,
                              std::vector<float>&) override {
     return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
@@ -52,11 +52,11 @@ class AudioEchoCancelationHandler : public BaseAudioHandler {
   const uint16_t get_frame_length();
 
  protected:
-  SpenchRetCode DoStart() override;
-  void DoStop() override;
+  SpenchRetCode do_start() override;
+  void do_stop() override;
 
  private:
   std::unique_ptr<util::echo::IEchoCanceler> canceler_;
-  SpenchRetCode LoadConfiguration(const std::string& config_path);
+  SpenchRetCode load_configuration(const std::string& config_path);
 };
 }  // namespace spench

@@ -905,7 +905,7 @@ TEST_CASE("SUCCEED Create and run LoudnessControl with default parameters [audio
   }
 }
 
-TEST_CASE("SUCCEED ProcessFrame works with empty chain [audio processing handler]") {
+TEST_CASE("SUCCEED process_frame works with empty chain [audio processing handler]") {
   auto env = std::move(TestAudioProcessing().InitAudioProcessing().SetWav("test1_48_noised.wav"));
 
   const uint32_t fs = 48000;
@@ -917,18 +917,18 @@ TEST_CASE("SUCCEED ProcessFrame works with empty chain [audio processing handler
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     std::vector<float> out;
-    auto rc = env.audio_proc->ProcessFrame(nullptr, chunks[i], out);
+    auto rc = env.audio_proc->process_frame(nullptr, chunks[i], out);
     REQUIRE(rc == SpenchRetCode::SUCCESS);
     REQUIRE(out.size() == chunks[i].size());
   }
 }
 
-TEST_CASE("FAIL ProcessFrame handles empty input gracefully [audio processing handler]") {
+TEST_CASE("FAIL process_frame handles empty input gracefully [audio processing handler]") {
   auto env = std::move(TestAudioProcessing().InitAudioProcessing());
   std::vector<float> in;
   std::vector<float> out;
 
-  auto rc = env.audio_proc->ProcessFrame(nullptr, in, out);
+  auto rc = env.audio_proc->process_frame(nullptr, in, out);
   REQUIRE(rc == SpenchRetCode::SUCCESS);
   REQUIRE(out.empty());
 }

@@ -15,12 +15,12 @@ NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::shared_ptr<NetworkConf
                                                      const std::string& password,
                                                      const std::string& checksum)
     : BaseAudioHandler(std::move(config)),
-      m_feature_extractor_runner_ptr(nullptr),
-      m_inference_runner_ptr(nullptr),
-      m_enc_password(password),
-      m_lic_checksum(checksum) {
-  // Ensure DoStart() runs after derived members are initialized.
-  SpenchRetCode ret_code = Restart();
+      feature_extractor_runner_ptr_(nullptr),
+      inference_runner_ptr_(nullptr),
+      enc_password_(password),
+      lic_checksum_(checksum) {
+  // Ensure do_start() runs after derived members are initialized.
+  SpenchRetCode ret_code = restart();
   if (ret_code != SpenchRetCode::SUCCESS) {
     spdlog::error("Due to errors a neural network handler module could not be created!  {}",
                                         std::to_string(static_cast<int32_t>(ret_code)));
@@ -31,52 +31,52 @@ NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::shared_ptr<NetworkConf
     throw std::runtime_error("A neural network handler module creation failed. ret_code=" +
                              std::to_string(static_cast<int32_t>(ret_code)));
   }
-  m_skip_zero_chunk = dynamic_cast<spench::NetworkConfig*>(m_config.get())->skipZeroedChunks();
+  skip_zero_chunk_ = dynamic_cast<spench::NetworkConfig*>(config_.get())->skipZeroedChunks();
 }
 
 NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(NeuralNetworkAudioHandler&& orig) noexcept
     : BaseAudioHandler(std::move(orig)),
-      m_feature_extractor_runner_ptr(std::move(orig.m_feature_extractor_runner_ptr)),
-      m_inference_runner_ptr(std::move(orig.m_inference_runner_ptr)),
-      m_enc_password(std::move(orig.m_enc_password)),
-      m_lic_checksum(std::move(orig.m_lic_checksum)) {}
+      feature_extractor_runner_ptr_(std::move(orig.feature_extractor_runner_ptr_)),
+      inference_runner_ptr_(std::move(orig.inference_runner_ptr_)),
+      enc_password_(std::move(orig.enc_password_)),
+      lic_checksum_(std::move(orig.lic_checksum_)) {}
 
 NeuralNetworkAudioHandler::~NeuralNetworkAudioHandler() = default;
 
-uint32_t NeuralNetworkAudioHandler::GetEngineThreadsNum() {
-  return std::dynamic_pointer_cast<spench::NetworkConfig>(m_config)->numThreads();
+uint32_t NeuralNetworkAudioHandler::get_engine_threads_num() {
+  return std::dynamic_pointer_cast<spench::NetworkConfig>(config_)->numThreads();
 }
 
-uint64_t NeuralNetworkAudioHandler::GetModelSampleRate() {
-  return m_feature_extractor_runner_ptr->GetSamplingFreq();
+uint64_t NeuralNetworkAudioHandler::get_model_sample_rate() {
+  return feature_extractor_runner_ptr_->GetSamplingFreq();
 }
 
-uint64_t NeuralNetworkAudioHandler::GetInputFrameSize() {
-  return m_feature_extractor_runner_ptr->GetFrameHopSizeSamples();
+uint64_t NeuralNetworkAudioHandler::get_input_frame_size() {
+  return feature_extractor_runner_ptr_->GetFrameHopSizeSamples();
 }
 
-SpenchRetCode NeuralNetworkAudioHandler::DoStart() {
+SpenchRetCode NeuralNetworkAudioHandler::do_start() {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
 
-  ret_code = LaunchFeatureExtractorRunner();
+  ret_code = launch_feature_extractor_runner();
   if (ret_code != SpenchRetCode::SUCCESS) {
     return ret_code;
   }
-  ret_code = LaunchInferenceRunner();
+  ret_code = launch_inference_runner();
   return ret_code;
 }
 
-void NeuralNetworkAudioHandler::DoStop() {
-  m_feature_extractor_runner_ptr.reset();
-  m_inference_runner_ptr.reset();
+void NeuralNetworkAudioHandler::do_stop() {
+  feature_extractor_runner_ptr_.reset();
+  inference_runner_ptr_.reset();
 }
 
-SpenchRetCode NeuralNetworkAudioHandler::LaunchFeatureExtractorRunner() {
+SpenchRetCode NeuralNetworkAudioHandler::launch_feature_extractor_runner() {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   try {
-    if (!m_feature_extractor_runner_ptr) {
-      m_feature_extractor_runner_ptr = std::unique_ptr<spench::FeatureExtractorRunner>(
-          new spench::FeatureExtractorRunner(std::dynamic_pointer_cast<spench::NetworkConfig>(m_config)));
+    if (!feature_extractor_runner_ptr_) {
+      feature_extractor_runner_ptr_ = std::unique_ptr<spench::FeatureExtractorRunner>(
+          new spench::FeatureExtractorRunner(std::dynamic_pointer_cast<spench::NetworkConfig>(config_)));
     }
   } catch (const std::exception& e) {
     spdlog::error("{}", e.what());
@@ -85,16 +85,16 @@ SpenchRetCode NeuralNetworkAudioHandler::LaunchFeatureExtractorRunner() {
   return ret_code;
 }
 
-SpenchRetCode NeuralNetworkAudioHandler::LaunchInferenceRunner() {
+SpenchRetCode NeuralNetworkAudioHandler::launch_inference_runner() {
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
-  const uint32_t inference_engine_threads = GetEngineThreadsNum();
+  const uint32_t inference_engine_threads = get_engine_threads_num();
 
   try {
-    if (!m_inference_runner_ptr) {
-      m_inference_runner_ptr = std::unique_ptr<spench::InferenceRunner>(
-        new spench::InferenceRunner(std::dynamic_pointer_cast<spench::NetworkConfig>(m_config),
-                                    m_enc_password,
-                                    m_lic_checksum,
+    if (!inference_runner_ptr_) {
+      inference_runner_ptr_ = std::unique_ptr<spench::InferenceRunner>(
+        new spench::InferenceRunner(std::dynamic_pointer_cast<spench::NetworkConfig>(config_),
+                                    enc_password_,
+                                    lic_checksum_,
                                     inference_engine_threads,
                                     false));
     }
@@ -105,7 +105,7 @@ SpenchRetCode NeuralNetworkAudioHandler::LaunchInferenceRunner() {
   return ret_code;
 }
 
-bool NeuralNetworkAudioHandler::IsZeroedVector(const std::vector<float>& v, float eps) noexcept {
+bool NeuralNetworkAudioHandler::is_zeroed_vector(const std::vector<float>& v, float eps) noexcept {
   const size_t n = v.size();
   for (size_t i = 0; i < n; ++i) {
     float ax = std::fabs(v[i]);

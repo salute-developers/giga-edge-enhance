@@ -176,6 +176,6 @@ class SPENCH_API SpenchAudioEchoCancelation : public ISpenchSequencer {
    *  \ingroup group_cpp
    */
   void convertFromInterleaved(const std::vector<float>& interlvd, std::vector<float>& mic, std::vector<float>& lbk);
-  std::unique_ptr<AudioEchoCancelationHandler> m_aec;
+  std::unique_ptr<AudioEchoCancelationHandler> aec_;
 };
 }  // namespace spench

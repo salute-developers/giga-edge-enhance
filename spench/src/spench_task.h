@@ -15,12 +15,12 @@ class SpenchTask;
 using TaskPtr = std::shared_ptr<spench::SpenchTask>;
 
 enum PipelineStage {
-  ORIG_CHUNK = 0,
-  FOURIER_TRANSFORMED_SPEC = 1,
-  PREDICTED_MASK = 2,
-  PREDICTED_SPEC = 3,
-  ENHANCED_CHUNK = 4,
-  SKIPPED_CHUNK = 5
+  orig_chunk = 0,
+  fourier_transformed_spec = 1,
+  predicted_mask = 2,
+  predicted_spec = 3,
+  enhanced_chunk = 4,
+  skipped_chunk = 5
 };
 
 struct SpenchTaskData {
@@ -35,30 +35,30 @@ struct SpenchTaskData {
 
 class DenoiseModelParams {
  public:
-  std::string m_model_path;
-  std::vector<std::string> m_model_inputs;
-  std::vector<std::string> m_model_outputs;
-  uint32_t m_network_input_ctx_len = 0;
+  std::string model_path;
+  std::vector<std::string> model_inputs;
+  std::vector<std::string> model_outputs;
+  uint32_t network_input_ctx_len = 0;
 
   DenoiseModelParams() = default;
 
-  void ReadModelNode(const YAML::Node& yaml_config);
+  void read_model_node(const YAML::Node& yaml_config);
 };
 
 class SpenchTask {
  public:
-  SpenchTaskData   m_data;
-  std::string       m_session_id;
-  std::string       m_message_id;
-  PipelineStage     m_stage;
-  SpenchTask(): m_stage(ORIG_CHUNK) {}
+  SpenchTaskData   data;
+  std::string       session_id;
+  std::string       message_id;
+  PipelineStage     stage;
+  SpenchTask(): stage(orig_chunk) {}
 };
 
 // float Frame2Seconds(int frames, const SpenchTaskParams& params);
 
-std::string GetNowDate();
+std::string get_now_date();
 
-std::string GetNowTime();
+std::string get_now_time();
 
 namespace tools {
 /**
@@ -71,7 +71,7 @@ namespace tools {
 #ifdef _MSC_VER
 __declspec(dllexport)
 #endif
-void                              convertFloat32ToPCM16(const std::vector<float>&,
+void                              convert_float32_to_pcm16(const std::vector<float>&,
                                                               std::vector<int16_t>&);
 
 /**
@@ -84,7 +84,7 @@ void                              convertFloat32ToPCM16(const std::vector<float>
 #ifdef _MSC_VER
 __declspec(dllexport)
 #endif
-void                              convertPCM16ToFloat32(const std::vector<int16_t>&,
+void                              convert_pcm16_to_float32(const std::vector<int16_t>&,
                                                               std::vector<float>&);
 }  // namespace tools
 }  // namespace spench

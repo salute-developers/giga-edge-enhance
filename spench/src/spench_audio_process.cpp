@@ -12,39 +12,39 @@
 
 namespace spench {
 SpenchAudioProcess::SpenchAudioProcess()
-: m_dsp(nullptr) {
-  m_dsp = std::make_unique<spench::AudioProcessorHandler>(
+: dsp_(nullptr) {
+  dsp_ = std::make_unique<spench::AudioProcessorHandler>(
             std::make_shared<spench::AudioProcessorConfig>());
 }
 
 SpenchAudioProcess::SpenchAudioProcess(const char* config)
-: m_dsp(nullptr) {
+: dsp_(nullptr) {
   std::string config_file(config);
   if (!config_file.empty()) {
-    m_dsp = std::make_unique<spench::AudioProcessorHandler>(
+    dsp_ = std::make_unique<spench::AudioProcessorHandler>(
             std::make_shared<spench::AudioProcessorConfig>(spench::FileConfigReader(config)));
   } else {
     spdlog::info("SpenchAudioProcess input config is empty. Use default values");
-    m_dsp = std::make_unique<spench::AudioProcessorHandler>(
+    dsp_ = std::make_unique<spench::AudioProcessorHandler>(
               std::make_shared<spench::AudioProcessorConfig>());
   }
   spdlog::info("Create Spench audio processor from a configuration file");
 }
 
 SpenchAudioProcess::SpenchAudioProcess(const std::string& yaml_conf)
-: m_dsp(nullptr) {
-  m_dsp = std::make_unique<spench::AudioProcessorHandler>(
+: dsp_(nullptr) {
+  dsp_ = std::make_unique<spench::AudioProcessorHandler>(
               std::make_shared<spench::AudioProcessorConfig>(spench::StringConfigReader(yaml_conf)));
   spdlog::info("Create Spench audio processor from yaml string");
 }
 
 SpenchAudioProcess::~SpenchAudioProcess() {
-  m_dsp.reset();
+  dsp_.reset();
 }
 
 std::vector<float>  SpenchAudioProcess::process(const std::vector<float>& chunk,
                                                       std::vector<float>& ret) {
-  return m_dsp->process(chunk, ret);
+  return dsp_->process(chunk, ret);
 }
 
 std::vector<int16_t>  SpenchAudioProcess::process(const std::vector<int16_t>& chunk16,
@@ -52,9 +52,9 @@ std::vector<int16_t>  SpenchAudioProcess::process(const std::vector<int16_t>& ch
   std::vector<float> input;
   std::vector<float> output;
 
-  tools::convertPCM16ToFloat32(chunk16, input);
-  m_dsp->process(input, output);
-  tools::convertFloat32ToPCM16(output, ret16);
+  tools::convert_pcm16_to_float32(chunk16, input);
+  dsp_->process(input, output);
+  tools::convert_float32_to_pcm16(output, ret16);
   return ret16;
 }
 
@@ -117,7 +117,7 @@ std::vector<int16_t>  SpenchAudioProcess::operator()(std::vector<int16_t>& in16,
 }
 
 SpenchAudioProcess& SpenchAudioProcess::AddAGC() {
-  m_dsp->addAGC();
+  dsp_->addAGC();
   return *this;
 }
 
@@ -126,13 +126,13 @@ SpenchAudioProcess& SpenchAudioProcess::AddAGC(uint32_t audio_sample_rate,
                                                float max_power_gain,
                                                float time_rise,
                                                float time_fall) {
-  m_dsp->addAGC({target_power_level, max_power_gain,
+  dsp_->addAGC({target_power_level, max_power_gain,
                   audio_sample_rate / 4, time_rise, time_fall});
   return *this;
 }
 
 SpenchAudioProcess& SpenchAudioProcess::AddRC() {
-  m_dsp->addRC();
+  dsp_->addRC();
   return *this;
 }
 
@@ -142,13 +142,13 @@ SpenchAudioProcess& SpenchAudioProcess::AddRC(uint32_t audio_sample_rate,
                                               float attack_time,
                                               float release_time,
                                               float hold_time) {
-  m_dsp->addRC({audio_sample_rate, target_level_db, max_gain_db,
+  dsp_->addRC({audio_sample_rate, target_level_db, max_gain_db,
                 attack_time, release_time, hold_time});
   return *this;
 }
 
 SpenchAudioProcess& SpenchAudioProcess::AddLC() {
-  m_dsp->addLC();
+  dsp_->addLC();
   return *this;
 }
 
@@ -158,13 +158,12 @@ SpenchAudioProcess& SpenchAudioProcess::AddLC(uint32_t audio_sample_rate,
                                               float max_gain_db,
                                               bool vad,
                                               bool post_processing) {
-  m_dsp->addLC(
-      {audio_sample_rate, target_level_db, bypass_time, max_gain_db, vad, post_processing});
+  dsp_->addLC({audio_sample_rate, target_level_db, bypass_time, max_gain_db, vad, post_processing});
   return *this;
 }
 
 SpenchAudioProcess& SpenchAudioProcess::AddNG() {
-  m_dsp->addNoiseGate();
+  dsp_->addNoiseGate();
   return *this;
 }
 
@@ -173,13 +172,13 @@ SpenchAudioProcess& SpenchAudioProcess::AddNG(uint32_t audio_sample_rate,
                                               float attack_time,
                                               float release_time,
                                               float hold_time) {
-  m_dsp->addNoiseGate({audio_sample_rate, threshold_db,
+  dsp_->addNoiseGate({audio_sample_rate, threshold_db,
                   attack_time, release_time, hold_time});
   return *this;
 }
 
 SpenchAudioProcess& SpenchAudioProcess::AddLim() {
-  m_dsp->addLimiter();
+  dsp_->addLimiter();
   return *this;
 }
 
@@ -188,13 +187,13 @@ SpenchAudioProcess& SpenchAudioProcess::AddLim(uint32_t audio_sample_rate,
                                               float knee_width,
                                               float attack_time,
                                               float release_time) {
-  m_dsp->addLimiter({audio_sample_rate, threshold_db,
+  dsp_->addLimiter({audio_sample_rate, threshold_db,
                   knee_width, attack_time, release_time});
   return *this;
 }
 
 SpenchAudioProcess& SpenchAudioProcess::AddDRC() {
-  m_dsp->addDRCompressor();
+  dsp_->addDRCompressor();
   return *this;
 }
 
@@ -204,7 +203,7 @@ SpenchAudioProcess& SpenchAudioProcess::AddDRC(uint32_t audio_sample_rate,
                                                float knee_width,
                                                float attack_time,
                                                float release_time) {
-  m_dsp->addDRCompressor({audio_sample_rate, threshold_db,
+  dsp_->addDRCompressor({audio_sample_rate, threshold_db,
                           ratio, knee_width, attack_time,
                           release_time});
   return *this;

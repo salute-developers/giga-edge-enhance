@@ -19,20 +19,20 @@ class FftCalculator {
  public:
   explicit FftCalculator(const uint32_t nfft, const uint32_t feature_size, const uint32_t frames_num_for_stft = 2);
   ~FftCalculator();
-  void CalculateSTFT(const size_t& n_samples, const T* begin, ComplexNumber<T>& dft);
+  void calculate_stft(const size_t& n_samples, const T* begin, ComplexNumber<T>& dft);
 
  private:
-  const uint32_t m_nfft;
-  const uint32_t m_feature_size;
-  const uint32_t m_frames_num_for_stft;
+  const uint32_t nfft_;
+  const uint32_t feature_size_;
+  const uint32_t frames_num_for_stft_;
 
-  std::vector<std::complex<fft::buffer_type>> m_out_fft_buf;
-  std::vector<fft::buffer_type> m_in_fft_buf;
+  std::vector<std::complex<fft::buffer_type>> out_fft_buf_;
+  std::vector<fft::buffer_type> in_fft_buf_;
 
-  void CalculateFft(const size_t& n_samples, const T* begin, ComplexNumber<T>& dft);
-  void PrepareInputBuffer(size_t n_samples, const T* begin);
-  void RunPocketFft();
-  void CopyOutputTo(ComplexNumber<T>& dft) const;
+  void calculate_fft(const size_t& n_samples, const T* begin, ComplexNumber<T>& dft);
+  void prepare_input_buffer(size_t n_samples, const T* begin);
+  void run_pocket_fft();
+  void copy_output_to(ComplexNumber<T>& dft) const;
 };
 }  // namespace fe
 }  // namespace spench

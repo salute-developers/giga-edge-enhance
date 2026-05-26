@@ -49,12 +49,12 @@ class BaseTfliteRunner {
   template<typename T>
   void test_run(std::vector<std::vector<T>*>& inputs) {run(inputs);}
   virtual uint32_t get_future_context_len() {
-    return model_params_.m_network_input_ctx_len;
+    return model_params_.network_input_ctx_len;
   }
 
  protected:
   void read_config(const YAML::Node& yaml_config) {
-    model_params_.ReadModelNode(yaml_config);
+    model_params_.read_model_node(yaml_config);
   }
 
   void init_model(std::vector<std::string>& input_names,

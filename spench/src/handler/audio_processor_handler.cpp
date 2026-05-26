@@ -8,24 +8,24 @@ namespace spench {
 void AudioProcItemWithStats::stats_configure(uint32_t sample_rate,
                                              double window_seconds,
                                              std::initializer_list<MetricDef> metrics) {
-  m_sr = (sample_rate == 0 ? 1u : sample_rate);
-  m_window_sec = (window_seconds > 0.0 ? window_seconds : 1.0);
+  sr_ = (sample_rate == 0 ? 1u : sample_rate);
+  window_sec_ = (window_seconds > 0.0 ? window_seconds : 1.0);
 
-  m_metrics.clear();
-  m_metrics.reserve(metrics.size());
+  metrics_.clear();
+  metrics_.reserve(metrics.size());
 
   for (const auto& def : metrics) {
     auto col = std::make_unique<util::sound::StatCollector>(
-        def.name, m_sr, m_window_sec, def.opts);
+        def.name, sr_, window_sec_, def.opts);
     // pair<name, Metric>
-    m_metrics.emplace_back(def.name, Metric{std::move(col), false, std::nullopt});
+    metrics_.emplace_back(def.name, Metric{std::move(col), false, std::nullopt});
   }
 }
 
 void AudioProcItemWithStats::stats_update(const std::string& name,
                                           std::optional<float> value,
                                           size_t frames) {
-  for (auto& kv : m_metrics) {
+  for (auto& kv : metrics_) {
     if (kv.first == name) {
       auto& metric = kv.second;
       std::optional<util::sound::StatCollector::Stat> flushed;
@@ -34,7 +34,7 @@ void AudioProcItemWithStats::stats_update(const std::string& name,
       } else {
         flushed = metric.collector->advance(frames);
       }
-      metric.m_flush_this_tick = static_cast<bool>(flushed);
+      metric.flush_this_tick_ = static_cast<bool>(flushed);
       if (flushed) {
         metric.last = *flushed;
       }
@@ -44,45 +44,45 @@ void AudioProcItemWithStats::stats_update(const std::string& name,
 }
 
 void AudioProcItemWithStats::stats_try_log_window() {
-  if (m_metrics.empty()) {
+  if (metrics_.empty()) {
     return;
   }
 
   bool all_flushed = true;
-  for (auto& kv : m_metrics) {
-    all_flushed &= kv.second.m_flush_this_tick;
+  for (auto& kv : metrics_) {
+    all_flushed &= kv.second.flush_this_tick_;
   }
 
   if (all_flushed) {
     std::vector<std::pair<std::string, util::sound::StatCollector::Stat>> snapshot;
-    snapshot.reserve(m_metrics.size());
-    for (auto& kv : m_metrics) {
+    snapshot.reserve(metrics_.size());
+    for (auto& kv : metrics_) {
       snapshot.emplace_back(kv.first, kv.second.last.value_or(util::sound::StatCollector::Stat{}));
     }
     on_stats_window(snapshot);
   }
 
-  for (auto& kv : m_metrics) {
-    kv.second.m_flush_this_tick = false;
+  for (auto& kv : metrics_) {
+    kv.second.flush_this_tick_ = false;
   }
 }
 
 std::vector<float>& AudioProcLC::process(const std::vector<float>& in,
                                          std::vector<float>& out) {
-  if (m_reset_stats_pending.exchange(false, std::memory_order_acq_rel)) {
+  if (reset_stats_pending_.exchange(false, std::memory_order_acq_rel)) {
     stats_reset_window();
   }
 
   if (!in.empty()) {
-    out = m_lc->process(in);
+    out = lc_->process(in);
   } else {
     out = in;
   }
 
   // --- Stats update (windowed at base class) ---
-  const size_t frames = (m_channels > 0) ? (in.size() / m_channels) : in.size();
+  const size_t frames = (channels_ > 0) ? (in.size() / channels_) : in.size();
 
-  const auto st = m_lc->state();  // one snapshot
+  const auto st = lc_->state();  // one snapshot
 
   // LUFS before gain
   if (st.last_short_term_lufs.has_value()) {
@@ -96,17 +96,17 @@ std::vector<float>& AudioProcLC::process(const std::vector<float>& in,
   return out;
 }
 
-void AudioProcLC::SetParameters(const ParametersStruct* params) {
+void AudioProcLC::set_parameters(const ParametersStruct* params) {
   const auto* p = dynamic_cast<const LoudnessParametersStruct*>(params);
   if (!p) {
     return;
   }
 
-  m_sr = p->sample_rate;
-  // m_stats_window_sec: if you add it in the future, wire it here. For now keep default.
+  sr_ = p->sample_rate;
+  // stats_window_sec_: if you add it in the future, wire it here. For now keep default.
 
-  m_lc = util::sound::LoudnessControlBuilder()
-              .set_sample_rate(m_sr)
+  lc_ = util::sound::LoudnessControlBuilder()
+              .set_sample_rate(sr_)
               .set_method(p->use_vad ?
                           util::sound::ILoudnessControl::vadbase :
                           util::sound::ILoudnessControl::simple)
@@ -116,10 +116,10 @@ void AudioProcLC::SetParameters(const ParametersStruct* params) {
               .set_bypass_time(p->bypass_time)
               .create();
 
-  stats_configure(m_sr,
-                  m_stats_window_sec,
+  stats_configure(sr_,
+                  stats_window_sec_,
                   { {"input_lufs", Options::All()}, {"gain_db", Options::All()} });
-  m_reset_stats_pending.store(true, std::memory_order_release);
+  reset_stats_pending_.store(true, std::memory_order_release);
 }
 
 void AudioProcLC::on_stats_window(
@@ -139,20 +139,20 @@ void AudioProcLC::on_stats_window(
     return;
   }
 
-  const auto st = m_lc->state();
+  const auto st = lc_->state();
 
   spdlog::info(
       "[LoudnessControl] window={}s input LUFS [min:max:mean:median:q95:q5] = [{}]\n"
       "[LoudnessControl] window={}s gain dB [min:max:mean:median:q95:q5] = [{}]\n"
       "[LoudnessControl] window={}s LoudnessStat[max={}, min={}]",
-      m_stats_window_sec, pack(*in),
-      m_stats_window_sec, pack(*gn),
-      m_stats_window_sec, st.longterm_max_lufs, st.longterm_min_lufs);
+      stats_window_sec_, pack(*in),
+      stats_window_sec_, pack(*gn),
+      stats_window_sec_, st.longterm_max_lufs, st.longterm_min_lufs);
 }
 
 AudioProcessorHandler::AudioProcessorHandler(std::shared_ptr<AudioProcessorConfig> config)
     : BaseAudioHandler(std::move(config)) {
-  SpenchRetCode ret_code = Restart();
+  SpenchRetCode ret_code = restart();
 
   if (ret_code != SpenchRetCode::SUCCESS) {
     spdlog::error("Due to errors an audio processing handler module could not be created! ret_code: ",
@@ -163,13 +163,13 @@ AudioProcessorHandler::AudioProcessorHandler(std::shared_ptr<AudioProcessorConfi
   spdlog::debug("Audio Processing container created!");
 }
 
-SpenchRetCode AudioProcessorHandler::DoStart() {
+SpenchRetCode AudioProcessorHandler::do_start() {
   return SpenchRetCode::SUCCESS;
 }
 
-void AudioProcessorHandler::DoStop() {
-  // Keep the chain by default; clear if you want a pristine Restart():
-  m_sequence_vec.clear();
+void AudioProcessorHandler::do_stop() {
+  // Keep the chain by default; clear if you want a pristine restart():
+  sequence_vec_.clear();
 }
 
 // ---- Builders (now always read via params()["sound_processing"]) ----
@@ -185,20 +185,20 @@ AudioProcessorHandler& AudioProcessorHandler::addAGC() {
     agc_params.t_rise = agc["step_size_rise"].as<dsplib::real_t>();
     agc_params.t_fall = agc["step_size_fall"].as<dsplib::real_t>();
 
-    m_sequence_vec.emplace_back(std::make_unique<AudioProcAGC>(agc_params));
+    sequence_vec_.emplace_back(std::make_unique<AudioProcAGC>(agc_params));
     spdlog::info("New Auto Gain Control element created. target_level: {}, max_gain: {}, average_len: {}, "
                  "t_rise: {}, t_fall: {}",
                  agc_params.target_level, agc_params.max_gain, agc_params.average_len,
                  agc_params.t_rise, agc_params.t_fall);
   } else {
-    m_sequence_vec.emplace_back(std::make_unique<AudioProcAGC>());
+    sequence_vec_.emplace_back(std::make_unique<AudioProcAGC>());
     spdlog::debug("New Auto Gain Control element created with params by default");
   }
   return *this;
 }
 
 AudioProcessorHandler& AudioProcessorHandler::addAGC(const AGCParameters& p) {
-  m_sequence_vec.emplace_back(std::make_unique<AudioProcAGC>(p));
+  sequence_vec_.emplace_back(std::make_unique<AudioProcAGC>(p));
   spdlog::info("New Auto Gain Control element created. target_level: {}, max_gain: {}, average_len: {}, "
                "t_rise: {}, t_fall: {}",
                p.target_level, p.max_gain, p.average_len, p.t_rise, p.t_fall);
@@ -217,20 +217,20 @@ AudioProcessorHandler& AudioProcessorHandler::addRC() {
     rc.release_time = n["release_time"].as<float>();
     rc.hold_time = n["hold_time"].as<float>();
 
-    m_sequence_vec.emplace_back(std::make_unique<AudioProcRC>(rc));
+    sequence_vec_.emplace_back(std::make_unique<AudioProcRC>(rc));
     spdlog::info("New Range Control element created. sr: {}, target_level_db: {}, max_gain_db: {}, "
                  "attack_time: {}, release_time {}, hold_time {}",
                  rc.sample_rate, rc.target_level_db, rc.max_gain_db,
                  rc.attack_time, rc.release_time, rc.hold_time);
   } else {
-    m_sequence_vec.emplace_back(std::make_unique<AudioProcRC>());
+    sequence_vec_.emplace_back(std::make_unique<AudioProcRC>());
     spdlog::debug("New Range Control element created with params by default");
   }
   return *this;
 }
 
 AudioProcessorHandler& AudioProcessorHandler::addRC(const RCParameters& p) {
-  m_sequence_vec.emplace_back(std::make_unique<AudioProcRC>(p));
+  sequence_vec_.emplace_back(std::make_unique<AudioProcRC>(p));
   spdlog::info("New Range Control element created. sr: {}, target_level_db: {}, max_gain_db: {}, "
                "attack_time: {}, release_time {}, hold_time {}",
                p.sample_rate, p.target_level_db, p.max_gain_db,
@@ -249,19 +249,19 @@ AudioProcessorHandler& AudioProcessorHandler::addNoiseGate() {
     ng.release_time = n["release_time"].as<dsplib::real_t>();
     ng.hold_time = n["hold_time"].as<dsplib::real_t>();
 
-    m_sequence_vec.emplace_back(std::make_unique<AudioProcNoiseGate>(ng));
+    sequence_vec_.emplace_back(std::make_unique<AudioProcNoiseGate>(ng));
     spdlog::info("New Noise Gate element created. sr: {}, threshold: {}, attack_time: {}, release_time {}, "
                  "hold_time {}",
                  ng.sample_rate, ng.threshold, ng.attack_time, ng.release_time, ng.hold_time);
   } else {
-    m_sequence_vec.emplace_back(std::make_unique<AudioProcNoiseGate>());
+    sequence_vec_.emplace_back(std::make_unique<AudioProcNoiseGate>());
     spdlog::debug("New Noise Gate element created with params by default");
   }
   return *this;
 }
 
 AudioProcessorHandler& AudioProcessorHandler::addNoiseGate(const NGParameters& p) {
-  m_sequence_vec.emplace_back(std::make_unique<AudioProcNoiseGate>(p));
+  sequence_vec_.emplace_back(std::make_unique<AudioProcNoiseGate>(p));
   spdlog::info("New Noise Gate element created. sr: {}, threshold: {}, attack_time: {}, release_time {}, "
                "hold_time {}",
                p.sample_rate, p.threshold, p.attack_time, p.release_time, p.hold_time);
@@ -282,10 +282,10 @@ AudioProcessorHandler& AudioProcessorHandler::addLimiter() {
     spdlog::info("New Limiter element created. sr: {}, threshold: {}, knee_width: {}, attack_time {}, "
                  "release_time {}",
                  lp.sample_rate, lp.threshold, lp.knee_width, lp.attack_time, lp.release_time);
-    m_sequence_vec.emplace_back(std::make_unique<AudioProcLimiter>(lp));
+    sequence_vec_.emplace_back(std::make_unique<AudioProcLimiter>(lp));
   } else {
     spdlog::debug("New Limiter element created with params by default");
-    m_sequence_vec.emplace_back(std::make_unique<AudioProcLimiter>());
+    sequence_vec_.emplace_back(std::make_unique<AudioProcLimiter>());
   }
   return *this;
 }
@@ -294,7 +294,7 @@ AudioProcessorHandler& AudioProcessorHandler::addLimiter(const LimParameters& p)
   spdlog::info("New Limiter element created. sr: {}, threshold: {}, knee_width: {}, attack_time {}, "
                "release_time {}",
                p.sample_rate, p.threshold, p.knee_width, p.attack_time, p.release_time);
-  m_sequence_vec.emplace_back(std::make_unique<AudioProcLimiter>(p));
+  sequence_vec_.emplace_back(std::make_unique<AudioProcLimiter>(p));
   return *this;
 }
 
@@ -310,20 +310,20 @@ AudioProcessorHandler& AudioProcessorHandler::addDRCompressor() {
     drc.attack_time = n["attack_time"].as<dsplib::real_t>();
     drc.release_time = n["release_time"].as<dsplib::real_t>();
 
-    m_sequence_vec.emplace_back(std::make_unique<AudioProcDRCompressor>(drc));
+    sequence_vec_.emplace_back(std::make_unique<AudioProcDRCompressor>(drc));
     spdlog::info("New Dynamic Range Compressor element created. sr: {}, threshold: {}, ratio: {}, "
                  "knee_width: {}, attack_time {}, release_time {}",
                  drc.sample_rate, drc.threshold, drc.ratio, drc.knee_width,
                  drc.attack_time, drc.release_time);
   } else {
-    m_sequence_vec.emplace_back(std::make_unique<AudioProcDRCompressor>());
+    sequence_vec_.emplace_back(std::make_unique<AudioProcDRCompressor>());
     spdlog::debug("New Dynamic Range Compressor element created with params by default");
   }
   return *this;
 }
 
 AudioProcessorHandler& AudioProcessorHandler::addDRCompressor(const DRCParameters& p) {
-  m_sequence_vec.emplace_back(std::make_unique<AudioProcDRCompressor>(p));
+  sequence_vec_.emplace_back(std::make_unique<AudioProcDRCompressor>(p));
   spdlog::info("New Dynamic Range Compressor element created. sr: {}, threshold: {}, ratio: {}, "
                "knee_width: {}, attack_time {}, release_time {}",
                p.sample_rate, p.threshold, p.ratio, p.knee_width, p.attack_time, p.release_time);
@@ -342,20 +342,20 @@ AudioProcessorHandler& AudioProcessorHandler::addLC() {
     lc.use_vad = n["use_vad"].as<bool>();
     lc.post_processing = n["post_processing"] ? n["post_processing"].as<bool>() : false;
 
-    m_sequence_vec.emplace_back(std::make_unique<AudioProcLC>(lc));
+    sequence_vec_.emplace_back(std::make_unique<AudioProcLC>(lc));
     spdlog::info("New Loudness Control element created. sr: {}, target_level_db: {}, max_gain_db: {}, "
                  "bypass_time: {}, vad enabled: {}, post_processing: {}",
                  lc.sample_rate, lc.target_level_db, lc.max_gain_db, lc.bypass_time, lc.use_vad,
                  lc.post_processing);
   } else {
-    m_sequence_vec.emplace_back(std::make_unique<AudioProcLC>());
+    sequence_vec_.emplace_back(std::make_unique<AudioProcLC>());
     spdlog::debug("New Loudness Control element created with params by default");
   }
   return *this;
 }
 
 AudioProcessorHandler& AudioProcessorHandler::addLC(const LoudnessParameters& p) {
-  m_sequence_vec.emplace_back(std::make_unique<AudioProcLC>(p));
+  sequence_vec_.emplace_back(std::make_unique<AudioProcLC>(p));
   spdlog::info("New Loudness Control element created. sr: {}, target_level_db: {}, max_gain_db: {}, "
                "bypass_time: {}, vad enabled: {}, post_processing: {}",
                p.sample_rate, p.target_level_db, p.max_gain_db, p.bypass_time, p.use_vad, p.post_processing);
@@ -365,14 +365,14 @@ AudioProcessorHandler& AudioProcessorHandler::addLC(const LoudnessParameters& p)
 std::vector<float>& AudioProcessorHandler::process(const std::vector<float>& in,
                                                    std::vector<float>& out) {
   std::vector<float> res(in);
-  for (auto& item : m_sequence_vec) {
+  for (auto& item : sequence_vec_) {
     res = item->process(res, res);
   }
   res.swap(out);
   return out;
 }
 
-SpenchRetCode AudioProcessorHandler::ProcessFrame(struct spench::SpenchContext<float>*,
+SpenchRetCode AudioProcessorHandler::process_frame(struct spench::SpenchContext<float>*,
                                                   const std::vector<float>& input_audio_frame,
                                                   std::vector<float>& enhanced_audio_frame) {
   (void)process(input_audio_frame, enhanced_audio_frame);

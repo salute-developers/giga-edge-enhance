@@ -13,38 +13,38 @@
 namespace spench {
 
 uint64_t FeatureExtractorRunner::GetFrameSizeMs() const {
-  return m_params.frame_size_ms;
+  return params_.frame_size_ms;
 }
 
 uint64_t FeatureExtractorRunner::GetSamplingFreq() const {
-  return m_params.sampling_freq;
+  return params_.sampling_freq;
 }
 
-uint64_t FeatureExtractorRunner::GetFrameSizeSamples() const {
-  return m_params.NumFrameSizeSamples();
+uint64_t FeatureExtractorRunner::get_frame_size_samples() const {
+  return params_.num_frame_size_samples();
 }
 
 uint64_t FeatureExtractorRunner::GetFrameHopSizeSamples() const {
-  return m_params.NumFrameStrideSamples();
+  return params_.num_frame_stride_samples();
 }
 
 uint64_t FeatureExtractorRunner::GetPowSpecFeatSizeSamples() const {
-  return m_params.PowSpecFeatSz();
+  return params_.pow_spec_feat_sz();
 }
 
-void FeatureExtractorRunner::ReadConfig(std::shared_ptr<spench::NetworkConfig> config) {
-  m_params.ReadFeatureParamsNode(config);
+void FeatureExtractorRunner::read_config(std::shared_ptr<spench::NetworkConfig> config) {
+  params_.read_feature_params_node(config);
 }
 
 spench::ComplexNumber<float>
 FeatureExtractorRunner::MergeInputSpectrogram(const std::vector<spench::ComplexNumber<float>>& frames) {
-  return spench::ComplexNumber<float>::concatParts(frames);
+  return spench::ComplexNumber<float>::concat_parts(frames);
 }
 
-void FeatureExtractorRunner::CalcEnhancedSpectrogram(const spench::ComplexNumber<float>& merged_spec,
+void FeatureExtractorRunner::calc_enhanced_spectrogram(const spench::ComplexNumber<float>& merged_spec,
                                                      spench::ComplexNumber<float>& out_new_spec) {
   // Computes enhanced parts (masking, etc.) into out_new_spec.
-  m_feature_extractor_ptr->calcEnhancedPartsInPlace(merged_spec, out_new_spec);
+  feature_extractor_ptr_->calc_enhanced_parts_in_place(merged_spec, out_new_spec);
 }
 
 uint32_t FeatureExtractorRunner::ValidateAndGetFeatNum(uint32_t input_chunk_num,
@@ -86,7 +86,7 @@ FeatureExtractorRunner::BuildConcatWithPrev(const spench::ComplexNumber<float>& 
     throw std::runtime_error("BuildConcatWithPrev: new_spec size mismatch");
   }
 
-  return spench::ComplexNumber<float>::concatWithHead(prev_spec, new_spec);
+  return spench::ComplexNumber<float>::concat_with_head(prev_spec, new_spec);
 }
 
 void FeatureExtractorRunner::UpdatePrevFromNewSpec(spench::SpenchContext<float>& ctx,
@@ -103,18 +103,18 @@ void FeatureExtractorRunner::UpdatePrevFromNewSpec(spench::SpenchContext<float>&
     ctx.prev_spectrogram.resize(feat_num);
   }
 
-  new_spec.copyFrameTo(ctx.prev_spectrogram, feat_num, input_chunk_num - 1);
+  new_spec.copy_frame_to(ctx.prev_spectrogram, feat_num, input_chunk_num - 1);
 }
 
-void FeatureExtractorRunner::HandlePredictedMask(spench::SpenchTask* task) {
-  auto& d = task->m_data;
+void FeatureExtractorRunner::handle_predicted_mask(spench::SpenchTask* task) {
+  auto& d = task->data;
   auto& ctx = *d.context;
 
   // 1) Merge input frames into a single spectrogram.
   const auto merged_spec = MergeInputSpectrogram(d.input_spectrogram);
 
   // 2) Apply enhancement/mask to build new_spectrogram.
-  CalcEnhancedSpectrogram(merged_spec, d.new_spectrogram);
+  calc_enhanced_spectrogram(merged_spec, d.new_spectrogram);
 
   // 3) Validate and compute feat_num.
   const uint32_t input_chunk_num = static_cast<uint32_t>(d.input_spectrogram.size());
@@ -129,17 +129,17 @@ void FeatureExtractorRunner::HandlePredictedMask(spench::SpenchTask* task) {
         ctx.prev_spectrogram.resize(feat_num);
       }
 
-      d.new_spectrogram.copyFrameTo(ctx.prev_spectrogram, feat_num, 0);
-      task->m_stage = PipelineStage::SKIPPED_CHUNK;
+      d.new_spectrogram.copy_frame_to(ctx.prev_spectrogram, feat_num, 0);
+      task->stage = PipelineStage::skipped_chunk;
       return;
     }
 
     // We can output N frames (but the overlap-add pipeline needs one prev for the next call).
     // new_spectrogram already contains N sequential frames, so we can iSTFT it directly.
-    m_feature_extractor_ptr->iSTFTApply(d.new_spectrogram, d.enhanced_wav);
+    feature_extractor_ptr_->istft_apply(d.new_spectrogram, d.enhanced_wav);
 
     UpdatePrevFromNewSpec(ctx, d.new_spectrogram, input_chunk_num, feat_num);
-    task->m_stage = PipelineStage::ENHANCED_CHUNK;
+    task->stage = PipelineStage::enhanced_chunk;
     return;
   }
 
@@ -149,26 +149,26 @@ void FeatureExtractorRunner::HandlePredictedMask(spench::SpenchTask* task) {
                                          input_chunk_num,
                                          feat_num);
 
-  m_feature_extractor_ptr->iSTFTApply(concat, d.enhanced_wav);
+  feature_extractor_ptr_->istft_apply(concat, d.enhanced_wav);
 
   UpdatePrevFromNewSpec(ctx, d.new_spectrogram, input_chunk_num, feat_num);
-  task->m_stage = PipelineStage::ENHANCED_CHUNK;
+  task->stage = PipelineStage::enhanced_chunk;
 }
 
-void FeatureExtractorRunner::Run(spench::SpenchTask* spench_task) {
+void FeatureExtractorRunner::run(spench::SpenchTask* spench_task) {
   if (!spench_task) {
-    throw std::invalid_argument("FeatureExtractorRunner::Run: spench_task is null");
+    throw std::invalid_argument("FeatureExtractorRunner::run: spench_task is null");
   }
-  auto& spench_data = spench_task->m_data;
+  auto& spench_data = spench_task->data;
   auto& spench_context = spench_data.context;
 
-  if (spench_task->m_stage == PipelineStage::ORIG_CHUNK) {
+  if (spench_task->stage == PipelineStage::orig_chunk) {
     if (spench_data.waveform.size() == 0) {
       // error
       throw std::runtime_error("Input signal is empty!");
     }
 
-    m_feature_extractor_ptr->STFTApply(spench_data.waveform,
+    feature_extractor_ptr_->stft_apply(spench_data.waveform,
                                        spench_data.input_spectrogram);
 
     if (spench_data.input_spectrogram.size() < 1) {
@@ -176,15 +176,15 @@ void FeatureExtractorRunner::Run(spench::SpenchTask* spench_task) {
       throw std::runtime_error("Spectrogram is calculated incorectly! Something with input data!");
     }
 
-    spench_task->m_stage = PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  } else if (spench_task->m_stage == PipelineStage::PREDICTED_MASK) {
-    HandlePredictedMask(spench_task);
+    spench_task->stage = PipelineStage::fourier_transformed_spec;
+  } else if (spench_task->stage == PipelineStage::predicted_mask) {
+    handle_predicted_mask(spench_task);
     return;
-  } else if (spench_task->m_stage == PipelineStage::PREDICTED_SPEC) {
+  } else if (spench_task->stage == PipelineStage::predicted_spec) {
     uint32_t feat_num = spench_context->prev_spectrogram.real.size();
     if (feat_num == 0) {
       spench_context->prev_spectrogram = spench_data.new_spectrogram;
-      spench_task->m_stage = PipelineStage::SKIPPED_CHUNK;
+      spench_task->stage = PipelineStage::skipped_chunk;
       return;
     }
 
@@ -198,23 +198,23 @@ void FeatureExtractorRunner::Run(spench::SpenchTask* spench_task) {
     concatenatedSpec.real[current_frame] = spench_data.new_spectrogram.real;
     concatenatedSpec.imag[current_frame] = spench_data.new_spectrogram.imag;
 
-    m_feature_extractor_ptr->iSTFTApply(concatenatedSpec,
+    feature_extractor_ptr_->istft_apply(concatenatedSpec,
                                 spench_data.enhanced_wav);
     spench_context->prev_spectrogram = spench_data.new_spectrogram;
-    spench_task->m_stage = PipelineStage::ENHANCED_CHUNK;
-  } else if (spench_task->m_stage == PipelineStage::SKIPPED_CHUNK) {
+    spench_task->stage = PipelineStage::enhanced_chunk;
+  } else if (spench_task->stage == PipelineStage::skipped_chunk) {
     // network pass the input to output and nothing to do
-    spench_data.enhanced_wav.resize(m_params.NumFrameStrideSamples());
+    spench_data.enhanced_wav.resize(params_.num_frame_stride_samples());
   } else {
     throw std::runtime_error("State is incorrect!");
   }
 }
 
-void FeatureExtractorRunner::WarmUp() {
+void FeatureExtractorRunner::warm_up() {
   spench::SpenchTask denoise_task;
   std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_data.waveform.resize(GetFrameSizeSamples(), 0.0);
-  Run(&denoise_task);
+  denoise_task.data.context = ctx.get();
+  denoise_task.data.waveform.resize(get_frame_size_samples(), 0.0);
+  run(&denoise_task);
 }
 }  // namespace spench

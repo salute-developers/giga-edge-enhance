@@ -7,7 +7,7 @@ namespace spench {
 
 AudioEchoCancelationHandler::AudioEchoCancelationHandler()
     : BaseAudioHandler(std::make_shared<AecConfig>()) {
-  auto ret_code = Restart();  // run DoStart() after derived members are live
+  auto ret_code = restart();  // run do_start() after derived members are live
   if (ret_code != SpenchRetCode::SUCCESS) {
     spdlog::error("Failed to initialize EchoCanceler!  ret_code: {}",
                                         std::to_string(static_cast<int32_t>(ret_code)));
@@ -18,7 +18,7 @@ AudioEchoCancelationHandler::AudioEchoCancelationHandler()
 
 AudioEchoCancelationHandler::AudioEchoCancelationHandler(std::shared_ptr<AecConfig> config)
     : BaseAudioHandler(std::move(config)) {
-  auto ret_code = Restart();
+  auto ret_code = restart();
   if (ret_code != SpenchRetCode::SUCCESS) {
     spdlog::error("Failed to initialize EchoCanceler!  ret_code: {}",
                                         std::to_string(static_cast<int32_t>(ret_code)));
@@ -27,9 +27,9 @@ AudioEchoCancelationHandler::AudioEchoCancelationHandler(std::shared_ptr<AecConf
   }
 }
 
-SpenchRetCode AudioEchoCancelationHandler::DoStart() {
+SpenchRetCode AudioEchoCancelationHandler::do_start() {
   try {
-    auto* aec = dynamic_cast<spench::AecConfig*>(m_config.get());
+    auto* aec = dynamic_cast<spench::AecConfig*>(config_.get());
     if (aec == nullptr) {
       spdlog::error("AEC config reader type mismatch");
       return SpenchRetCode::ERR_CONF_FILE_PROBLEM;
@@ -59,22 +59,22 @@ SpenchRetCode AudioEchoCancelationHandler::DoStart() {
   return SpenchRetCode::SUCCESS;
 }
 
-void AudioEchoCancelationHandler::DoStop() {
+void AudioEchoCancelationHandler::do_stop() {
   canceler_.reset();
 }
 
 const uint32_t AudioEchoCancelationHandler::get_sample_rate() {
-  auto* aec = dynamic_cast<AecConfig*>(m_config.get());
+  auto* aec = dynamic_cast<AecConfig*>(config_.get());
   return aec ? aec->sampleRate() : 0;
 }
 
 const uint16_t AudioEchoCancelationHandler::get_filter_length() {
-  auto* aec = dynamic_cast<AecConfig*>(m_config.get());
+  auto* aec = dynamic_cast<AecConfig*>(config_.get());
   return aec ? aec->filterLen() : 0;
 }
 
 const uint16_t AudioEchoCancelationHandler::get_frame_length() {
-  auto* aec = dynamic_cast<AecConfig*>(m_config.get());
+  auto* aec = dynamic_cast<AecConfig*>(config_.get());
   return aec ? aec->frameLen() : 0;
 }
 
@@ -87,7 +87,7 @@ void AudioEchoCancelationHandler::process(const std::vector<float>& mic,
   canceler_->process(mic, lbk, out);
 }
 
-SpenchRetCode AudioEchoCancelationHandler::ProcessFrame(struct spench::SpenchContext<float>*,
+SpenchRetCode AudioEchoCancelationHandler::process_frame(struct spench::SpenchContext<float>*,
                                                         const std::vector<float>& mic_frame,
                                                         const std::vector<float>& lbk_frame,
                                                         std::vector<float>& out) {

@@ -5,25 +5,25 @@
 
 namespace spench {
 
-SpenchRetCode BaseAudioHandler::ProcessFrame(struct spench::SpenchContext<float>*,
+SpenchRetCode BaseAudioHandler::process_frame(struct spench::SpenchContext<float>*,
                                              const std::vector<float>&,
                                              std::vector<float>&) {
   return SpenchRetCode::ERR_NOT_IMPLEMENTED;
 }
 
-SpenchRetCode BaseAudioHandler::ProcessFrame(struct spench::SpenchContext<float>* ctx,
+SpenchRetCode BaseAudioHandler::process_frame(struct spench::SpenchContext<float>* ctx,
                                              const std::vector<float>& mic_frame,
                                              const std::vector<float>& lbk_frame,
                                              std::vector<float>& out) {
   // Default: ignore lbk and call single-input version.
   // Derived classes that need lbk (AEC) will override this.
   (void)lbk_frame;
-  return ProcessFrame(ctx, mic_frame, out);
+  return process_frame(ctx, mic_frame, out);
 }
 
 BaseAudioHandler::BaseAudioHandler(std::shared_ptr<PipelineConfig> config)
-    : m_config(std::move(config)) {
-  SpenchRetCode ret_code = Start();
+    : config_(std::move(config)) {
+  SpenchRetCode ret_code = start();
   if (ret_code != SpenchRetCode::SUCCESS) {
     spdlog::error("Handler could not be created! {}",
                   std::to_string(static_cast<int32_t>(ret_code)));
@@ -33,24 +33,24 @@ BaseAudioHandler::BaseAudioHandler(std::shared_ptr<PipelineConfig> config)
 }
 
 BaseAudioHandler::BaseAudioHandler(BaseAudioHandler&& orig_handler) noexcept
-    : m_config(std::move(orig_handler.m_config)) {}
+    : config_(std::move(orig_handler.config_)) {}
 
-BaseAudioHandler::~BaseAudioHandler() { Stop(); }
+BaseAudioHandler::~BaseAudioHandler() { stop(); }
 
-SpenchRetCode BaseAudioHandler::Start() {
+SpenchRetCode BaseAudioHandler::start() {
   // Common pre-start steps can go here; leave config loading to subclasses if needed.
-  return DoStart();
+  return do_start();
 }
 
-void BaseAudioHandler::Stop() { DoStop(); }
+void BaseAudioHandler::stop() { do_stop(); }
 
-SpenchRetCode BaseAudioHandler::Restart() {
-  Stop();
-  return Start();
+SpenchRetCode BaseAudioHandler::restart() {
+  stop();
+  return start();
 }
 
-SpenchRetCode BaseAudioHandler::DoStart() { return SpenchRetCode::SUCCESS; }
+SpenchRetCode BaseAudioHandler::do_start() { return SpenchRetCode::SUCCESS; }
 
-void BaseAudioHandler::DoStop() {}
+void BaseAudioHandler::do_stop() {}
 
 }  // namespace spench

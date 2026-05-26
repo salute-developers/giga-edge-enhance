@@ -10,45 +10,45 @@ namespace spench {
 namespace fe {
 template <typename T>
 FftCalculator<T>::FftCalculator(const uint32_t nfft, const uint32_t feature_size, const uint32_t frames_num_for_stft)
-    : m_nfft(nfft),
-      m_feature_size(feature_size),
-      m_frames_num_for_stft(frames_num_for_stft),
-      m_out_fft_buf(feature_size, 0.0),
-      m_in_fft_buf(m_nfft, 0.0) {}
+    : nfft_(nfft),
+      feature_size_(feature_size),
+      frames_num_for_stft_(frames_num_for_stft),
+      out_fft_buf_(feature_size, 0.0),
+      in_fft_buf_(nfft_, 0.0) {}
 
 template <typename T>
-void FftCalculator<T>::CalculateSTFT(const size_t& n_samples, const T* begin, ComplexNumber<T>& dft) {
-  CalculateFft(n_samples, begin, dft);
+void FftCalculator<T>::calculate_stft(const size_t& n_samples, const T* begin, ComplexNumber<T>& dft) {
+  calculate_fft(n_samples, begin, dft);
 }
 
 template <typename T>
-void FftCalculator<T>::PrepareInputBuffer(size_t n_samples, const T* begin) {
-  if (n_samples > m_nfft) {
-    throw std::runtime_error("PrepareInputBuffer: n_samples > nfft");
+void FftCalculator<T>::prepare_input_buffer(size_t n_samples, const T* begin) {
+  if (n_samples > nfft_) {
+    throw std::runtime_error("prepare_input_buffer: n_samples > nfft");
   }
 
   // Zero-pad up to nfft.
-  std::fill(m_in_fft_buf.begin(), m_in_fft_buf.end(), fft::buffer_type(0));
+  std::fill(in_fft_buf_.begin(), in_fft_buf_.end(), fft::buffer_type(0));
 
   // Copy input samples into FFT input buffer.
-  std::copy(begin, begin + n_samples, m_in_fft_buf.begin());
+  std::copy(begin, begin + n_samples, in_fft_buf_.begin());
 }
 
 template <typename T>
-void FftCalculator<T>::RunPocketFft() {
-  pocketfft::shape_t shape{1, m_nfft};
+void FftCalculator<T>::run_pocket_fft() {
+  pocketfft::shape_t shape{1, nfft_};
 
   const std::ptrdiff_t sz = sizeof(fft::buffer_type);
 
   // Input: real [1, nfft]
   pocketfft::stride_t stride_in{
-      static_cast<std::ptrdiff_t>(sz * m_nfft),
+      static_cast<std::ptrdiff_t>(sz * nfft_),
       static_cast<std::ptrdiff_t>(sz)
   };
 
   // Output: complex interleaved [1, feature_size]
   pocketfft::stride_t stride_out{
-      static_cast<std::ptrdiff_t>(2 * sz * m_feature_size),
+      static_cast<std::ptrdiff_t>(2 * sz * feature_size_),
       static_cast<std::ptrdiff_t>(2 * sz)
   };
 
@@ -58,27 +58,27 @@ void FftCalculator<T>::RunPocketFft() {
                                   stride_out,
                                   axes,
                                   pocketfft::FORWARD,
-                                  m_in_fft_buf.data(),
-                                  m_out_fft_buf.data(),
+                                  in_fft_buf_.data(),
+                                  out_fft_buf_.data(),
                                   1.0);
 }
 
 template <typename T>
-void FftCalculator<T>::CopyOutputTo(ComplexNumber<T>& dft) const {
-  for (size_t i = 0; i < m_feature_size; ++i) {
-    dft.real[i] = static_cast<T>(m_out_fft_buf[i].real());
-    dft.imag[i] = static_cast<T>(m_out_fft_buf[i].imag());
+void FftCalculator<T>::copy_output_to(ComplexNumber<T>& dft) const {
+  for (size_t i = 0; i < feature_size_; ++i) {
+    dft.real[i] = static_cast<T>(out_fft_buf_[i].real());
+    dft.imag[i] = static_cast<T>(out_fft_buf_[i].imag());
   }
 }
 
 template <typename T>
-void FftCalculator<T>::CalculateFft(const size_t& n_samples, const T* begin, ComplexNumber<T>& dft) {
-  if (dft.size() != m_feature_size) {
-    throw std::runtime_error("CalculateFft: dft.size() != feature_size");
+void FftCalculator<T>::calculate_fft(const size_t& n_samples, const T* begin, ComplexNumber<T>& dft) {
+  if (dft.size() != feature_size_) {
+    throw std::runtime_error("calculate_fft: dft.size() != feature_size");
   }
-  PrepareInputBuffer(static_cast<size_t>(n_samples), begin);
-  RunPocketFft();
-  CopyOutputTo(dft);
+  prepare_input_buffer(static_cast<size_t>(n_samples), begin);
+  run_pocket_fft();
+  copy_output_to(dft);
 }
 
 template <typename T>

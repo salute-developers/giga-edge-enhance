@@ -19,28 +19,28 @@ class iFftCalculator {
   explicit iFftCalculator(const uint32_t feature_size, const uint32_t nfft, const uint32_t frames_num_for_istft);
   ~iFftCalculator();
 
-  void CalculateISTFT(const uint32_t n_feats, const T* real_ptr, const T* imag_ptr, std::vector<T>& idft);
+  void calculate_istft(const uint32_t n_feats, const T* real_ptr, const T* imag_ptr, std::vector<T>& idft);
 
  private:
-  const uint32_t m_nfft;
-  const uint32_t m_feature_size;
-  const uint32_t m_frames_num_for_istft;
+  const uint32_t nfft_;
+  const uint32_t feature_size_;
+  const uint32_t frames_num_for_istft_;
 
-  std::vector<std::complex<fft::buffer_type>> m_in_fft_buf;
-  std::vector<fft::buffer_type> m_out_fft_buf;
+  std::vector<std::complex<fft::buffer_type>> in_fft_buf_;
+  std::vector<fft::buffer_type> out_fft_buf_;
 
-  void ValidateIfftArgs(uint32_t n_feats) const;
+  void validate_ifft_args(uint32_t n_feats) const;
 
   pocketfft::shape_t MakeShape(size_t frames) const;
 
-  void MakeStrides(pocketfft::stride_t& stride_in,
+  void make_strides(pocketfft::stride_t& stride_in,
                    pocketfft::stride_t& stride_out) const;
 
-  void BuildFullSpectrum(const T* real_ptr, const T* imag_ptr, size_t frames);
+  void build_full_spectrum(const T* real_ptr, const T* imag_ptr, size_t frames);
 
-  void CopyOutputToVector(std::vector<T>& idft) const;
+  void copy_output_to_vector(std::vector<T>& idft) const;
 
-  void CalculateIFft(const uint32_t n_feats, const T* real_ptr, const T* imag_ptr, std::vector<T>& idft);
+  void calculate_ifft(const uint32_t n_feats, const T* real_ptr, const T* imag_ptr, std::vector<T>& idft);
 };
 
 }  // namespace fe

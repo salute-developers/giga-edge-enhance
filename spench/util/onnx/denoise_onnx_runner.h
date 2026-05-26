@@ -18,7 +18,7 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
 
   template<typename T>
   void parse_results(std::vector<Ort::Value>& network_output, spench::SpenchTaskData& data) {
-    if (model_params_.m_model_outputs.size() != network_output.size()) {
+    if (model_params_.model_outputs.size() != network_output.size()) {
       throw std::runtime_error("Model output error");
     }
     if (data.context == nullptr) {
@@ -68,7 +68,7 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
     }
 
     const size_t num_frames = complex_pairs / num_feats;
-    UnpackComplexMask(probabilities, num_feats, num_frames, data.new_spectrogram);
+    unpack_complex_mask(probabilities, num_feats, num_frames, data.new_spectrogram);
   }
 
  public:
@@ -87,16 +87,16 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
   void warm_up() {
     spench::SpenchTask dummy_task;
     std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>());
-    dummy_task.m_data.context = ctx.get();
+    dummy_task.data.context = ctx.get();
     std::vector<std::vector<T>*> inputs;
-    init_output_tensors(dummy_task.m_data);
+    init_output_tensors(dummy_task.data);
 
     uint64_t multi = std::abs(std::accumulate(model_input_shapes_[0].begin(),
                                               model_input_shapes_[0].end(),
                                               int32_t{1},
                                               std::multiplies<int32_t>()));
     std::vector<T> mag(multi, 1e-4);
-    prepare_input_in_place(mag, inputs, dummy_task.m_data.context);
+    prepare_input_in_place(mag, inputs, dummy_task.data.context);
 
     BaseOnnxRunner::warm_up<T>(inputs);
   }
@@ -109,7 +109,7 @@ class SpenchFOnnxRunner: public BaseOnnxRunner {
 
   template<typename T>
   void parse_results(std::vector<Ort::Value>& network_output, spench::SpenchTaskData& data) {
-    if (model_params_.m_model_outputs.size() != network_output.size()) {
+    if (model_params_.model_outputs.size() != network_output.size()) {
       throw("Model output error");
     }
     if (data.context == nullptr) {
@@ -159,15 +159,15 @@ class SpenchFOnnxRunner: public BaseOnnxRunner {
   void warm_up() {
     spench::SpenchTask dummy_task;
     std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>());
-    dummy_task.m_data.context = ctx.get();
+    dummy_task.data.context = ctx.get();
 
     std::vector<std::vector<T>*> inputs;
     // batch_size * num_features (for example 1 * 385)
     uint64_t multi = model_input_shapes_[0][0] * model_input_shapes_[0][1];
 
     std::vector<T> dummy_mag(multi, 1e-4);
-    prepare_input_in_place(dummy_mag, inputs, dummy_task.m_data.context);
-    init_output_tensors(dummy_task.m_data);
+    prepare_input_in_place(dummy_mag, inputs, dummy_task.data.context);
+    init_output_tensors(dummy_task.data);
     BaseOnnxRunner::warm_up<T>(inputs);
   }
 };
@@ -177,7 +177,7 @@ class SpenchSFOnnxRunner : public BaseOnnxRunner {
 
   template<typename T>
   void parse_results(std::vector<Ort::Value>& network_output, spench::SpenchTaskData& data) {
-    if (model_params_.m_model_outputs.size() != network_output.size()) {
+    if (model_params_.model_outputs.size() != network_output.size()) {
       throw std::runtime_error("Model output error");
     }
     if (data.context == nullptr) {
@@ -239,7 +239,7 @@ class SpenchSFOnnxRunner : public BaseOnnxRunner {
     }
 
     const size_t num_frames = complex_pairs / num_feats;
-    UnpackComplexMask(probabilities, num_feats, num_frames, data.new_spectrogram);
+    unpack_complex_mask(probabilities, num_feats, num_frames, data.new_spectrogram);
   }
 
  public:
@@ -261,10 +261,10 @@ class SpenchSFOnnxRunner : public BaseOnnxRunner {
   void warm_up() {
     spench::SpenchTask dummy_task;
     std::unique_ptr<spench::DenoiseContextSF<float>> ctx(new spench::DenoiseContextSF<float>());
-    dummy_task.m_data.context = ctx.get();
+    dummy_task.data.context = ctx.get();
 
     std::vector<std::vector<T>*> inputs;
-    init_output_tensors(dummy_task.m_data);
+    init_output_tensors(dummy_task.data);
 
     std::vector<std::vector<int64_t>> resolved_input_shapes = model_input_shapes_;
     set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], 1);
@@ -276,7 +276,7 @@ class SpenchSFOnnxRunner : public BaseOnnxRunner {
         std::multiplies<int32_t>())));
 
     std::vector<T> dummy_mag(multi, static_cast<T>(1e-4));
-    prepare_input_in_place(dummy_mag, inputs, dummy_task.m_data.context);
+    prepare_input_in_place(dummy_mag, inputs, dummy_task.data.context);
 
     BaseOnnxRunner::warm_up<T>(inputs);
   }

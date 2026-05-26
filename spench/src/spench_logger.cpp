@@ -78,7 +78,7 @@ void ShutdownLogger() {
   gLogger.reset();
 }
 
-void SetLogLevel(unsigned int level) {
+void set_log_level(unsigned int level) {
   auto lvl = MapLevel(level);
   spdlog::set_level(lvl);
   spdlog::flush_on(lvl);

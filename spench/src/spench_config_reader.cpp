@@ -106,7 +106,7 @@ void mergeYaml(YAML::Node& dest, const YAML::Node& src) {
 
 // -----------------------------------------------------------------------------
 
-ConfigReader::ConfigReader() : m_params(new YAML::Node{}) {}
+ConfigReader::ConfigReader() : params_(new YAML::Node{}) {}
 
 ConfigReader::~ConfigReader() = default;
 
@@ -114,18 +114,18 @@ ConfigReader::~ConfigReader() = default;
 
 PipelineConfig::PipelineConfig(const ConfigReader& base_reader,
                                std::string default_config) {
-  m_params.reset(new YAML::Node{});
+  params_.reset(new YAML::Node{});
   if (!default_config.empty()) {
-    *m_params = YAML::Load(default_config);
+    *params_ = YAML::Load(default_config);
   }
-  mergeYaml(*m_params, base_reader.params());
+  mergeYaml(*params_, base_reader.params());
 }
 
 // -----------------------------------------------------------------------------
 
 FileConfigReader::FileConfigReader(std::string path) {
   try {
-    m_params.reset(new YAML::Node{YAML::LoadFile(path)});
+    params_.reset(new YAML::Node{YAML::LoadFile(path)});
   } catch (const YAML::Exception& e) {
     spdlog::critical("FileConfigReader: cannot load or parse '{}': {}", path,
                      e.what());
@@ -137,7 +137,7 @@ FileConfigReader::FileConfigReader(std::string path) {
 
 StringConfigReader::StringConfigReader(std::string yaml) {
   try {
-    m_params.reset(new YAML::Node{YAML::Load(yaml)});
+    params_.reset(new YAML::Node{YAML::Load(yaml)});
   } catch (const YAML::Exception& e) {
     spdlog::critical("StringConfigReader: cannot parse string: {}", e.what());
     throw std::runtime_error(std::string("Config file load error: ") + e.what());

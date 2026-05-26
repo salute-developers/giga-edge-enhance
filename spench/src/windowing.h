@@ -16,18 +16,18 @@ class Windowing {
  public:
   Windowing(int64_t n, WindowType window, uint32_t hop_size, bool is_periodic = false);
 
-  std::vector<T> Apply(const std::vector<T>& input) const;
-  void ApplyInPlace(std::vector<T>& input) const;
-  void ApplyFrameInPlace(T* frame, size_t frame_size) const;
-  void sumSquareInPlace(std::vector<T>& input) const;
+  std::vector<T> apply(const std::vector<T>& input) const;
+  void apply_in_place(std::vector<T>& input) const;
+  void apply_frame_in_place(T* frame, size_t frame_size) const;
+  void sum_square_in_place(std::vector<T>& input) const;
 
  private:
-  int64_t m_window_length;
-  WindowType m_window_type;
-  std::vector<T> m_coefs;
-  std::vector<T> m_coefs_pow_2;
-  uint32_t m_hop_size;
-  bool m_window_periodic;
+  int64_t window_length_;
+  WindowType window_type_;
+  std::vector<T> coefs_;
+  std::vector<T> coefs_pow_2_;
+  uint32_t hop_size_;
+  bool window_periodic_;
 };
 
 }  // namespace fe

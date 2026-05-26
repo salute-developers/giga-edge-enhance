@@ -5,7 +5,7 @@
 
 namespace spench {
 namespace fe {
-void FeatureParams::ReadFeatureParamsNode(std::shared_ptr<spench::NetworkConfig> config) {
+void FeatureParams::read_feature_params_node(std::shared_ptr<spench::NetworkConfig> config) {
   sampling_freq = config->samplingFreq();
   frame_size_ms = config->frameSizeMs();
   frame_stride_ms = config->frameStrideMs();

@@ -12,7 +12,7 @@ SpenchDenoise::SpenchDenoise(const char* config_file,
                              const char* password,
                              const char* checksum)
 : ISpenchSequencer(),
-  m_handler(std::make_unique<DenoiserAudioHandler>(
+  handler_(std::make_unique<DenoiserAudioHandler>(
                               std::make_shared<spench::DenoiserConfig>(
                                 FileConfigReader(std::string(config_file))),
                               std::string(password),
@@ -25,7 +25,7 @@ SpenchDenoise::SpenchDenoise(const std::string& yaml_str,
                              const char* password,
                              const char* checksum)
 : ISpenchSequencer(),
-  m_handler(std::make_unique<DenoiserAudioHandler>(
+  handler_(std::make_unique<DenoiserAudioHandler>(
                               std::make_shared<spench::DenoiserConfig>(
                                 StringConfigReader(yaml_str)),
                               password,
@@ -38,7 +38,7 @@ SpenchDenoise::SpenchDenoise(std::shared_ptr<spench::PackedModelReader> bundle,
                              const char* password,
                              const char* checksum)
 : ISpenchSequencer(),
-  m_handler(std::make_unique<DenoiserAudioHandler>(
+  handler_(std::make_unique<DenoiserAudioHandler>(
                               std::make_shared<spench::DenoiserConfig>(bundle),
                               password,
                               checksum)) {
@@ -46,45 +46,45 @@ SpenchDenoise::SpenchDenoise(std::shared_ptr<spench::PackedModelReader> bundle,
 }
 
 SpenchDenoise::SpenchDenoise(SpenchDenoise&& orig) noexcept : ISpenchSequencer()
-                                                            , m_handler(std::move(orig.m_handler)) {
-//  orig.m_handler is now nullptr
+                                                            , handler_(std::move(orig.handler_)) {
+//  orig.handler_ is now nullptr
 }
 
 SpenchDenoise::~SpenchDenoise() {
-  m_handler.reset();
+  handler_.reset();
 }
 
 SpenchRetCode SpenchDenoise::ReloadConfig() {
-  return m_handler->ReloadConfig();
+  return handler_->reload_config();
 }
 
 uint32_t SpenchDenoise::GetEngineThreads() {
-  return m_handler->GetEngineThreadsNum();
+  return handler_->get_engine_threads_num();
 }
 
 uint64_t SpenchDenoise::GetModelSampleRate() {
-  return m_handler->GetModelSampleRate();
+  return handler_->get_model_sample_rate();
 }
 
 uint64_t SpenchDenoise::GetModelInputFrameSize() {
-  return m_handler->GetInputFrameSize();
+  return handler_->get_input_frame_size();
 }
 
 StreamStatStruct SpenchDenoise::GetStreamStat(const SpenchContext<float>* ctx) {
-  return m_handler->GetStatInfo(ctx);
+  return handler_->get_stat_info(ctx);
 }
 
 SpenchRetCode SpenchDenoise::GetFinalChunk(std::vector<float>& ret,
                                            SpenchContext<float>* ctx) {
-  return m_handler->FinalizeInference(ctx, ret);
+  return handler_->finalize_inference(ctx, ret);
 }
 
 SpenchRetCode SpenchDenoise::GetFinalChunk(std::vector<int16_t>& ret16,
                                            SpenchContext<float>* ctx) {
   std::vector<float> output;
 
-  SpenchRetCode ret_code = m_handler->FinalizeInference(ctx, output);
-  tools::convertFloat32ToPCM16(output, ret16);
+  SpenchRetCode ret_code = handler_->finalize_inference(ctx, output);
+  tools::convert_float32_to_pcm16(output, ret16);
 
   return ret_code;
 }
@@ -104,11 +104,11 @@ std::vector<int16_t>  SpenchDenoise::operator()(std::vector<int16_t>& ret16,
 
 SpenchContext<float>* SpenchDenoise::CreateContext(uint32_t in_audio_sr,
                                                     uint32_t out_audio_sr) {
-  return m_handler->CreateContext(in_audio_sr, out_audio_sr);
+  return handler_->create_context(in_audio_sr, out_audio_sr);
 }
 
 void SpenchDenoise::DestroyContext(SpenchContext<float>** ctx) {
-  m_handler->DestroyContext(ctx);
+  handler_->destroy_context(ctx);
 }
 
 uint64_t SpenchDenoise::GetContextId(const SpenchContext<float>* ctx) {
@@ -122,7 +122,7 @@ void SpenchDenoise::SetContextId(SpenchContext<float>* ctx, uint64_t id) {
 SpenchRetCode SpenchDenoise::ProcessChunk(const std::vector<float>& chunk,
                                           std::vector<float>& ret,
                                           SpenchContext<float>* ctx) {
-  return m_handler->ProcessFrame(ctx, chunk, ret);
+  return handler_->process_frame(ctx, chunk, ret);
 }
 
 SpenchRetCode SpenchDenoise::ProcessChunk(const std::vector<int16_t>& chunk16,
@@ -131,9 +131,9 @@ SpenchRetCode SpenchDenoise::ProcessChunk(const std::vector<int16_t>& chunk16,
   std::vector<float> input;
   std::vector<float> output;
 
-  tools::convertPCM16ToFloat32(chunk16, input);
-  SpenchRetCode ret_code = m_handler->ProcessFrame(ctx, input, output);
-  tools::convertFloat32ToPCM16(output, ret16);
+  tools::convert_pcm16_to_float32(chunk16, input);
+  SpenchRetCode ret_code = handler_->process_frame(ctx, input, output);
+  tools::convert_float32_to_pcm16(output, ret16);
 
   return ret_code;
 }

@@ -37,5 +37,5 @@ void InitLogger(uint32_t level = static_cast<unsigned int>(LogLevel::Info),
 void ShutdownLogger();
 
 // Change the log level at runtime (0=Trace ... 5=Off)
-void SetLogLevel(uint32_t level);
+void set_log_level(uint32_t level);
 }  // namespace spench

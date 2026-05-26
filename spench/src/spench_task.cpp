@@ -9,26 +9,26 @@ namespace spench {
 #define localtime_r(T, Tm) (localtime_s(Tm, T) ? NULL : Tm)
 #endif
 
-void DenoiseModelParams::ReadModelNode(const YAML::Node& yaml_config) {
+void DenoiseModelParams::read_model_node(const YAML::Node& yaml_config) {
   // Just read as already verified
   try {
-    m_model_path = yaml_config["model_path"].as<std::string>();
+    model_path = yaml_config["model_path"].as<std::string>();
 
     for (auto& item : yaml_config["model_inputs"]) {
-      m_model_inputs.push_back(item.as<std::string>());
+      model_inputs.push_back(item.as<std::string>());
     }
 
     for (auto& item : yaml_config["model_outputs"]) {
-      m_model_outputs.push_back(item.as<std::string>());
+      model_outputs.push_back(item.as<std::string>());
     }
 
-    m_network_input_ctx_len = yaml_config["model_input_ctx_len"].as<uint32_t>(0);
+    network_input_ctx_len = yaml_config["model_input_ctx_len"].as<uint32_t>(0);
   } catch(...) {
     throw("Config reading error!");
   }
 }
 
-std::string GetNowDate() {
+std::string get_now_date() {
   time_t now = time(nullptr);
   struct tm tmbuf;
   struct tm* tstruct;
@@ -39,7 +39,7 @@ std::string GetNowDate() {
   return buf;
 }
 
-std::string GetNowTime() {
+std::string get_now_time() {
   time_t now = time(nullptr);
   struct tm tmbuf;
   struct tm* tstruct;
@@ -61,7 +61,7 @@ namespace tools {
 #ifdef _MSC_VER
 __declspec(dllexport)
 #endif
-void convertFloat32ToPCM16(const std::vector<float>& input, std::vector<int16_t>& output) {
+void convert_float32_to_pcm16(const std::vector<float>& input, std::vector<int16_t>& output) {
     output.resize(input.size());
     constexpr float scale = static_cast<float>(std::numeric_limits<int16_t>::max());
     for (size_t i = 0; i < input.size(); ++i) {
@@ -83,7 +83,7 @@ void convertFloat32ToPCM16(const std::vector<float>& input, std::vector<int16_t>
 #ifdef _MSC_VER
 __declspec(dllexport)
 #endif
-void convertPCM16ToFloat32(const std::vector<int16_t>& input, std::vector<float>& output) {
+void convert_pcm16_to_float32(const std::vector<int16_t>& input, std::vector<float>& output) {
     output.resize(input.size());
     constexpr float inv_scale = 1.0f / std::numeric_limits<int16_t>::max();
     for (size_t i = 0; i < input.size(); ++i) {

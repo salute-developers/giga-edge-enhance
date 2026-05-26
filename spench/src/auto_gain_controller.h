@@ -14,8 +14,8 @@ namespace spench {
 
 class AutoGainController {
  private:
-  std::unique_ptr<dsplib::Agc> m_auto_gain_ctrl_ptr;
-  std::unique_ptr<util::sound::RangeControl> m_range_ctrl_ptr;
+  std::unique_ptr<dsplib::Agc> auto_gain_ctrl_ptr_;
+  std::unique_ptr<util::sound::RangeControl> range_ctrl_ptr_;
 
  public:
   AutoGainController(bool range_control = true,
@@ -28,14 +28,14 @@ class AutoGainController {
                      uint32_t average_len = 100,
                      float t_rise = 0.01,
                      float t_fall = 0.01):
-                     m_auto_gain_ctrl_ptr(nullptr)
-                     m_range_ctrl_ptr(nullptr) {
+                     auto_gain_ctrl_ptr_(nullptr)
+                     range_ctrl_ptr_(nullptr) {
     if (range_control) {
-      m_auto_gain_ctrl_ptr = std::make_unique<dsplib::Agc>(1, 60, 100, 0.01, 0.01);
+      auto_gain_ctrl_ptr_ = std::make_unique<dsplib::Agc>(1, 60, 100, 0.01, 0.01);
     }
 
     if (gain_control) {
-      m_range_ctrl_ptr = std::make_unique<util::sound::RangeControl>(1000, 0.75, 1e-3);
+      range_ctrl_ptr_ = std::make_unique<util::sound::RangeControl>(1000, 0.75, 1e-3);
     }
   }
 
@@ -47,7 +47,7 @@ class AutoGainController {
                            float range_max_level,
                            float range_step_size);
 
-  resetAutoGainCtrlParameters(float gain_target_level = 1,
+  reset_auto_gain_ctrl_parameters(float gain_target_level = 1,
                               float max_gain = 60.0,
                               uint32_t average_len = 100,
                               float t_rise = 0.01,

@@ -42,11 +42,11 @@ class ConfigReader {
   virtual ~ConfigReader();
 
   // Accessor does not require a complete YAML::Node type.
-  inline const YAML::Node& params() const noexcept { return *m_params; }
+  inline const YAML::Node& params() const noexcept { return *params_; }
 
  protected:
   // Pointer to an opaque YAML::Node to avoid including yaml-cpp in this header.
-  std::unique_ptr<YAML::Node> m_params;
+  std::unique_ptr<YAML::Node> params_;
 };
 
 // Loads the entire document from a file path.

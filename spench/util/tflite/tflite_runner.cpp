@@ -318,8 +318,8 @@ SpenchFTfliteRunner::SpenchFTfliteRunner(const YAML::Node& yaml_config,
                                          uint32_t inference_engine_threads, bool on_gpu) :
                                          BaseTfliteRunner::BaseTfliteRunner() {
     read_config(yaml_config);
-    init_model(model_params_.m_model_inputs, model_params_.m_model_outputs,
-              model_params_.m_model_path, password, checksum, inference_engine_threads,
+    init_model(model_params_.model_inputs, model_params_.model_outputs,
+              model_params_.model_path, password, checksum, inference_engine_threads,
               on_gpu);
     warm_up<float>();
 }
@@ -328,7 +328,7 @@ template<typename T>
 void SpenchFTfliteRunner::warm_up() {
   spench::SpenchTask dummy_task;
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>());
-  dummy_task.m_data.context = ctx.get();
+  dummy_task.data.context = ctx.get();
 
   std::vector<T> dummy_mag(input_tensor_sizes[0], 0.0);
   std::vector<T> dummy_fb_h(input_tensor_sizes[1], 0.0);
@@ -426,23 +426,23 @@ void SpenchFTfliteRunner::parse_results(spench::SpenchTaskData& data) {
 }
 
 void SpenchFTfliteRunner::infer(spench::SpenchTask* denoise_task) {
-  if (denoise_task == nullptr || denoise_task->m_data.context == nullptr) {
+  if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
     throw("Task data or context are not initialized!");
   }
-  if (denoise_task->m_data.input_spectrogram.size() == 0) {
+  if (denoise_task->data.input_spectrogram.size() == 0) {
     throw("Input spectrogram should be calculated before this step!");
   }
-  auto& denoise_data = denoise_task->m_data;
+  auto& denoise_data = denoise_task->data;
   auto& denoise_context = denoise_data.context;
-  if (denoise_context->prev_features.size() > model_params_.m_network_input_ctx_len) {
+  if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len) {
     denoise_context->prev_features.pop();
   }
   denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
 
-  if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
+  if (denoise_task->stage == spench::PipelineStage::fourier_transformed_spec) {
     std::vector<std::vector<float>*> inputs;
     std::vector<std::vector<float>> outputs;
-    std::vector<float> mag = denoise_data.input_spectrogram[0].getMagnitude();
+    std::vector<float> mag = denoise_data.input_spectrogram[0].get_magnitude();
     SpenchFTfliteRunner::prepare_input_in_place(mag, inputs, denoise_context);
     SpenchFTfliteRunner::init_output_tensors(denoise_data, output_tensor_sizes[3]);
 
@@ -455,11 +455,11 @@ void SpenchFTfliteRunner::infer(spench::SpenchTask* denoise_task) {
     if (denoise_context->prev_spectrogram.real.size() == 0) {
       denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
       std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
-      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
-    } else if (denoise_context->prev_features.size() > model_params_.m_network_input_ctx_len + 1) {
+      denoise_task->stage = spench::PipelineStage::predicted_mask;
+    } else if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len + 1) {
       throw("Incorrect number of previous states!");
     } else {
-      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
+      denoise_task->stage = spench::PipelineStage::predicted_mask;
     }
   } else {
     throw("State is not appropriate");
@@ -472,8 +472,8 @@ SpenchQTfliteRunner::SpenchQTfliteRunner(const YAML::Node& yaml_config,
                                          uint32_t inference_engine_threads, bool on_gpu) :
                                          BaseTfliteRunner::BaseTfliteRunner() {
     read_config(yaml_config);
-    init_model(model_params_.m_model_inputs, model_params_.m_model_outputs,
-              model_params_.m_model_path, password, checksum,
+    init_model(model_params_.model_inputs, model_params_.model_outputs,
+              model_params_.model_path, password, checksum,
               inference_engine_threads, on_gpu);
     warm_up<float>();
 }
@@ -616,7 +616,7 @@ void SpenchQTfliteRunner::parse_results(spench::SpenchTaskData& data) {
           throw std::runtime_error("Invalid output shape: zero-sized dynamic output");
         }
 
-        UnpackComplexMask(const_output_ptr, num_feats, num_frames, data.new_spectrogram);
+        unpack_complex_mask(const_output_ptr, num_feats, num_frames, data.new_spectrogram);
         break;
       }
       default:
@@ -628,19 +628,19 @@ void SpenchQTfliteRunner::parse_results(spench::SpenchTaskData& data) {
 }
 
 void SpenchQTfliteRunner::infer(spench::SpenchTask* denoise_task) {
-  if (denoise_task == nullptr || denoise_task->m_data.context == nullptr) {
+  if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
     throw("Task data or context are not initialized!");
   }
-  if (denoise_task->m_data.input_spectrogram.size() == 0) {
+  if (denoise_task->data.input_spectrogram.size() == 0) {
     throw("Input spectrogram should be calculated before this step!");
   }
-  auto& denoise_data = denoise_task->m_data;
+  auto& denoise_data = denoise_task->data;
   auto& denoise_context = denoise_data.context;
-  if (denoise_context->prev_features.size() > model_params_.m_network_input_ctx_len) {
+  if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len) {
     denoise_context->prev_features.pop();
   }
 
-  if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
+  if (denoise_task->stage == spench::PipelineStage::fourier_transformed_spec) {
     std::vector<std::vector<float>*> inputs;
     std::vector<std::vector<float>> outputs;
     std::vector<float> mag;
@@ -653,7 +653,7 @@ void SpenchQTfliteRunner::infer(spench::SpenchTask* denoise_task) {
     mag.resize(num_feats * num_frames);
     // Fill mag so that time is the fastest axis: mag[f * T + t]
     for (std::size_t t = 0; t < num_frames; ++t) {
-      specs[t].writeMagnitudeInterleaved(mag, t, num_frames);
+      specs[t].write_magnitude_interleaved(mag, t, num_frames);
     }
 
     std::vector<std::vector<int32_t>> resolved_input_shapes = model_input_shapes_;
@@ -667,17 +667,17 @@ void SpenchQTfliteRunner::infer(spench::SpenchTask* denoise_task) {
       parse_results<float>(denoise_data);
     }
 
-    if (denoise_context->prev_features.size() < model_params_.m_network_input_ctx_len) {
+    if (denoise_context->prev_features.size() < model_params_.network_input_ctx_len) {
       denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
       std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
-      denoise_task->m_stage = spench::PipelineStage::SKIPPED_CHUNK;
-    } else if (denoise_context->prev_features.size() == model_params_.m_network_input_ctx_len &&
+      denoise_task->stage = spench::PipelineStage::skipped_chunk;
+    } else if (denoise_context->prev_features.size() == model_params_.network_input_ctx_len &&
                denoise_context->prev_spectrogram.real.size() == 0) {
       denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
       std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
-      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
+      denoise_task->stage = spench::PipelineStage::predicted_mask;
     } else {
-      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
+      denoise_task->stage = spench::PipelineStage::predicted_mask;
     }
 
     denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);

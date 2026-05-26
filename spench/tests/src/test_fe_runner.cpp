@@ -91,21 +91,21 @@ struct TestFERunner {
 //   REQUIRE(test_data.fe_runner_ptr.get()->GetFrameSizeMs() == 32);
 //   spench::SpenchTask denoise_task;
 //   std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
-//   denoise_task.m_data.context = ctx.get();
-//   denoise_task.m_stage = spench::PipelineStage::ORIG_CHUNK;
+//   denoise_task.data.context = ctx.get();
+//   denoise_task.stage = spench::PipelineStage::orig_chunk;
 //   std::vector<float> audio(test_data.wav_data.begin(),
 //                            test_data.wav_data.begin() +
 //                            test_data.fe_runner_ptr.get()->GetFrameHopSizeSamples() * iterations);
-//   denoise_task.m_data.waveform = audio;
-//   REQUIRE(denoise_task.m_data.input_spectrogram.size() == 0);
+//   denoise_task.data.waveform = audio;
+//   REQUIRE(denoise_task.data.input_spectrogram.size() == 0);
 
-//   test_data.fe_runner_ptr.get()->Run(&denoise_task);
+//   test_data.fe_runner_ptr.get()->run(&denoise_task);
 
-//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC);
-//   REQUIRE(denoise_task.m_data.input_spectrogram.size() == 1);
+//   REQUIRE(denoise_task.stage == spench::PipelineStage::fourier_transformed_spec);
+//   REQUIRE(denoise_task.data.input_spectrogram.size() == 1);
 
 //   for (size_t i = 0; i < iterations - 1 ; ++i) {
-//     result_mag.push_back(denoise_task.m_data.input_spectrogram[i].getMagnitude());
+//     result_mag.push_back(denoise_task.data.input_spectrogram[i].get_magnitude());
 //   }
 
 //   IsVectorsClose(reference_mag[0], result_mag[0], 0.0001);
@@ -135,31 +135,31 @@ struct TestFERunner {
 //   spench::SpenchTask denoise_task;
 
 //   std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
-//   denoise_task.m_data.context = ctx.get();
+//   denoise_task.data.context = ctx.get();
 //   // update previous features for test
-//   denoise_task.m_data.context->prev_features.push(prev_features);
-//   denoise_task.m_data.context->prev_features.push(prev_features);
-//   denoise_task.m_stage = spench::PipelineStage::PREDICTED_MASK;
+//   denoise_task.data.context->prev_features.push(prev_features);
+//   denoise_task.data.context->prev_features.push(prev_features);
+//   denoise_task.stage = spench::PipelineStage::predicted_mask;
 
 //   REQUIRE(test_data.fe_runner_ptr.get()->GetSamplingFreq() == 16000);
 //   REQUIRE(test_data.fe_runner_ptr.get()->GetFrameSizeMs() == 32);
 
-//   denoise_task.m_data.new_spectrogram.real = predicted_mask_real;
-//   denoise_task.m_data.new_spectrogram.imag = predicted_mask_imag;
+//   denoise_task.data.new_spectrogram.real = predicted_mask_real;
+//   denoise_task.data.new_spectrogram.imag = predicted_mask_imag;
 //   // add random value to avoid crashes because of empty contaner
-//   denoise_task.m_data.input_spectrogram.push_back(prev_features);
+//   denoise_task.data.input_spectrogram.push_back(prev_features);
 
-//   denoise_task.m_data.context->prev_spectrogram.real = prev_predicted_mask_real;
-//   denoise_task.m_data.context->prev_spectrogram.imag = prev_predicted_mask_imag;
+//   denoise_task.data.context->prev_spectrogram.real = prev_predicted_mask_real;
+//   denoise_task.data.context->prev_spectrogram.imag = prev_predicted_mask_imag;
 
-//   REQUIRE(denoise_task.m_data.enhanced_wav.size() == 0);
-//   test_data.fe_runner_ptr.get()->Run(&denoise_task);
+//   REQUIRE(denoise_task.data.enhanced_wav.size() == 0);
+//   test_data.fe_runner_ptr.get()->run(&denoise_task);
 
-//   REQUIRE(denoise_task.m_data.enhanced_wav.size() ==
+//   REQUIRE(denoise_task.data.enhanced_wav.size() ==
 //                                   test_data.fe_runner_ptr.get()->GetFrameHopSizeSamples());
-//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::ENHANCED_CHUNK);
+//   REQUIRE(denoise_task.stage == spench::PipelineStage::enhanced_chunk);
 
-//   IsVectorsClose(reference_signal, denoise_task.m_data.enhanced_wav, 0.05);
+//   IsVectorsClose(reference_signal, denoise_task.data.enhanced_wav, 0.05);
 // }
 
 TEST_CASE("SUCCEED Read config for runner with modified .yaml file and check values [fe runner]") {
@@ -205,21 +205,21 @@ TEST_CASE("FAIL Read config for runner with incorrect window type value [fe runn
 
 //   spench::SpenchTask denoise_task;
 //   std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
-//   denoise_task.m_data.context = ctx.get();
-//   denoise_task.m_stage = spench::PipelineStage::ORIG_CHUNK;
+//   denoise_task.data.context = ctx.get();
+//   denoise_task.stage = spench::PipelineStage::orig_chunk;
 //   std::vector<float> audio(test_data.wav_data.begin(),
 //                            test_data.wav_data.begin() +
 //                            test_data.fe_runner_ptr.get()->GetFrameHopSizeSamples() * iterations);
-//   denoise_task.m_data.waveform = audio;
-//   REQUIRE(denoise_task.m_data.input_spectrogram.size() == 0);
+//   denoise_task.data.waveform = audio;
+//   REQUIRE(denoise_task.data.input_spectrogram.size() == 0);
 
-//   test_data.fe_runner_ptr.get()->Run(&denoise_task);
+//   test_data.fe_runner_ptr.get()->run(&denoise_task);
 
-//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC);
-//   REQUIRE(denoise_task.m_data.input_spectrogram.size() == 1);
+//   REQUIRE(denoise_task.stage == spench::PipelineStage::fourier_transformed_spec);
+//   REQUIRE(denoise_task.data.input_spectrogram.size() == 1);
 
 //   for (size_t i = 0; i < iterations - 1 ; ++i) {
-//     result_mag.push_back(denoise_task.m_data.input_spectrogram[i].getMagnitude());
+//     result_mag.push_back(denoise_task.data.input_spectrogram[i].get_magnitude());
 //   }
 
 //   IsVectorsClose(reference_mag[0], result_mag[0], 0.0001);
@@ -233,20 +233,20 @@ TEST_CASE("FAIL Read config for runner with incorrect window type value [fe runn
 
 //   spench::SpenchTask denoise_task;
 //   std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
-//   denoise_task.m_data.context = ctx.get();
-//   denoise_task.m_stage = spench::PipelineStage::SKIPPED_CHUNK;
+//   denoise_task.data.context = ctx.get();
+//   denoise_task.stage = spench::PipelineStage::skipped_chunk;
 //   std::vector<float> audio(test_data.wav_data.begin(),
 //                            test_data.wav_data.begin() +
 //                            test_data.fe_runner_ptr.get()->GetFrameHopSizeSamples() * iterations);
-//   denoise_task.m_data.waveform = audio;
-//   REQUIRE(denoise_task.m_data.input_spectrogram.size() == 0);
+//   denoise_task.data.waveform = audio;
+//   REQUIRE(denoise_task.data.input_spectrogram.size() == 0);
 
-//   test_data.fe_runner_ptr.get()->Run(&denoise_task);
+//   test_data.fe_runner_ptr.get()->run(&denoise_task);
 
-//   CHECK(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
-//   REQUIRE(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-//                                                  denoise_task.m_data.enhanced_wav);
-//   REQUIRE(denoise_task.m_data.input_spectrogram.size() == 0);
+//   CHECK(denoise_task.stage == spench::PipelineStage::skipped_chunk);
+//   REQUIRE(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
+//                                                  denoise_task.data.enhanced_wav);
+//   REQUIRE(denoise_task.data.input_spectrogram.size() == 0);
 // }
 
 // TEST_CASE("SUCCEED Launch runner for iSTFT calc with first valid chunk and check states (audio 16kHz) [fe runner]") {
@@ -257,7 +257,7 @@ TEST_CASE("FAIL Read config for runner with incorrect window type value [fe runn
 
 //   spench::SpenchTask denoise_task;
 //   std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
-//   denoise_task.m_data.context = ctx.get();
+//   denoise_task.data.context = ctx.get();
 //   std::valarray<float> predicted_mask_real;
 //   std::valarray<float> predicted_mask_imag;
 //   test_data.LoadDataFromBin("1_predicted_mask_real_16khz.dump", predicted_mask_real);
@@ -266,26 +266,26 @@ TEST_CASE("FAIL Read config for runner with incorrect window type value [fe runn
 //   std::vector<float> audio(test_data.wav_data.begin(),
 //                            test_data.wav_data.begin() +
 //                            test_data.fe_runner_ptr.get()->GetFrameHopSizeSamples() * iterations);
-//   denoise_task.m_data.waveform = audio;
+//   denoise_task.data.waveform = audio;
 //   for (uint16_t i = 0; i < 3; ++i) {
-//     denoise_task.m_stage = spench::PipelineStage::ORIG_CHUNK;
-//     test_data.fe_runner_ptr.get()->Run(&denoise_task);
-//     denoise_task.m_data.context->prev_features.push(denoise_task.m_data.input_spectrogram[0]);
+//     denoise_task.stage = spench::PipelineStage::orig_chunk;
+//     test_data.fe_runner_ptr.get()->run(&denoise_task);
+//     denoise_task.data.context->prev_features.push(denoise_task.data.input_spectrogram[0]);
 //   }
-//   REQUIRE(denoise_task.m_data.context->prev_features.size() == 3);
-//   REQUIRE(denoise_task.m_data.context->prev_spectrogram.real.size() == 0);
-//   REQUIRE(denoise_task.m_data.context->prev_spectrogram.imag.size() == 0);
+//   REQUIRE(denoise_task.data.context->prev_features.size() == 3);
+//   REQUIRE(denoise_task.data.context->prev_spectrogram.real.size() == 0);
+//   REQUIRE(denoise_task.data.context->prev_spectrogram.imag.size() == 0);
 
-//   denoise_task.m_stage = spench::PipelineStage::PREDICTED_MASK;
+//   denoise_task.stage = spench::PipelineStage::predicted_mask;
 
-//   denoise_task.m_data.new_spectrogram.real = predicted_mask_real;
-//   denoise_task.m_data.new_spectrogram.imag = predicted_mask_imag;
+//   denoise_task.data.new_spectrogram.real = predicted_mask_real;
+//   denoise_task.data.new_spectrogram.imag = predicted_mask_imag;
 
-//   test_data.fe_runner_ptr.get()->Run(&denoise_task);
-//   CHECK(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
-//   CHECK(denoise_task.m_data.context->prev_spectrogram.real.size() ==
+//   test_data.fe_runner_ptr.get()->run(&denoise_task);
+//   CHECK(denoise_task.stage == spench::PipelineStage::skipped_chunk);
+//   CHECK(denoise_task.data.context->prev_spectrogram.real.size() ==
 //                                                     test_data.fe_runner_ptr.get()->GetPowSpecFeatSizeSamples());
-//   CHECK(denoise_task.m_data.context->prev_spectrogram.imag.size() ==
+//   CHECK(denoise_task.data.context->prev_spectrogram.imag.size() ==
 //                                                     test_data.fe_runner_ptr.get()->GetPowSpecFeatSizeSamples());
 // }
 
@@ -303,19 +303,19 @@ TEST_CASE("FAIL Read config for runner with incorrect window type value [fe runn
 
 //   spench::SpenchTask denoise_task;
 //   std::unique_ptr<spench::SpenchContext<float>> ctx(new spench::SpenchContext<float>);
-//   denoise_task.m_data.context = ctx.get();
-//   denoise_task.m_stage = spench::PipelineStage::ORIG_CHUNK;
+//   denoise_task.data.context = ctx.get();
+//   denoise_task.stage = spench::PipelineStage::orig_chunk;
 //   std::vector<float> audio(test_data.fe_runner_ptr.get()->GetFrameHopSizeSamples() * iterations, 0.0);
-//   denoise_task.m_data.waveform = audio;
-//   REQUIRE(denoise_task.m_data.input_spectrogram.size() == 0);
+//   denoise_task.data.waveform = audio;
+//   REQUIRE(denoise_task.data.input_spectrogram.size() == 0);
 
-//   test_data.fe_runner_ptr.get()->Run(&denoise_task);
+//   test_data.fe_runner_ptr.get()->run(&denoise_task);
 
-//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC);
-//   REQUIRE(denoise_task.m_data.input_spectrogram.size() == 1);
+//   REQUIRE(denoise_task.stage == spench::PipelineStage::fourier_transformed_spec);
+//   REQUIRE(denoise_task.data.input_spectrogram.size() == 1);
 
 //   for (size_t i = 0; i < iterations - 1 ; ++i) {
-//     result_mag.push_back(denoise_task.m_data.input_spectrogram[i].getMagnitude());
+//     result_mag.push_back(denoise_task.data.input_spectrogram[i].get_magnitude());
 //   }
 //   IsVectorsClose(reference_mag[0], result_mag[0], 0.00001);
 // }
