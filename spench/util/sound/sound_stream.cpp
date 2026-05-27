@@ -100,8 +100,6 @@ void SoundStream::apply_fallback_drift_correction(double delay_ms) {
   }
 }
 
-}
-
 namespace {
 
 inline std::size_t aligned_sample_count(std::size_t total, std::size_t frame_samples) {

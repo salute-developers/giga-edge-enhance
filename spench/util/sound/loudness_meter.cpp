@@ -28,7 +28,7 @@ float max_abs(const std::vector<float>& x) noexcept {
 
 class PowerMeter {
  public:
-  explicit PowerMeter(int32_t winlen, int32_t overlap) : winlen_{winlen}, stride_{winlen - overlap} {
+  explicit PowerMeter(int32_t winlen, int32_t overlap) : win_len_{winlen}, stride_len_{winlen - overlap} {
     DSPLIB_ASSERT(winlen > overlap, "window size must be greater than overlap");
     buf_ = dsplib::zeros(winlen);
   }
@@ -37,9 +37,9 @@ class PowerMeter {
     std::optional<float> result;
     for (const auto& v : x) {
       buf_[idx_] = (v * v);
-      idx_ = (idx_ < (winlen_ - 1)) ? (idx_ + 1) : 0;
+      idx_ = (idx_ < (win_len_ - 1)) ? (idx_ + 1) : 0;
       step_ += 1;
-      if (step_ == stride_) {
+      if (step_ == stride_len_) {
         step_ = 0;
         result = dsplib::mean(buf_);
       }
@@ -47,13 +47,13 @@ class PowerMeter {
     return result;
   }
 
-  [[nodiscard]] int32_t stride() const noexcept { return stride_; }
+  [[nodiscard]] int32_t stride() const noexcept { return stride_len_; }
 
  private:
   int32_t step_{0};
   int32_t idx_{0};
-  const int32_t winlen_;
-  const int32_t stride_;
+  const int32_t win_len_;
+  const int32_t stride_len_;
   dsplib::arr_real buf_;
 };
 
@@ -73,8 +73,8 @@ void LoudnessMeter::update(const std::vector<float>& x) {
   // momentary power
   auto mm = mm_meter_->process(kx);
   if (mm.has_value()) {
-    auto p_ = -0.691F + dsplib::pow2db(*mm + eps);
-    state_.momentary = p_;
+    auto power_db = -0.691F + dsplib::pow2db(*mm + eps);
+    state_.momentary = power_db;
   }
 
   // short-term power

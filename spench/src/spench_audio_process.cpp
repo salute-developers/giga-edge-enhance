@@ -117,7 +117,7 @@ std::vector<int16_t>  SpenchAudioProcess::operator()(std::vector<int16_t>& in16,
 }
 
 SpenchAudioProcess& SpenchAudioProcess::AddAGC() {
-  dsp_->addAGC();
+  dsp_->add_agc();
   return *this;
 }
 
@@ -126,13 +126,13 @@ SpenchAudioProcess& SpenchAudioProcess::AddAGC(uint32_t audio_sample_rate,
                                                float max_power_gain,
                                                float time_rise,
                                                float time_fall) {
-  dsp_->addAGC({target_power_level, max_power_gain,
+  dsp_->add_agc({target_power_level, max_power_gain,
                   audio_sample_rate / 4, time_rise, time_fall});
   return *this;
 }
 
 SpenchAudioProcess& SpenchAudioProcess::AddRC() {
-  dsp_->addRC();
+  dsp_->add_rc();
   return *this;
 }
 
@@ -142,13 +142,13 @@ SpenchAudioProcess& SpenchAudioProcess::AddRC(uint32_t audio_sample_rate,
                                               float attack_time,
                                               float release_time,
                                               float hold_time) {
-  dsp_->addRC({audio_sample_rate, target_level_db, max_gain_db,
+  dsp_->add_rc({audio_sample_rate, target_level_db, max_gain_db,
                 attack_time, release_time, hold_time});
   return *this;
 }
 
 SpenchAudioProcess& SpenchAudioProcess::AddLC() {
-  dsp_->addLC();
+  dsp_->add_lc();
   return *this;
 }
 
@@ -158,12 +158,12 @@ SpenchAudioProcess& SpenchAudioProcess::AddLC(uint32_t audio_sample_rate,
                                               float max_gain_db,
                                               bool vad,
                                               bool post_processing) {
-  dsp_->addLC({audio_sample_rate, target_level_db, bypass_time, max_gain_db, vad, post_processing});
+  dsp_->add_lc({audio_sample_rate, target_level_db, bypass_time, max_gain_db, vad, post_processing});
   return *this;
 }
 
 SpenchAudioProcess& SpenchAudioProcess::AddNG() {
-  dsp_->addNoiseGate();
+  dsp_->add_noise_gate();
   return *this;
 }
 
@@ -172,13 +172,13 @@ SpenchAudioProcess& SpenchAudioProcess::AddNG(uint32_t audio_sample_rate,
                                               float attack_time,
                                               float release_time,
                                               float hold_time) {
-  dsp_->addNoiseGate({audio_sample_rate, threshold_db,
+  dsp_->add_noise_gate({audio_sample_rate, threshold_db,
                   attack_time, release_time, hold_time});
   return *this;
 }
 
 SpenchAudioProcess& SpenchAudioProcess::AddLim() {
-  dsp_->addLimiter();
+  dsp_->add_limiter();
   return *this;
 }
 
@@ -187,13 +187,13 @@ SpenchAudioProcess& SpenchAudioProcess::AddLim(uint32_t audio_sample_rate,
                                               float knee_width,
                                               float attack_time,
                                               float release_time) {
-  dsp_->addLimiter({audio_sample_rate, threshold_db,
+  dsp_->add_limiter({audio_sample_rate, threshold_db,
                   knee_width, attack_time, release_time});
   return *this;
 }
 
 SpenchAudioProcess& SpenchAudioProcess::AddDRC() {
-  dsp_->addDRCompressor();
+  dsp_->add_dr_compressor();
   return *this;
 }
 
@@ -203,7 +203,7 @@ SpenchAudioProcess& SpenchAudioProcess::AddDRC(uint32_t audio_sample_rate,
                                                float knee_width,
                                                float attack_time,
                                                float release_time) {
-  dsp_->addDRCompressor({audio_sample_rate, threshold_db,
+  dsp_->add_dr_compressor({audio_sample_rate, threshold_db,
                           ratio, knee_width, attack_time,
                           release_time});
   return *this;

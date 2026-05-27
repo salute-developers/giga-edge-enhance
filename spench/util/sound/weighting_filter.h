@@ -16,7 +16,7 @@ class BiquadSection {
   // explicit numeric constructor
   explicit BiquadSection(double b0, double b1, double b2,
                          double a1, double a2) noexcept
-      : b0{b0}, b1{b1}, b2{b2}, a1{a1}, a2{a2} {}
+      : b0_{b0}, b1_{b1}, b2_{b2}, a1_{a1}, a2_{a2} {}
 
   // constructor from single-precision coeff arrays (cast → double once)
   explicit BiquadSection(const std::array<float, 3>& num,
@@ -37,20 +37,20 @@ class BiquadSection {
     const double xd = static_cast<double>(x);
 
     // Direct-Form II T in *double*
-    const double y  = u1_ + b0 * xd;
-    u1_            = b1 * xd - a1 * y + u2_;
-    u2_            = b2 * xd - a2 * y;
+    const double y  = u1_ + b0_ * xd;
+    u1_            = b1_ * xd - a1_ * y + u2_;
+    u2_            = b2_ * xd - a2_ * y;
 
     return static_cast<float>(y);     // cast back for the caller
   }
 
  private:
   // coeffs (double precision)
-  const double b0;
-  const double b1;
-  const double b2;
-  const double a1;
-  const double a2;
+  const double b0_;
+  const double b1_;
+  const double b2_;
+  const double a1_;
+  const double a2_;
 
   // state (double precision)
   double u1_{0};

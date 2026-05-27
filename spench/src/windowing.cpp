@@ -31,13 +31,13 @@ Windowing<T>::Windowing(int64_t n, WindowType window_type, uint32_t hop_size, bo
   std::iota(coefs_.begin(), coefs_.end(), 0.0);
   uint32_t i = 0;
   switch (window_type) {
-    case WindowType::HAMMING:
+    case WindowType::hamming:
       for (auto& c : coefs_) {
         c = 0.54 - 0.46 * std::cos(2 * M_PI * c / (window_length_ - 1));
         coefs_pow_2_[i++] = c * c;
       }
       break;
-    case WindowType::HANNING:
+    case WindowType::hanning:
       for (auto& c : coefs_) {
         c = 0.5 * (1.0 - std::cos(2 * M_PI * c / (window_length_ - 1)));
         coefs_pow_2_[i++] = c * c;
@@ -113,6 +113,6 @@ void Windowing<T>::sum_square_in_place(std::vector<T>& input) const {
   }
 }
 
-template class Windowing<fft::buffer_type>;
+template class Windowing<fft::BufferType>;
 }  // namespace fe
 }  // namespace spench

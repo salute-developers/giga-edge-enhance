@@ -171,7 +171,7 @@ int32_t BaseTfliteRunner::get_single_dynamic_axis(const TfLiteTensor* tensor,
   }
 
   int32_t found = -1;
-  for (int i = 0; i < sig->size; ++i) {
+  for (int32_t i = 0; i < sig->size; ++i) {
     if (sig->data[i] < 0) {
       if (found >= 0) {
         std::stringstream ss;
@@ -226,7 +226,7 @@ void BaseTfliteRunner::refresh_tensor_metadata() {
 
     std::vector<int32_t> concrete_shape;
     concrete_shape.reserve(static_cast<size_t>(t->dims->size));
-    for (int i = 0; i < t->dims->size; ++i) {
+    for (int32_t i = 0; i < t->dims->size; ++i) {
       concrete_shape.push_back(t->dims->data[i]);
     }
 
@@ -247,7 +247,7 @@ void BaseTfliteRunner::refresh_tensor_metadata() {
 
     std::vector<int32_t> concrete_shape;
     concrete_shape.reserve(static_cast<size_t>(t->dims->size));
-    for (int i = 0; i < t->dims->size; ++i) {
+    for (int32_t i = 0; i < t->dims->size; ++i) {
       concrete_shape.push_back(t->dims->data[i]);
     }
 
@@ -278,7 +278,7 @@ void BaseTfliteRunner::resize_inputs_if_needed(const std::vector<std::vector<int
       break;
     }
 
-    for (int j = 0; j < t->dims->size; ++j) {
+    for (int32_t j = 0; j < t->dims->size; ++j) {
       if (t->dims->data[j] != input_shapes[i][static_cast<size_t>(j)]) {
         need_resize = true;
         break;
@@ -604,7 +604,7 @@ void SpenchQTfliteRunner::parse_results(spench::SpenchTaskData& data) {
           throw std::runtime_error("Invalid output tensor #7: missing dims");
         }
 
-        const int last_dim = t->dims->data[t->dims->size - 1];
+        const int32_t last_dim = t->dims->data[t->dims->size - 1];
         if (last_dim != 2) {
           throw std::runtime_error("Invalid output shape: expected last dimension = 2 (complex)");
         }

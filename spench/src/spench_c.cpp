@@ -11,7 +11,7 @@
 namespace ctools {
 
 template <typename T>
-SpenchRetCode AllocateAndCopy(const std::vector<T>& input,
+SpenchRetCode allocate_and_copy(const std::vector<T>& input,
                               uint8_t**             output,
                               uint64_t*             output_size) {
   if (output == nullptr || output_size == nullptr) {
@@ -185,7 +185,7 @@ SpenchRetCode SpenchDenoiseProcessChunkFp(SpenchDenoise  model,
     static_cast<spench::SpenchContext<float>*>(ctx));
 
   if (rc == SpenchRetCode::SUCCESS || rc == SpenchRetCode::CONTEXT_ACCUMULATION) {
-    return ctools::AllocateAndCopy<float>(res, output, output_size);
+    return ctools::allocate_and_copy<float>(res, output, output_size);
   }
   return rc;
 }
@@ -209,7 +209,7 @@ SpenchRetCode SpenchDenoiseProcessChunkInt(SpenchDenoise  model,
     static_cast<spench::SpenchContext<float>*>(ctx));
 
   if (rc == SpenchRetCode::SUCCESS || rc == SpenchRetCode::CONTEXT_ACCUMULATION) {
-    return ctools::AllocateAndCopy<int16_t>(res, output, output_size);
+    return ctools::allocate_and_copy<int16_t>(res, output, output_size);
   }
   return rc;
 }
@@ -236,7 +236,7 @@ SpenchRetCode SpenchDenoiseGetFinalChunkFp(SpenchDenoise model,
     *output_size = 0;
     return SpenchRetCode::SUCCESS;
   }
-  return ctools::AllocateAndCopy<float>(res, output, output_size);
+  return ctools::allocate_and_copy<float>(res, output, output_size);
 }
 
 SpenchRetCode SpenchDenoiseGetFinalChunkInt(SpenchDenoise model,
@@ -261,7 +261,7 @@ SpenchRetCode SpenchDenoiseGetFinalChunkInt(SpenchDenoise model,
     *output_size = 0;
     return SpenchRetCode::SUCCESS;
   }
-  return ctools::AllocateAndCopy<int16_t>(res, output, output_size);
+  return ctools::allocate_and_copy<int16_t>(res, output, output_size);
 }
 
 // --------------------------- SpenchAudioProcess -----------------------------
@@ -456,7 +456,7 @@ SpenchRetCode SpenchAudioProcessChunkFp(SpenchAudioProcess model,
     nullptr);
 
   if (rc == SpenchRetCode::SUCCESS || rc == SpenchRetCode::CONTEXT_ACCUMULATION) {
-    return ctools::AllocateAndCopy<float>(res, memory_out, out_size);
+    return ctools::allocate_and_copy<float>(res, memory_out, out_size);
   }
   return rc;
 }
@@ -478,7 +478,7 @@ SpenchRetCode SpenchAudioProcessChunkInt(SpenchAudioProcess model,
     nullptr);
 
   if (rc == SpenchRetCode::SUCCESS || rc == SpenchRetCode::CONTEXT_ACCUMULATION) {
-    return ctools::AllocateAndCopy<int16_t>(res, memory_out, out_size);
+    return ctools::allocate_and_copy<int16_t>(res, memory_out, out_size);
   }
   return rc;
 }
@@ -504,7 +504,7 @@ SpenchRetCode SpenchAudioProcessGetFinalChunkFp(SpenchAudioProcess model,
     *out_size = 0;
     return SpenchRetCode::SUCCESS;
   }
-  return ctools::AllocateAndCopy<float>(res, memory_out, out_size);
+  return ctools::allocate_and_copy<float>(res, memory_out, out_size);
 }
 
 SpenchRetCode SpenchAudioProcessGetFinalChunkInt(SpenchAudioProcess model,
@@ -528,7 +528,7 @@ SpenchRetCode SpenchAudioProcessGetFinalChunkInt(SpenchAudioProcess model,
     *out_size = 0;
     return SpenchRetCode::SUCCESS;
   }
-  return ctools::AllocateAndCopy<int16_t>(res, memory_out, out_size);
+  return ctools::allocate_and_copy<int16_t>(res, memory_out, out_size);
 }
 
 }  // extern "C"

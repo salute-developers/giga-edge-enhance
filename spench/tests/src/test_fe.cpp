@@ -29,7 +29,7 @@ static spench::fe::FeatureParams DefaultSpeechFeatureParams16kHz() {
   params.sampling_freq = 16000;
   params.frame_size_ms = 32;
   params.frame_stride_ms = 16;
-  params.window_type = spench::fe::WindowType::HANNING;
+  params.window_type = spench::fe::WindowType::hanning;
   return params;
 }
 
@@ -39,7 +39,7 @@ static spench::fe::FeatureParams DefaultSpeechFeatureParams24kHz() {
   params.sampling_freq = 24000;
   params.frame_size_ms = 32;
   params.frame_stride_ms = 16;
-  params.window_type = spench::fe::WindowType::HANNING;
+  params.window_type = spench::fe::WindowType::hanning;
   return params;
 }
 

@@ -84,7 +84,8 @@ TEST_CASE("SUCCEED Run relu model dummy inference [tflite]") {
   IsVectorsClose(output, gt_vector, 0.0000001);
 }
 
-TEST_CASE("SUCCEED Run prepare_input_in_place on one real frame with fast tflite model (audio 24 kHz) [tflite runner]") {
+TEST_CASE("SUCCEED Run prepare_input_in_place on one real frame with fast tflite model "
+          "(audio 24 kHz) [tflite runner]") {
   auto data = std::move(TestTfliteRunner()
       .InitRunner("default_configuration_fast_tflite_24khz.yaml"));
   std::vector<float> noisy_mag_5_old;
@@ -446,7 +447,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 48kHz and with differen
 
     std::vector<size_t> timings(nattempts);
     std::vector<std::vector<float>*> inputs;
-    for (auto s : data.denoiser_runner->model_input_size_) {
+    for (auto s : data.denoiser_runner->input_tensor_sizes) {
       inputs.push_back(new std::vector<float>(s, static_cast<float>(0.)));
     }
 
@@ -466,7 +467,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 48kHz and with differen
                tot,
                static_cast<double>(tot) / nattempts);
 
-    for (uint16_t i = 0; i < data.denoiser_runner->model_input_size_.size(); i++) {
+    for (uint16_t i = 0; i < data.denoiser_runner->input_tensor_sizes.size(); i++) {
       delete inputs[i];
     }
   }
@@ -481,7 +482,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
 
     std::vector<size_t> timings(nattempts);
     std::vector<std::vector<float>*> inputs;
-    for (auto s : data.denoiser_runner->model_input_size_) {
+    for (auto s : data.denoiser_runner->input_tensor_sizes) {
       inputs.push_back(new std::vector<float>(s, static_cast<float>(0.)));
     }
 
@@ -501,7 +502,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
                tot,
                static_cast<double>(tot) / nattempts);
 
-    for (uint16_t i = 0; i < data.denoiser_runner->model_input_size_.size(); i++) {
+    for (uint16_t i = 0; i < data.denoiser_runner->input_tensor_sizes.size(); i++) {
       delete inputs[i];
     }
   }
@@ -533,10 +534,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
 
 //   spench::SpenchTask denoise_task;
 //   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
-//   ctx.get()->fullband_hidden.resize(data.denoiser_runner->model_input_size_[1], 0);
-//   ctx.get()->fullband_cell_state.resize(data.denoiser_runner->model_input_size_[2], 0);
-//   ctx.get()->subband_hidden.resize(data.denoiser_runner->model_input_size_[3], 0);
-//   ctx.get()->subband_cell_state.resize(data.denoiser_runner->model_input_size_[4], 0);
+//   ctx.get()->fullband_hidden.resize(data.denoiser_runner->input_tensor_sizes[1], 0);
+//   ctx.get()->fullband_cell_state.resize(data.denoiser_runner->input_tensor_sizes[2], 0);
+//   ctx.get()->subband_hidden.resize(data.denoiser_runner->input_tensor_sizes[3], 0);
+//   ctx.get()->subband_cell_state.resize(data.denoiser_runner->input_tensor_sizes[4], 0);
 
 //   denoise_task.data.context = ctx.get();
 //   denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
@@ -562,10 +563,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
 
 //   spench::SpenchTask denoise_task;
 //   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
-//   ctx.get()->fullband_hidden.resize(data.denoiser_runner->model_input_size_[1], 0);
-//   ctx.get()->fullband_cell_state.resize(data.denoiser_runner->model_input_size_[2], 0);
-//   ctx.get()->subband_hidden.resize(data.denoiser_runner->model_input_size_[3], 0);
-//   ctx.get()->subband_cell_state.resize(data.denoiser_runner->model_input_size_[4], 0);
+//   ctx.get()->fullband_hidden.resize(data.denoiser_runner->input_tensor_sizes[1], 0);
+//   ctx.get()->fullband_cell_state.resize(data.denoiser_runner->input_tensor_sizes[2], 0);
+//   ctx.get()->subband_hidden.resize(data.denoiser_runner->input_tensor_sizes[3], 0);
+//   ctx.get()->subband_cell_state.resize(data.denoiser_runner->input_tensor_sizes[4], 0);
 //   denoise_task.data.context = ctx.get();
 
 //   std::valarray<float> real;
@@ -627,7 +628,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
 
 //     std::vector<size_t> timings(nattempts);
 //     std::vector<std::vector<float>*> inputs;
-//     for (auto s : data.denoiser_runner->model_input_size_) {
+//     for (auto s : data.denoiser_runner->input_tensor_sizes) {
 //       inputs.push_back(new std::vector<float>(s, static_cast<float>(0.)));
 //     }
 
@@ -646,7 +647,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
 //                tot,
 //                static_cast<double>(tot) / nattempts);
 
-//     for (uint16_t i = 0; i < data.denoiser_runner->model_input_size_.size(); i++) {
+//     for (uint16_t i = 0; i < data.denoiser_runner->input_tensor_sizes.size(); i++) {
 //       delete inputs[i];
 //     }
 //   }

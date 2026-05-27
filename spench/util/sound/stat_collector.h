@@ -29,13 +29,13 @@ class StatCollector {
     bool need_median = true;
     bool need_q95 = true;
     bool need_q5 = true;
-    static constexpr Options All() noexcept { return Options{true, true, true, true, true, true}; }
+    static constexpr Options all() noexcept { return Options{true, true, true, true, true, true}; }
   };
 
-  enum class ResetMode { KeepOverrun, Hard };
+  enum class ResetMode { keep_overrun, hard };
 
   explicit StatCollector(std::string name, uint32_t sample_rate,
-                         double window_seconds, Options opts = Options::All())
+                         double window_seconds, Options opts = Options::all())
       : name_(std::move(name)), sr_(sample_rate), win_sec_(window_seconds), opt_(opts) {
     if (win_sec_ <= 0.0) { win_sec_ = 1.0; }
     if (sr_ == 0) { sr_ = 1; }
@@ -52,13 +52,13 @@ class StatCollector {
       vals_.push_back(value);
     }
     elapsed_samples_ += samples_in_value;
-    return try_flush_();
+    return try_flush();
   }
 
   // NEW: advance time only (no value)
   std::optional<Stat> advance(size_t samples_in_value) noexcept {
     elapsed_samples_ += samples_in_value;
-    return try_flush_();
+    return try_flush();
   }
 
   Stat current() const { return compute_stat_current_copy(); }
@@ -78,15 +78,15 @@ class StatCollector {
     if (sr_ == 0) { sr_ = 1; }
     win_samples_ = to_samples(win_sec_, sr_);
     if (win_samples_ == 0) { win_samples_ = 1; }
-    reset_window(ResetMode::Hard);
+    reset_window(ResetMode::hard);
   }
 
  private:
-  std::optional<Stat> try_flush_() noexcept {
+  std::optional<Stat> try_flush() noexcept {
     if (elapsed_samples_ >= win_samples_) {
       Stat s = compute_stat_flush_inplace();     // O(n) via nth_element
       last_ = s;
-      reset_window(ResetMode::KeepOverrun);
+      reset_window(ResetMode::keep_overrun);
       return s;
     }
     return std::nullopt;
@@ -182,7 +182,7 @@ class StatCollector {
     count_ = 0;
     vals_.clear();
 
-    if (mode == ResetMode::KeepOverrun) {
+    if (mode == ResetMode::keep_overrun) {
       if (win_samples_ == 0) { elapsed_samples_ = 0; return; }
       if (elapsed_samples_ >= win_samples_) {
         elapsed_samples_ -= win_samples_;

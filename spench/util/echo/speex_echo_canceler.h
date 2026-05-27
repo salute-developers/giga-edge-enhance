@@ -15,25 +15,25 @@
 
 namespace util::echo {
 
-constexpr int echo_suppress = -60;
-constexpr int echo_suppress_active = -10;
-constexpr int echo_suppress_premute = -30;
-constexpr int lbk_active_threshold = -30;
-constexpr int int16_scale = 32767;
+constexpr int32_t echo_suppress = -60;
+constexpr int32_t echo_suppress_active = -10;
+constexpr int32_t echo_suppress_premute = -30;
+constexpr int32_t lbk_active_threshold = -30;
+constexpr int32_t int16_scale = 32767;
 
 using SpeexEchoStatePtr = std::shared_ptr<SpeexEchoState>;
 
 class SpeexPreprocess {
  public:
   explicit SpeexPreprocess(SpeexEchoStatePtr echo, size_t frame_size, size_t sample_rate)
-      : echo_{echo}, frame_size{frame_size} {
+      : echo_{echo}, frame_size_{frame_size} {
     auto state = speex_preprocess_state_init(frame_size, sample_rate);
     proc_ = std::shared_ptr<SpeexPreprocessState>(state, speex_preprocess_state_destroy);
     speex_preprocess_ctl(proc_.get(), SPEEX_PREPROCESS_SET_ECHO_STATE, echo_.get());
   }
 
   void process(std::vector<int16_t>& sig) {
-    if (sig.size() != frame_size) {
+    if (sig.size() != frame_size_) {
       throw std::runtime_error("frame size error");
     }
     // TODO(vayulis): use VAD result?
@@ -54,7 +54,7 @@ class SpeexPreprocess {
  private:
   std::shared_ptr<SpeexPreprocessState> proc_;
   SpeexEchoStatePtr echo_;
-  const size_t frame_size;
+  const size_t frame_size_;
 };
 
 
@@ -182,7 +182,7 @@ class SpeexEchoCanceler : public IEchoCanceler {
 
   const EchoCancelerConfig& config() const noexcept final { return cfg_; }
 
-  int delay_len() const noexcept final { return 0; }
+  int32_t delay_len() const noexcept final { return 0; }
 
  private:
   SpeexEchoStatePtr echo_;

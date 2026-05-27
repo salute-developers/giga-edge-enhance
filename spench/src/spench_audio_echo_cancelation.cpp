@@ -137,6 +137,7 @@ std::vector<int16_t>  SpenchAudioEchoCancelation::operator()(std::vector<int16_t
   return interleaved_chunk16;
 }
 
+// NOLINTNEXTLINE — frozen SPENCH_API (convertToInterleaved)
 std::vector<float> SpenchAudioEchoCancelation::convertToInterleaved(const std::vector<float>& mic,
                                                                     const std::vector<float>& lbk) {
   if (mic.size() != lbk.size()) {
@@ -155,6 +156,7 @@ std::vector<float> SpenchAudioEchoCancelation::convertToInterleaved(const std::v
   return interlvd;
 }
 
+// NOLINTNEXTLINE — frozen SPENCH_API (convertFromInterleaved)
 void SpenchAudioEchoCancelation::convertFromInterleaved(const std::vector<float>& interlvd,
                                                               std::vector<float>& mic,
                                                               std::vector<float>& lbk) {

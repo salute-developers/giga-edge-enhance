@@ -3,7 +3,7 @@
 namespace spench {
 // Denoiser defaults
 #ifdef BUILD_TFLITE_ENGINE
-static constexpr char DefaultDenoiserConfigYAML[] = R"(
+static constexpr char default_denoiser_config_yaml[] = R"(
 model:
   model_path: ""
   model_inputs:  ["noisy_mag", "fb_h", "fb_c", "prev_fb_out"]
@@ -20,7 +20,7 @@ inference:
   model_type:        best_speed
 )";
 
-static constexpr char DefaultDereverbConfigYAML[] = R"(
+static constexpr char default_dereverb_config_yaml[] = R"(
 model:
   model_path: ""
   model_inputs:  ["noisy_spec_5"]
@@ -38,7 +38,7 @@ inference:
 )";
 
 #else
-static constexpr char DefaultDenoiserConfigYAML[] = R"(
+static constexpr char default_denoiser_config_yaml[] = R"(
 model:
   model_path: ""
   model_inputs:  ["noisy_mag_5", "fb_h.1", "fb_c.1", "prev_fb_out_5"]
@@ -56,7 +56,7 @@ inference:
 )";
 
 // Dereverb defaults
-static constexpr char DefaultDereverbConfigYAML[] = R"(
+static constexpr char default_dereverb_config_yaml[] = R"(
 model:
   model_path: ""
   model_inputs:  ["noisy_spec_5"]
@@ -75,7 +75,7 @@ inference:
 #endif
 
 // AEC defaults (as above)
-static constexpr char DefaultAecConfigYAML[] = R"(
+static constexpr char default_aec_config_yaml[] = R"(
 echo_cancellation:
   sample_rate:                       48000
   filter_len:                        4096
@@ -87,7 +87,7 @@ echo_cancellation:
 )";
 
 // Normalizer defaults
-static constexpr char DefaultAudioProcessingConfigYAML[] = R"(
+static constexpr char default_audio_processing_config_yaml[] = R"(
 sound_processing:
   range_ctrl:
     sample_rate: 48000

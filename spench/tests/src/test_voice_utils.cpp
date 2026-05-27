@@ -737,16 +737,16 @@ TEST_CASE("SUCCESS Input sound stream emits all resampled frames for 16*N ms chu
 
   // Variable length: one N×16 ms push must return all resampled frames, not one frame.
   {
-    auto stream = util::sound::BuildSoundStream(src_sample_rate, dst_sample_rate, frame_ms,
-                                                util::sound::TemplateType::INPUT);
+    auto stream = util::sound::build_sound_stream(src_sample_rate, dst_sample_rate, frame_ms,
+                                                  util::sound::TemplateType::input);
     std::vector<float> primed;
     for (uint32_t i = 0; i < 32 && primed.size() < out_frame; ++i) {
-      const std::vector<float> part = stream->ReadChunk(short_chunk);
+      const std::vector<float> part = stream->read_chunk(short_chunk);
       primed.insert(primed.end(), part.begin(), part.end());
     }
     REQUIRE(primed.size() >= out_frame);
 
-    const std::vector<float> out = stream->ReadChunk(long_chunk);
+    const std::vector<float> out = stream->read_chunk(long_chunk);
     REQUIRE(out.size() % out_frame == 0);
     REQUIRE(out.size() >= out_frame * 2);
     REQUIRE(out.size() == expected_out_aligned);
@@ -999,7 +999,7 @@ TEST_CASE("SUCCESS Run sound stream without resampling [sound]") {
 
 TEST_CASE("SUCCEED StatCollector exact 1s window with evenly sized blocks [stat]") {
   // sr = 1000 Hz, window = 1s -> 1000 samples per flush
-  util::sound::StatCollector col("basic", 1000, 1.0, util::sound::StatCollector::Options::All());
+  util::sound::StatCollector col("basic", 1000, 1.0, util::sound::StatCollector::Options::all());
 
   std::optional<util::sound::StatCollector::Stat> res;
   // feed 10 blocks * 100 samples, values 1..10
@@ -1022,7 +1022,7 @@ TEST_CASE("SUCCEED StatCollector exact 1s window with evenly sized blocks [stat]
 
 TEST_CASE("SUCCEED StatCollector carry-over KeepOverrun [stat]") {
   // sr = 10 Hz, window = 1s -> 10 samples
-  util::sound::StatCollector col("carry", 10, 1.0, util::sound::StatCollector::Options::All());
+  util::sound::StatCollector col("carry", 10, 1.0, util::sound::StatCollector::Options::all());
 
   auto res = col.update(0.0f, /*samples_in_value=*/6);
   REQUIRE_FALSE(res.has_value());
@@ -1051,7 +1051,7 @@ TEST_CASE("SUCCEED StatCollector carry-over KeepOverrun [stat]") {
 }
 
 TEST_CASE("SUCCEED StatCollector ignores missing values but advances time [stat]") {
-  util::sound::StatCollector col("miss", 1000, 1.0, util::sound::StatCollector::Options::All());
+  util::sound::StatCollector col("miss", 1000, 1.0, util::sound::StatCollector::Options::all());
 
   // No value this tick: advance time only → should flush after 1s and return empty stats
   auto res = col.advance(/*samples_in_value=*/1000);
@@ -1077,7 +1077,7 @@ TEST_CASE("SUCCEED StatCollector ignores missing values but advances time [stat]
 }
 
 TEST_CASE("SUCCEED StatCollector set_window_seconds does hard reset [stat]") {
-  util::sound::StatCollector col("reset", 100, 1.0, util::sound::StatCollector::Options::All());
+  util::sound::StatCollector col("reset", 100, 1.0, util::sound::StatCollector::Options::all());
   REQUIRE_FALSE(col.update(5.0f, /*samples_in_value=*/60).has_value());
 
   col.set_window_seconds(0.5);
@@ -1095,7 +1095,7 @@ TEST_CASE("SUCCEED StatCollector set_window_seconds does hard reset [stat]") {
 }
 
 TEST_CASE("SUCCEED StatCollector options toggle disables selected metrics [stat]") {
-  util::sound::StatCollector::Options opt = util::sound::StatCollector::Options::All();
+  util::sound::StatCollector::Options opt = util::sound::StatCollector::Options::all();
   opt.need_min = false;
   opt.need_max = false;
   opt.need_median = false;
@@ -1121,14 +1121,14 @@ TEST_CASE("SUCCEED StatCollector options toggle disables selected metrics [stat]
 }
 
 TEST_CASE("SUCCEED StatCollector progress_seconds reflects elapsed / sr [stat]") {
-  util::sound::StatCollector col("progress", 1000, 10.0, util::sound::StatCollector::Options::All());
+  util::sound::StatCollector col("progress", 1000, 10.0, util::sound::StatCollector::Options::all());
   REQUIRE_FALSE(col.update(1.0f, /*samples_in_value=*/2500).has_value());
   CHECK(col.progress_seconds() == Approx(2.5).margin(1e-6));
 }
 
 // Extra sanity on quantiles for 1..100 sequence
 TEST_CASE("SUCCEED StatCollector quantile values for 1..100 [stat]") {
-  util::sound::StatCollector col("q", 1000, 1.0, util::sound::StatCollector::Options::All());
+  util::sound::StatCollector col("q", 1000, 1.0, util::sound::StatCollector::Options::all());
 
   std::optional<util::sound::StatCollector::Stat> res;
   for (int i = 1; i <= 100; ++i) {
@@ -1160,7 +1160,7 @@ TEST_CASE("SUCCEED StatCollector quantile values for 1..100 [stat]") {
 TEST_CASE("FAIL invalid parameters: sr==0 and window<=0 are clamped [stat]") {
   // Both should clamp internally to sr=1, window=1
   util::sound::StatCollector col("clamp", /*sample_rate=*/0, /*window_seconds=*/0.0,
-                                 util::sound::StatCollector::Options::All());
+                                 util::sound::StatCollector::Options::all());
   CHECK(col.window_seconds() == Approx(1.0));
 
   // After construction, exact 1s worth of samples should flush once
@@ -1171,7 +1171,7 @@ TEST_CASE("FAIL invalid parameters: sr==0 and window<=0 are clamped [stat]") {
 }
 
 TEST_CASE("FAIL zero-sample updates do not flush and do not advance time [stat]") {
-  util::sound::StatCollector col("zerosamp", 1000, 1.0, util::sound::StatCollector::Options::All());
+  util::sound::StatCollector col("zerosamp", 1000, 1.0, util::sound::StatCollector::Options::all());
 
   // Many zero-sample updates should neither flush nor advance progress
   for (int i = 0; i < 100; ++i) {
@@ -1189,7 +1189,7 @@ TEST_CASE("FAIL zero-sample updates do not flush and do not advance time [stat]"
 
 TEST_CASE("FAIL large overrun: one flush per call and leftover time kept [stat]") {
   // sr=100, window=1s -> 100 samples. Push 307 samples at once: expect 1 flush and 7-sample carry.
-  util::sound::StatCollector col("overrun", 100, 1.0, util::sound::StatCollector::Options::All());
+  util::sound::StatCollector col("overrun", 100, 1.0, util::sound::StatCollector::Options::all());
 
   auto res = col.update(5.0f, /*samples_in_value=*/307);
   REQUIRE(res.has_value());  // exactly one flush per update() call
@@ -1206,7 +1206,7 @@ TEST_CASE("FAIL large overrun: one flush per call and leftover time kept [stat]"
 }
 
 TEST_CASE("FAIL set_window_seconds(0) clamps to 1.0 and hard-resets [stat]") {
-  util::sound::StatCollector col("set0", 1000, 2.0, util::sound::StatCollector::Options::All());
+  util::sound::StatCollector col("set0", 1000, 2.0, util::sound::StatCollector::Options::all());
   REQUIRE_FALSE(col.update(1.0f, /*samples_in_value=*/500).has_value());  // partial fill
   col.set_window_seconds(0.0);  // clamp to 1.0 and hard reset
   CHECK(col.window_seconds() == Approx(1.0));
@@ -1229,7 +1229,7 @@ TEST_CASE("SUCCESS StatCollector matches reference stats on random vectors [stat
     for (int i = 0; i < n; ++i) vals.push_back(val_dist(rng));
 
     util::sound::StatCollector col("prop-ref", 1, static_cast<double>(n),
-                                   util::sound::StatCollector::Options::All());
+                                   util::sound::StatCollector::Options::all());
 
     std::vector<int> idx(n);
     std::iota(idx.begin(), idx.end(), 0);
@@ -1278,7 +1278,7 @@ TEST_CASE("SUCCESS StatCollector ignores missing values but matches reference [s
         "prop-nullopt",
         /*sample_rate=*/1,
         /*window_seconds=*/static_cast<double>(n),
-        util::sound::StatCollector::Options::All());
+        util::sound::StatCollector::Options::all());
 
     std::optional<util::sound::StatCollector::Stat> out;
     for (int i = 0; i < n; ++i) {
@@ -1319,7 +1319,7 @@ TEST_CASE("SUCCESS StatCollector quantiles monotonic constant input [stat]") {
   {
     const int n = 1000;
     util::sound::StatCollector col("const", 1, static_cast<double>(n),
-                                   util::sound::StatCollector::Options::All());
+                                   util::sound::StatCollector::Options::all());
     std::optional<util::sound::StatCollector::Stat> out;
     for (int i = 0; i < n; ++i) out = col.update(3.14f, 1);
     REQUIRE(out.has_value());
@@ -1341,7 +1341,7 @@ TEST_CASE("SUCCESS StatCollector quantiles monotonic constant input [stat]") {
     for (int trial = 0; trial < 30; ++trial) {
       const int n = len_dist(rng);
       util::sound::StatCollector col("mono", 1, static_cast<double>(n),
-                                     util::sound::StatCollector::Options::All());
+                                     util::sound::StatCollector::Options::all());
       std::optional<util::sound::StatCollector::Stat> out;
       for (int i = 0; i < n; ++i) out = col.update(val_norm(rng), 1);
       REQUIRE(out.has_value());

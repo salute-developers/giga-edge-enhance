@@ -1055,7 +1055,8 @@ TEST_CASE("SUCCEED Run prepare_input_in_place on one real frame with fast onnx m
   IsVectorsClose(ctx.get()->noisy_mag, noisy_mag_5_new, 0.000001);
 }
 
-TEST_CASE("SUCCEED Run prepare_input_in_place on one real frame with dereverb onnx model (audio 48 kHz) [onnx runner]") {
+TEST_CASE("SUCCEED Run prepare_input_in_place on one real frame with dereverb onnx model "
+          "(audio 48 kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_dereverberation_onnx_48khz.yaml"));
   std::vector<float> noisy_spec_5_old_real;

@@ -52,12 +52,12 @@ class DenoiserModelAdviser {
   *
   * @return A high‑level action for model selection.
   */
-  T processFrame(const ComplexNumber<T>& input_spec,
+  T process_frame(const ComplexNumber<T>& input_spec,
                             const ComplexNumber<T>& enhanced_spec,
                             StreamCurrentMetrics<T>& metrics) {
-    T value = calcSnrEstimation(input_spec, enhanced_spec, metrics);
+    T value = calc_snr_estimation(input_spec, enhanced_spec, metrics);
     add_value(value);
-    T average = averageSnrDb();
+    T average = average_snr_db();
     return average;
   }
 
@@ -80,14 +80,14 @@ class DenoiserModelAdviser {
   /**
   * @return Current windowed‑average SNR in dB, or NaN if the window is not yet filled.
   */
-  [[nodiscard]] T averageSnrDb() const {
+  [[nodiscard]] T average_snr_db() const {
     if (snr_history_.size() == window_frames_) {
       return sum_ / static_cast<T>(snr_history_.size());
     }
     return std::numeric_limits<T>::quiet_NaN();
   }
 
-  T calcSnrEstimation(const ComplexNumber<T>& input_spec,
+  T calc_snr_estimation(const ComplexNumber<T>& input_spec,
                     const ComplexNumber<T>& enhanced_spec,
                     StreamCurrentMetrics<T>& metrics);
 
@@ -95,8 +95,8 @@ class DenoiserModelAdviser {
   std::deque<T> snr_history_;  ///< Circular buffer of recent SNR estimates (in dB).
   size_t        window_frames_;  ///< Window length expressed in *frames*.
   T             sum_ = static_cast<T>(0);
-  const T       eps_ = static_cast<T>(1e-8);
-  const T       snr_vad_threshold_ = static_cast<T>(0.1);
+  const T       eps = static_cast<T>(1e-8);
+  const T       snr_vad_threshold = static_cast<T>(0.1);
 };
 
 }  // namespace spench

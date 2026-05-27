@@ -41,7 +41,7 @@ class IEchoCanceler {
   virtual const EchoCancelerConfig& config() const noexcept = 0;
 
   // delay (samples) between input and output
-  virtual int delay_len() const noexcept { return 0; }
+  virtual int32_t delay_len() const noexcept { return 0; }
 
   // control filter adaptation
   virtual bool lock_filter_support() const noexcept { return false; }

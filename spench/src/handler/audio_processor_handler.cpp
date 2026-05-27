@@ -34,7 +34,7 @@ void AudioProcItemWithStats::stats_update(const std::string& name,
       } else {
         flushed = metric.collector->advance(frames);
       }
-      metric.flush_this_tick_ = static_cast<bool>(flushed);
+      metric.flush_this_tick = static_cast<bool>(flushed);
       if (flushed) {
         metric.last = *flushed;
       }
@@ -50,7 +50,7 @@ void AudioProcItemWithStats::stats_try_log_window() {
 
   bool all_flushed = true;
   for (auto& kv : metrics_) {
-    all_flushed &= kv.second.flush_this_tick_;
+    all_flushed &= kv.second.flush_this_tick;
   }
 
   if (all_flushed) {
@@ -63,7 +63,7 @@ void AudioProcItemWithStats::stats_try_log_window() {
   }
 
   for (auto& kv : metrics_) {
-    kv.second.flush_this_tick_ = false;
+    kv.second.flush_this_tick = false;
   }
 }
 
@@ -118,7 +118,7 @@ void AudioProcLC::set_parameters(const ParametersStruct* params) {
 
   stats_configure(sr_,
                   stats_window_sec_,
-                  { {"input_lufs", Options::All()}, {"gain_db", Options::All()} });
+                  { {"input_lufs", Options::all()}, {"gain_db", Options::all()} });
   reset_stats_pending_.store(true, std::memory_order_release);
 }
 
@@ -174,7 +174,7 @@ void AudioProcessorHandler::do_stop() {
 
 // ---- Builders (now always read via params()["sound_processing"]) ----
 
-AudioProcessorHandler& AudioProcessorHandler::addAGC() {
+AudioProcessorHandler& AudioProcessorHandler::add_agc() {
   YAML::Node sp = params()["sound_processing"];
   if (sp && sp["auto_gain_ctrl"]) {
     AGCParameters agc_params;
@@ -197,7 +197,7 @@ AudioProcessorHandler& AudioProcessorHandler::addAGC() {
   return *this;
 }
 
-AudioProcessorHandler& AudioProcessorHandler::addAGC(const AGCParameters& p) {
+AudioProcessorHandler& AudioProcessorHandler::add_agc(const AGCParameters& p) {
   sequence_vec_.emplace_back(std::make_unique<AudioProcAGC>(p));
   spdlog::info("New Auto Gain Control element created. target_level: {}, max_gain: {}, average_len: {}, "
                "t_rise: {}, t_fall: {}",
@@ -205,7 +205,7 @@ AudioProcessorHandler& AudioProcessorHandler::addAGC(const AGCParameters& p) {
   return *this;
 }
 
-AudioProcessorHandler& AudioProcessorHandler::addRC() {
+AudioProcessorHandler& AudioProcessorHandler::add_rc() {
   YAML::Node sp = params()["sound_processing"];
   if (sp && sp["range_ctrl"]) {
     RCParameters rc;
@@ -229,7 +229,7 @@ AudioProcessorHandler& AudioProcessorHandler::addRC() {
   return *this;
 }
 
-AudioProcessorHandler& AudioProcessorHandler::addRC(const RCParameters& p) {
+AudioProcessorHandler& AudioProcessorHandler::add_rc(const RCParameters& p) {
   sequence_vec_.emplace_back(std::make_unique<AudioProcRC>(p));
   spdlog::info("New Range Control element created. sr: {}, target_level_db: {}, max_gain_db: {}, "
                "attack_time: {}, release_time {}, hold_time {}",
@@ -238,7 +238,7 @@ AudioProcessorHandler& AudioProcessorHandler::addRC(const RCParameters& p) {
   return *this;
 }
 
-AudioProcessorHandler& AudioProcessorHandler::addNoiseGate() {
+AudioProcessorHandler& AudioProcessorHandler::add_noise_gate() {
   YAML::Node sp = params()["sound_processing"];
   if (sp && sp["noise_gate_ctrl"]) {
     NGParameters ng;
@@ -260,7 +260,7 @@ AudioProcessorHandler& AudioProcessorHandler::addNoiseGate() {
   return *this;
 }
 
-AudioProcessorHandler& AudioProcessorHandler::addNoiseGate(const NGParameters& p) {
+AudioProcessorHandler& AudioProcessorHandler::add_noise_gate(const NGParameters& p) {
   sequence_vec_.emplace_back(std::make_unique<AudioProcNoiseGate>(p));
   spdlog::info("New Noise Gate element created. sr: {}, threshold: {}, attack_time: {}, release_time {}, "
                "hold_time {}",
@@ -268,7 +268,7 @@ AudioProcessorHandler& AudioProcessorHandler::addNoiseGate(const NGParameters& p
   return *this;
 }
 
-AudioProcessorHandler& AudioProcessorHandler::addLimiter() {
+AudioProcessorHandler& AudioProcessorHandler::add_limiter() {
   YAML::Node sp = params()["sound_processing"];
   if (sp && sp["limiter_ctrl"]) {
     LimParameters lp;
@@ -290,7 +290,7 @@ AudioProcessorHandler& AudioProcessorHandler::addLimiter() {
   return *this;
 }
 
-AudioProcessorHandler& AudioProcessorHandler::addLimiter(const LimParameters& p) {
+AudioProcessorHandler& AudioProcessorHandler::add_limiter(const LimParameters& p) {
   spdlog::info("New Limiter element created. sr: {}, threshold: {}, knee_width: {}, attack_time {}, "
                "release_time {}",
                p.sample_rate, p.threshold, p.knee_width, p.attack_time, p.release_time);
@@ -298,7 +298,7 @@ AudioProcessorHandler& AudioProcessorHandler::addLimiter(const LimParameters& p)
   return *this;
 }
 
-AudioProcessorHandler& AudioProcessorHandler::addDRCompressor() {
+AudioProcessorHandler& AudioProcessorHandler::add_dr_compressor() {
   YAML::Node sp = params()["sound_processing"];
   if (sp && sp["dynamic_range_compressor_ctrl"]) {
     DRCParameters drc;
@@ -322,7 +322,7 @@ AudioProcessorHandler& AudioProcessorHandler::addDRCompressor() {
   return *this;
 }
 
-AudioProcessorHandler& AudioProcessorHandler::addDRCompressor(const DRCParameters& p) {
+AudioProcessorHandler& AudioProcessorHandler::add_dr_compressor(const DRCParameters& p) {
   sequence_vec_.emplace_back(std::make_unique<AudioProcDRCompressor>(p));
   spdlog::info("New Dynamic Range Compressor element created. sr: {}, threshold: {}, ratio: {}, "
                "knee_width: {}, attack_time {}, release_time {}",
@@ -330,7 +330,7 @@ AudioProcessorHandler& AudioProcessorHandler::addDRCompressor(const DRCParameter
   return *this;
 }
 
-AudioProcessorHandler& AudioProcessorHandler::addLC() {
+AudioProcessorHandler& AudioProcessorHandler::add_lc() {
   YAML::Node sp = params()["sound_processing"];
   if (sp && sp["loudness_ctrl"]) {
     LoudnessParameters lc;
@@ -354,7 +354,7 @@ AudioProcessorHandler& AudioProcessorHandler::addLC() {
   return *this;
 }
 
-AudioProcessorHandler& AudioProcessorHandler::addLC(const LoudnessParameters& p) {
+AudioProcessorHandler& AudioProcessorHandler::add_lc(const LoudnessParameters& p) {
   sequence_vec_.emplace_back(std::make_unique<AudioProcLC>(p));
   spdlog::info("New Loudness Control element created. sr: {}, target_level_db: {}, max_gain_db: {}, "
                "bypass_time: {}, vad enabled: {}, post_processing: {}",

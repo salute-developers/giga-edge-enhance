@@ -206,7 +206,7 @@ class AudioProcItemWithStats : public AudioProcItem {
  private:
   struct Metric {
     std::unique_ptr<util::sound::StatCollector> collector;
-    bool flush_this_tick_{false};
+    bool flush_this_tick{false};
     std::optional<Stat> last;
   };
 
@@ -407,7 +407,7 @@ class AudioProcLC : public AudioProcItemWithStats {
                .set_method(util::sound::ILoudnessControl::simple)
                .create();
 
-  stats_configure(sr_, stats_window_sec_, {{"input_lufs", Options::All()}, {"gain_db", Options::All()}});}
+  stats_configure(sr_, stats_window_sec_, {{"input_lufs", Options::all()}, {"gain_db", Options::all()}});}
 
   explicit AudioProcLC(const LoudnessParametersStruct& parameters) { set_parameters(&parameters); }
 
@@ -433,18 +433,18 @@ class AudioProcessorHandler : public BaseAudioHandler {
     return process(in, out);
   }
 
-  AudioProcessorHandler& addAGC();
-  AudioProcessorHandler& addAGC(const AGCParameters& parameters);
-  AudioProcessorHandler& addRC();
-  AudioProcessorHandler& addRC(const RCParameters& parameters);
-  AudioProcessorHandler& addNoiseGate();
-  AudioProcessorHandler& addNoiseGate(const NGParameters& parameters);
-  AudioProcessorHandler& addLimiter();
-  AudioProcessorHandler& addLimiter(const LimParameters& parameters);
-  AudioProcessorHandler& addDRCompressor();
-  AudioProcessorHandler& addDRCompressor(const DRCParameters& parameters);
-  AudioProcessorHandler& addLC();
-  AudioProcessorHandler& addLC(const LoudnessParameters& parameters);
+  AudioProcessorHandler& add_agc();
+  AudioProcessorHandler& add_agc(const AGCParameters& parameters);
+  AudioProcessorHandler& add_rc();
+  AudioProcessorHandler& add_rc(const RCParameters& parameters);
+  AudioProcessorHandler& add_noise_gate();
+  AudioProcessorHandler& add_noise_gate(const NGParameters& parameters);
+  AudioProcessorHandler& add_limiter();
+  AudioProcessorHandler& add_limiter(const LimParameters& parameters);
+  AudioProcessorHandler& add_dr_compressor();
+  AudioProcessorHandler& add_dr_compressor(const DRCParameters& parameters);
+  AudioProcessorHandler& add_lc();
+  AudioProcessorHandler& add_lc(const LoudnessParameters& parameters);
 
   SpenchRetCode process_frame(struct spench::SpenchContext<float>* ctx,
                              const std::vector<float>& input_audio_frame,

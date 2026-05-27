@@ -31,7 +31,7 @@ NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::shared_ptr<NetworkConf
     throw std::runtime_error("A neural network handler module creation failed. ret_code=" +
                              std::to_string(static_cast<int32_t>(ret_code)));
   }
-  skip_zero_chunk_ = dynamic_cast<spench::NetworkConfig*>(config_.get())->skipZeroedChunks();
+  skip_zero_chunk_ = dynamic_cast<spench::NetworkConfig*>(config_.get())->skip_zeroed_chunks();
 }
 
 NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(NeuralNetworkAudioHandler&& orig) noexcept
@@ -44,15 +44,15 @@ NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(NeuralNetworkAudioHandler&&
 NeuralNetworkAudioHandler::~NeuralNetworkAudioHandler() = default;
 
 uint32_t NeuralNetworkAudioHandler::get_engine_threads_num() {
-  return std::dynamic_pointer_cast<spench::NetworkConfig>(config_)->numThreads();
+  return std::dynamic_pointer_cast<spench::NetworkConfig>(config_)->num_threads();
 }
 
 uint64_t NeuralNetworkAudioHandler::get_model_sample_rate() {
-  return feature_extractor_runner_ptr_->GetSamplingFreq();
+  return feature_extractor_runner_ptr_->get_sampling_freq();
 }
 
 uint64_t NeuralNetworkAudioHandler::get_input_frame_size() {
-  return feature_extractor_runner_ptr_->GetFrameHopSizeSamples();
+  return feature_extractor_runner_ptr_->get_frame_hop_size_samples();
 }
 
 SpenchRetCode NeuralNetworkAudioHandler::do_start() {
@@ -118,7 +118,7 @@ bool NeuralNetworkAudioHandler::is_zeroed_vector(const std::vector<float>& v, fl
 
 namespace tools {
 
-void PrepareFirstInputFrame(const std::vector<float>& current_chunk,
+void prepare_first_input_frame(const std::vector<float>& current_chunk,
                             std::vector<float>& frame,
                             uint32_t frame_size) {
   if (frame.size() != 0) {

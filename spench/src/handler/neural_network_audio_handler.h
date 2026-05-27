@@ -64,8 +64,8 @@ class NeuralNetworkAudioHandler : public BaseAudioHandler {
 };
 
 namespace tools {
-void PrepareFirstInputFrame(const std::vector<float>& current_chunk,
-                            std::vector<float>& frame, uint32_t frame_size);
+void prepare_first_input_frame(const std::vector<float>& current_chunk,
+                               std::vector<float>& frame, uint32_t frame_size);
 }  // namespace tools
 
 }  // namespace spench

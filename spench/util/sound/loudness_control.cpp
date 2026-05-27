@@ -77,8 +77,8 @@ class LoudnessControlImpl : public ILoudnessControl {
 
     // dynamic post-processing
     if (postprocess) {
-      comp_ = std::make_shared<dsplib::Compressor>(sample_rate, target_level + COMP_OFFSET, COMP_RATIO, COMP_KNEE);
-      limit_ = std::make_shared<dsplib::Limiter>(sample_rate, LIMITER_THRESHOLD);
+      comp_ = std::make_shared<dsplib::Compressor>(sample_rate, target_level + comp_offset, comp_ratio, comp_knee);
+      limit_ = std::make_shared<dsplib::Limiter>(sample_rate, limiter_threshold);
     }
   }
 
@@ -361,12 +361,11 @@ class LoudnessControlImpl : public ILoudnessControl {
 };
 
 std::unique_ptr<ILoudnessControl> LoudnessControlBuilder::create() {
-
   if (method_ == ILoudnessControl::simple) {
     return std::make_unique<legacy::LoudnessControlImpl>(sample_rate_.value(), target_level_db_.value(),
-                                                         bypass_time_.value(), max_gain_db_.value(),
+                                                         postprocessing_.value_or(false),
+                                                         bypass_time_.value_or(3.0f),
                                                          max_gain_db_.value());
-
   }
   if (method_ == ILoudnessControl::vadbase) {
     return std::make_unique<LoudnessControlImpl>(sample_rate_.value(), target_level_db_.value(),

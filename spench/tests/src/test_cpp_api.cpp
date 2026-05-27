@@ -254,7 +254,7 @@ TEST_CASE("SUCCEED Get empty statistic information with nullptr instead of conte
   #endif
 
   auto stat = test_data.denoiser->GetStreamStat(nullptr);
-  REQUIRE(stat.m_snr == 0.0);
+  REQUIRE(stat.snr == 0.0);
 }
 
 TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
@@ -324,10 +324,10 @@ TEST_CASE("SUCCEED Get statistic information [spench c++ api]") {
   }
 
   auto stat = test_data.denoiser->GetStreamStat(nullptr);
-  CHECK(stat.m_snr == 0.0);
+  CHECK(stat.snr == 0.0);
 
   stat = test_data.denoiser->GetStreamStat(ctx);
-  REQUIRE(stat.m_snr != 0.0);
+  REQUIRE(stat.snr != 0.0);
 
   test_data.denoiser->DestroyContext(&ctx);
   REQUIRE(ctx == nullptr);
@@ -2347,7 +2347,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [
 // POSITIVE — YAML string accepted, chain can be built and used
 // -----------------------------------------------------------------------------
 TEST_CASE("SUCCESS AudioProcessing accepts YAML string and can process a small frame [spench c++ api]") {
-  const std::string yaml = spench::DefaultAudioProcessingConfigYAML;
+  const std::string yaml = spench::default_audio_processing_config_yaml;
 
   // Construct from YAML string
   auto fx = std::move(TestFixture().InitAudioProcessor(yaml));

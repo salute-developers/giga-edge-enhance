@@ -56,12 +56,12 @@ void BaseOnnxRunner::init_model(const std::shared_ptr<spench::NetworkConfig> con
           if (!checksum.empty()) {
             license_checksum.reset(new modelencryption::Checksum(hasher.DeserializeChecksum(checksum.c_str())));
           }
-          if (config->isModelBundled()) {
-            model_data = decryptor.DecryptArray(config->getModel(),
+          if (config->is_model_bundled()) {
+            model_data = decryptor.DecryptArray(config->get_model(),
                                                 modelencryption::Key(password),
                                                 license_checksum.get());
           } else {
-            model_data = decryptor.DecryptFile(config->modelPath(),
+            model_data = decryptor.DecryptFile(config->model_path(),
                                               modelencryption::Key(password),
                                               license_checksum.get());
           }
@@ -74,15 +74,15 @@ void BaseOnnxRunner::init_model(const std::shared_ptr<spench::NetworkConfig> con
           throw OnnxValidationException("Password must be empty or library should be built with encryption support");
 #endif
         } else {
-          if (config->isModelBundled()) {
-            const auto& model_data = config->getModel();
+          if (config->is_model_bundled()) {
+            const auto& model_data = config->get_model();
             session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(),
                                                             model_data.data(),
                                                             model_data.size(),
                                                             session_options);
           } else {
             session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(),
-                                                            config->modelPath().c_str(),
+                                                            config->model_path().c_str(),
                                                             session_options);
           }
         }
@@ -99,7 +99,7 @@ void BaseOnnxRunner::init_model(const std::shared_ptr<spench::NetworkConfig> con
     try {
       if (session_ptr_ == nullptr) {
         session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(),
-                                                        config->modelPath().c_str(),
+                                                        config->model_path().c_str(),
                                                         session_options);
       }
     } catch (...) {

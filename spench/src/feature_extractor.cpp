@@ -247,6 +247,6 @@ void FeatureExtractor<T>::calc_enhanced_parts_in_place(const ComplexNumber<T>& i
   }
 }
 
-template class FeatureExtractor<fft::buffer_type>;
+template class FeatureExtractor<fft::BufferType>;
 }  // namespace fe
 }  // namespace spench

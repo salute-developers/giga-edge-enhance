@@ -36,13 +36,13 @@ SpenchRetCode AudioEchoCancelationHandler::do_start() {
     }
 
     canceler_ = util::echo::EchoCancelerBuilder()
-                     .set_sample_rate(aec->sampleRate())
-                     .set_filter_len(aec->filterLen())
-                     .set_frame_len(aec->frameLen())
+                     .set_sample_rate(aec->sample_rate())
+                     .set_filter_len(aec->filter_len())
+                     .set_frame_len(aec->frame_len())
                      .set_type(aec->type())
-                     .set_residual_echo_suppression(aec->residualEchoSuppressionEnabled())
-                     .set_delay_compensator(aec->delayCompensatorEnabled())
-                     .set_echo_premute(aec->echoPremute())
+                     .set_residual_echo_suppression(aec->residual_echo_suppression_enabled())
+                     .set_delay_compensator(aec->delay_compensator_enabled())
+                     .set_echo_premute(aec->echo_premute())
                      .create();
 
     if (!canceler_) {
@@ -65,17 +65,17 @@ void AudioEchoCancelationHandler::do_stop() {
 
 const uint32_t AudioEchoCancelationHandler::get_sample_rate() {
   auto* aec = dynamic_cast<AecConfig*>(config_.get());
-  return aec ? aec->sampleRate() : 0;
+  return aec ? aec->sample_rate() : 0;
 }
 
 const uint16_t AudioEchoCancelationHandler::get_filter_length() {
   auto* aec = dynamic_cast<AecConfig*>(config_.get());
-  return aec ? aec->filterLen() : 0;
+  return aec ? aec->filter_len() : 0;
 }
 
 const uint16_t AudioEchoCancelationHandler::get_frame_length() {
   auto* aec = dynamic_cast<AecConfig*>(config_.get());
-  return aec ? aec->frameLen() : 0;
+  return aec ? aec->frame_len() : 0;
 }
 
 void AudioEchoCancelationHandler::process(const std::vector<float>& mic,

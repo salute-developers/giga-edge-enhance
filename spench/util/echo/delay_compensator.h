@@ -7,12 +7,13 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 
 namespace util::echo {
 
 // the length of the median filter for smoothing the estimate
 // convergence time after delay change: (median_flt_len / 2 * max_delay)
-constexpr int median_flt_len = 7;
+constexpr int32_t median_flt_len = 7;
 
 /**
  * @brief Estimation of the shift between the microphone and the speaker signal
@@ -29,27 +30,28 @@ class DelayCompensator {
    * @param threshold The acceptable range of the estimate, within which there is no delay correction
    * @param dither_db Added noise level for better stability in silence
    */
-  explicit DelayCompensator(int max_delay = 16000, int quantize = 256, float threshold = 0.1f, float dither_db = -80)
-      : win_len(1L << dsplib::nextpow2(max_delay)),
-        mic_buf_(win_len),
-        spk_buf_(win_len),
-        quantize{quantize},
-        threshold{threshold},
-        dither_lvl{dsplib::db2mag(dither_db)} {
-    DSPLIB_ASSERT(win_len <= (1L << 16), "`max_delay` must be less or equal 65536");
+  explicit DelayCompensator(int32_t max_delay = 16000, int32_t quantize = 256, float threshold = 0.1f,
+                            float dither_db = -80)
+      : win_len_(1L << dsplib::nextpow2(max_delay)),
+        mic_buf_(win_len_),
+        spk_buf_(win_len_),
+        quantize_{quantize},
+        threshold_{threshold},
+        dither_lvl_{dsplib::db2mag(dither_db)} {
+    DSPLIB_ASSERT(win_len_ <= (1L << 16), "`max_delay` must be less or equal 65536");
   }
 
   dsplib::arr_real process(const dsplib::arr_real& mic, const dsplib::arr_real& spk) {
     DSPLIB_ASSERT(mic.size() == spk.size(), "input arrays must be equal size");
-    const int len = mic.size();
-    DSPLIB_ASSERT(len <= win_len, "input frame size must be less or equal `max_delay`");
+    const int32_t len = static_cast<int32_t>(mic.size());
+    DSPLIB_ASSERT(len <= win_len_, "input frame size must be less or equal `max_delay`");
 
     // update buffers (add `len` samples)
-    const int upd_pos = win_len - len;
-    mic_buf_.slice(0, upd_pos) = mic_buf_.slice(len, win_len);
-    mic_buf_.slice(upd_pos, win_len) = mic;
-    spk_buf_.slice(0, upd_pos) = spk_buf_.slice(len, win_len);
-    spk_buf_.slice(upd_pos, win_len) = spk;
+    const int32_t upd_pos = win_len_ - len;
+    mic_buf_.slice(0, upd_pos) = mic_buf_.slice(len, win_len_);
+    mic_buf_.slice(upd_pos, win_len_) = mic;
+    spk_buf_.slice(0, upd_pos) = spk_buf_.slice(len, win_len_);
+    spk_buf_.slice(upd_pos, win_len_) = spk;
 
     update_cnt_ += len;
 
@@ -58,20 +60,20 @@ class DelayCompensator {
     return aligned_frame(len);
   }
 
-  int get_current_offset() const noexcept { return offset_; }
+  int32_t get_current_offset() const noexcept { return offset_; }
 
  private:
   void update_sync() {
     // TODO(vayulis): another overlap?
-    if (update_cnt_ < win_len / 2) {
+    if (update_cnt_ < win_len_ / 2) {
       return;
     }
 
     update_cnt_ = 0;
 
     // simulate `noise floor` (more stability on silence)
-    const auto mic_n = mic_buf_ + dsplib::randn(mic_buf_.size()) * dither_lvl;
-    const auto spk_n = spk_buf_ + dsplib::randn(spk_buf_.size()) * dither_lvl;
+    const auto mic_n = mic_buf_ + dsplib::randn(mic_buf_.size()) * dither_lvl_;
+    const auto spk_n = spk_buf_ + dsplib::randn(spk_buf_.size()) * dither_lvl_;
     auto [tau, corr] = dsplib::gccphat(mic_n, spk_n);
 
     // delay must be positive
@@ -81,7 +83,7 @@ class DelayCompensator {
 
     // update the estimate only if there is a strong correlation
     auto peak = dsplib::abs(dsplib::max(corr));
-    if (peak < threshold) {
+    if (peak < threshold_) {
       return;
     }
 
@@ -95,30 +97,30 @@ class DelayCompensator {
     auto est_offset = offset_flt_->process(dsplib::arr_real{tau})[0];
 
     // don't change anything if the delay delta hasn't changed much.
-    if (std::abs(est_offset - offset_) > quantize) {
+    if (std::abs(est_offset - offset_) > quantize_) {
       offset_ = std::round(est_offset);
     }
   }
 
-  dsplib::arr_real aligned_frame(int frame_len) {
+  dsplib::arr_real aligned_frame(int32_t frame_len) {
     assert(offset_ >= 0);
     // WARN: it is extremely important to have a tolerance for alignment error
     // if the `spk` signal is ahead of the `mic`, the AEC will not work properly
-    int offset = offset_ - (quantize / 2);
+    int32_t offset = offset_ - (quantize_ / 2);
     offset = (offset < 0) ? (0) : (offset);  // защита на случай нулевой задержки
-    const int t1 = win_len - frame_len - offset;
+    const int32_t t1 = win_len_ - frame_len - offset;
     return dsplib::arr_real(spk_buf_.data() + t1, frame_len);
   }
 
-  const int win_len;
+  const int32_t win_len_;
   dsplib::arr_real mic_buf_;
   dsplib::arr_real spk_buf_;
-  int update_cnt_{0};                               ///< samples counter to update estimate
-  int offset_{0};                                   ///< current time offset
-  const int quantize{1};                           ///< error tolerance for synchronization
-  const dsplib::real_t threshold{0.1};             ///< gccphat threshold to update offset estimate
+  int32_t update_cnt_{0};                               ///< samples counter to update estimate
+  int32_t offset_{0};                                   ///< current time offset
+  const int32_t quantize_{1};                           ///< error tolerance for synchronization
+  const dsplib::real_t threshold_{0.1};             ///< gccphat threshold to update offset estimate
   std::optional<dsplib::MedianFilter> offset_flt_;  ///< median filter to smooth out the jitter of the estimate
-  const dsplib::real_t dither_lvl{0};
+  const dsplib::real_t dither_lvl_{0};
 };
 
 }  // namespace util::echo

@@ -58,7 +58,7 @@ class FeatureExtractor {
   std::mutex fft_mutex_;
   FftCalculator<T> fft_calculator_;
   std::mutex ifft_mutex_;
-  iFftCalculator<T> ifft_calculator_;
+  IFftCalculator<T> ifft_calculator_;
   T cirm_k_{static_cast<T>(10.0)};
   T cirm_limit_{static_cast<T>(9.9)};
 };

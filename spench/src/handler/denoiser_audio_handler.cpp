@@ -14,7 +14,7 @@ DenoiserAudioHandler::DenoiserAudioHandler(std::shared_ptr<DenoiserConfig> confi
                                           const std::string& checksum):
                                           NeuralNetworkAudioHandler(std::move(config), password, checksum),
                                           adviser_(nullptr) {
-  float frame_shift_ms = dynamic_cast<spench::DenoiserConfig*>(config_.get())->frameStrideMs();
+  float frame_shift_ms = dynamic_cast<spench::DenoiserConfig*>(config_.get())->frame_stride_ms();
   static constexpr float window_duration_ms = 1000 * 5;
   adviser_ = std::make_unique<DenoiserModelAdviser<float>>(window_duration_ms, frame_shift_ms);
 }
@@ -33,10 +33,10 @@ SpenchContext<float>* DenoiserAudioHandler::create_context(uint32_t input_sample
   }
 
   if (input_sample_rate == 0) {
-    input_sample_rate = dynamic_cast<spench::DenoiserConfig*>(config_.get())->samplingFreq();
+    input_sample_rate = dynamic_cast<spench::DenoiserConfig*>(config_.get())->sampling_freq();
   }
   if (output_sample_rate == 0) {
-    output_sample_rate = dynamic_cast<spench::DenoiserConfig*>(config_.get())->samplingFreq();
+    output_sample_rate = dynamic_cast<spench::DenoiserConfig*>(config_.get())->sampling_freq();
   }
 
   SpenchRetCode ret_code = init_audio_streams(ctx, input_sample_rate, output_sample_rate);
@@ -61,16 +61,16 @@ SpenchRetCode DenoiserAudioHandler::init_audio_streams(SpenchContext<float>* ctx
       if (!ctx->input_sound_stream_ptr) {
         ctx->input_sound_stream_ptr =
                   util::sound::build_sound_stream(input_sample_rate,
-                              dynamic_cast<spench::DenoiserConfig*>(config_.get())->samplingFreq(),
-                              dynamic_cast<spench::DenoiserConfig*>(config_.get())->frameStrideMs(),
+                              dynamic_cast<spench::DenoiserConfig*>(config_.get())->sampling_freq(),
+                              dynamic_cast<spench::DenoiserConfig*>(config_.get())->frame_stride_ms(),
                                                        util::sound::TemplateType::input);
       }
       if (!ctx->output_sound_stream_ptr) {
         ctx->output_sound_stream_ptr =
           util::sound::build_sound_stream(
-                                dynamic_cast<spench::DenoiserConfig*>(config_.get())->samplingFreq(),
+                                dynamic_cast<spench::DenoiserConfig*>(config_.get())->sampling_freq(),
                                 output_sample_rate,
-                                dynamic_cast<spench::DenoiserConfig*>(config_.get())->frameStrideMs(),
+                                dynamic_cast<spench::DenoiserConfig*>(config_.get())->frame_stride_ms(),
                                 util::sound::TemplateType::output);
       }
     } catch(const std::exception& e) {
@@ -189,7 +189,7 @@ SpenchRetCode DenoiserAudioHandler::process_frame(struct spench::SpenchContext<f
 
   if (ret_code == SpenchRetCode::SUCCESS) {
     const auto minimal_chunk_size = get_input_frame_size();
-    const auto hop = feature_extractor_runner_ptr_->GetFrameHopSizeSamples();
+    const auto hop = feature_extractor_runner_ptr_->get_frame_hop_size_samples();
 
     if (resampled_input_result.size() < minimal_chunk_size) {
       spdlog::error("Frame too short: got {}, need at least {}",
@@ -216,7 +216,7 @@ SpenchRetCode DenoiserAudioHandler::process_frame(struct spench::SpenchContext<f
           resampled_input_result.end() - minimal_chunk_size,
           resampled_input_result.end());
 
-      tools::PrepareFirstInputFrame(resampled_input_result,
+      tools::prepare_first_input_frame(resampled_input_result,
                                     task_ptr->data.waveform,
                                     minimal_chunk_size);
     } else {
@@ -286,14 +286,14 @@ SpenchRetCode DenoiserAudioHandler::finalize_inference(struct spench::SpenchCont
     // we left last number_of_zero_contexts chunks in last_input_resampled_data as it got from zeroed vector
     for (uint32_t i = 0; last_input_resampled_data.size() >
                         (i + number_of_zero_contexts) *
-                                          feature_extractor_runner_ptr_->GetFrameHopSizeSamples(); ++i) {
+                                          feature_extractor_runner_ptr_->get_frame_hop_size_samples(); ++i) {
       std::unique_ptr<spench::SpenchTask> task_ptr(new spench::SpenchTask());
       task_ptr->data.context = ctx;
       std::vector<float>
                   input_audio_frame(last_input_resampled_data.begin() +
-                                    feature_extractor_runner_ptr_->GetFrameHopSizeSamples() * i,
+                                    feature_extractor_runner_ptr_->get_frame_hop_size_samples() * i,
                                     last_input_resampled_data.begin() +
-                                    feature_extractor_runner_ptr_->GetFrameHopSizeSamples() * (i + 1));
+                                    feature_extractor_runner_ptr_->get_frame_hop_size_samples() * (i + 1));
 
       fill_in_data_for_processing(task_ptr, input_audio_frame);
       task_ptr->stage = PipelineStage::orig_chunk;

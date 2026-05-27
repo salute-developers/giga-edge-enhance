@@ -149,7 +149,7 @@ TEST_CASE("SUCCEED Create frame [denoiser handler]") {
                                           251.0, 250.0, 249.0, 250.0,
                                           251.0, 252.0, 253.0, 254.0, 255.0};
   std::vector<float> reversed_chunk;
-  spench::tools::PrepareFirstInputFrame(input_chunk, reversed_chunk, input_chunk.size());
+  spench::tools::prepare_first_input_frame(input_chunk, reversed_chunk, input_chunk.size());
   IsVectorsClose(reversed_chunk, gt_reversed_chunk, 1.0);
 }
 
@@ -591,7 +591,7 @@ model:
   scheduler_test_env.handler->destroy_context(&ctx);
 }
 
-TEST_CASE("SUCCEED Run calcSnrEstimation with one chunk [denoiser handler]") {
+TEST_CASE("SUCCEED Run calc_snr_estimation with one chunk [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
@@ -626,7 +626,7 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with one chunk [denoiser handler]") {
 
   scheduler_test_env.LoadDataFromBin("calc_snr_result.dump", gt_test_snr_result);
   float test_snr_result =
-      scheduler_test_env.GetAdviser()->calcSnrEstimation(test_noisy_mag,
+      scheduler_test_env.GetAdviser()->calc_snr_estimation(test_noisy_mag,
                                                         test_enhanced_mag,
                                                         metrics);
 
@@ -635,7 +635,7 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with one chunk [denoiser handler]") {
                  0.001);
 }
 
-TEST_CASE("SUCCEED Run calcSnrEstimation with dumped recording [denoiser handler]") {
+TEST_CASE("SUCCEED Run calc_snr_estimation with dumped recording [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
@@ -672,7 +672,7 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with dumped recording [denoiser handler
     spench::ComplexNumber<float> test_enhanced_mag(test_enhanced_real[0], 1,
                                                    test_enhanced_imag[0], 1);
     test_snr_result.emplace_back(
-        scheduler_test_env.GetAdviser()->calcSnrEstimation(test_noisy_mag,
+        scheduler_test_env.GetAdviser()->calc_snr_estimation(test_noisy_mag,
                                                           test_enhanced_mag,
                                                           metrics));
   }
@@ -680,7 +680,7 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with dumped recording [denoiser handler
   IsVectorsClose(test_snr_result, test_snr_result, 0.000001);
 }
 
-TEST_CASE("SUCCEED Run calcSnrEstimation with zero recording [denoiser handler]") {
+TEST_CASE("SUCCEED Run calc_snr_estimation with zero recording [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
@@ -706,7 +706,7 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with zero recording [denoiser handler]"
     spench::ComplexNumber<float> test_enhanced_mag(test_enhanced_real[0], 1,
                                                    test_enhanced_imag[0], 1);
     test_snr_result.emplace_back(
-        scheduler_test_env.GetAdviser()->calcSnrEstimation(test_noisy_mag,
+        scheduler_test_env.GetAdviser()->calc_snr_estimation(test_noisy_mag,
                                                           test_enhanced_mag,
                                                           metrics));
   }
@@ -714,7 +714,7 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with zero recording [denoiser handler]"
   IsVectorsClose(test_snr_result, test_snr_result, 0.000001);
 }
 
-TEST_CASE("SUCCEED Run calcSnrEstimation with empty recording [denoiser handler]") {
+TEST_CASE("SUCCEED Run calc_snr_estimation with empty recording [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
@@ -740,7 +740,7 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with empty recording [denoiser handler]
     spench::ComplexNumber<float> test_enhanced_mag(test_enhanced_real[0], 1,
                                                    test_enhanced_imag[0], 1);
     test_snr_result.emplace_back(
-        scheduler_test_env.GetAdviser()->calcSnrEstimation(test_noisy_mag,
+        scheduler_test_env.GetAdviser()->calc_snr_estimation(test_noisy_mag,
                                                           test_enhanced_mag,
                                                           metrics));
   }
@@ -748,7 +748,7 @@ TEST_CASE("SUCCEED Run calcSnrEstimation with empty recording [denoiser handler]
   IsVectorsClose(test_snr_result, test_snr_result, 0.000001);
 }
 
-TEST_CASE("FAIL calcSnrEstimation with overflow values [denoiser handler]") {
+TEST_CASE("FAIL calc_snr_estimation with overflow values [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
@@ -769,12 +769,12 @@ TEST_CASE("FAIL calcSnrEstimation with overflow values [denoiser handler]") {
 
   spench::ComplexNumber<float> spec(test_real, test_imag);
   float snr =
-      scheduler_test_env.GetAdviser()->calcSnrEstimation(spec, spec, metrics);
+      scheduler_test_env.GetAdviser()->calc_snr_estimation(spec, spec, metrics);
 
   CHECK(std::isfinite(snr));
 }
 
-TEST_CASE("FAIL calcSnrEstimation with NaN in input [denoiser handler]") {
+TEST_CASE("FAIL calc_snr_estimation with NaN in input [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
@@ -795,12 +795,12 @@ TEST_CASE("FAIL calcSnrEstimation with NaN in input [denoiser handler]") {
 
   spench::ComplexNumber<float> spec(test_real, test_imag);
   float snr =
-      scheduler_test_env.GetAdviser()->calcSnrEstimation(spec, spec, metrics);
+      scheduler_test_env.GetAdviser()->calc_snr_estimation(spec, spec, metrics);
 
   CHECK(std::isfinite(snr));
 }
 
-TEST_CASE("FAIL calcSnrEstimation with mismatched input sizes [denoiser handler]") {
+TEST_CASE("FAIL calc_snr_estimation with mismatched input sizes [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
@@ -820,12 +820,12 @@ TEST_CASE("FAIL calcSnrEstimation with mismatched input sizes [denoiser handler]
 
   spench::ComplexNumber<float> spec(real, imag);
   float snr =
-      scheduler_test_env.GetAdviser()->calcSnrEstimation(spec, spec, metrics);
+      scheduler_test_env.GetAdviser()->calc_snr_estimation(spec, spec, metrics);
 
   CHECK(std::isfinite(snr));
 }
 
-TEST_CASE("FAIL calcSnrEstimation with mostly zeros [denoiser handler]") {
+TEST_CASE("FAIL calc_snr_estimation with mostly zeros [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
@@ -846,14 +846,14 @@ TEST_CASE("FAIL calcSnrEstimation with mostly zeros [denoiser handler]") {
 
   spench::ComplexNumber<float> input_spec(real, imag);
   spench::ComplexNumber<float> enhanced_spec(real, imag);
-  float snr = scheduler_test_env.GetAdviser()->calcSnrEstimation(input_spec,
+  float snr = scheduler_test_env.GetAdviser()->calc_snr_estimation(input_spec,
                                                                 enhanced_spec,
                                                                 metrics);
 
   CHECK(std::isfinite(snr));
 }
 
-TEST_CASE("FAIL calcSnrEstimation with empty complex numbers [denoiser handler]") {
+TEST_CASE("FAIL calc_snr_estimation with empty complex numbers [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
@@ -873,12 +873,12 @@ TEST_CASE("FAIL calcSnrEstimation with empty complex numbers [denoiser handler]"
 
   spench::ComplexNumber<float> spec(empty_real, empty_imag);
   float snr =
-      scheduler_test_env.GetAdviser()->calcSnrEstimation(spec, spec, metrics);
+      scheduler_test_env.GetAdviser()->calc_snr_estimation(spec, spec, metrics);
 
   CHECK(std::isfinite(snr));
 }
 
-TEST_CASE("FAIL calcSnrEstimation with mismatched real/imag sizes [denoiser handler]") {
+TEST_CASE("FAIL calc_snr_estimation with mismatched real/imag sizes [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
@@ -903,14 +903,14 @@ TEST_CASE("FAIL calcSnrEstimation with mismatched real/imag sizes [denoiser hand
   spench::ComplexNumber<float> enhanced_spec(enhanced_real, enhanced_imag);
 
   float snr =
-      scheduler_test_env.GetAdviser()->calcSnrEstimation(input_spec,
+      scheduler_test_env.GetAdviser()->calc_snr_estimation(input_spec,
                                                         enhanced_spec,
                                                         metrics);
 
   CHECK(snr == 0.0f);
 }
 
-TEST_CASE("SUCCEED calcSnrEstimation with exit from practical range [denoiser handler]") {
+TEST_CASE("SUCCEED calc_snr_estimation with exit from practical range [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
@@ -935,14 +935,14 @@ TEST_CASE("SUCCEED calcSnrEstimation with exit from practical range [denoiser ha
   spench::ComplexNumber<float> enhanced_spec(enhanced_real, enhanced_imag);
 
   float snr =
-      scheduler_test_env.GetAdviser()->calcSnrEstimation(input_spec,
+      scheduler_test_env.GetAdviser()->calc_snr_estimation(input_spec,
                                                         enhanced_spec,
                                                         metrics);
 
   CHECK(snr == 100.0f);
 }
 
-TEST_CASE("FAIL averageSnrDb with no input values [denoiser handler]") {
+TEST_CASE("FAIL average_snr_db with no input values [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<spench::DenoiserAudioHandler,
@@ -955,7 +955,7 @@ TEST_CASE("FAIL averageSnrDb with no input values [denoiser handler]") {
           "default_configuration_fast_onnx_24khz.yaml"));
 #endif
 
-  float avg = scheduler_test_env.GetAdviser()->averageSnrDb();
+  float avg = scheduler_test_env.GetAdviser()->average_snr_db();
 
   CHECK(std::isnan(avg));
 }

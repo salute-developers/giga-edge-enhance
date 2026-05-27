@@ -7,8 +7,8 @@
 #include "spench/src/feature_params.h"
 
 namespace pocketfft {
-using shape_t  = std::vector<std::size_t>;
-using stride_t = std::vector<std::ptrdiff_t>;
+using ShapeT  = std::vector<std::size_t>;
+using StrideT = std::vector<std::ptrdiff_t>;
 }  // namespace pocketfft
 
 namespace spench {
@@ -22,12 +22,12 @@ class FftCalculator {
   void calculate_stft(const size_t& n_samples, const T* begin, ComplexNumber<T>& dft);
 
  private:
-  const uint32_t nfft_;
-  const uint32_t feature_size_;
-  const uint32_t frames_num_for_stft_;
+  const uint32_t nfft;
+  const uint32_t feature_size;
+  const uint32_t frames_num_for_stft;
 
-  std::vector<std::complex<fft::buffer_type>> out_fft_buf_;
-  std::vector<fft::buffer_type> in_fft_buf_;
+  std::vector<std::complex<fft::BufferType>> out_fft_buf_;
+  std::vector<fft::BufferType> in_fft_buf_;
 
   void calculate_fft(const size_t& n_samples, const T* begin, ComplexNumber<T>& dft);
   void prepare_input_buffer(size_t n_samples, const T* begin);

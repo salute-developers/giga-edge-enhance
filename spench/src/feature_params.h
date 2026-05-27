@@ -9,12 +9,12 @@ namespace spench {
 class NetworkConfig;
 namespace fe {
 namespace fft {
-using buffer_type = float;
+using BufferType = float;
 }  // namespace fft
 
 enum class WindowType {
-  HAMMING = 0,
-  HANNING = 1,
+  hamming = 0,
+  hanning = 1,
 };
 
 class FeatureParams {
@@ -34,7 +34,7 @@ class FeatureParams {
   uint32_t frames_num_for_istft = 2;
 
   // analysis window function handle for framing (hamming by default)
-  WindowType window_type = WindowType::HANNING;
+  WindowType window_type = WindowType::hanning;
 
   FeatureParams() = default;
   explicit FeatureParams(std::shared_ptr<spench::NetworkConfig> config) {
@@ -56,12 +56,12 @@ class FeatureParams {
     return (nsamples > 0) ? static_cast<uint64_t>(nsamples) : static_cast<int64_t>(0);
   }
 
-  inline uint64_t FilterFreqResponseLen() const {
+  inline uint64_t filter_freq_response_len() const {
     return (nfft() >> 1) + 1;
   }
 
   inline uint64_t pow_spec_feat_sz() const {
-    return FilterFreqResponseLen();
+    return filter_freq_response_len();
   }
 
   inline uint64_t num_frames(uint64_t in_size) const {
@@ -75,7 +75,7 @@ class FeatureParams {
   }
 
  private:
-  WindowType StringToWindowTypeEnum(const std::string& window);
+  WindowType string_to_window_type_enum(const std::string& window);
 };
 }  // namespace fe
 }  // namespace spench

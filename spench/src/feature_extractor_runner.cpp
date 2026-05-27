@@ -12,11 +12,11 @@
 
 namespace spench {
 
-uint64_t FeatureExtractorRunner::GetFrameSizeMs() const {
+uint64_t FeatureExtractorRunner::get_frame_size_ms() const {
   return params_.frame_size_ms;
 }
 
-uint64_t FeatureExtractorRunner::GetSamplingFreq() const {
+uint64_t FeatureExtractorRunner::get_sampling_freq() const {
   return params_.sampling_freq;
 }
 
@@ -24,11 +24,11 @@ uint64_t FeatureExtractorRunner::get_frame_size_samples() const {
   return params_.num_frame_size_samples();
 }
 
-uint64_t FeatureExtractorRunner::GetFrameHopSizeSamples() const {
+uint64_t FeatureExtractorRunner::get_frame_hop_size_samples() const {
   return params_.num_frame_stride_samples();
 }
 
-uint64_t FeatureExtractorRunner::GetPowSpecFeatSizeSamples() const {
+uint64_t FeatureExtractorRunner::get_pow_spec_feat_size_samples() const {
   return params_.pow_spec_feat_sz();
 }
 
@@ -37,7 +37,7 @@ void FeatureExtractorRunner::read_config(std::shared_ptr<spench::NetworkConfig> 
 }
 
 spench::ComplexNumber<float>
-FeatureExtractorRunner::MergeInputSpectrogram(const std::vector<spench::ComplexNumber<float>>& frames) {
+FeatureExtractorRunner::merge_input_spectrogram(const std::vector<spench::ComplexNumber<float>>& frames) {
   return spench::ComplexNumber<float>::concat_parts(frames);
 }
 
@@ -47,7 +47,7 @@ void FeatureExtractorRunner::calc_enhanced_spectrogram(const spench::ComplexNumb
   feature_extractor_ptr_->calc_enhanced_parts_in_place(merged_spec, out_new_spec);
 }
 
-uint32_t FeatureExtractorRunner::ValidateAndGetFeatNum(uint32_t input_chunk_num,
+uint32_t FeatureExtractorRunner::validate_and_get_feat_num(uint32_t input_chunk_num,
                                                        const spench::ComplexNumber<float>& new_spec) {
   if (input_chunk_num == 0) {
     throw std::runtime_error("ValidateAndGetFeatNum: input_chunk_num == 0");
@@ -69,12 +69,12 @@ uint32_t FeatureExtractorRunner::ValidateAndGetFeatNum(uint32_t input_chunk_num,
   return real_size / input_chunk_num;
 }
 
-bool FeatureExtractorRunner::HasPrevSpectrogram(const spench::SpenchContext<float>& ctx) {
+bool FeatureExtractorRunner::has_prev_spectrogram(const spench::SpenchContext<float>& ctx) {
   return ctx.prev_spectrogram.real.size() != 0;
 }
 
 spench::ComplexNumber<float>
-FeatureExtractorRunner::BuildConcatWithPrev(const spench::ComplexNumber<float>& prev_spec,
+FeatureExtractorRunner::build_concat_with_prev(const spench::ComplexNumber<float>& prev_spec,
                                             const spench::ComplexNumber<float>& new_spec,
                                             uint32_t input_chunk_num,
                                             uint32_t feat_num) {
@@ -89,7 +89,7 @@ FeatureExtractorRunner::BuildConcatWithPrev(const spench::ComplexNumber<float>& 
   return spench::ComplexNumber<float>::concat_with_head(prev_spec, new_spec);
 }
 
-void FeatureExtractorRunner::UpdatePrevFromNewSpec(spench::SpenchContext<float>& ctx,
+void FeatureExtractorRunner::update_prev_from_new_spec(spench::SpenchContext<float>& ctx,
                                                    const spench::ComplexNumber<float>& new_spec,
                                                    uint32_t input_chunk_num,
                                                    uint32_t feat_num) {
@@ -111,17 +111,17 @@ void FeatureExtractorRunner::handle_predicted_mask(spench::SpenchTask* task) {
   auto& ctx = *d.context;
 
   // 1) Merge input frames into a single spectrogram.
-  const auto merged_spec = MergeInputSpectrogram(d.input_spectrogram);
+  const auto merged_spec = merge_input_spectrogram(d.input_spectrogram);
 
   // 2) Apply enhancement/mask to build new_spectrogram.
   calc_enhanced_spectrogram(merged_spec, d.new_spectrogram);
 
   // 3) Validate and compute feat_num.
   const uint32_t input_chunk_num = static_cast<uint32_t>(d.input_spectrogram.size());
-  const uint32_t feat_num = ValidateAndGetFeatNum(input_chunk_num, d.new_spectrogram);
+  const uint32_t feat_num = validate_and_get_feat_num(input_chunk_num, d.new_spectrogram);
 
   // ---- Case 1: no previous spectrogram yet ----
-  if (!HasPrevSpectrogram(ctx)) {
+  if (!has_prev_spectrogram(ctx)) {
     if (input_chunk_num == 1) {
       // First ever chunk: store it as prev, nothing to output yet.
       if (ctx.prev_spectrogram.real.size() != feat_num ||
@@ -138,20 +138,20 @@ void FeatureExtractorRunner::handle_predicted_mask(spench::SpenchTask* task) {
     // new_spectrogram already contains N sequential frames, so we can iSTFT it directly.
     feature_extractor_ptr_->istft_apply(d.new_spectrogram, d.enhanced_wav);
 
-    UpdatePrevFromNewSpec(ctx, d.new_spectrogram, input_chunk_num, feat_num);
+    update_prev_from_new_spec(ctx, d.new_spectrogram, input_chunk_num, feat_num);
     task->stage = PipelineStage::enhanced_chunk;
     return;
   }
 
   // ---- Case 2: we have previous spectrogram ----
-  const auto concat = BuildConcatWithPrev(ctx.prev_spectrogram,
+  const auto concat = build_concat_with_prev(ctx.prev_spectrogram,
                                          d.new_spectrogram,
                                          input_chunk_num,
                                          feat_num);
 
   feature_extractor_ptr_->istft_apply(concat, d.enhanced_wav);
 
-  UpdatePrevFromNewSpec(ctx, d.new_spectrogram, input_chunk_num, feat_num);
+  update_prev_from_new_spec(ctx, d.new_spectrogram, input_chunk_num, feat_num);
   task->stage = PipelineStage::enhanced_chunk;
 }
 
@@ -188,17 +188,17 @@ void FeatureExtractorRunner::run(spench::SpenchTask* spench_task) {
       return;
     }
 
-    ComplexNumber<float> concatenatedSpec(feat_num * 2, feat_num * 2);
+    ComplexNumber<float> concatenated_spec(feat_num * 2, feat_num * 2);
 
     auto previous_frame = std::slice(0, feat_num, 1);
-    concatenatedSpec.real[previous_frame] = spench_context->prev_spectrogram.real;
-    concatenatedSpec.imag[previous_frame] = spench_context->prev_spectrogram.imag;
+    concatenated_spec.real[previous_frame] = spench_context->prev_spectrogram.real;
+    concatenated_spec.imag[previous_frame] = spench_context->prev_spectrogram.imag;
 
     auto current_frame = std::slice(feat_num, feat_num, 1);
-    concatenatedSpec.real[current_frame] = spench_data.new_spectrogram.real;
-    concatenatedSpec.imag[current_frame] = spench_data.new_spectrogram.imag;
+    concatenated_spec.real[current_frame] = spench_data.new_spectrogram.real;
+    concatenated_spec.imag[current_frame] = spench_data.new_spectrogram.imag;
 
-    feature_extractor_ptr_->istft_apply(concatenatedSpec,
+    feature_extractor_ptr_->istft_apply(concatenated_spec,
                                 spench_data.enhanced_wav);
     spench_context->prev_spectrogram = spench_data.new_spectrogram;
     spench_task->stage = PipelineStage::enhanced_chunk;

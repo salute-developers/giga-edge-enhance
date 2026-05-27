@@ -18,7 +18,7 @@
 namespace spench {
 
 // Helper: map uint to spdlog level_enum
-static spdlog::level::level_enum MapLevel(uint32_t lvl) {
+static spdlog::level::level_enum map_level(uint32_t lvl) {
   switch (lvl) {
     case 0: return spdlog::level::trace;
     case 1: return spdlog::level::debug;
@@ -29,9 +29,9 @@ static spdlog::level::level_enum MapLevel(uint32_t lvl) {
   }
 }
 
-void InitLogger(uint32_t level,
-                const std::string& name,
-                const std::string& logfile) {
+void init_logger(uint32_t level,
+                 const std::string& name,
+                 const std::string& logfile) {
   std::vector<spdlog::sink_ptr> sinks;
 
   // Colored console output (all platforms)
@@ -60,35 +60,35 @@ void InitLogger(uint32_t level,
   }
 
   // Create logger and configure
-  gLogger = std::make_shared<spdlog::logger>(name, sinks.begin(), sinks.end());
+  g_logger = std::make_shared<spdlog::logger>(name, sinks.begin(), sinks.end());
 
   // Pattern: logger name, level, source file:line, message
-  gLogger->set_pattern("%n [%l] [%s:%#] %v");
+  g_logger->set_pattern("%n [%l] [%s:%#] %v");
 
-  spdlog::set_default_logger(gLogger);
+  spdlog::set_default_logger(g_logger);
 
   // Set initial level
-  spdlog::level::level_enum lvl = MapLevel(level);
+  spdlog::level::level_enum lvl = map_level(level);
   spdlog::set_level(lvl);
   spdlog::flush_every(std::chrono::seconds(3));
 }
 
-void ShutdownLogger() {
+void shutdown_logger() {
   spdlog::shutdown();
-  gLogger.reset();
+  g_logger.reset();
 }
 
 void set_log_level(unsigned int level) {
-  auto lvl = MapLevel(level);
+  auto lvl = map_level(level);
   spdlog::set_level(lvl);
   spdlog::flush_on(lvl);
 }
 
 #ifndef __EMSCRIPTEN__
 struct LoggerInitializer {
-  LoggerInitializer() { InitLogger(); }
+  LoggerInitializer() { init_logger(); }
 };
-static LoggerInitializer s_loggerInitializer;
+static LoggerInitializer s_logger_initializer;
 #endif
 
 }  // namespace spench

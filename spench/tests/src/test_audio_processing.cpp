@@ -69,7 +69,7 @@ TEST_CASE("SUCCEED Create and run audio processing with AGC default parameters [
   auto audio_proc_test_env = std::move(TestAudioProcessing().
                                        InitAudioProcessing().
                                        SetWav("test1_48_noised.wav"));
-  audio_proc_test_env.getAudioProc().addAGC();
+  audio_proc_test_env.getAudioProc().add_agc();
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t audio_src_sample_rate = 48000;
@@ -106,7 +106,7 @@ TEST_CASE("SUCCEED Create and run audio processing with RC default parameters [a
   auto audio_proc_test_env = std::move(TestAudioProcessing().
                                        InitAudioProcessing().
                                        SetWav("test1_48_noised.wav"));
-  audio_proc_test_env.getAudioProc().addRC();
+  audio_proc_test_env.getAudioProc().add_rc();
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t audio_src_sample_rate = 48000;
@@ -147,7 +147,7 @@ TEST_CASE("SUCCEED Create and run audio processing with RC and NG [audio process
   auto audio_proc_test_env = std::move(TestAudioProcessing().
                                        InitAudioProcessing().
                                        SetWav("test1_48_noised.wav"));
-  audio_proc_test_env.getAudioProc().addRC().addNoiseGate({48000, -20, 0.05, 0.02, 0.05});
+  audio_proc_test_env.getAudioProc().add_rc().add_noise_gate({48000, -20, 0.05, 0.02, 0.05});
 
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
@@ -243,7 +243,7 @@ TEST_CASE("SUCCEED Create and run audio processing with AGC specific parameters 
                                audio_proc_test_env.wav_data.begin() + source_data_size);
   chunks.resize(chunks_to_compare);
 
-  audio_proc_test_env.getAudioProc().addAGC({0.9, 20.0, 48000 / 4, 0.01, 0.01});
+  audio_proc_test_env.getAudioProc().add_agc({0.9, 20.0, 48000 / 4, 0.01, 0.01});
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
@@ -282,7 +282,7 @@ TEST_CASE("SUCCEED Create and run audio processing with RC specific parameters [
   std::vector<float> greater_than_0_8;
   chunks.resize(chunks_to_compare);
 
-  audio_proc_test_env.getAudioProc().addRC({48000, -4, 10, 0.05, 300, 5});
+  audio_proc_test_env.getAudioProc().add_rc({48000, -4, 10, 0.05, 300, 5});
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
@@ -311,7 +311,7 @@ TEST_CASE("SUCCEED Run audio processing with reading AGC parameters from config 
             std::move(TestAudioProcessing().
             InitAudioProcessing((std::filesystem::path("default_configuration_fast_tflite_agc_enabled_24khz.yaml"))).
             SetWav("test1_48_noised.wav"));
-  audio_proc_test_env.getAudioProc().addAGC();
+  audio_proc_test_env.getAudioProc().add_agc();
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t audio_src_sample_rate = 48000;
@@ -349,7 +349,7 @@ TEST_CASE("SUCCEED Run audio processing with reading RC parameters from config [
           std::move(TestAudioProcessing().
           InitAudioProcessing(std::filesystem::path("default_configuration_fast_tflite_rc_enabled_24khz.yaml")).
           SetWav("test1_48_noised.wav"));
-  audio_proc_test_env.getAudioProc().addRC();
+  audio_proc_test_env.getAudioProc().add_rc();
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t audio_src_sample_rate = 48000;
@@ -390,7 +390,7 @@ TEST_CASE("SUCCEED Run audio processing with reading LC parameters from config [
   auto audio_proc_test_env =
           std::move(TestAudioProcessing().
               InitAudioProcessing(std::filesystem::path("default_configuration_fast_tflite_rc_enabled_24khz.yaml")));
-  audio_proc_test_env.getAudioProc().addLC();
+  audio_proc_test_env.getAudioProc().add_lc();
   constexpr int32_t fs = 48000;
   constexpr int32_t chunk_ms = 16;
   constexpr int32_t frame_len = fs * chunk_ms / 1000;
@@ -434,7 +434,7 @@ TEST_CASE("SUCCEED Run audio processing with reading RC and NG parameters from c
         std::move(TestAudioProcessing().
             InitAudioProcessing(std::filesystem::path("default_configuration_fast_tflite_dsp_enabled_24khz.yaml")).
             SetWav("test1_48_noised.wav"));
-  audio_proc_test_env.getAudioProc().addRC().addNoiseGate();
+  audio_proc_test_env.getAudioProc().add_rc().add_noise_gate();
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t audio_src_sample_rate = 48000;
@@ -493,7 +493,7 @@ sound_processing:
   auto audio_proc_test_env = std::move(TestAudioProcessing().
                                        InitAudioProcessing(std::string(change)).
                                        SetWav("test1_48_noised.wav"));
-  audio_proc_test_env.getAudioProc().addNoiseGate();
+  audio_proc_test_env.getAudioProc().add_noise_gate();
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t audio_src_sample_rate = 48000;
@@ -538,7 +538,7 @@ TEST_CASE("SUCCEED Run audio processing with reading NG parameters from config [
     std::move(TestAudioProcessing().
               InitAudioProcessing(std::filesystem::path("default_configuration_fast_tflite_agc_enabled_24khz.yaml")).
               SetWav("test1_48_noised.wav"));
-  audio_proc_test_env.getAudioProc().addNoiseGate();
+  audio_proc_test_env.getAudioProc().add_noise_gate();
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t audio_src_sample_rate = 48000;
@@ -598,7 +598,7 @@ TEST_CASE("SUCCEED Create and run audio processing with NG specific parameters [
   chunks.resize(chunks_to_compare);
 
   // set high threshold and noise gate will not suppress noise
-  audio_proc_test_env.getAudioProc().addNoiseGate({48000, -40, 0.05, 0.02, 0.05});
+  audio_proc_test_env.getAudioProc().add_noise_gate({48000, -40, 0.05, 0.02, 0.05});
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
@@ -629,7 +629,7 @@ TEST_CASE("SUCCEED Create and run audio processing with DRC default parameters [
   auto audio_proc_test_env = std::move(TestAudioProcessing().
                                        InitAudioProcessing().
                                        SetWav("test1_48_noised.wav"));
-  audio_proc_test_env.getAudioProc().addDRCompressor();
+  audio_proc_test_env.getAudioProc().add_dr_compressor();
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t audio_src_sample_rate = 48000;
@@ -671,7 +671,7 @@ TEST_CASE("SUCCEED Run audio processing with reading DRC parameters from config 
           std::move(TestAudioProcessing().
                 InitAudioProcessing(std::filesystem::path("default_configuration_fast_tflite_agc_enabled_24khz.yaml")).
                 SetWav("test1_48_noised.wav"));
-  audio_proc_test_env.getAudioProc().addDRCompressor();
+  audio_proc_test_env.getAudioProc().add_dr_compressor();
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t audio_src_sample_rate = 48000;
@@ -728,7 +728,7 @@ TEST_CASE("SUCCEED Create and run audio processing with DRC specific parameters 
   chunks.resize(chunks_to_compare);
 
   // set low threshold = 0
-  audio_proc_test_env.getAudioProc().addDRCompressor({48000, 0, 5, 0.0, 0.01, 0.2});
+  audio_proc_test_env.getAudioProc().add_dr_compressor({48000, 0, 5, 0.0, 0.01, 0.2});
 
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     auto& chunk = chunks[i];
@@ -806,7 +806,7 @@ TEST_CASE("SUCCEED Create and process speex echo canceler [echo canceling]") {
 
 TEST_CASE("SUCCEED Create and run audio processing with Limiter default parameters [audio processing handler]") {
   auto env = std::move(TestAudioProcessing().InitAudioProcessing().SetWav("test1_48_noised.wav"));
-  env.getAudioProc().addLimiter();
+  env.getAudioProc().add_limiter();
 
   const uint32_t fs = 48000;
   const uint32_t chunk_ms = 16;
@@ -837,7 +837,7 @@ TEST_CASE("SUCCEED Create and run audio processing with Limiter default paramete
 TEST_CASE("SUCCEED Create and run audio processing with Limiter specific parameters [audio processing handler]") {
   auto env = std::move(TestAudioProcessing().InitAudioProcessing().SetWav("test1_48_noised.wav"));
   // Tight knee and low threshold to enforce limiting.
-  env.getAudioProc().addLimiter({48000, -6.0, 0.0, 0.0, 0.05});
+  env.getAudioProc().add_limiter({48000, -6.0, 0.0, 0.0, 0.05});
 
   const uint32_t fs = 48000;
   const uint32_t chunk_ms = 16;
@@ -866,7 +866,7 @@ TEST_CASE("SUCCEED Create and run audio processing with Limiter specific paramet
 
 TEST_CASE("SUCCEED Create and run LoudnessControl with default parameters [audio processing handler]") {
   auto env = std::move(TestAudioProcessing().InitAudioProcessing());
-  env.getAudioProc().addLC({48000, -15, 30, 3, false, false});
+  env.getAudioProc().add_lc({48000, -15, 30, 3, false, false});
 
   constexpr int32_t fs = 48000;
   constexpr int32_t chunk_ms = 16;
@@ -937,8 +937,8 @@ TEST_CASE("SUCCEED Processing order affects result (AGC+Limiter vs Limiter+AGC) 
   auto env1 = std::move(TestAudioProcessing().InitAudioProcessing().SetWav("test1_48_noised.wav"));
   auto env2 = std::move(TestAudioProcessing().InitAudioProcessing().SetWav("test1_48_noised.wav"));
 
-  env1.getAudioProc().addAGC().addLimiter();
-  env2.getAudioProc().addLimiter().addAGC();
+  env1.getAudioProc().add_agc().add_limiter();
+  env2.getAudioProc().add_limiter().add_agc();
 
   const uint32_t fs = 48000;
   const uint32_t chunk_ms = 16;
@@ -972,7 +972,7 @@ TEST_CASE("SUCCEED Run audio processing with reading Limiter parameters from con
         std::move(TestAudioProcessing().
               InitAudioProcessing(std::filesystem::path("default_configuration_fast_tflite_dsp_enabled_24khz.yaml")).
               SetWav("test1_48_noised.wav"));
-  env.getAudioProc().addLimiter();
+  env.getAudioProc().add_limiter();
 
   const uint32_t fs = 48000;
   const uint32_t chunk_ms = 16;
@@ -1040,10 +1040,10 @@ sound_processing:
   auto env = std::move(TestAudioProcessing().InitAudioProcessing(std::string(change)));
 
   // Build a small chain reading params from YAML
-  REQUIRE_NOTHROW(env.getAudioProc().addRC());
-  REQUIRE_NOTHROW(env.getAudioProc().addAGC());
-  REQUIRE_NOTHROW(env.getAudioProc().addNoiseGate());
-  REQUIRE_NOTHROW(env.getAudioProc().addDRCompressor());
-  REQUIRE_NOTHROW(env.getAudioProc().addLimiter());
-  REQUIRE_NOTHROW(env.getAudioProc().addLC());
+  REQUIRE_NOTHROW(env.getAudioProc().add_rc());
+  REQUIRE_NOTHROW(env.getAudioProc().add_agc());
+  REQUIRE_NOTHROW(env.getAudioProc().add_noise_gate());
+  REQUIRE_NOTHROW(env.getAudioProc().add_dr_compressor());
+  REQUIRE_NOTHROW(env.getAudioProc().add_limiter());
+  REQUIRE_NOTHROW(env.getAudioProc().add_lc());
 }

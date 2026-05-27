@@ -10,6 +10,7 @@ struct SpxFftPlan {
   std::vector<float> tmp;
 };
 
+// Speex C API uses int; do not change the signature.
 extern "C" void* spx_fft_init(int);
 extern "C" void spx_fft_destroy(void*);
 extern "C" void spx_fft(void*, float*, float*);
