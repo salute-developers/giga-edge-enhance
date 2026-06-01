@@ -100,25 +100,52 @@ void SoundStream::ApplyFallbackDriftCorrection(double delay_ms) {
   }
 }
 
+namespace {
+
+inline std::size_t alignedSampleCount(std::size_t total, std::size_t frame_samples) {
+  return (total / frame_samples) * frame_samples;
+}
+
+std::vector<float> takeAlignedFrames(std::deque<float>& pending, std::size_t frame_samples) {
+  const std::size_t emit_samples = alignedSampleCount(pending.size(), frame_samples);
+  if (emit_samples == 0) {
+    return {};
+  }
+
+  std::vector<float> out(emit_samples);
+  std::move(pending.begin(), pending.begin() + static_cast<std::ptrdiff_t>(emit_samples), out.begin());
+  pending.erase(pending.begin(), pending.begin() + static_cast<std::ptrdiff_t>(emit_samples));
+  return out;
+}
+
+}  // namespace
+
 std::vector<float> SoundStream::ReadChunk(const std::vector<float>& in_chunk) {
-  if (in_chunk.empty() || m_in.sample_rate == m_out.sample_rate) {
+  if (m_in.sample_rate == m_out.sample_rate) {
     return in_chunk;
   }
 
-  const uint32_t threshold = m_out.FrameSizeSamples();
-  auto resampled_vector = ReadChunkToVector(in_chunk);
-  std::move(resampled_vector.begin(), resampled_vector.end(), std::back_inserter(m_output_buffer));
-
-  std::vector<float> result;
-  if (m_output_buffer.size() >= threshold) {
-    std::move(std::begin(m_output_buffer), std::begin(m_output_buffer) + threshold, std::back_inserter(result));
-    m_output_buffer.erase(std::begin(m_output_buffer), std::begin(m_output_buffer) + threshold);
-
-    // account emitted samples
-    m_emitted_samples_total += result.size();
+  const std::size_t frame_samples = m_out.FrameSizeSamples();
+  if (frame_samples == 0) {
+    return {};
   }
 
-  return result;
+  if (!in_chunk.empty()) {
+    std::vector<float> resampled = ReadChunkToVector(in_chunk);
+    if (!resampled.empty()) {
+      m_output_buffer.insert(m_output_buffer.end(),
+                             std::make_move_iterator(resampled.begin()),
+                             std::make_move_iterator(resampled.end()));
+    }
+  }
+
+  // Emit every complete frame_stride block at the output rate (fixes variable-length
+  // chunks). Partial remainder stays buffered for the next call.
+  std::vector<float> out = takeAlignedFrames(m_output_buffer, frame_samples);
+  if (!out.empty()) {
+    m_emitted_samples_total += out.size();
+  }
+  return out;
 }
 
 std::vector<float> SoundStream::FinalizeStream() {

@@ -720,6 +720,39 @@ TEST_CASE("SUCCESS Run sound stream for sequenced downsampling and upsampling 32
   IsVectorsClose(voice_utils.dst_wav_data, result, 0.015);
 }
 
+TEST_CASE("SUCCESS Input sound stream emits all resampled frames for 16*N ms chunk [sound]") {
+  const uint32_t frame_ms = 16;
+  const uint32_t src_sample_rate = 48000;
+  const uint32_t dst_sample_rate = 8000;
+  const uint32_t n = 4;  // 64 ms chunk
+
+  const std::size_t in_frame = static_cast<std::size_t>(src_sample_rate) * frame_ms / 1000;
+  const std::size_t in_chunk_long = in_frame * n;
+  const std::size_t out_frame = static_cast<std::size_t>(dst_sample_rate) * frame_ms / 1000;
+  const std::size_t expected_out = (in_chunk_long * dst_sample_rate) / src_sample_rate;
+  const std::size_t expected_out_aligned = (expected_out / out_frame) * out_frame;
+
+  std::vector<float> short_chunk(in_frame, 0.1f);
+  std::vector<float> long_chunk(in_chunk_long, 0.1f);
+
+  // Variable length: one N×16 ms push must return all resampled frames, not one frame.
+  {
+    auto stream = util::sound::BuildSoundStream(src_sample_rate, dst_sample_rate, frame_ms,
+                                                util::sound::TemplateType::INPUT);
+    std::vector<float> primed;
+    for (uint32_t i = 0; i < 32 && primed.size() < out_frame; ++i) {
+      const std::vector<float> part = stream->ReadChunk(short_chunk);
+      primed.insert(primed.end(), part.begin(), part.end());
+    }
+    REQUIRE(primed.size() >= out_frame);
+
+    const std::vector<float> out = stream->ReadChunk(long_chunk);
+    REQUIRE(out.size() % out_frame == 0);
+    REQUIRE(out.size() >= out_frame * 2);
+    REQUIRE(out.size() == expected_out_aligned);
+  }
+}
+
 TEST_CASE("SUCCESS Accumulated delay bounded for 44.1kHz -> 24kHz input stream [sound]") {
   const uint32_t chunk_size_ms = 16;
   const uint32_t src_sample_rate = 44100;
