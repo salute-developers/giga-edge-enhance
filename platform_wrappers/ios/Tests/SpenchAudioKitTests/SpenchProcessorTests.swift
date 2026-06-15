@@ -1,0 +1,174 @@
+import XCTest
+@testable import SpenchAudioKit
+
+final class SpenchProcessorTests: XCTestCase {
+    func testSpenchProcessorPassesThroughWhenFeaturesDisabled() throws {
+        let processor = try SpenchProcessor(sampleRate: 44_100,
+                                            features: SpenchFeatures(normalization: false,
+                                                                     noiseSuppression: nil))
+
+        let input: [Float] = [0.5, -0.5, 0.25, -0.25]
+        var output = Array(repeating: Float.zero, count: input.count)
+
+        let processed = try processor.process(input: input, output: &output)
+
+        XCTAssertEqual(processed, UInt32(input.count))
+        XCTAssertEqual(output, input)
+        XCTAssertEqual(processor.telemetry.audioProcessingCounters, [:])
+        XCTAssertEqual(processor.telemetry.denoiserCounters, [:])
+    }
+
+    func testFeaturesCanBeUpdated() throws {
+        let processor = try SpenchProcessor(sampleRate: 44_100)
+
+        XCTAssertEqual(processor.features, .standard)
+
+        let disabledFeatures = SpenchFeatures(normalization: false, noiseSuppression: nil)
+        try processor.setFeatures(disabledFeatures)
+        XCTAssertEqual(processor.features, disabledFeatures)
+
+        let enabledFeatures = SpenchFeatures(normalization: true,
+                                             noiseSuppression: SpenchModelDescriptor(rawValue: "lite24k"))
+        try processor.setFeatures(enabledFeatures)
+        XCTAssertEqual(processor.features, enabledFeatures)
+    }
+
+    func testInvalidNoiseSuppressionModelThrows() throws {
+        let processor = try SpenchProcessor(sampleRate: 44_100)
+
+        XCTAssertThrowsError(try processor.setFeatures(SpenchFeatures(normalization: true,
+                                                                      noiseSuppression: SpenchModelDescriptor(rawValue: "missing"))))
+    }
+
+    func testSampleRateCanBeUpdated() throws {
+        let features = SpenchFeatures(normalization: true,
+                                      noiseSuppression: SpenchModelDescriptor(rawValue: "lite24k"))
+        let processor = try SpenchProcessor(sampleRate: 44_100, features: features)
+
+        try processor.setSampleRate(48_000)
+
+        XCTAssertEqual(processor.sampleRate, 48_000)
+        XCTAssertEqual(processor.features, features)
+    }
+
+    func testInvalidSampleRateThrows() {
+        XCTAssertThrowsError(try SpenchProcessor(sampleRate: 0))
+    }
+
+    func testInvalidSettingsThrow() {
+        let settings = SpenchSettings(lowPerformanceWindowSeconds: 0)
+        XCTAssertThrowsError(try SpenchProcessor(sampleRate: 44_100, settings: settings))
+    }
+
+    func testValidatedSettingsUseGigaEdgeErrorDomain() {
+        let settings = SpenchSettings(lowPerformanceWindowSeconds: 0)
+
+        XCTAssertThrowsError(try settings.validated()) { error in
+            let nsError = error as NSError
+            XCTAssertEqual(nsError.domain, "com.gigaedge.SpenchAudioKit.SpenchError")
+        }
+    }
+
+    func testInvalidTelemetryRoundingThrows() {
+        let settings = SpenchSettings(telemetryRoundingMilliseconds: 0)
+        XCTAssertThrowsError(try SpenchProcessor(sampleRate: 44_100, settings: settings))
+    }
+
+    func testMismatchedBuffersThrow() throws {
+        let processor = try SpenchProcessor(sampleRate: 44_100)
+        let input: [Float] = [1, 2]
+        var output: [Float] = [0]
+        XCTAssertThrowsError(try processor.process(input: input, output: &output))
+    }
+
+    func testResetSucceedsForConfiguredPipelines() throws {
+        let processor = try SpenchProcessor(sampleRate: 44_100,
+                                            features: SpenchFeatures(normalization: true,
+                                                                     noiseSuppression: SpenchModelDescriptor(rawValue: "lite24k")))
+
+        let input = Array(repeating: Float(0.25), count: 512)
+        var output = Array(repeating: Float.zero, count: input.count)
+        _ = try processor.process(input: input, output: &output)
+        let telemetryBeforeReset = processor.telemetry
+
+        processor.reset()
+
+        XCTAssertEqual(processor.features.noiseSuppression, SpenchModelDescriptor(rawValue: "lite24k"))
+        XCTAssertEqual(processor.telemetry, telemetryBeforeReset)
+    }
+
+    func testTelemetryRecordsAudioProcessingCounters() throws {
+        let processor = try SpenchProcessor(sampleRate: 44_100,
+                                            features: SpenchFeatures(normalization: true, noiseSuppression: nil),
+                                            settings: SpenchSettings(telemetryRoundingMilliseconds: 0.25))
+
+        let input = Array(repeating: Float(0.25), count: 512)
+        var output = Array(repeating: Float.zero, count: input.count)
+        _ = try processor.process(input: input, output: &output)
+
+        let telemetry = processor.telemetry
+        XCTAssertEqual(telemetry.denoiserCounters, [:])
+        XCTAssertEqual(telemetry.audioProcessingCounters.values.reduce(0, +), 1)
+        XCTAssertTrue(telemetry.audioProcessingCounters.keys.allSatisfy { isMultiple(of: 0.25, value: $0) })
+    }
+
+    func testTelemetryRecordsBothProcessingStages() throws {
+        let processor = try SpenchProcessor(sampleRate: 44_100,
+                                            features: SpenchFeatures(normalization: true,
+                                                                     noiseSuppression: SpenchModelDescriptor(rawValue: "lite24k")),
+                                            settings: SpenchSettings(telemetryRoundingMilliseconds: 0.25))
+
+        let input = Array(repeating: Float(0.25), count: 512)
+        var output = Array(repeating: Float.zero, count: input.count)
+        _ = try processor.process(input: input, output: &output)
+
+        let telemetry = processor.telemetry
+        XCTAssertEqual(telemetry.audioProcessingCounters.values.reduce(0, +), 1)
+        XCTAssertEqual(telemetry.denoiserCounters.values.reduce(0, +), 1)
+    }
+
+    func testTelemetrySurvivesSampleRateUpdate() throws {
+        let processor = try SpenchProcessor(sampleRate: 44_100,
+                                            features: SpenchFeatures(normalization: true, noiseSuppression: nil))
+        let input = Array(repeating: Float(0.25), count: 512)
+        var output = Array(repeating: Float.zero, count: input.count)
+
+        _ = try processor.process(input: input, output: &output)
+        let initialCount = processor.telemetry.audioProcessingCounters.values.reduce(0, +)
+
+        try processor.setSampleRate(48_000)
+        _ = try processor.process(input: input, output: &output)
+
+        XCTAssertEqual(processor.telemetry.audioProcessingCounters.values.reduce(0, +), initialCount + 1)
+    }
+
+    func testAvailableModelsFindInstalledBundles() throws {
+        let modelIDs = try SpenchModelCatalog.availableModels().map(\.rawValue)
+
+        XCTAssertEqual(modelIDs, ["full24k", "lite24k", "lite8k"])
+    }
+
+    func testNormalizationConfigIncludesVadParametersWhenEnabled() {
+        let settings = SpenchSettings(useVadNormalization: true)
+
+        let config = SpenchProcessor.normalizationConfig(sampleRate: 44_100, settings: settings)
+
+        XCTAssertTrue(config.contains("use_vad: true"))
+        XCTAssertTrue(config.contains("target_level_db: -18.0"))
+        XCTAssertTrue(config.contains("sample_rate: 44100"))
+    }
+
+    func testNormalizationConfigUsesCustomOverrideWhenProvided() {
+        let customConfig = "sound_processing:\n  loudness_ctrl:\n    sample_rate: 8000\n"
+        let settings = SpenchSettings(unstableCustomNormalizationConfig: customConfig)
+
+        let config = SpenchProcessor.normalizationConfig(sampleRate: 48_000, settings: settings)
+
+        XCTAssertEqual(config, customConfig)
+    }
+
+    private func isMultiple(of step: Double, value: Double) -> Bool {
+        let ratio = value / step
+        return abs(ratio.rounded() - ratio) < 0.000_001
+    }
+}
