@@ -249,6 +249,6 @@ class SPENCH_API SpenchAudioProcess : public ISpenchSequencer {
   std::vector<int16_t> process(const std::vector<int16_t>& in, std::vector<int16_t>& out);
 
 
-  std::unique_ptr<AudioProcessorHandler> m_dsp;
+  std::unique_ptr<AudioProcessorHandler> dsp_;
 };
 }  // namespace spench

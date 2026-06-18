@@ -5,19 +5,19 @@
 
 namespace spench {
 namespace fe {
-void FeatureParams::ReadFeatureParamsNode(std::shared_ptr<spench::NetworkConfig> config) {
-  sampling_freq = config->samplingFreq();
-  frame_size_ms = config->frameSizeMs();
-  frame_stride_ms = config->frameStrideMs();
-  window_type = StringToWindowTypeEnum(config->windowType());
+void FeatureParams::read_feature_params_node(std::shared_ptr<spench::NetworkConfig> config) {
+  sampling_freq = config->sampling_freq();
+  frame_size_ms = config->frame_size_ms();
+  frame_stride_ms = config->frame_stride_ms();
+  window_type = string_to_window_type_enum(config->window_type());
 }
 
-WindowType FeatureParams::StringToWindowTypeEnum(const std::string& window) {
+WindowType FeatureParams::string_to_window_type_enum(const std::string& window) {
   if (window == "hanning") {
-    return WindowType::HANNING;
+    return WindowType::hanning;
   }
   if (window == "hamming") {
-    return WindowType::HAMMING;
+    return WindowType::hamming;
   }
   throw std::invalid_argument("Window type must be in [\"hanning\", \"hamming\"]");
 }

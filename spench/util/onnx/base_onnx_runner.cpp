@@ -8,7 +8,7 @@ namespace util {
 namespace onnx {
 
 BaseOnnxRunner::BaseOnnxRunner()
-    : m_run_options_ptr(std::make_unique<Ort::RunOptions>(nullptr)) {}
+    : run_options_ptr_(std::make_unique<Ort::RunOptions>(nullptr)) {}
 
 BaseOnnxRunner::BaseOnnxRunner(const std::vector<std::string>& inputs,
                                const std::vector<std::string>& outputs,
@@ -17,72 +17,72 @@ BaseOnnxRunner::BaseOnnxRunner(const std::vector<std::string>& inputs,
                                const std::string& checksum,
                                const uint32_t num_threads,
                                bool gpu)
-    : m_run_options_ptr(std::make_unique<Ort::RunOptions>(nullptr)) {
-  InitModel(config, password,
+    : run_options_ptr_(std::make_unique<Ort::RunOptions>(nullptr)) {
+  init_model(config, password,
             checksum, num_threads,
             gpu);
-  ValidateModel(inputs, outputs);
+  validate_model(inputs, outputs);
 }
 
 BaseOnnxRunner::~BaseOnnxRunner() {
-  for (size_t i = 0; i < m_model_input_names.size(); ++i) {
-    m_default_allocator.Free(m_model_input_names[i]);
+  for (size_t i = 0; i < model_input_names_.size(); ++i) {
+    default_allocator_.Free(model_input_names_[i]);
   }
-  for (size_t i = 0; i < m_model_output_names.size(); ++i) {
-    m_default_allocator.Free(m_model_output_names[i]);
+  for (size_t i = 0; i < model_output_names_.size(); ++i) {
+    default_allocator_.Free(model_output_names_[i]);
   }
-  m_session_ptr.reset();
-  m_run_options_ptr.reset();
+  session_ptr_.reset();
+  run_options_ptr_.reset();
 }
 
-void BaseOnnxRunner::InitModel(const std::shared_ptr<spench::NetworkConfig> config,
+void BaseOnnxRunner::init_model(const std::shared_ptr<spench::NetworkConfig> config,
                                const std::string& password,
                                const std::string& checksum,
                                const uint32_t num_threads,
                                bool gpu) {
   if (!gpu) {
-    std::lock_guard<std::mutex> lock(GetCpuSessionMutex());
-    const auto& session_options = GetOrtSessionOptionsCpu(num_threads, false);
+    std::lock_guard<std::mutex> lock(get_cpu_session_mutex());
+    const auto& session_options = get_ort_session_options_cpu(num_threads, false);
 
     try {
-      if (m_session_ptr == nullptr) {
+      if (session_ptr_ == nullptr) {
         if (!password.empty() || !checksum.empty()) {
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
           modelencryption::Decryptor decryptor;
           modelencryption::Hasher hasher;
-          std::vector<uint8_t> modelData;
+          std::vector<uint8_t> model_data;
 
           std::unique_ptr<modelencryption::Checksum> license_checksum = nullptr;
           if (!checksum.empty()) {
             license_checksum.reset(new modelencryption::Checksum(hasher.DeserializeChecksum(checksum.c_str())));
           }
-          if (config->isModelBundled()) {
-            modelData = decryptor.DecryptArray(config->getModel(),
+          if (config->is_model_bundled()) {
+            model_data = decryptor.DecryptArray(config->get_model(),
                                                 modelencryption::Key(password),
                                                 license_checksum.get());
           } else {
-            modelData = decryptor.DecryptFile(config->modelPath(),
+            model_data = decryptor.DecryptFile(config->model_path(),
                                               modelencryption::Key(password),
                                               license_checksum.get());
           }
 
-          m_session_ptr = std::make_unique<Ort::Session>(util::onnx::GetOrtEnv(),
-                                                         modelData.data(),
-                                                         modelData.size(),
+          session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(),
+                                                         model_data.data(),
+                                                         model_data.size(),
                                                          session_options);
 #else
           throw OnnxValidationException("Password must be empty or library should be built with encryption support");
 #endif
         } else {
-          if (config->isModelBundled()) {
-            const auto& modelData = config->getModel();
-            m_session_ptr = std::make_unique<Ort::Session>(util::onnx::GetOrtEnv(),
-                                                            modelData.data(),
-                                                            modelData.size(),
+          if (config->is_model_bundled()) {
+            const auto& model_data = config->get_model();
+            session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(),
+                                                            model_data.data(),
+                                                            model_data.size(),
                                                             session_options);
           } else {
-            m_session_ptr = std::make_unique<Ort::Session>(util::onnx::GetOrtEnv(),
-                                                            config->modelPath().c_str(),
+            session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(),
+                                                            config->model_path().c_str(),
                                                             session_options);
           }
         }
@@ -92,24 +92,24 @@ void BaseOnnxRunner::InitModel(const std::shared_ptr<spench::NetworkConfig> conf
                                 + ex.what();
       throw OnnxValidationException(err_message);
     }
-    m_memory_info_ptr = const_cast<Ort::MemoryInfo*>(&GetMemoryInfoCpu());
+    memory_info_ptr_ = const_cast<Ort::MemoryInfo*>(&get_memory_info_cpu());
   } else {
-    std::lock_guard<std::mutex> lock(GetGpuSessionMutex());
-    const auto& session_options = GetOrtSessionOptionsGpu(num_threads, false);
+    std::lock_guard<std::mutex> lock(get_gpu_session_mutex());
+    const auto& session_options = get_ort_session_options_gpu(num_threads, false);
     try {
-      if (m_session_ptr == nullptr) {
-        m_session_ptr = std::make_unique<Ort::Session>(util::onnx::GetOrtEnv(),
-                                                        config->modelPath().c_str(),
+      if (session_ptr_ == nullptr) {
+        session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(),
+                                                        config->model_path().c_str(),
                                                         session_options);
       }
     } catch (...) {
       throw OnnxValidationException("Model reading error. File does not exist!");
     }
-    m_memory_info_ptr = const_cast<Ort::MemoryInfo*>(&GetMemoryInfoGpu());
+    memory_info_ptr_ = const_cast<Ort::MemoryInfo*>(&get_memory_info_gpu());
   }
 }
 
-int32_t BaseOnnxRunner::GetSingleDynamicAxis(const std::vector<int64_t>& shape, const char* tensor_debug_name) {
+int32_t BaseOnnxRunner::get_single_dynamic_axis(const std::vector<int64_t>& shape, const char* tensor_debug_name) {
   int32_t found = -1;
   for (size_t i = 0; i < shape.size(); ++i) {
     if (shape[i] < 0) {
@@ -124,16 +124,16 @@ int32_t BaseOnnxRunner::GetSingleDynamicAxis(const std::vector<int64_t>& shape, 
   return found;
 }
 
-void BaseOnnxRunner::ValidateModel(const std::vector<std::string>& input_names,
+void BaseOnnxRunner::validate_model(const std::vector<std::string>& input_names,
                                    const std::vector<std::string>& output_names) {
-  if (!m_session_ptr) {
+  if (!session_ptr_) {
     std::stringstream iss;
     iss << "The model has not defined session or allocator";
     throw OnnxValidationException(iss.str());
   }
 
   // Inputs
-  const size_t inputs_count = m_session_ptr->GetInputCount();
+  const size_t inputs_count = session_ptr_->GetInputCount();
   if (inputs_count != input_names.size()) {
     std::stringstream iss;
     iss << "The model has " << inputs_count << " inputs, but you provided " << input_names.size();
@@ -142,19 +142,19 @@ void BaseOnnxRunner::ValidateModel(const std::vector<std::string>& input_names,
 
   bool inputs_names_same = true;
   for (size_t i = 0; i < inputs_count; ++i) {
-    m_model_input_names.push_back(m_session_ptr->GetInputNameAllocated(i, m_default_allocator).release());
-    m_model_input_shapes.push_back(m_session_ptr->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-    const std::string cur_model_input_name = m_model_input_names.back();
+    model_input_names_.push_back(session_ptr_->GetInputNameAllocated(i, default_allocator_).release());
+    model_input_shapes_.push_back(session_ptr_->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+    const std::string cur_model_input_name = model_input_names_.back();
     if (input_names[i] != cur_model_input_name) {
       inputs_names_same = false;
     }
   }
 
   // Cache time axis (only dynamic dim) for each input tensor.
-  m_time_axis_in.resize(m_model_input_shapes.size(), -1);
-  for (size_t i = 0; i < m_model_input_shapes.size(); ++i) {
+  time_axis_in_.resize(model_input_shapes_.size(), -1);
+  for (size_t i = 0; i < model_input_shapes_.size(); ++i) {
     // English comment: dynamic time axis is encoded as -1 in ONNX shapes
-    m_time_axis_in[i] = GetSingleDynamicAxis(m_model_input_shapes[i], "input");
+    time_axis_in_[i] = get_single_dynamic_axis(model_input_shapes_[i], "input");
   }
 
   if (!inputs_names_same) {
@@ -164,7 +164,7 @@ void BaseOnnxRunner::ValidateModel(const std::vector<std::string>& input_names,
   }
 
   // Outputs
-  const size_t outputs_count = m_session_ptr->GetOutputCount();
+  const size_t outputs_count = session_ptr_->GetOutputCount();
   if (outputs_count != output_names.size()) {
     std::stringstream iss;
     iss << "The model has " << outputs_count << " outputs, but you provided " << output_names.size();
@@ -173,9 +173,9 @@ void BaseOnnxRunner::ValidateModel(const std::vector<std::string>& input_names,
 
   bool outputs_names_same = true;
   for (size_t i = 0; i < outputs_count; ++i) {
-    m_model_output_names.push_back(m_session_ptr->GetOutputNameAllocated(i, m_default_allocator).release());
-    m_model_output_shapes.push_back(m_session_ptr->GetOutputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-    const std::string cur_model_output_name = m_model_output_names.back();
+    model_output_names_.push_back(session_ptr_->GetOutputNameAllocated(i, default_allocator_).release());
+    model_output_shapes_.push_back(session_ptr_->GetOutputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
+    const std::string cur_model_output_name = model_output_names_.back();
     if (output_names[i] != cur_model_output_name) {
       outputs_names_same = false;
     }
@@ -188,7 +188,7 @@ void BaseOnnxRunner::ValidateModel(const std::vector<std::string>& input_names,
   }
 }
 
-void BaseOnnxRunner::ResizeIfNeededInPlace(std::vector<float>& to_check,
+void BaseOnnxRunner::resize_if_needed_in_place(std::vector<float>& to_check,
                                           const std::vector<int64_t>& shape,
                                           uint32_t num_parts) {
   if (to_check.size() == 0) {
@@ -200,7 +200,7 @@ void BaseOnnxRunner::ResizeIfNeededInPlace(std::vector<float>& to_check,
   }
 }
 
-void BaseOnnxRunner::ResizeIfNeededInPlace(std::valarray<float>& to_check,
+void BaseOnnxRunner::resize_if_needed_in_place(std::valarray<float>& to_check,
                                           const std::vector<int64_t>& shape,
                                           uint32_t num_parts) {
   if (to_check.size() == 0) {

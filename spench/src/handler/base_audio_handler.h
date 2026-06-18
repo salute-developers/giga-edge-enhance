@@ -15,10 +15,10 @@ namespace spench {
 
 class BaseAudioHandler {
  protected:
-  std::shared_ptr<spench::PipelineConfig> m_config;
+  std::shared_ptr<spench::PipelineConfig> config_;
 
   // ToDo(artsokol): remove and use config directly
-  const YAML::Node& params() { return m_config->params(); }
+  const YAML::Node& params() { return config_->params(); }
 
  public:
   BaseAudioHandler() = delete;
@@ -30,26 +30,26 @@ class BaseAudioHandler {
 
   virtual ~BaseAudioHandler();
 
-  SpenchRetCode ReloadConfig() { return Restart(); }
+  SpenchRetCode reload_config() { return restart(); }
 
-  virtual SpenchRetCode ProcessFrame(struct spench::SpenchContext<float>* ctx,
+  virtual SpenchRetCode process_frame(struct spench::SpenchContext<float>* ctx,
                                      const std::vector<float>& input_audio_frame,
                                      std::vector<float>& enhanced_audio_frame);
 
-  virtual SpenchRetCode ProcessFrame(struct spench::SpenchContext<float>* ctx,
+  virtual SpenchRetCode process_frame(struct spench::SpenchContext<float>* ctx,
                                      const std::vector<float>& mic_frame,
                                      const std::vector<float>& lbk_frame,
                                      std::vector<float>& out);
 
  protected:
   // Lifecycle owned by Base, implemented by subclasses.
-  SpenchRetCode Start();
-  void Stop();
-  SpenchRetCode Restart();
+  SpenchRetCode start();
+  void stop();
+  SpenchRetCode restart();
 
   // Subclass hooks.
-  virtual SpenchRetCode DoStart();   // default no-op
-  virtual void DoStop();             // default no-op
+  virtual SpenchRetCode do_start();   // default no-op
+  virtual void do_stop();             // default no-op
 };
 
 }  // namespace spench

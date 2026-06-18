@@ -11,5 +11,5 @@
  */
 
 typedef struct StatInfo {
-  float m_snr;
+  float snr;
 } StreamStatStruct;

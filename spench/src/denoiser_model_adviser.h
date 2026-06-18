@@ -34,7 +34,7 @@ class DenoiserModelAdviser {
   */
   DenoiserModelAdviser(double window_duration_ms,
                        double frame_shift_ms)
-        : m_window_frames(static_cast<size_t>(std::max(1.0,
+        : window_frames_(static_cast<size_t>(std::max(1.0,
                               std::round(window_duration_ms / frame_shift_ms)))) {}
 
   // Copy/move semantics – defaulted explicitly for clarity.
@@ -52,51 +52,51 @@ class DenoiserModelAdviser {
   *
   * @return A high‑level action for model selection.
   */
-  T processFrame(const ComplexNumber<T>& input_spec,
+  T process_frame(const ComplexNumber<T>& input_spec,
                             const ComplexNumber<T>& enhanced_spec,
                             StreamCurrentMetrics<T>& metrics) {
-    T value = calcSnrEstimation(input_spec, enhanced_spec, metrics);
+    T value = calc_snr_estimation(input_spec, enhanced_spec, metrics);
     add_value(value);
-    T average = averageSnrDb();
+    T average = average_snr_db();
     return average;
   }
 
   /** Reset the sliding window (e.g. on stream boundaries). */
   void reset() {
-    m_snr_history.clear();
-    m_sum = 0;
+    snr_history_.clear();
+    sum_ = 0;
   }
 
   void add_value(T value) {
-    m_snr_history.push_back(value);
-    m_sum += value;
+    snr_history_.push_back(value);
+    sum_ += value;
 
-    if (m_snr_history.size() > m_window_frames) {
-      m_sum -= m_snr_history.front();
-      m_snr_history.pop_front();
+    if (snr_history_.size() > window_frames_) {
+      sum_ -= snr_history_.front();
+      snr_history_.pop_front();
     }
   }
 
   /**
   * @return Current windowed‑average SNR in dB, or NaN if the window is not yet filled.
   */
-  [[nodiscard]] T averageSnrDb() const {
-    if (m_snr_history.size() == m_window_frames) {
-      return m_sum / static_cast<T>(m_snr_history.size());
+  [[nodiscard]] T average_snr_db() const {
+    if (snr_history_.size() == window_frames_) {
+      return sum_ / static_cast<T>(snr_history_.size());
     }
     return std::numeric_limits<T>::quiet_NaN();
   }
 
-  T calcSnrEstimation(const ComplexNumber<T>& input_spec,
+  T calc_snr_estimation(const ComplexNumber<T>& input_spec,
                     const ComplexNumber<T>& enhanced_spec,
                     StreamCurrentMetrics<T>& metrics);
 
  private:
-  std::deque<T> m_snr_history;  ///< Circular buffer of recent SNR estimates (in dB).
-  size_t        m_window_frames;  ///< Window length expressed in *frames*.
-  T             m_sum = static_cast<T>(0);
-  const T       m_eps = static_cast<T>(1e-8);
-  const T       m_snr_vad_threshold = static_cast<T>(0.1);
+  std::deque<T> snr_history_;  ///< Circular buffer of recent SNR estimates (in dB).
+  size_t        window_frames_;  ///< Window length expressed in *frames*.
+  T             sum_ = static_cast<T>(0);
+  const T       eps = static_cast<T>(1e-8);
+  const T       snr_vad_threshold = static_cast<T>(0.1);
 };
 
 }  // namespace spench

@@ -155,8 +155,8 @@ class AudioProcItem {
                                                std::vector<float>& out) {
     return process(in, out);
   }
-  virtual void SetParameters(const ParametersStruct* param) = 0;
-  virtual std::string getName() = 0;
+  virtual void set_parameters(const ParametersStruct* param) = 0;
+  virtual std::string name() = 0;
 };
 
 class AudioProcItemWithStats : public AudioProcItem {
@@ -198,56 +198,56 @@ class AudioProcItemWithStats : public AudioProcItem {
 
  protected:
   void stats_reset_window() {
-    for (auto& kv : m_metrics) {
-      kv.second.collector->set_window_seconds(m_window_sec);  // internal Hard reset
+    for (auto& kv : metrics_) {
+      kv.second.collector->set_window_seconds(window_sec_);  // internal Hard reset
     }
   }
 
  private:
   struct Metric {
     std::unique_ptr<util::sound::StatCollector> collector;
-    bool m_flush_this_tick{false};
+    bool flush_this_tick{false};
     std::optional<Stat> last;
   };
 
   Metric* find_metric(const std::string& name) noexcept {
-    for (auto& kv : m_metrics) if (kv.first == name) return &kv.second;
+    for (auto& kv : metrics_) if (kv.first == name) return &kv.second;
     return nullptr;
   }
-  uint32_t m_sr{1};
-  double m_window_sec{10.0};
-  std::vector<std::pair<std::string, Metric>> m_metrics;
+  uint32_t sr_{1};
+  double window_sec_{10.0};
+  std::vector<std::pair<std::string, Metric>> metrics_;
 };
 
 class AudioProcAGC : public AudioProcItem {
  private:
-  std::unique_ptr<dsplib::Agc> m_ac_ptr;
+  std::unique_ptr<dsplib::Agc> ac_ptr_;
 
  public:
   AudioProcAGC(AudioProcAGC&& other) = default;
   AudioProcAGC() {
-    m_ac_ptr = std::make_unique<dsplib::Agc>(1.0, 20.0, (48000 / 4));
+    ac_ptr_ = std::make_unique<dsplib::Agc>(1.0, 20.0, (48000 / 4));
   }
   explicit AudioProcAGC(const ParametersStruct& params) {
-    SetParameters(&params);
+    set_parameters(&params);
   }
   std::vector<float>& process(const std::vector<float>& in,
                                     std::vector<float>& out) override {
     if (in.size() != 0) {
       dsplib::arr_real agc_input_sig(in);
-      auto [sig, gain] = m_ac_ptr->process(agc_input_sig);
+      auto [sig, gain] = ac_ptr_->process(agc_input_sig);
       out = sig.to_vec();
     } else {
       out = in;
     }
     return out;
   }
-  std::string getName() override {
+  std::string name() override {
     return std::string("AutoGainController");
   }
-  void SetParameters(const ParametersStruct* params) override {
+  void set_parameters(const ParametersStruct* params) override {
     auto parameters = dynamic_cast<const AGCParametersStruct*>(params);
-    m_ac_ptr.reset(new dsplib::Agc(parameters->target_level,
+    ac_ptr_.reset(new dsplib::Agc(parameters->target_level,
                                    parameters->max_gain,
                                    parameters->average_len,
                                    parameters->t_rise,
@@ -257,31 +257,31 @@ class AudioProcAGC : public AudioProcItem {
 
 class AudioProcRC : public AudioProcItem {
  private:
-  std::unique_ptr<util::sound::RangeControl> m_rctrl_ptr;
+  std::unique_ptr<util::sound::RangeControl> rctrl_ptr_;
 
  public:
   AudioProcRC(AudioProcRC&& other) = default;
   AudioProcRC() {
-    m_rctrl_ptr = std::make_unique<util::sound::RangeControl>(48000);
+    rctrl_ptr_ = std::make_unique<util::sound::RangeControl>(48000);
   }
   explicit AudioProcRC(const RCParameters& parameters) {
-    SetParameters(&parameters);
+    set_parameters(&parameters);
   }
   std::vector<float>& process(const std::vector<float>& in, std::vector<float>& out) override {
     if (in.size() != 0) {
-      auto [sig, gain] = m_rctrl_ptr->process(in);
+      auto [sig, gain] = rctrl_ptr_->process(in);
       out.swap(sig);
     } else {
       out = in;
     }
     return out;
   }
-  std::string getName() override {
+  std::string name() override {
     return std::string("RangeController");
   }
-  void SetParameters(const ParametersStruct* params) override {
+  void set_parameters(const ParametersStruct* params) override {
     auto parameters = dynamic_cast<const RCParametersStruct*>(params);
-    m_rctrl_ptr.reset(new util::sound::RangeControl(parameters->sample_rate,
+    rctrl_ptr_.reset(new util::sound::RangeControl(parameters->sample_rate,
                                                     parameters->target_level_db,
                                                     parameters->max_gain_db,
                                                     parameters->attack_time,
@@ -292,32 +292,32 @@ class AudioProcRC : public AudioProcItem {
 
 class AudioProcNoiseGate : public AudioProcItem {
  private:
-  std::unique_ptr<dsplib::NoiseGate> m_ng_ptr;
+  std::unique_ptr<dsplib::NoiseGate> ng_ptr_;
 
  public:
   AudioProcNoiseGate(AudioProcNoiseGate&& other) = default;
   AudioProcNoiseGate() {
-    m_ng_ptr = std::make_unique<dsplib::NoiseGate>(48000, -15);
+    ng_ptr_ = std::make_unique<dsplib::NoiseGate>(48000, -15);
   }
   explicit AudioProcNoiseGate(const NGParameters& parameters) {
-    SetParameters(&parameters);
+    set_parameters(&parameters);
   }
   std::vector<float>& process(const std::vector<float>& in, std::vector<float>& out) override {
     if (in.size() != 0) {
       dsplib::arr_real ng_input_sig(in);
-      auto [sig, gain] = m_ng_ptr->process(ng_input_sig);
+      auto [sig, gain] = ng_ptr_->process(ng_input_sig);
       out = sig.to_vec();
     } else {
       out = in;
     }
     return out;
   }
-  std::string getName() override {
+  std::string name() override {
     return std::string("NoiseGate");
   }
-  void SetParameters(const ParametersStruct* params) override {
+  void set_parameters(const ParametersStruct* params) override {
     auto parameters = dynamic_cast<const NGParametersStruct*>(params);
-    m_ng_ptr.reset(new dsplib::NoiseGate(parameters->sample_rate,
+    ng_ptr_.reset(new dsplib::NoiseGate(parameters->sample_rate,
                                          parameters->threshold,
                                          parameters->attack_time,
                                          parameters->release_time,
@@ -327,32 +327,32 @@ class AudioProcNoiseGate : public AudioProcItem {
 
 class AudioProcLimiter : public AudioProcItem {
  private:
-  std::unique_ptr<dsplib::Limiter> m_lim_ptr;
+  std::unique_ptr<dsplib::Limiter> lim_ptr_;
 
  public:
   AudioProcLimiter(AudioProcLimiter&& other) = default;
   AudioProcLimiter() {
-    m_lim_ptr = std::make_unique<dsplib::Limiter>(48000, -15);
+    lim_ptr_ = std::make_unique<dsplib::Limiter>(48000, -15);
   }
   explicit AudioProcLimiter(const LimParameters& parameters) {
-    SetParameters(&parameters);
+    set_parameters(&parameters);
   }
   std::vector<float>& process(const std::vector<float>& in, std::vector<float>& out) override {
     if (in.size() != 0) {
       dsplib::arr_real ng_input_sig(in);
-      auto [sig, gain] = m_lim_ptr->process(ng_input_sig);
+      auto [sig, gain] = lim_ptr_->process(ng_input_sig);
       out = sig.to_vec();
     } else {
       out = in;
     }
     return out;
   }
-  std::string getName() override {
+  std::string name() override {
     return std::string("Limiter");
   }
-  void SetParameters(const ParametersStruct* params) override {
+  void set_parameters(const ParametersStruct* params) override {
     auto parameters = dynamic_cast<const LimParametersStruct*>(params);
-    m_lim_ptr.reset(new dsplib::Limiter(parameters->sample_rate,
+    lim_ptr_.reset(new dsplib::Limiter(parameters->sample_rate,
                                         parameters->threshold,
                                         parameters->knee_width,
                                         parameters->attack_time,
@@ -362,28 +362,28 @@ class AudioProcLimiter : public AudioProcItem {
 
 class AudioProcDRCompressor : public AudioProcItem {
  private:
-  std::unique_ptr<dsplib::Compressor> m_drc_ptr;
+  std::unique_ptr<dsplib::Compressor> drc_ptr_;
 
  public:
   explicit AudioProcDRCompressor(AudioProcDRCompressor&& other) = default;
   AudioProcDRCompressor() {
-    m_drc_ptr = std::make_unique<dsplib::Compressor>(48000, -15);
+    drc_ptr_ = std::make_unique<dsplib::Compressor>(48000, -15);
   }
   explicit AudioProcDRCompressor(const DRCParameters& parameters) {
-    SetParameters(&parameters);
+    set_parameters(&parameters);
   }
   std::vector<float>& process(const std::vector<float>& in, std::vector<float>& out) override {
     dsplib::arr_real ng_input_sig(in);
-    auto [sig, gain] = m_drc_ptr->process(ng_input_sig);
+    auto [sig, gain] = drc_ptr_->process(ng_input_sig);
     out = sig.to_vec();
     return out;
   }
-  std::string getName() override {
+  std::string name() override {
     return std::string("DynamicRangeCompressor");
   }
-  void SetParameters(const ParametersStruct* params) override {
+  void set_parameters(const ParametersStruct* params) override {
     auto parameters = dynamic_cast<const DRCParametersStruct*>(params);
-    m_drc_ptr.reset(new dsplib::Compressor(parameters->sample_rate,
+    drc_ptr_.reset(new dsplib::Compressor(parameters->sample_rate,
                                            parameters->threshold,
                                            parameters->ratio,
                                            parameters->knee_width,
@@ -394,28 +394,28 @@ class AudioProcDRCompressor : public AudioProcItem {
 
 class AudioProcLC : public AudioProcItemWithStats {
  private:
-  std::unique_ptr<util::sound::ILoudnessControl> m_lc;
-  uint32_t m_sr{48000};
-  uint32_t m_channels{1};  // IMPORTANT: frames = samples / channels
-  double m_stats_window_sec{10.0};
-  std::atomic<bool> m_reset_stats_pending{false};
+  std::unique_ptr<util::sound::ILoudnessControl> lc_;
+  uint32_t sr_{48000};
+  uint32_t channels_{1};  // IMPORTANT: frames = samples / channels
+  double stats_window_sec_{10.0};
+  std::atomic<bool> reset_stats_pending_{false};
 
  public:
   AudioProcLC() {
-    m_lc = util::sound::LoudnessControlBuilder()
-               .set_sample_rate(m_sr)
-               .set_method(util::sound::ILoudnessControl::SIMPLE)
+    lc_ = util::sound::LoudnessControlBuilder()
+               .set_sample_rate(sr_)
+               .set_method(util::sound::ILoudnessControl::simple)
                .create();
 
-  stats_configure(m_sr, m_stats_window_sec, {{"input_lufs", Options::All()}, {"gain_db", Options::All()}});}
+  stats_configure(sr_, stats_window_sec_, {{"input_lufs", Options::all()}, {"gain_db", Options::all()}});}
 
-  explicit AudioProcLC(const LoudnessParametersStruct& parameters) { SetParameters(&parameters); }
+  explicit AudioProcLC(const LoudnessParametersStruct& parameters) { set_parameters(&parameters); }
 
   std::vector<float>& process(const std::vector<float>& in, std::vector<float>& out) override;
 
-  void SetParameters(const ParametersStruct* params) override;
+  void set_parameters(const ParametersStruct* params) override;
 
-  std::string getName() override { return std::string("LoudnessControl"); }
+  std::string name() override { return std::string("LoudnessControl"); }
 
   void on_stats_window(const std::vector<std::pair<std::string, util::sound::StatCollector::Stat>>& stats) override;
 };
@@ -433,28 +433,28 @@ class AudioProcessorHandler : public BaseAudioHandler {
     return process(in, out);
   }
 
-  AudioProcessorHandler& addAGC();
-  AudioProcessorHandler& addAGC(const AGCParameters& parameters);
-  AudioProcessorHandler& addRC();
-  AudioProcessorHandler& addRC(const RCParameters& parameters);
-  AudioProcessorHandler& addNoiseGate();
-  AudioProcessorHandler& addNoiseGate(const NGParameters& parameters);
-  AudioProcessorHandler& addLimiter();
-  AudioProcessorHandler& addLimiter(const LimParameters& parameters);
-  AudioProcessorHandler& addDRCompressor();
-  AudioProcessorHandler& addDRCompressor(const DRCParameters& parameters);
-  AudioProcessorHandler& addLC();
-  AudioProcessorHandler& addLC(const LoudnessParameters& parameters);
+  AudioProcessorHandler& add_agc();
+  AudioProcessorHandler& add_agc(const AGCParameters& parameters);
+  AudioProcessorHandler& add_rc();
+  AudioProcessorHandler& add_rc(const RCParameters& parameters);
+  AudioProcessorHandler& add_noise_gate();
+  AudioProcessorHandler& add_noise_gate(const NGParameters& parameters);
+  AudioProcessorHandler& add_limiter();
+  AudioProcessorHandler& add_limiter(const LimParameters& parameters);
+  AudioProcessorHandler& add_dr_compressor();
+  AudioProcessorHandler& add_dr_compressor(const DRCParameters& parameters);
+  AudioProcessorHandler& add_lc();
+  AudioProcessorHandler& add_lc(const LoudnessParameters& parameters);
 
-  SpenchRetCode ProcessFrame(struct spench::SpenchContext<float>* ctx,
+  SpenchRetCode process_frame(struct spench::SpenchContext<float>* ctx,
                              const std::vector<float>& input_audio_frame,
                              std::vector<float>& enhanced_audio_frame) override;
 
  protected:
-  SpenchRetCode DoStart() override;
-  void DoStop() override;
+  SpenchRetCode do_start() override;
+  void do_stop() override;
 
  private:
-  std::vector<std::unique_ptr<AudioProcItem>> m_sequence_vec;
+  std::vector<std::unique_ptr<AudioProcItem>> sequence_vec_;
 };
 }  // namespace spench

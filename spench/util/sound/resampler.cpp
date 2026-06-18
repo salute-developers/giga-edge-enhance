@@ -18,10 +18,10 @@ namespace sound {
 
 class ResamplerImpl {
  public:
-  ResamplerImpl(size_t in_rate, size_t out_rate, size_t channels) : m_in_rate{in_rate}, m_out_rate{out_rate} {
+  ResamplerImpl(size_t in_rate, size_t out_rate, size_t channels) : in_rate_{in_rate}, out_rate_{out_rate} {
     // Same rate: pass-through (SoundStream always owns a Resampler; soxr is unnecessary).
     if (in_rate == out_rate) {
-      m_pass_through = true;
+      pass_through_ = true;
       spdlog::info("Resampler pass-through: input rate equals output rate ({} Hz); soxr not constructed "
                     "({} channel(s))",
                     in_rate, channels);
@@ -45,25 +45,25 @@ class ResamplerImpl {
       throw std::runtime_error(std::string("BuildResampler: failed to create resampler: ") +
                                std::string(soxr_strerror(err)));
     }
-    m_rsmp = std::shared_ptr<soxr>(state, soxr_delete);
+    rsmp_ = std::shared_ptr<soxr>(state, soxr_delete);
   }
 
   bool set_io_ratio(double io_ratio) {
-    if (m_pass_through) {
+    if (pass_through_) {
       return true;
     }
-    if (!m_rsmp) {
+    if (!rsmp_) {
       return false;
     }
-    soxr_error_t err = soxr_set_io_ratio(m_rsmp.get(), io_ratio, 0.0);
+    soxr_error_t err = soxr_set_io_ratio(rsmp_.get(), io_ratio, 0.0);
     return err == 0;
   }
 
   std::vector<float> process(const std::vector<float>& v) {
-    if (m_pass_through) {
+    if (pass_through_) {
       return v;
     }
-    if (!m_rsmp) {
+    if (!rsmp_) {
       throw std::runtime_error("ResampleVec: resampler is null!");
     }
 
@@ -73,17 +73,17 @@ class ResamplerImpl {
     std::vector<float> resampled;
 
     // TODO(?): wtf
-    if (m_in_rate < m_out_rate) {
-      ratio = static_cast<double>(m_out_rate) / static_cast<double>(m_in_rate);
+    if (in_rate_ < out_rate_) {
+      ratio = static_cast<double>(out_rate_) / static_cast<double>(in_rate_);
       // a trick for accurate resampling with 44.1 sample rate case.
       resampled = std::vector<float>(static_cast<size_t>(static_cast<double>(v.size() * ratio) + 0.0f));
     } else {
-      ratio = static_cast<double>(m_in_rate) / static_cast<double>(m_out_rate);
+      ratio = static_cast<double>(in_rate_) / static_cast<double>(out_rate_);
       resampled = std::vector<float>(static_cast<size_t>(static_cast<double>(v.size() / ratio) + 0.5f));
     }
 
     soxr_error_t err =
-        soxr_process(m_rsmp.get(), v.data(), v.size(), &input_len, resampled.data(), resampled.size(), &out_len);
+        soxr_process(rsmp_.get(), v.data(), v.size(), &input_len, resampled.data(), resampled.size(), &out_len);
     if (err) {
       throw std::runtime_error("Error during soxr process");
     }
@@ -95,18 +95,18 @@ class ResamplerImpl {
   }
 
   std::vector<float> flush() {
-    if (m_pass_through) {
+    if (pass_through_) {
       return {};
     }
-    if (!m_rsmp) {
+    if (!rsmp_) {
       throw std::runtime_error("ResampleVec: resampler is null!");
     }
     size_t out_len = 1;
-    double delayed_samples = soxr_delay((m_rsmp.get()));
+    double delayed_samples = soxr_delay((rsmp_.get()));
     std::vector<float> resampled(static_cast<size_t>(delayed_samples) + 1);
     soxr_error_t err;
 
-    err = soxr_process(m_rsmp.get(), NULL, 0, NULL, resampled.data(), resampled.size(), &out_len);
+    err = soxr_process(rsmp_.get(), NULL, 0, NULL, resampled.data(), resampled.size(), &out_len);
     if (err) {
       throw std::runtime_error("ResampleVec: soxr internal error occurred!");
     }
@@ -117,24 +117,24 @@ class ResamplerImpl {
   }
 
   float accumulated_delay_ms() const noexcept {
-    if (m_pass_through) {
+    if (pass_through_) {
       return 0;
     }
     double ms = 0;
-    if (m_in_rate != m_out_rate) {
-      const double d = soxr_delay(m_rsmp.get());  // in output samples
-      if (d > 0.0 && m_out_rate != 0) {
-        ms += 1000.0 * d / static_cast<double>(m_out_rate);
+    if (in_rate_ != out_rate_) {
+      const double d = soxr_delay(rsmp_.get());  // in output samples
+      if (d > 0.0 && out_rate_ != 0) {
+        ms += 1000.0 * d / static_cast<double>(out_rate_);
       }
     }
     return ms;
   }
 
  private:
-  bool m_pass_through{false};
-  std::shared_ptr<soxr> m_rsmp;
-  size_t m_in_rate{1};
-  size_t m_out_rate{1};
+  bool pass_through_{false};
+  std::shared_ptr<soxr> rsmp_;
+  size_t in_rate_{1};
+  size_t out_rate_{1};
 };
 
 #else
@@ -160,16 +160,16 @@ class ResamplerImpl {
 #endif
 
 Resampler::Resampler(size_t in_rate, size_t out_rate, size_t channels) {
-  m_d = std::make_shared<ResamplerImpl>(in_rate, out_rate, channels);
+  impl_ = std::make_shared<ResamplerImpl>(in_rate, out_rate, channels);
 }
 
-std::vector<float> Resampler::process(const std::vector<float>& x) { return m_d->process(x); }
+std::vector<float> Resampler::process(const std::vector<float>& x) { return impl_->process(x); }
 
-std::vector<float> Resampler::flush() { return m_d->flush(); }
+std::vector<float> Resampler::flush() { return impl_->flush(); }
 
-bool Resampler::set_io_ratio(double io_ratio) { return m_d->set_io_ratio(io_ratio); }
+bool Resampler::set_io_ratio(double io_ratio) { return impl_->set_io_ratio(io_ratio); }
 
-float Resampler::accumulated_delay_ms() const noexcept { return m_d->accumulated_delay_ms(); }
+float Resampler::accumulated_delay_ms() const noexcept { return impl_->accumulated_delay_ms(); }
 
 
 }  // namespace sound

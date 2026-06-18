@@ -29,7 +29,7 @@ namespace util::sound {
 
 TEST_CASE("FAIL Create returns nullptr for SIMPLE type [voice activity detection]") {
   VadConfig cfg;
-  cfg.type = VadType::SIMPLE;
+  cfg.type = VadType::simple;
 
   auto vad = VadBuilder(cfg).create();
   REQUIRE(vad == nullptr);
@@ -37,7 +37,7 @@ TEST_CASE("FAIL Create returns nullptr for SIMPLE type [voice activity detection
 
 TEST_CASE("SUCCEED Create returns RNNoiseVad for RNNOISE type [voice activity detection]") {
   VadConfig cfg;
-  cfg.type = VadType::RNNOISE;
+  cfg.type = VadType::rnnoise;
   cfg.sample_rate = 16000;
   cfg.threshold = 0.5f;
 
@@ -64,7 +64,7 @@ TEST_CASE("FAIL Create returns nullptr for unknown VAD type [voice activity dete
 TEST_CASE("SUCCEED Builder setters affect created VAD instance [voice activity detection]") {
   constexpr uint32_t sample_rate = 48000;
 
-  auto vad = VadBuilder().set_type(VadType::RNNOISE).set_sample_rate(sample_rate).set_threshold(0.25f).create();
+  auto vad = VadBuilder().set_type(VadType::rnnoise).set_sample_rate(sample_rate).set_threshold(0.25f).create();
 
   REQUIRE(vad != nullptr);
   REQUIRE(vad->sample_rate() == sample_rate);
@@ -74,7 +74,7 @@ TEST_CASE("SUCCEED Builder setters affect created VAD instance [voice activity d
 
 TEST_CASE("SUCCEED RNNoiseVad initial state is default [voice activity detection]") {
   VadConfig cfg;
-  cfg.type = VadType::RNNOISE;
+  cfg.type = VadType::rnnoise;
   cfg.sample_rate = 16000;
   cfg.threshold = 0.5f;
 
@@ -87,7 +87,7 @@ TEST_CASE("SUCCEED RNNoiseVad initial state is default [voice activity detection
 
 TEST_CASE("SUCCEED RNNoiseVad process updates internal state and returns it [voice activity detection]") {
   VadConfig cfg;
-  cfg.type = VadType::RNNOISE;
+  cfg.type = VadType::rnnoise;
   cfg.sample_rate = 16000;
   cfg.threshold = 0.5f;
 
@@ -111,7 +111,7 @@ TEST_CASE("SUCCEED Threshold extremes force speech decision [voice activity dete
   // High threshold -> must be false (unless score is absurdly huge).
   {
     VadConfig cfg;
-    cfg.type = VadType::RNNOISE;
+    cfg.type = VadType::rnnoise;
     cfg.sample_rate = 16000;
     cfg.threshold = 1000.0f;
 
@@ -126,7 +126,7 @@ TEST_CASE("SUCCEED Threshold extremes force speech decision [voice activity dete
   // Very low threshold -> must be true (unless score is NaN, which would fail finite check).
   {
     VadConfig cfg;
-    cfg.type = VadType::RNNOISE;
+    cfg.type = VadType::rnnoise;
     cfg.sample_rate = 16000;
     cfg.threshold = -1000.0f;
 
@@ -146,7 +146,7 @@ TEST_CASE("SUCCEED Create and process voice activity detector [voice activity de
   constexpr uint32_t num_frames = (60 * fs) / frame_len;
 
   auto vad =
-      VadBuilder().set_sample_rate(fs).set_frame_len(frame_len).set_threshold(0.5).set_type(VadType::RNNOISE).create();
+      VadBuilder().set_sample_rate(fs).set_frame_len(frame_len).set_threshold(0.5).set_type(VadType::rnnoise).create();
 
   dsplib::arr_real vad_state(num_frames);
   for (int32_t i = 0; i < static_cast<int32_t>(num_frames); ++i) {

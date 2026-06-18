@@ -37,12 +37,12 @@ VadBuilder& VadBuilder::set_model_file(const std::string& model_file) {
 }
 
 std::shared_ptr<IVad> VadBuilder::create() {
-  if (cfg_.type == VadType::SIMPLE) {
+  if (cfg_.type == VadType::simple) {
     // TODO(vayulis): add implementation
     return nullptr;
   }
 
-  if (cfg_.type == VadType::RNNOISE) {
+  if (cfg_.type == VadType::rnnoise) {
     return std::make_shared<RNNoiseVad>(cfg_);
   }
 

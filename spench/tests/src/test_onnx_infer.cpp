@@ -81,7 +81,7 @@ struct TestOnnx {
     session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
   }
 
-  TestOnnx& InitModel(const std::string& model_name) {
+  TestOnnx& init_model(const std::string& model_name) {
     std::string full_model_path = data_root + "models/" + model_name;
 
     denoiser = std::unique_ptr<Ort::Session>(new Ort::Session(session_env,
@@ -161,7 +161,7 @@ struct TestOnnxRunner {
 
 TEST_CASE("SUCCEED Run single dummy inference [onnx]") {
   auto data = std::move(TestOnnx()
-      .InitModel("quality_model_48khz.onnx"));
+      .init_model("quality_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -214,7 +214,7 @@ TEST_CASE("SUCCEED Run single dummy inference [onnx]") {
 
 TEST_CASE("SUCCEED Run single dummy inference for dereverb model [onnx]") {
   auto data = std::move(TestOnnx()
-      .InitModel("dereverb_model_48khz.onnx"));
+      .init_model("dereverb_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -263,7 +263,7 @@ TEST_CASE("SUCCEED Run single dummy inference for dereverb model [onnx]") {
 
 TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with one thread [onnx]") {
   auto data = std::move(TestOnnx()
-      .InitModel("quality_model_48khz.onnx"));
+      .init_model("quality_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -317,7 +317,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with 
 
 TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with two threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(2)
-      .InitModel("quality_model_48khz.onnx"));
+      .init_model("quality_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -366,7 +366,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with 
 
 TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with four threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(4)
-      .InitModel("quality_model_48khz.onnx"));
+      .init_model("quality_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -415,7 +415,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with 
 
 TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with eight threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(8)
-      .InitModel("quality_model_48khz.onnx"));
+      .init_model("quality_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -464,7 +464,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with 
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with one thread [onnx]") {
   auto data = std::move(TestOnnx()
-      .InitModel("fast_model_24khz.onnx"));
+      .init_model("fast_model_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -514,7 +514,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with one
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with two threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(2)
-      .InitModel("fast_model_24khz.onnx"));
+      .init_model("fast_model_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -563,7 +563,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with two
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with four threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(4)
-      .InitModel("fast_model_24khz.onnx"));
+      .init_model("fast_model_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -612,7 +612,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with fou
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with eight threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(8)
-      .InitModel("fast_model_24khz.onnx"));
+      .init_model("fast_model_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -661,7 +661,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with eig
 
 TEST_CASE("SUCCEED Run dummy multi inference for a dereverb model 48kHz and with one thread [onnx]") {
   auto data = std::move(TestOnnx()
-      .InitModel("dereverb_model_48khz.onnx"));
+      .init_model("dereverb_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -713,7 +713,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a dereverb model 48kHz and with
 
 TEST_CASE("SUCCEED Run dummy multi inference for a dereverb model 48kHz and with two threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(2)
-      .InitModel("dereverb_model_48khz.onnx"));
+      .init_model("dereverb_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -764,7 +764,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a dereverb model 48kHz and with
 
 TEST_CASE("SUCCEED Run dummy multi inference for a dereverb model 48kHz and with four threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(4)
-      .InitModel("dereverb_model_48khz.onnx"));
+      .init_model("dereverb_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -815,7 +815,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a dereverb model 48kHz and with
 
 TEST_CASE("SUCCEED Run dummy multi inference for a dereverb model 48kHz and with eight threads [onnx]") {
   auto data = std::move(TestOnnx().SetThreadNum(8)
-      .InitModel("dereverb_model_48khz.onnx"));
+      .init_model("dereverb_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
@@ -883,7 +883,7 @@ TEST_CASE("FAIL Read config for Inference Runner with not existed model path [on
 TEST_CASE("FAIL Run cpu onnx runner with null pointer task and zeroed hidden layer [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
-  CHECK_THROWS_WITH(data.spench_model_runner->Infer(nullptr),
+  CHECK_THROWS_WITH(data.spench_model_runner->infer(nullptr),
                                               "Task data or context are not initialized!");
 }
 
@@ -891,7 +891,7 @@ TEST_CASE("FAIL Run cpu onnx runner with null pointer context and zeroed hidden 
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
   spench::SpenchTask denoise_task;
-  CHECK_THROWS_WITH(data.spench_model_runner->Infer(&denoise_task),
+  CHECK_THROWS_WITH(data.spench_model_runner->infer(&denoise_task),
                                             "Task data or context are not initialized!");
 }
 
@@ -953,17 +953,17 @@ TEST_CASE("SUCCEED Run the dereverb model and check network outputs (audio 48kHz
 
   spench::SpenchTask dereverb_task;
   std::unique_ptr<spench::DereverbContext<float>> ctx(new spench::DereverbContext<float>);
-  dereverb_task.m_data.context = ctx.get();
+  dereverb_task.data.context = ctx.get();
   // pass resulted spec
   ctx.get()->noisy_spec = spec;
-  dereverb_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-  dereverb_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.spench_model_runner->Infer(&dereverb_task);
+  dereverb_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
+  dereverb_task.stage = spench::PipelineStage::fourier_transformed_spec;
+  data.spench_model_runner->infer(&dereverb_task);
 
   IsVectorsClose(ctx.get()->noisy_spec, noisy_spec_for_model_input_5_new, 0.000001);
 
-  auto& new_real_ref = dereverb_task.m_data.new_spectrogram.real;
-  auto& new_imag_ref = dereverb_task.m_data.new_spectrogram.imag;
+  auto& new_real_ref = dereverb_task.data.new_spectrogram.real;
+  auto& new_imag_ref = dereverb_task.data.new_spectrogram.imag;
   std::vector<float> new_spec_mag(new_real_ref.size());
 
   for (size_t i = 0; i < new_real_ref.size(); ++i) {
@@ -975,7 +975,7 @@ TEST_CASE("SUCCEED Run the dereverb model and check network outputs (audio 48kHz
   // Maximum value in the vectors is about 4.5
   IsVectorsClose(gt_model_output_mag, new_spec_mag, 0.8);
 
-  REQUIRE(dereverb_task.m_stage == spench::PipelineStage::PREDICTED_SPEC);
+  REQUIRE(dereverb_task.stage == spench::PipelineStage::predicted_spec);
 }
 
 #ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
@@ -1002,17 +1002,17 @@ TEST_CASE("SUCCEED Run the dereverb model and check network outputs (audio 48kHz
 
 //   spench::SpenchTask denoise_task;
 //   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
-//   denoise_task.m_data.context = ctx.get();
-//   denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-//   denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+//   denoise_task.data.context = ctx.get();
+//   denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
+//   denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
 
-//   data.spench_model_runner->Infer(&denoise_task);
+//   data.spench_model_runner->infer(&denoise_task);
 
-//   REQUIRE(denoise_task.m_stage == spench::PipelineStage::SKIPPED_CHUNK);
-//   IsVectorsClose(gt_real, denoise_task.m_data.new_spectrogram.real, 0.000001);
-//   IsVectorsClose(gt_imag, denoise_task.m_data.new_spectrogram.imag, 0.000001);
-//   CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-//                                                  denoise_task.m_data.enhanced_wav);
+//   REQUIRE(denoise_task.stage == spench::PipelineStage::skipped_chunk);
+//   IsVectorsClose(gt_real, denoise_task.data.new_spectrogram.real, 0.000001);
+//   IsVectorsClose(gt_imag, denoise_task.data.new_spectrogram.imag, 0.000001);
+//   CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
+//                                                  denoise_task.data.enhanced_wav);
 //   IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.000001);
 //   IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.000001);
 //   IsVectorsClose(gt_subband_hidden, ctx.get()->subband_hidden, 0.000001);
@@ -1035,7 +1035,7 @@ TEST_CASE("SUCCEED Read default config for the best speed model 24kHz [onnx runn
       .InitRunner("default_configuration_fast_onnx_24khz.yaml"));
 }
 
-TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with fast onnx model (audio 24 kHz) [onnx runner]") {
+TEST_CASE("SUCCEED Run prepare_input_in_place on one real frame with fast onnx model (audio 24 kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_fast_onnx_24khz.yaml"));
   std::vector<float> noisy_mag_5_old;
@@ -1050,12 +1050,13 @@ TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with fast onnx mode
   std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
   spench::SpenchContext<float>* denoise_contex = ctx.get();
   ctx.get()->noisy_mag = noisy_mag_5_old;
-  data.spench_model_runner->PrepareInputInPlace(noisy_mag_1_new, inputs, denoise_contex);
+  data.spench_model_runner->prepare_input_in_place(noisy_mag_1_new, inputs, denoise_contex);
 
   IsVectorsClose(ctx.get()->noisy_mag, noisy_mag_5_new, 0.000001);
 }
 
-TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with dereverb onnx model (audio 48 kHz) [onnx runner]") {
+TEST_CASE("SUCCEED Run prepare_input_in_place on one real frame with dereverb onnx model "
+          "(audio 48 kHz) [onnx runner]") {
   auto data = std::move(TestOnnxRunner()
       .InitRunner("default_configuration_dereverberation_onnx_48khz.yaml"));
   std::vector<float> noisy_spec_5_old_real;
@@ -1084,7 +1085,7 @@ TEST_CASE("SUCCEED Run PrepareInputInPlace on one real frame with dereverb onnx 
   frame.insert(std::end(frame), std::begin(noisy_frame_new_imag), std::end(noisy_frame_new_imag));
 
   // pass all inputs
-  data.spench_model_runner->PrepareInputInPlace(frame, inputs, spench_contex);
+  data.spench_model_runner->prepare_input_in_place(frame, inputs, spench_contex);
 
   IsVectorsClose(ctx.get()->noisy_spec, noisy_spec_for_model_input_5_new, 0.000001);
 }
@@ -1111,30 +1112,30 @@ TEST_CASE("SUCCEED Run fast onnx model with real data and check first two iterat
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
   data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.data.context = ctx.get();
+  denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
 
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.spench_model_runner->Infer(&denoise_task);
+  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
+  data.spench_model_runner->infer(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-                           denoise_task.m_data.enhanced_wav);
+  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
+  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
+                           denoise_task.data.enhanced_wav);
 
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
   data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.spench_model_runner->Infer(&denoise_task);
+  denoise_task.data.context = ctx.get();
+  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
+  data.spench_model_runner->infer(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
+  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
   IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.000001);
   IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.000001);
   IsVectorsClose(gt_prev_fb_out_5, ctx.get()->prev_fb_out, 0.000001);
-  IsVectorsClose(gt_real_output, denoise_task.m_data.new_spectrogram.real, 0.000001);
-  IsVectorsClose(gt_imag_output, denoise_task.m_data.new_spectrogram.imag, 0.000001);
+  IsVectorsClose(gt_real_output, denoise_task.data.new_spectrogram.real, 0.000001);
+  IsVectorsClose(gt_imag_output, denoise_task.data.new_spectrogram.imag, 0.000001);
 }
 
 TEST_CASE("SUCCEED Run quality onnx model with real data and check first two iterations (audio 48 kHz) [onnx runner]") {
@@ -1189,10 +1190,10 @@ TEST_CASE("SUCCEED Run quality onnx model with real data and check first two ite
 
   REQUIRE(ctx->fullband_hidden.size() == 2 * 256);
 
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_data.input_spectrogram.clear();
-  denoise_task.m_data.input_spectrogram.emplace_back(noisy_real_0, noisy_imag_0);
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+  denoise_task.data.context = ctx.get();
+  denoise_task.data.input_spectrogram.clear();
+  denoise_task.data.input_spectrogram.emplace_back(noisy_real_0, noisy_imag_0);
+  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
 
   data.LoadDataFromBin("step1_prev_fb_conv1_buf_in_48khz.dump", ctx->fb_conv1_buf);
   data.LoadDataFromBin("step1_prev_fb_conv3_buf_in_48khz.dump", ctx->fb_conv3_buf);
@@ -1201,8 +1202,8 @@ TEST_CASE("SUCCEED Run quality onnx model with real data and check first two ite
   IsVectorsClose(gt_b1_in_step1, ctx->fb_conv1_buf, 1e-5f);
   IsVectorsClose(gt_b3_in_step1, ctx->fb_conv3_buf, 1e-5f);
 
-  data.spench_model_runner->Infer(&denoise_task);
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
+  data.spench_model_runner->infer(&denoise_task);
+  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
   IsVectorsClose(gt_fb_hidden_step1, ctx->fullband_hidden, 1e-5f);
   IsVectorsClose(gt_fb_snr_noise_psd_step1, ctx->fb_snr_noise_psd, 1e-5f);
   IsVectorsClose(gt_sb_snr_noise_psd_step1, ctx->sb_snr_noise_psd, 1e-5f);
@@ -1211,12 +1212,12 @@ TEST_CASE("SUCCEED Run quality onnx model with real data and check first two ite
   IsVectorsClose(gt_fb_snr_noise_pg_step1, ctx->fb_snr_noise_pg, 1e-5f);
   IsVectorsClose(gt_sb_snr_noise_pg_step1, ctx->sb_snr_noise_pg, 1e-5f);
 
-  denoise_task.m_data.input_spectrogram.clear();
-  denoise_task.m_data.input_spectrogram.emplace_back(noisy_real_1, noisy_imag_1);
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
+  denoise_task.data.input_spectrogram.clear();
+  denoise_task.data.input_spectrogram.emplace_back(noisy_real_1, noisy_imag_1);
+  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
 
-  data.spench_model_runner->Infer(&denoise_task);
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
+  data.spench_model_runner->infer(&denoise_task);
+  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
   IsVectorsClose(gt_fb_hidden_step2, ctx->fullband_hidden, 1e-5f);
   IsVectorsClose(gt_fb_snr_noise_psd_step2, ctx->fb_snr_noise_psd, 1e-5f);
   IsVectorsClose(gt_sb_snr_noise_psd_step2, ctx->sb_snr_noise_psd, 1e-5f);
@@ -1247,30 +1248,30 @@ TEST_CASE("SUCCEED Run encrypted onnx model and check first two iterations (audi
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
   data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.data.context = ctx.get();
+  denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
 
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.spench_model_runner->Infer(&denoise_task);
+  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
+  data.spench_model_runner->infer(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-                           denoise_task.m_data.enhanced_wav);
+  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
+  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
+                           denoise_task.data.enhanced_wav);
 
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
   data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.spench_model_runner->Infer(&denoise_task);
+  denoise_task.data.context = ctx.get();
+  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
+  data.spench_model_runner->infer(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
+  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
   IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.000001);
   IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.000001);
   IsVectorsClose(gt_prev_fb_out_5, ctx.get()->prev_fb_out, 0.000001);
-  IsVectorsClose(gt_real_output, denoise_task.m_data.new_spectrogram.real, 0.000001);
-  IsVectorsClose(gt_imag_output, denoise_task.m_data.new_spectrogram.imag, 0.000001);
+  IsVectorsClose(gt_real_output, denoise_task.data.new_spectrogram.real, 0.000001);
+  IsVectorsClose(gt_imag_output, denoise_task.data.new_spectrogram.imag, 0.000001);
 }
 
 TEST_CASE("SUCCEED Run licensed encrypted model and check first two iterations (24 kHz) [onnx runner]") {
@@ -1296,30 +1297,30 @@ TEST_CASE("SUCCEED Run licensed encrypted model and check first two iterations (
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
   data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.data.context = ctx.get();
+  denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
 
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.spench_model_runner->Infer(&denoise_task);
+  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
+  data.spench_model_runner->infer(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-                           denoise_task.m_data.enhanced_wav);
+  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
+  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
+                           denoise_task.data.enhanced_wav);
 
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
   data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.spench_model_runner->Infer(&denoise_task);
+  denoise_task.data.context = ctx.get();
+  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
+  data.spench_model_runner->infer(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
+  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
   IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.00001);
   IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.00001);
   IsVectorsClose(gt_prev_fb_out_5, ctx.get()->prev_fb_out, 0.00001);
-  IsVectorsClose(gt_real_output, denoise_task.m_data.new_spectrogram.real, 0.00001);
-  IsVectorsClose(gt_imag_output, denoise_task.m_data.new_spectrogram.imag, 0.00001);
+  IsVectorsClose(gt_real_output, denoise_task.data.new_spectrogram.real, 0.00001);
+  IsVectorsClose(gt_imag_output, denoise_task.data.new_spectrogram.imag, 0.00001);
 }
 
 TEST_CASE("SUCCEED Run licensed encrypted model w/o lic check (24 kHz) [onnx runner]") {
@@ -1345,29 +1346,29 @@ TEST_CASE("SUCCEED Run licensed encrypted model w/o lic check (24 kHz) [onnx run
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
   data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
+  denoise_task.data.context = ctx.get();
+  denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
 
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.spench_model_runner->Infer(&denoise_task);
+  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
+  data.spench_model_runner->infer(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
-  CHECK(std::vector<float>(denoise_task.m_data.enhanced_wav.size(), 0.0) ==
-                           denoise_task.m_data.enhanced_wav);
+  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
+  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
+                           denoise_task.data.enhanced_wav);
 
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
   data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
   data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.m_data.context = ctx.get();
-  denoise_task.m_stage = spench::PipelineStage::FOURIER_TRANSFORMED_SPEC;
-  data.spench_model_runner->Infer(&denoise_task);
+  denoise_task.data.context = ctx.get();
+  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
+  data.spench_model_runner->infer(&denoise_task);
 
-  REQUIRE(denoise_task.m_stage == spench::PipelineStage::PREDICTED_MASK);
+  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
   IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.00001);
   IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.00001);
   IsVectorsClose(gt_prev_fb_out_5, ctx.get()->prev_fb_out, 0.00001);
-  IsVectorsClose(gt_real_output, denoise_task.m_data.new_spectrogram.real, 0.00001);
-  IsVectorsClose(gt_imag_output, denoise_task.m_data.new_spectrogram.imag, 0.00001);
+  IsVectorsClose(gt_real_output, denoise_task.data.new_spectrogram.real, 0.00001);
+  IsVectorsClose(gt_imag_output, denoise_task.data.new_spectrogram.imag, 0.00001);
 }
 #endif

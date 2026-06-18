@@ -17,7 +17,7 @@ namespace {
 
 constexpr float eps = 1e-8;
 
-float _max_abs(const std::vector<float>& x) noexcept {
+float max_abs(const std::vector<float>& x) noexcept {
   float max = std::abs(x[0]);
   for (size_t i = 1; i < x.size(); ++i) {
     max = std::max(std::abs(x[i]), max);
@@ -28,66 +28,66 @@ float _max_abs(const std::vector<float>& x) noexcept {
 
 class PowerMeter {
  public:
-  explicit PowerMeter(int32_t winlen, int32_t overlap) : m_winlen{winlen}, m_stride{winlen - overlap} {
+  explicit PowerMeter(int32_t winlen, int32_t overlap) : win_len_{winlen}, stride_len_{winlen - overlap} {
     DSPLIB_ASSERT(winlen > overlap, "window size must be greater than overlap");
-    m_buf = dsplib::zeros(m_winlen);
+    buf_ = dsplib::zeros(winlen);
   }
 
   std::optional<float> process(const std::vector<float>& x) {
     std::optional<float> result;
     for (const auto& v : x) {
-      m_buf[m_idx] = (v * v);
-      m_idx = (m_idx < (m_winlen - 1)) ? (m_idx + 1) : 0;
-      m_step += 1;
-      if (m_step == m_stride) {
-        m_step = 0;
-        result = dsplib::mean(m_buf);
+      buf_[idx_] = (v * v);
+      idx_ = (idx_ < (win_len_ - 1)) ? (idx_ + 1) : 0;
+      step_ += 1;
+      if (step_ == stride_len_) {
+        step_ = 0;
+        result = dsplib::mean(buf_);
       }
     }
     return result;
   }
 
-  [[nodiscard]] int32_t stride() const noexcept { return m_stride; }
+  [[nodiscard]] int32_t stride() const noexcept { return stride_len_; }
 
  private:
-  int32_t m_step{0};
-  int32_t m_idx{0};
-  const int32_t m_winlen;
-  const int32_t m_stride;
-  dsplib::arr_real m_buf;
+  int32_t step_{0};
+  int32_t idx_{0};
+  const int32_t win_len_;
+  const int32_t stride_len_;
+  dsplib::arr_real buf_;
 };
 
 LoudnessMeter::LoudnessMeter(int32_t sample_rate) {
   // see EBU R 128
-  m_mm_meter = std::make_shared<PowerMeter>(sample_rate * 0.4, sample_rate * 0.35);  ///< 0.4s, 0.35 overlap
-  m_st_meter = std::make_shared<PowerMeter>(sample_rate * 3.0, sample_rate * 2.95);  ///< 3.0s, 2.95 overlap
-  m_wflt = std::make_shared<WeightingFilter>(sample_rate, WeightingFilter::Type::K);
+  mm_meter_ = std::make_shared<PowerMeter>(sample_rate * 0.4, sample_rate * 0.35);  ///< 0.4s, 0.35 overlap
+  st_meter_ = std::make_shared<PowerMeter>(sample_rate * 3.0, sample_rate * 2.95);  ///< 3.0s, 2.95 overlap
+  wflt_ = std::make_shared<WeightingFilter>(sample_rate, WeightingFilter::Type::k);
 }
 
-size_t LoudnessMeter::stride() const noexcept { return m_st_meter->stride(); }
+size_t LoudnessMeter::stride() const noexcept { return st_meter_->stride(); }
 
 void LoudnessMeter::update(const std::vector<float>& x) {
   // k-weightning
-  const auto kx = m_wflt->process(x);
+  const auto kx = wflt_->process(x);
 
   // momentary power
-  auto mm = m_mm_meter->process(kx);
+  auto mm = mm_meter_->process(kx);
   if (mm.has_value()) {
-    auto mP = -0.691F + dsplib::pow2db(*mm + eps);
-    m_state.momentary = mP;
+    auto power_db = -0.691F + dsplib::pow2db(*mm + eps);
+    state_.momentary = power_db;
   }
 
   // short-term power
-  auto st = m_st_meter->process(kx);
+  auto st = st_meter_->process(kx);
   if (st.has_value()) {
-    auto sP = -0.691F + dsplib::pow2db(*st + eps);
-    m_state.short_term = sP;
+    auto s_p = -0.691F + dsplib::pow2db(*st + eps);
+    state_.short_term = s_p;
   }
 
   // true peak level (for current frame)
   // TODO(vayulis): interpolate signal
-  auto peak = dsplib::mag2db(_max_abs(x));
-  m_state.true_peak = peak;
+  auto peak = dsplib::mag2db(max_abs(x));
+  state_.true_peak = peak;
 }
 
 }  // namespace util::sound

@@ -10,10 +10,12 @@
 #include "spench/src/spench_default_configurations.h"
 
 // Forward declarations to avoid exposing yaml-cpp in the public header.
+// NOLINTBEGIN(readability-identifier-naming)
 namespace YAML {
 class Node;
 class ParserException;
 }  // namespace YAML
+// NOLINTEND(readability-identifier-naming)
 
 namespace util {
 namespace echo {
@@ -26,7 +28,7 @@ namespace spench {
 // Declared here, implemented in the .cpp to keep yaml-cpp private.
 YAML::Node lookup(const YAML::Node& root,
                   const std::initializer_list<std::string>& path);
-void mergeYaml(YAML::Node& dest, const YAML::Node& src);
+void merge_yaml(YAML::Node& dest, const YAML::Node& src);
 
 // -----------------------------------------------------------------------------
 
@@ -42,11 +44,11 @@ class ConfigReader {
   virtual ~ConfigReader();
 
   // Accessor does not require a complete YAML::Node type.
-  inline const YAML::Node& params() const noexcept { return *m_params; }
+  inline const YAML::Node& params() const noexcept { return *params_; }
 
  protected:
   // Pointer to an opaque YAML::Node to avoid including yaml-cpp in this header.
-  std::unique_ptr<YAML::Node> m_params;
+  std::unique_ptr<YAML::Node> params_;
 };
 
 // Loads the entire document from a file path.
@@ -84,29 +86,29 @@ class NetworkConfig : public PipelineConfig {
   }
 
   void validate() const override;
-  std::string                 modelPath()        const;
-  std::vector<std::string>    modelInputs()      const;
-  std::vector<std::string>    modelOutputs()     const;
-  uint32_t                    samplingFreq()     const;
-  uint32_t                    frameSizeMs()      const;
-  uint32_t                    frameStrideMs()    const;
-  std::string                 windowType()       const;
-  bool                        useGpu()           const;
-  bool                        skipZeroedChunks() const;
-  uint32_t                    numThreads()       const;
-  std::string                 modelType()        const;
-  bool                        isModelBundled()   const;
-  const std::vector<uint8_t>& getModel()         const;
+  std::string                 model_path()        const;
+  std::vector<std::string>    model_inputs()      const;
+  std::vector<std::string>    model_outputs()     const;
+  uint32_t                    sampling_freq()     const;
+  uint32_t                    frame_size_ms()      const;
+  uint32_t                    frame_stride_ms()    const;
+  std::string                 window_type()       const;
+  bool                        use_gpu()           const;
+  bool                        skip_zeroed_chunks() const;
+  uint32_t                    num_threads()       const;
+  std::string                 model_type()        const;
+  bool                        is_model_bundled()   const;
+  const std::vector<uint8_t>& get_model()         const;
 
  protected:
   NetworkConfig(std::shared_ptr<spench::PackedModelReader> bundle,
                 std::string default_config)
-      : PipelineConfig(StringConfigReader(bundle->getConfig()),
+      : PipelineConfig(StringConfigReader(bundle->config()),
                        std::move(default_config)),
         bundle_(std::move(bundle)) {}
 
-  virtual std::vector<std::string> defaultModelInputs() const = 0;
-  virtual std::vector<std::string> defaultModelOutputs() const = 0;
+  virtual std::vector<std::string> default_model_inputs() const = 0;
+  virtual std::vector<std::string> default_model_outputs() const = 0;
 
   std::shared_ptr<spench::PackedModelReader> bundle_ = nullptr;
 };
@@ -116,14 +118,14 @@ class NetworkConfig : public PipelineConfig {
 class DenoiserConfig final : public NetworkConfig {
  public:
   explicit DenoiserConfig(const ConfigReader& base_reader)
-      : NetworkConfig(base_reader, spench::DefaultDenoiserConfigYAML) {}
+      : NetworkConfig(base_reader, spench::default_denoiser_config_yaml) {}
 
   explicit DenoiserConfig(std::shared_ptr<spench::PackedModelReader> bundle)
-      : NetworkConfig(std::move(bundle), spench::DefaultDenoiserConfigYAML) {}
+      : NetworkConfig(std::move(bundle), spench::default_denoiser_config_yaml) {}
 
  protected:
-  std::vector<std::string> defaultModelInputs() const override;
-  std::vector<std::string> defaultModelOutputs() const override;
+  std::vector<std::string> default_model_inputs() const override;
+  std::vector<std::string> default_model_outputs() const override;
 };
 
 // -----------------------------------------------------------------------------
@@ -131,21 +133,21 @@ class DenoiserConfig final : public NetworkConfig {
 class DereverbConfig final : public NetworkConfig {
  public:
   explicit DereverbConfig(const ConfigReader& base_reader)
-      : NetworkConfig(base_reader, spench::DefaultDereverbConfigYAML) {}
+      : NetworkConfig(base_reader, spench::default_dereverb_config_yaml) {}
 
   explicit DereverbConfig(std::shared_ptr<spench::PackedModelReader> bundle)
-      : NetworkConfig(std::move(bundle), spench::DefaultDereverbConfigYAML) {}
+      : NetworkConfig(std::move(bundle), spench::default_dereverb_config_yaml) {}
 
  protected:
-  std::vector<std::string> defaultModelInputs() const override;
-  std::vector<std::string> defaultModelOutputs() const override;
+  std::vector<std::string> default_model_inputs() const override;
+  std::vector<std::string> default_model_outputs() const override;
 };
 
 // -----------------------------------------------------------------------------
 
 class AudioProcessorConfigYamlBlock {
  public:
-  enum class Kind { kScalar, kSequence, kMap };
+  enum class Kind { scalar, sequence, map };
 
   struct Field {
     const char* key;
@@ -153,7 +155,7 @@ class AudioProcessorConfigYamlBlock {
     bool required;
   };
 
-  static void validateSection(const YAML::Node& section,
+  static void validate_section(const YAML::Node& section,
                               const std::string& section_name,
                               std::initializer_list<Field> fields);
 };
@@ -183,7 +185,7 @@ class AudioProcessorConfig final : public PipelineConfig {
   explicit AudioProcessorConfig() : AudioProcessorConfig(StringConfigReader("")) {}
 
   explicit AudioProcessorConfig(const ConfigReader& base_reader)
-      : PipelineConfig(base_reader, spench::DefaultAudioProcessingConfigYAML) {
+      : PipelineConfig(base_reader, spench::default_audio_processing_config_yaml) {
     validate();
   }
 
@@ -206,19 +208,19 @@ class AecConfig final : public PipelineConfig {
   explicit AecConfig() : AecConfig(StringConfigReader("")) {}
 
   explicit AecConfig(const ConfigReader& base_reader)
-      : PipelineConfig(base_reader, spench::DefaultAecConfigYAML) {
+      : PipelineConfig(base_reader, spench::default_aec_config_yaml) {
     validate();
   }
 
   void validate() const override;
 
     // typed getters (with code-baked defaults):
-    uint32_t                     sampleRate()                      const;
-    uint16_t                     filterLen()                       const;
-    bool                         residualEchoSuppressionEnabled()  const;
-    bool                         delayCompensatorEnabled()         const;
-    uint16_t                     frameLen()                        const;
-    uint16_t                     echoPremute()                     const;
+    uint32_t                     sample_rate()                      const;
+    uint16_t                     filter_len()                       const;
+    bool                         residual_echo_suppression_enabled()  const;
+    bool                         delay_compensator_enabled()         const;
+    uint16_t                     frame_len()                        const;
+    uint16_t                     echo_premute()                     const;
     util::echo::EchoCancelerType type()                            const;
 };
 

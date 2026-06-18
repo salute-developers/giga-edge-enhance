@@ -10,21 +10,21 @@ namespace util::sound {
 
 class CycleBuffer {
  public:
-  explicit CycleBuffer(size_t size, float init = 0) : m_size{size} { m_buf.resize(m_size, init); }
+  explicit CycleBuffer(size_t size, float init = 0) : size_{size} { buf_.resize(size_, init); }
 
   void push(float value) noexcept {
-    m_buf[m_pos] = value;
-    m_pos = (m_pos + 1) % m_size;
+    buf_[pos_] = value;
+    pos_ = (pos_ + 1) % size_;
   }
 
-  const std::vector<float>& data() const noexcept { return m_buf; }
+  const std::vector<float>& data() const noexcept { return buf_; }
 
-  size_t size() const noexcept { return m_buf.size(); }
+  size_t size() const noexcept { return buf_.size(); }
 
  private:
-  size_t m_size;
-  std::vector<float> m_buf;
-  size_t m_pos{0};
+  size_t size_;
+  std::vector<float> buf_;
+  size_t pos_{0};
 };
 
 /**

@@ -4,13 +4,15 @@
 #include <vector>
 #include <memory>
 
-// Forward declarations to avoid including spdlog headers
+// Forward declarations to avoid including spdlog headers (spdlog names are NOLINT).
+// NOLINTBEGIN(readability-identifier-naming)
 namespace spdlog {
 class logger;
 namespace sinks { class sink; }
 using sink_ptr = std::shared_ptr<sinks::sink>;
 namespace level { enum level_enum : int32_t; }
 }  // namespace spdlog
+// NOLINTEND(readability-identifier-naming)
 
 namespace spench {
 
@@ -22,20 +24,20 @@ namespace spench {
 // 4: Error  Error events that might still allow the application to continue running.
 // 5: Off    Disable all logging.
 
-enum class LogLevel : uint32_t { Trace = 0, Debug, Info, Warn, Error, Off };
+enum class LogLevel : uint32_t { trace = 0, debug, info, warn, error, off };
 
-// Global logger instance (static, inline) to be used directly: use spdlog::info(), etc. after Init.
-inline std::shared_ptr<spdlog::logger> gLogger;
+// Global logger instance (static, inline) to be used directly: use spdlog::info(), etc. after init.
+inline std::shared_ptr<spdlog::logger> g_logger;
 
 // Initialize the global logger (call once at startup)
 // name: logger name, level: minimum log level to output, logfile: optional file path
-void InitLogger(uint32_t level = static_cast<unsigned int>(LogLevel::Info),
-                const std::string& name = "Spench",
-                const std::string& logfile = {});
+void init_logger(uint32_t level = static_cast<unsigned int>(LogLevel::info),
+                 const std::string& name = "Spench",
+                 const std::string& logfile = {});
 
 // Shutdown and flush all loggers
-void ShutdownLogger();
+void shutdown_logger();
 
 // Change the log level at runtime (0=Trace ... 5=Off)
-void SetLogLevel(uint32_t level);
+void set_log_level(uint32_t level);
 }  // namespace spench

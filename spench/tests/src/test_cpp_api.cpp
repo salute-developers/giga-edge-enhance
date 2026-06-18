@@ -169,7 +169,7 @@ TEST_CASE("SUCCEED Convert pcm to float point [spench c++ api]") {
   std::vector<float> ref_float = {0.0, 1.0, -1.0, 0.06103, -0.1526};
   std::vector<float> converted_float;
 
-  spench::tools::convertPCM16ToFloat32(pcm16, converted_float);
+  spench::tools::convert_pcm16_to_float32(pcm16, converted_float);
 
   IsVectorsClose(ref_float, converted_float, 0.001);
 }
@@ -179,7 +179,7 @@ TEST_CASE("SUCCEED Convert float point to pcm [spench c++ api]") {
   std::vector<int16_t> ref_pcm = {0, 32767, -32767, 2000, -5000};
   std::vector<int16_t> converted_pcm;
 
-  spench::tools::convertFloat32ToPCM16(float_point32, converted_pcm);
+  spench::tools::convert_float32_to_pcm16(float_point32, converted_pcm);
 
   REQUIRE(ref_pcm == converted_pcm);
 }
@@ -254,7 +254,7 @@ TEST_CASE("SUCCEED Get empty statistic information with nullptr instead of conte
   #endif
 
   auto stat = test_data.denoiser->GetStreamStat(nullptr);
-  REQUIRE(stat.m_snr == 0.0);
+  REQUIRE(stat.snr == 0.0);
 }
 
 TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
@@ -324,10 +324,10 @@ TEST_CASE("SUCCEED Get statistic information [spench c++ api]") {
   }
 
   auto stat = test_data.denoiser->GetStreamStat(nullptr);
-  CHECK(stat.m_snr == 0.0);
+  CHECK(stat.snr == 0.0);
 
   stat = test_data.denoiser->GetStreamStat(ctx);
-  REQUIRE(stat.m_snr != 0.0);
+  REQUIRE(stat.snr != 0.0);
 
   test_data.denoiser->DestroyContext(&ctx);
   REQUIRE(ctx == nullptr);
@@ -2347,7 +2347,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [
 // POSITIVE — YAML string accepted, chain can be built and used
 // -----------------------------------------------------------------------------
 TEST_CASE("SUCCESS AudioProcessing accepts YAML string and can process a small frame [spench c++ api]") {
-  const std::string yaml = spench::DefaultAudioProcessingConfigYAML;
+  const std::string yaml = spench::default_audio_processing_config_yaml;
 
   // Construct from YAML string
   auto fx = std::move(TestFixture().InitAudioProcessor(yaml));

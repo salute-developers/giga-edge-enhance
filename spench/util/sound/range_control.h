@@ -16,12 +16,12 @@ namespace sound {
 template<typename T>
 class PeakDetector {
  private:
-  T m_frame_peak{0};
-  T m_best_peak{0};
-  uint32_t m_frame_size;
-  uint32_t m_frame_step{0};
-  std::vector<T> m_stat;
-  uint32_t m_istat{0};
+  T frame_peak_{0};
+  T best_peak_{0};
+  uint32_t frame_size_;
+  uint32_t frame_step_{0};
+  std::vector<T> stat_;
+  uint32_t istat_{0};
 
  public:
  /**
@@ -45,13 +45,13 @@ class PeakDetector {
 //----------------------------------------------------------------------
 class RangeControl {
  private:
-  PeakDetector<float> m_detector;
-  float m_eps{1e-5};
-  const float m_target{-3};
-  const float m_max_gain{0};
-  float m_peak{-3};
-  float m_wa;
-  float m_wr;
+  PeakDetector<float> detector_;
+  float eps_{1e-5};
+  float target_{-3};
+  float max_gain_{0};
+  float peak_{-3};
+  float wa_;
+  float wr_;
 
  public:
  /**

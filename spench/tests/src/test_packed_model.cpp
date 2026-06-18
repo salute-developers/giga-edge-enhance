@@ -27,8 +27,8 @@ TEST_CASE("SUCCEED write_packed_model and PackedModelReader work correctly [pack
 
   // Use PackedModelReader to retrieve data
   spench::PackedModelReader reader(packed_data);
-  REQUIRE(reader.getConfig() == config);
-  REQUIRE(reader.getModel() == model_bytes);
+  REQUIRE(reader.config() == config);
+  REQUIRE(reader.model() == model_bytes);
 }
 
 TEST_CASE("FAIL PackedModelReader throws on insufficient data length [packed_model]") {

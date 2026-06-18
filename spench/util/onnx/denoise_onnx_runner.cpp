@@ -13,13 +13,13 @@ SpenchQOnnxRunner::SpenchQOnnxRunner(const std::shared_ptr<spench::NetworkConfig
                                      const std::string& checksum,
                                      uint32_t inference_engine_threads,
                                      bool on_gpu) {
-    ReadConfig(config->params()["model"]);
-    InitModel(config, password, checksum, inference_engine_threads, on_gpu);
-    ValidateModel(m_model_params.m_model_inputs, m_model_params.m_model_outputs);
-    WarmUp<float>();
+    read_config(config->params()["model"]);
+    init_model(config, password, checksum, inference_engine_threads, on_gpu);
+    validate_model(model_params_.model_inputs, model_params_.model_outputs);
+    warm_up<float>();
 }
 
-void SpenchQOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
+void SpenchQOnnxRunner::prepare_input_in_place(std::vector<float>& mag,
                                            std::vector<std::vector<float>*>& inputs,
                                            spench::SpenchContext<float>* context) {
   if (context == nullptr) {
@@ -32,7 +32,7 @@ void SpenchQOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
   }
   inputs.clear();
 
-  const uint32_t num_feats = static_cast<uint32_t>(m_model_input_shapes[0][2]);
+  const uint32_t num_feats = static_cast<uint32_t>(model_input_shapes_[0][2]);
   if (mag.size() < num_feats) {
     throw std::runtime_error("mag size is smaller than expected");
   }
@@ -44,17 +44,17 @@ void SpenchQOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
   }
   const uint32_t num_frames = static_cast<uint32_t>(mag.size() / num_feats);
 
-  std::vector<std::vector<int64_t>> resolved_input_shapes = m_model_input_shapes;
-  SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], num_frames);
+  std::vector<std::vector<int64_t>> resolved_input_shapes = model_input_shapes_;
+  set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], num_frames);
 
-  ResizeIfNeededInPlace(denoise_context->noisy_mag,        resolved_input_shapes[0]);  // noisy_mag_in [1,1,769,T]
-  ResizeIfNeededInPlace(denoise_context->fullband_hidden,  resolved_input_shapes[1]);
-  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_psd, resolved_input_shapes[2]);
-  ResizeIfNeededInPlace(denoise_context->fb_snr_noise_pg,  resolved_input_shapes[3]);
-  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_psd, resolved_input_shapes[4]);
-  ResizeIfNeededInPlace(denoise_context->sb_snr_noise_pg,  resolved_input_shapes[5]);
-  ResizeIfNeededInPlace(denoise_context->fb_conv1_buf,     resolved_input_shapes[6]);
-  ResizeIfNeededInPlace(denoise_context->fb_conv3_buf,     resolved_input_shapes[7]);
+  resize_if_needed_in_place(denoise_context->noisy_mag,        resolved_input_shapes[0]);  // noisy_mag_in [1,1,769,T]
+  resize_if_needed_in_place(denoise_context->fullband_hidden,  resolved_input_shapes[1]);
+  resize_if_needed_in_place(denoise_context->fb_snr_noise_psd, resolved_input_shapes[2]);
+  resize_if_needed_in_place(denoise_context->fb_snr_noise_pg,  resolved_input_shapes[3]);
+  resize_if_needed_in_place(denoise_context->sb_snr_noise_psd, resolved_input_shapes[4]);
+  resize_if_needed_in_place(denoise_context->sb_snr_noise_pg,  resolved_input_shapes[5]);
+  resize_if_needed_in_place(denoise_context->fb_conv1_buf,     resolved_input_shapes[6]);
+  resize_if_needed_in_place(denoise_context->fb_conv3_buf,     resolved_input_shapes[7]);
 
   std::copy(mag.begin(), mag.end(), denoise_context->noisy_mag.begin());
 
@@ -68,25 +68,25 @@ void SpenchQOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
   inputs.push_back(&denoise_context->fb_conv3_buf);
 }
 
-void SpenchQOnnxRunner::InitOutputTensors(spench::SpenchTaskData& data, uint32_t out_shape) {
-    ResizeIfNeededInPlace(data.new_spectrogram.real, {out_shape}, 2);
-    ResizeIfNeededInPlace(data.new_spectrogram.imag, {out_shape}, 2);
+void SpenchQOnnxRunner::init_output_tensors(spench::SpenchTaskData& data, uint32_t out_shape) {
+    resize_if_needed_in_place(data.new_spectrogram.real, {out_shape}, 2);
+    resize_if_needed_in_place(data.new_spectrogram.imag, {out_shape}, 2);
 }
 
-void SpenchQOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
-  if (denoise_task == nullptr || denoise_task->m_data.context == nullptr) {
+void SpenchQOnnxRunner::infer(spench::SpenchTask* denoise_task) {
+  if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
     throw std::runtime_error("Task data or context are not initialized!");
   }
-  if (denoise_task->m_data.input_spectrogram.size() == 0) {
+  if (denoise_task->data.input_spectrogram.size() == 0) {
     throw std::runtime_error("Input spectrogram should be calculated before this step!");
   }
-  auto& denoise_data = denoise_task->m_data;
+  auto& denoise_data = denoise_task->data;
   auto& denoise_context = denoise_data.context;
-  if (denoise_context->prev_features.size() == m_model_params.m_network_input_ctx_len + 1) {
+  if (denoise_context->prev_features.size() == model_params_.network_input_ctx_len + 1) {
     denoise_context->prev_features.pop();
   }
 
-  if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
+  if (denoise_task->stage == spench::PipelineStage::fourier_transformed_spec) {
     std::vector<std::vector<float>*> inputs;
     std::vector<float> mag;
     const auto& specs = denoise_data.input_spectrogram;
@@ -99,34 +99,34 @@ void SpenchQOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
 
     // Fill mag so that time is the fastest axis: mag[f * T + t]
     for (std::size_t t = 0; t < num_frames; ++t) {
-      specs[t].writeMagnitudeInterleaved(mag, t, num_frames);
+      specs[t].write_magnitude_interleaved(mag, t, num_frames);
     }
 
     if (mag.size() % num_feats != 0) {
         throw std::runtime_error("mag size is not divisible by num_feats");
     }
 
-    std::vector<std::vector<int64_t>> resolved_input_shapes = m_model_input_shapes;
-    SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], num_frames);
+    std::vector<std::vector<int64_t>> resolved_input_shapes = model_input_shapes_;
+    set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], num_frames);
 
-    PrepareInputInPlace(mag, inputs, denoise_context);
-    InitOutputTensors(denoise_data, num_feats * num_frames * 2);
+    prepare_input_in_place(mag, inputs, denoise_context);
+    init_output_tensors(denoise_data, num_feats * num_frames * 2);
     std::vector<Ort::Value> outputs;
 
-    Run(inputs, outputs, resolved_input_shapes);
-    ParseResults<float>(outputs, denoise_data);
+    run(inputs, outputs, resolved_input_shapes);
+    parse_results<float>(outputs, denoise_data);
 
-    if (denoise_context->prev_features.size() < m_model_params.m_network_input_ctx_len) {
+    if (denoise_context->prev_features.size() < model_params_.network_input_ctx_len) {
       denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
       std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
-      denoise_task->m_stage = spench::PipelineStage::SKIPPED_CHUNK;
-    } else if (denoise_context->prev_features.size() == m_model_params.m_network_input_ctx_len &&
+      denoise_task->stage = spench::PipelineStage::skipped_chunk;
+    } else if (denoise_context->prev_features.size() == model_params_.network_input_ctx_len &&
                denoise_context->prev_spectrogram.real.size() == 0) {
       denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
       std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
-      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
+      denoise_task->stage = spench::PipelineStage::predicted_mask;
     } else {
-      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
+      denoise_task->stage = spench::PipelineStage::predicted_mask;
     }
 
     denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
@@ -141,19 +141,19 @@ SpenchFOnnxRunner::SpenchFOnnxRunner(const std::shared_ptr<spench::NetworkConfig
                                      const std::string& checksum,
                                      uint32_t inference_engine_threads,
                                      bool on_gpu) {
-    ReadConfig(config->params()["model"]);
-    InitModel(config, password, checksum, inference_engine_threads, on_gpu);
-    ValidateModel(m_model_params.m_model_inputs, m_model_params.m_model_outputs);
-    WarmUp<float>();
+    read_config(config->params()["model"]);
+    init_model(config, password, checksum, inference_engine_threads, on_gpu);
+    validate_model(model_params_.model_inputs, model_params_.model_outputs);
+    warm_up<float>();
 }
 
-void SpenchFOnnxRunner::InitOutputTensors(spench::SpenchTaskData& data) {
-  // other outputs were resized in PrepareInputInPlace
-  ResizeIfNeededInPlace(data.new_spectrogram.real, m_model_output_shapes[3], 2);
-  ResizeIfNeededInPlace(data.new_spectrogram.imag, m_model_output_shapes[3], 2);
+void SpenchFOnnxRunner::init_output_tensors(spench::SpenchTaskData& data) {
+  // other outputs were resized in prepare_input_in_place
+  resize_if_needed_in_place(data.new_spectrogram.real, model_output_shapes_[3], 2);
+  resize_if_needed_in_place(data.new_spectrogram.imag, model_output_shapes_[3], 2);
 }
 
-void SpenchFOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
+void SpenchFOnnxRunner::prepare_input_in_place(std::vector<float>& mag,
                                             std::vector<std::vector<float>*>& inputs,
                                             spench::SpenchContext<float>* context) {
   if (context == nullptr) {
@@ -161,15 +161,15 @@ void SpenchFOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
   }
   spench::DenoiseContextF<float>* denoise_context =
                                      dynamic_cast<spench::DenoiseContextF<float>*>(context);
-  ResizeIfNeededInPlace(denoise_context->noisy_mag, m_model_input_shapes[0]);  // noisy_mag_5
-  ResizeIfNeededInPlace(denoise_context->fullband_hidden, m_model_input_shapes[1]);  // fb_h
-  ResizeIfNeededInPlace(denoise_context->fullband_cell_state, m_model_input_shapes[2]);  // fb_c
-  ResizeIfNeededInPlace(denoise_context->prev_fb_out, m_model_input_shapes[3]);  // new_fb_out_5
+  resize_if_needed_in_place(denoise_context->noisy_mag, model_input_shapes_[0]);  // noisy_mag_5
+  resize_if_needed_in_place(denoise_context->fullband_hidden, model_input_shapes_[1]);  // fb_h
+  resize_if_needed_in_place(denoise_context->fullband_cell_state, model_input_shapes_[2]);  // fb_c
+  resize_if_needed_in_place(denoise_context->prev_fb_out, model_input_shapes_[3]);  // new_fb_out_5
 
   // forget 1 frame out of num_frames (5) and move remaining to the left
   uint32_t from, to;
-  uint32_t num_feats = m_model_input_shapes[0][1];
-  uint32_t num_frames = m_model_input_shapes[0][2];
+  uint32_t num_feats = model_input_shapes_[0][1];
+  uint32_t num_frames = model_input_shapes_[0][2];
   for (uint32_t frame_i = 1; frame_i < num_frames; ++frame_i) {
     for (uint32_t feat_i = 0; feat_i < num_feats; ++feat_i) {
       from = frame_i + feat_i * num_frames;
@@ -190,38 +190,38 @@ void SpenchFOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
   inputs.push_back(&denoise_context->prev_fb_out);
 }
 
-void SpenchFOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
-  if (denoise_task == nullptr || denoise_task->m_data.context == nullptr) {
+void SpenchFOnnxRunner::infer(spench::SpenchTask* denoise_task) {
+  if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
     throw("Task data or context are not initialized!");
   }
-  if (denoise_task->m_data.input_spectrogram.size() == 0) {
+  if (denoise_task->data.input_spectrogram.size() == 0) {
     throw("Input spectrogram should be calculated before this step!");
   }
-  auto& denoise_data = denoise_task->m_data;
+  auto& denoise_data = denoise_task->data;
   auto& denoise_context = denoise_data.context;
-  if (denoise_context->prev_features.size() > m_model_params.m_network_input_ctx_len) {
+  if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len) {
     denoise_context->prev_features.pop();
   }
   denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
 
-  if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
+  if (denoise_task->stage == spench::PipelineStage::fourier_transformed_spec) {
     std::vector<std::vector<float>*> inputs;
-    std::vector<float> mag = denoise_data.input_spectrogram[0].getMagnitude();
-    SpenchFOnnxRunner::PrepareInputInPlace(mag, inputs, denoise_context);
-    InitOutputTensors(denoise_data);
+    std::vector<float> mag = denoise_data.input_spectrogram[0].get_magnitude();
+    SpenchFOnnxRunner::prepare_input_in_place(mag, inputs, denoise_context);
+    init_output_tensors(denoise_data);
     std::vector<Ort::Value> outputs;
 
-    Run(inputs, outputs);
-    ParseResults<float>(outputs, denoise_data);
+    run(inputs, outputs);
+    parse_results<float>(outputs, denoise_data);
 
     if (denoise_context->prev_spectrogram.real.size() == 0) {
       denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
       std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
-      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
-    } else if (denoise_context->prev_features.size() > m_model_params.m_network_input_ctx_len + 1) {
+      denoise_task->stage = spench::PipelineStage::predicted_mask;
+    } else if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len + 1) {
       throw("Incorrect number of previous states!");
     } else {
-      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
+      denoise_task->stage = spench::PipelineStage::predicted_mask;
     }
   } else {
     throw("State is not appropriate");
@@ -233,18 +233,18 @@ SpenchSFOnnxRunner::SpenchSFOnnxRunner(const std::shared_ptr<spench::NetworkConf
                                        const std::string& checksum,
                                        uint32_t inference_engine_threads,
                                        bool on_gpu) {
-  ReadConfig(config->params()["model"]);
-  InitModel(config, password, checksum, inference_engine_threads, on_gpu);
-  ValidateModel(m_model_params.m_model_inputs, m_model_params.m_model_outputs);
-  WarmUp<float>();
+  read_config(config->params()["model"]);
+  init_model(config, password, checksum, inference_engine_threads, on_gpu);
+  validate_model(model_params_.model_inputs, model_params_.model_outputs);
+  warm_up<float>();
 }
 
-void SpenchSFOnnxRunner::InitOutputTensors(spench::SpenchTaskData& data, uint32_t out_shape) {
-  ResizeIfNeededInPlace(data.new_spectrogram.real, {out_shape}, 2);
-  ResizeIfNeededInPlace(data.new_spectrogram.imag, {out_shape}, 2);
+void SpenchSFOnnxRunner::init_output_tensors(spench::SpenchTaskData& data, uint32_t out_shape) {
+  resize_if_needed_in_place(data.new_spectrogram.real, {out_shape}, 2);
+  resize_if_needed_in_place(data.new_spectrogram.imag, {out_shape}, 2);
 }
 
-void SpenchSFOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
+void SpenchSFOnnxRunner::prepare_input_in_place(std::vector<float>& mag,
                                              std::vector<std::vector<float>*>& inputs,
                                              spench::SpenchContext<float>* context) {
   if (context == nullptr) {
@@ -258,7 +258,7 @@ void SpenchSFOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
   }
 
   inputs.clear();
-  const uint32_t num_feats = static_cast<uint32_t>(m_model_input_shapes[0][1]);
+  const uint32_t num_feats = static_cast<uint32_t>(model_input_shapes_[0][1]);
 
   if (mag.size() < num_feats) {
     throw std::runtime_error("mag size is smaller than expected");
@@ -272,14 +272,14 @@ void SpenchSFOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
 
   const uint32_t num_frames = static_cast<uint32_t>(mag.size() / num_feats);
 
-  std::vector<std::vector<int64_t>> resolved_input_shapes = m_model_input_shapes;
-  SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], num_frames);
+  std::vector<std::vector<int64_t>> resolved_input_shapes = model_input_shapes_;
+  set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], num_frames);
 
-  ResizeIfNeededInPlace(denoise_context->noisy_mag,               resolved_input_shapes[0]);
-  ResizeIfNeededInPlace(denoise_context->fullband_hidden_state,   resolved_input_shapes[1]);
-  ResizeIfNeededInPlace(denoise_context->fullband_cell_state,     resolved_input_shapes[2]);
-  ResizeIfNeededInPlace(denoise_context->fb_conv1_buf,            resolved_input_shapes[3]);
-  ResizeIfNeededInPlace(denoise_context->fb_conv3_buf,            resolved_input_shapes[4]);
+  resize_if_needed_in_place(denoise_context->noisy_mag,               resolved_input_shapes[0]);
+  resize_if_needed_in_place(denoise_context->fullband_hidden_state,   resolved_input_shapes[1]);
+  resize_if_needed_in_place(denoise_context->fullband_cell_state,     resolved_input_shapes[2]);
+  resize_if_needed_in_place(denoise_context->fb_conv1_buf,            resolved_input_shapes[3]);
+  resize_if_needed_in_place(denoise_context->fb_conv3_buf,            resolved_input_shapes[4]);
 
   std::copy(mag.begin(), mag.end(), denoise_context->noisy_mag.begin());
 
@@ -290,23 +290,23 @@ void SpenchSFOnnxRunner::PrepareInputInPlace(std::vector<float>& mag,
   inputs.push_back(&denoise_context->fb_conv3_buf);
 }
 
-void SpenchSFOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
-  if (denoise_task == nullptr || denoise_task->m_data.context == nullptr) {
+void SpenchSFOnnxRunner::infer(spench::SpenchTask* denoise_task) {
+  if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
     throw std::runtime_error("Task data or context are not initialized!");
   }
-  if (denoise_task->m_data.input_spectrogram.empty()) {
+  if (denoise_task->data.input_spectrogram.empty()) {
     throw std::runtime_error("Input spectrogram should be calculated before this step!");
   }
 
-  auto& denoise_data = denoise_task->m_data;
+  auto& denoise_data = denoise_task->data;
   auto& denoise_context = denoise_data.context;
 
-  if (denoise_context->prev_features.size() > m_model_params.m_network_input_ctx_len) {
+  if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len) {
     denoise_context->prev_features.pop();
   }
   denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
 
-  if (denoise_task->m_stage == spench::PipelineStage::FOURIER_TRANSFORMED_SPEC) {
+  if (denoise_task->stage == spench::PipelineStage::fourier_transformed_spec) {
     std::vector<std::vector<float>*> inputs;
     std::vector<float> mag;
     const auto& specs = denoise_data.input_spectrogram;
@@ -317,29 +317,29 @@ void SpenchSFOnnxRunner::Infer(spench::SpenchTask* denoise_task) {
     // Layout: [F * T], where time is fastest axis: mag[f * T + t]
     mag.resize(num_feats * num_frames);
     for (std::size_t t = 0; t < num_frames; ++t) {
-      specs[t].writeMagnitudeInterleaved(mag, t, num_frames);
+      specs[t].write_magnitude_interleaved(mag, t, num_frames);
     }
 
     if (mag.size() % num_feats != 0) {
       throw std::runtime_error("mag size is not divisible by num_feats");
     }
 
-    std::vector<std::vector<int64_t>> resolved_input_shapes = m_model_input_shapes;
-    SetTimeDimIfDynamic(resolved_input_shapes[0], m_time_axis_in[0], num_frames);
+    std::vector<std::vector<int64_t>> resolved_input_shapes = model_input_shapes_;
+    set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], num_frames);
 
-    PrepareInputInPlace(mag, inputs, denoise_context);
-    InitOutputTensors(denoise_data, static_cast<uint32_t>(num_feats * num_frames * 2));
+    prepare_input_in_place(mag, inputs, denoise_context);
+    init_output_tensors(denoise_data, static_cast<uint32_t>(num_feats * num_frames * 2));
     std::vector<Ort::Value> outputs;
-    Run(inputs, outputs, resolved_input_shapes);
-    ParseResults<float>(outputs, denoise_data);
+    run(inputs, outputs, resolved_input_shapes);
+    parse_results<float>(outputs, denoise_data);
     if (denoise_context->prev_spectrogram.real.size() == 0) {
       denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
       std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
-      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
-    } else if (denoise_context->prev_features.size() > m_model_params.m_network_input_ctx_len + 1) {
+      denoise_task->stage = spench::PipelineStage::predicted_mask;
+    } else if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len + 1) {
       throw std::runtime_error("Incorrect number of previous states!");
     } else {
-      denoise_task->m_stage = spench::PipelineStage::PREDICTED_MASK;
+      denoise_task->stage = spench::PipelineStage::predicted_mask;
     }
   } else {
     throw std::runtime_error("State is not appropriate");

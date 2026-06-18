@@ -12,7 +12,7 @@ struct SoundInfo {
   uint16_t channels = 1;
   bool operator==(SoundInfo const& l) const;
   // friend std::ostream& operator<<(std::ostream& os, const SoundInfo& info);
-  uint64_t FrameSizeSamples() const {
+  uint64_t frame_size_samples() const {
     return static_cast<uint64_t>(round(1e-3 * processing_frame_ms * sample_rate));
   }
 };

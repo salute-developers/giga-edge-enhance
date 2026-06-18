@@ -21,7 +21,7 @@ class Resampler {
   float accumulated_delay_ms() const noexcept;
 
  private:
-  std::shared_ptr<ResamplerImpl> m_d;
+  std::shared_ptr<ResamplerImpl> impl_;
 };
 
 }  // namespace sound

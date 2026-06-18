@@ -19,10 +19,10 @@ namespace spench {
 class InferenceRunner {
  public:
   typedef enum class ModelType {
-    DENOISER_BEST_QUALITY = 0,
-    DENOISER_BEST_SPEED = 1,
-    DENOISER_BEST_SPEED_NEW = 2,
-    DEREVERBERATOR_BASE = 3
+    denoiser_best_quality = 0,
+    denoiser_best_speed = 1,
+    denoiser_best_speed_new = 2,
+    dereverberator_base = 3
   } ModelTypeEnum;
   InferenceRunner() = delete;
   InferenceRunner& operator=(const InferenceRunner&) = delete;
@@ -35,31 +35,31 @@ class InferenceRunner {
                   bool gpu);
   ~InferenceRunner();
 
-  void Infer(spench::SpenchTask* denoise_task);
+  void infer(spench::SpenchTask* denoise_task);
 
-  const ModelType GetModelType() {return m_model_type;}
-  uint32_t GetModelFutureContextLen() {
-    return m_engine_runner_ptr->GetFutureContextLen();
+  const ModelType get_model_type() {return model_type_;}
+  uint32_t get_model_future_context_len() {
+    return engine_runner_ptr_->get_future_context_len();
   }
 
  protected:
 #ifdef BUILD_TFLITE_ENGINE
-  std::unique_ptr<util::tf_lite::BaseTfliteRunner> m_engine_runner_ptr = nullptr;
+  std::unique_ptr<util::tf_lite::BaseTfliteRunner> engine_runner_ptr_ = nullptr;
 #else
-  std::unique_ptr<util::onnx::BaseOnnxRunner> m_engine_runner_ptr = nullptr;
+  std::unique_ptr<util::onnx::BaseOnnxRunner> engine_runner_ptr_ = nullptr;
 #endif
-  ModelType m_model_type;
+  ModelType model_type_;
 
  private:
-  ModelType StringToModelTypeEnum(const std::string& type) {
+  ModelType string_to_model_type_enum(const std::string& type) {
     if (type == "best_quality") {
-      return ModelType::DENOISER_BEST_QUALITY;
+      return ModelType::denoiser_best_quality;
     } else if (type == "best_speed") {
-      return ModelType::DENOISER_BEST_SPEED;
+      return ModelType::denoiser_best_speed;
     } else if (type == "best_speed_new") {
-      return ModelType::DENOISER_BEST_SPEED_NEW;
+      return ModelType::denoiser_best_speed_new;
     } else if (type == "remove_reverb") {
-      return ModelType::DEREVERBERATOR_BASE;
+      return ModelType::dereverberator_base;
     }
     throw std::invalid_argument("Model type must be in [\"best_quality\", \"best_speed\", \"remove_reverb\"]");
   }

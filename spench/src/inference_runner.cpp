@@ -7,19 +7,19 @@ InferenceRunner::InferenceRunner(std::shared_ptr<spench::NetworkConfig> config,
                                 const std::string& checksum,
                                 uint32_t inference_engine_threads,
                                 bool gpu) {
-  m_model_type = StringToModelTypeEnum(config->params()["inference"]["model_type"].as<std::string>(""));
+  model_type_ = string_to_model_type_enum(config->params()["inference"]["model_type"].as<std::string>(""));
 #ifdef BUILD_TFLITE_ENGINE
   auto model_config = config->params()["model"];
 
-  if (m_model_type == ModelType::DENOISER_BEST_QUALITY) {
-    m_engine_runner_ptr =
+  if (model_type_ == ModelType::denoiser_best_quality) {
+    engine_runner_ptr_ =
                     std::make_unique<util::tf_lite::SpenchQTfliteRunner>(model_config,
                                                                          password,
                                                                          checksum,
                                                                          inference_engine_threads,
                                                                          gpu);
-  } else if (m_model_type == ModelType::DENOISER_BEST_SPEED) {
-    m_engine_runner_ptr =
+  } else if (model_type_ == ModelType::denoiser_best_speed) {
+    engine_runner_ptr_ =
                     std::make_unique<util::tf_lite::SpenchFTfliteRunner>(model_config,
                                                                          password,
                                                                          checksum,
@@ -27,26 +27,26 @@ InferenceRunner::InferenceRunner(std::shared_ptr<spench::NetworkConfig> config,
                                                                          gpu);
   }
 #else
-  if (m_model_type == ModelType::DENOISER_BEST_QUALITY) {
-    m_engine_runner_ptr = std::make_unique<util::onnx::SpenchQOnnxRunner>(config,
+  if (model_type_ == ModelType::denoiser_best_quality) {
+    engine_runner_ptr_ = std::make_unique<util::onnx::SpenchQOnnxRunner>(config,
                                                                           password,
                                                                           checksum,
                                                                           inference_engine_threads,
                                                                           gpu);
-  } else if (m_model_type == ModelType::DENOISER_BEST_SPEED) {
-    m_engine_runner_ptr = std::make_unique<util::onnx::SpenchFOnnxRunner>(config,
+  } else if (model_type_ == ModelType::denoiser_best_speed) {
+    engine_runner_ptr_ = std::make_unique<util::onnx::SpenchFOnnxRunner>(config,
                                                                           password,
                                                                           checksum,
                                                                           inference_engine_threads,
                                                                           gpu);
-  } else if (m_model_type == ModelType::DENOISER_BEST_SPEED_NEW) {
-    m_engine_runner_ptr = std::make_unique<util::onnx::SpenchSFOnnxRunner>(config,
+  } else if (model_type_ == ModelType::denoiser_best_speed_new) {
+    engine_runner_ptr_ = std::make_unique<util::onnx::SpenchSFOnnxRunner>(config,
                                                                            password,
                                                                            checksum,
                                                                            inference_engine_threads,
                                                                            gpu);
   } else {
-    m_engine_runner_ptr =
+    engine_runner_ptr_ =
                     std::make_unique<util::onnx::SpenchDereverbOnnxRunner>(config,
                                                                            password,
                                                                            checksum,
@@ -57,12 +57,12 @@ InferenceRunner::InferenceRunner(std::shared_ptr<spench::NetworkConfig> config,
 }
 
 InferenceRunner::~InferenceRunner() {
-  m_engine_runner_ptr.reset();
+  engine_runner_ptr_.reset();
 }
 
-void InferenceRunner::Infer(spench::SpenchTask* denoise_task) {
+void InferenceRunner::infer(spench::SpenchTask* denoise_task) {
   if (denoise_task) {
-    m_engine_runner_ptr->Infer(denoise_task);
+    engine_runner_ptr_->infer(denoise_task);
   } else {
     throw("Task data or context are not initialized!");
   }

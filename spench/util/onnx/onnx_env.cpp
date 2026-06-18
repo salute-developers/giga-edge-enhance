@@ -10,55 +10,55 @@
 namespace util {
 namespace onnx {
 
-static const OrtApi* OrtApiPtr = OrtGetApiBase()->GetApi(ORT_API_VERSION);
-static std::mutex OrtMutex;
+static const OrtApi* ort_api_ptr = OrtGetApiBase()->GetApi(ORT_API_VERSION);
+static std::mutex ort_mutex;
 
-void CheckStatus(OrtStatus* status) {
+void check_status(OrtStatus* status) {
   if (status != NULL) {
-    const char* msg = OrtApiPtr->GetErrorMessage(status);
+    const char* msg = ort_api_ptr->GetErrorMessage(status);
     (void) msg;
     // VOICE_ERROR() << msg;
     // Logging::Terminate();
   }
 }
 
-static std::unique_ptr<Ort::Env> OrtEnvPtr;
-static std::unique_ptr<Ort::SessionOptions> OrtSessOptionsCpuPtr;
-static std::unique_ptr<Ort::SessionOptions> OrtSessOptionsGpuPtr;
-static std::unique_ptr<Ort::MemoryInfo> OrtMemoryInfoCpuPtr;
-static std::unique_ptr<Ort::MemoryInfo> OrtMemoryInfoGpuPtr;
-static std::unique_ptr<std::mutex> OrtCpuSessionMutexPtr;
-static std::unique_ptr<std::mutex> OrtGpuSessionMutexPtr;
+static std::unique_ptr<Ort::Env> ort_env_ptr;
+static std::unique_ptr<Ort::SessionOptions> ort_sess_options_cpu_ptr;
+static std::unique_ptr<Ort::SessionOptions> ort_sess_options_gpu_ptr;
+static std::unique_ptr<Ort::MemoryInfo> ort_memory_info_cpu_ptr;
+static std::unique_ptr<Ort::MemoryInfo> ort_memory_info_gpu_ptr;
+static std::unique_ptr<std::mutex> ort_cpu_session_mutex_ptr;
+static std::unique_ptr<std::mutex> ort_gpu_session_mutex_ptr;
 
-std::mutex& GetCpuSessionMutex() {
-  std::lock_guard<std::mutex> lock(OrtMutex);
-  if (!OrtCpuSessionMutexPtr) {
-    OrtCpuSessionMutexPtr = std::make_unique<std::mutex>();
+std::mutex& get_cpu_session_mutex() {
+  std::lock_guard<std::mutex> lock(ort_mutex);
+  if (!ort_cpu_session_mutex_ptr) {
+    ort_cpu_session_mutex_ptr = std::make_unique<std::mutex>();
   }
-  return *OrtCpuSessionMutexPtr;
+  return *ort_cpu_session_mutex_ptr;
 }
-std::mutex& GetGpuSessionMutex() {
-  std::lock_guard<std::mutex> lock(OrtMutex);
-  if (!OrtGpuSessionMutexPtr) {
-    OrtGpuSessionMutexPtr = std::make_unique<std::mutex>();
+std::mutex& get_gpu_session_mutex() {
+  std::lock_guard<std::mutex> lock(ort_mutex);
+  if (!ort_gpu_session_mutex_ptr) {
+    ort_gpu_session_mutex_ptr = std::make_unique<std::mutex>();
   }
-  return *OrtGpuSessionMutexPtr;
+  return *ort_gpu_session_mutex_ptr;
 }
 
-void CreateDefaultEnv() {
-  std::lock_guard<std::mutex> lock(OrtMutex);
-  if (OrtEnvPtr) {
+void create_default_env() {
+  std::lock_guard<std::mutex> lock(ort_mutex);
+  if (ort_env_ptr) {
     return;
   }
-  OrtThreadingOptions* threadingOptions = nullptr;
-  CheckStatus(OrtApiPtr->CreateThreadingOptions(&threadingOptions));
-  OrtEnvPtr = std::make_unique<Ort::Env>(threadingOptions, ORT_LOGGING_LEVEL_WARNING, "spench-onnx");
-  OrtApiPtr->ReleaseThreadingOptions(threadingOptions);
-  OrtEnvPtr->DisableTelemetryEvents();
+  OrtThreadingOptions* threading_options = nullptr;
+  check_status(ort_api_ptr->CreateThreadingOptions(&threading_options));
+  ort_env_ptr = std::make_unique<Ort::Env>(threading_options, ORT_LOGGING_LEVEL_WARNING, "spench-onnx");
+  ort_api_ptr->ReleaseThreadingOptions(threading_options);
+  ort_env_ptr->DisableTelemetryEvents();
 }
 
-void CreateDefaultSessionOptions(std::unique_ptr<Ort::SessionOptions>& options_ptr, uint32_t num_threads, bool gpu) {
-  std::lock_guard<std::mutex> lock(OrtMutex);
+void create_default_session_options(std::unique_ptr<Ort::SessionOptions>& options_ptr, uint32_t num_threads, bool gpu) {
+  std::lock_guard<std::mutex> lock(ort_mutex);
   if (options_ptr) {
     return;
   }
@@ -85,8 +85,8 @@ void CreateDefaultSessionOptions(std::unique_ptr<Ort::SessionOptions>& options_p
   }
 }
 
-void CreateDefaultMemoryInfo(std::unique_ptr<Ort::MemoryInfo>& memory_info_ptr, bool gpu) {
-  std::lock_guard<std::mutex> lock(OrtMutex);
+void create_default_memory_info(std::unique_ptr<Ort::MemoryInfo>& memory_info_ptr, bool gpu) {
+  std::lock_guard<std::mutex> lock(ort_mutex);
   if (memory_info_ptr) {
     return;
   }
@@ -99,45 +99,45 @@ void CreateDefaultMemoryInfo(std::unique_ptr<Ort::MemoryInfo>& memory_info_ptr, 
   }
 }
 
-Ort::Env& GetOrtEnv() {
-  if (!OrtEnvPtr) {
-    CreateDefaultEnv();
+Ort::Env& get_ort_env() {
+  if (!ort_env_ptr) {
+    create_default_env();
   }
-  return *OrtEnvPtr;
+  return *ort_env_ptr;
 }
 
-const Ort::SessionOptions& GetOrtSessionOptionsCpu(const uint32_t num_threads, bool restart_session) {
+const Ort::SessionOptions& get_ort_session_options_cpu(const uint32_t num_threads, bool restart_session) {
   if (restart_session) {
-    OrtSessOptionsCpuPtr.release();
+    ort_sess_options_cpu_ptr.release();
   }
-  if (!OrtSessOptionsCpuPtr) {
-    CreateDefaultSessionOptions(OrtSessOptionsCpuPtr, num_threads, false);
+  if (!ort_sess_options_cpu_ptr) {
+    create_default_session_options(ort_sess_options_cpu_ptr, num_threads, false);
   }
-  return *OrtSessOptionsCpuPtr;
+  return *ort_sess_options_cpu_ptr;
 }
 
-const Ort::SessionOptions& GetOrtSessionOptionsGpu(const uint32_t num_threads, bool restart_session) {
+const Ort::SessionOptions& get_ort_session_options_gpu(const uint32_t num_threads, bool restart_session) {
   if (restart_session) {
-    OrtSessOptionsCpuPtr.release();
+    ort_sess_options_cpu_ptr.release();
   }
-  if (!OrtSessOptionsGpuPtr) {
-    CreateDefaultSessionOptions(OrtSessOptionsGpuPtr, num_threads, true);
+  if (!ort_sess_options_gpu_ptr) {
+    create_default_session_options(ort_sess_options_gpu_ptr, num_threads, true);
   }
-  return *OrtSessOptionsGpuPtr;
+  return *ort_sess_options_gpu_ptr;
 }
 
-const Ort::MemoryInfo& GetMemoryInfoCpu() {
-  if (!OrtMemoryInfoCpuPtr) {
-    CreateDefaultMemoryInfo(OrtMemoryInfoCpuPtr, false);
+const Ort::MemoryInfo& get_memory_info_cpu() {
+  if (!ort_memory_info_cpu_ptr) {
+    create_default_memory_info(ort_memory_info_cpu_ptr, false);
   }
-  return *OrtMemoryInfoCpuPtr;
+  return *ort_memory_info_cpu_ptr;
 }
 
-const Ort::MemoryInfo& GetMemoryInfoGpu() {
-  if (!OrtMemoryInfoGpuPtr) {
-    CreateDefaultMemoryInfo(OrtMemoryInfoGpuPtr, true);
+const Ort::MemoryInfo& get_memory_info_gpu() {
+  if (!ort_memory_info_gpu_ptr) {
+    create_default_memory_info(ort_memory_info_gpu_ptr, true);
   }
-  return *OrtMemoryInfoGpuPtr;
+  return *ort_memory_info_gpu_ptr;
 }
 
 }  // namespace onnx

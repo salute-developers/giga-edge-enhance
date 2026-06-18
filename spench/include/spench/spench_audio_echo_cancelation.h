@@ -165,6 +165,7 @@ class SPENCH_API SpenchAudioEchoCancelation : public ISpenchSequencer {
    *  \return: Vector with interleaved audio.
    *  \ingroup group_cpp
    */
+  // NOLINTNEXTLINE — frozen SPENCH_API (convertToInterleaved)
   std::vector<float> convertToInterleaved(const std::vector<float>& mic, const std::vector<float>& lbk);
 
   /**
@@ -175,7 +176,8 @@ class SPENCH_API SpenchAudioEchoCancelation : public ISpenchSequencer {
    *  \return: None
    *  \ingroup group_cpp
    */
+  // NOLINTNEXTLINE — frozen SPENCH_API (convertFromInterleaved)
   void convertFromInterleaved(const std::vector<float>& interlvd, std::vector<float>& mic, std::vector<float>& lbk);
-  std::unique_ptr<AudioEchoCancelationHandler> m_aec;
+  std::unique_ptr<AudioEchoCancelationHandler> aec_;
 };
 }  // namespace spench

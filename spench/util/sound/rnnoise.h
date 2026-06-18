@@ -11,7 +11,7 @@ typedef struct DenoiseState DenoiseState;
 
 namespace util::sound {
 
-constexpr int32_t RNNOISE_FS = 48000;  //< native rnnoise sample rate
+constexpr int32_t rnnoise_fs = 48000;  //< native rnnoise sample rate
 
 // rnnoise wrapper
 class RNNoise {
@@ -25,21 +25,21 @@ class RNNoise {
 
   Result process(const std::vector<float>& x);
 
-  size_t stride() const noexcept { return m_in_stride; }
+  size_t stride() const noexcept { return in_stride_; }
 
-  size_t sample_rate() const noexcept { return m_fs; }
+  size_t sample_rate() const noexcept { return fs_; }
 
  private:
-  size_t m_fs;
-  size_t m_frame_len;
-  size_t m_in_stride;
-  FIFOBuffer<float> m_rsbuf;
-  FIFOBuffer<float> m_rnbuf;
-  dsplib::FIRResampler m_in_rsmp;
-  dsplib::FIRResampler m_out_rsmp;
-  std::shared_ptr<DenoiseState> m_rnnoise;
-  float m_vad{0.0};
-  bool m_only_vad{false};
+  size_t fs_;
+  size_t frame_len_;
+  size_t in_stride_;
+  FIFOBuffer<float> rsbuf_;
+  FIFOBuffer<float> rnbuf_;
+  dsplib::FIRResampler in_rsmp_;
+  dsplib::FIRResampler out_rsmp_;
+  std::shared_ptr<DenoiseState> rnnoise_;
+  float vad_{0.0};
+  bool only_vad_{false};
 };
 
 }  // namespace util::sound

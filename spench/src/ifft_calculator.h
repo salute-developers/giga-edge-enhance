@@ -6,41 +6,41 @@
 #include "spench/src/feature_params.h"
 
 namespace pocketfft {
-using shape_t  = std::vector<std::size_t>;
-using stride_t = std::vector<std::ptrdiff_t>;
+using ShapeT  = std::vector<std::size_t>;
+using StrideT = std::vector<std::ptrdiff_t>;
 }  // namespace pocketfft
 
 namespace spench {
 namespace fe {
 
 template <typename T>
-class iFftCalculator {
+class IFftCalculator {
  public:
-  explicit iFftCalculator(const uint32_t feature_size, const uint32_t nfft, const uint32_t frames_num_for_istft);
-  ~iFftCalculator();
+  explicit IFftCalculator(const uint32_t feature_size, const uint32_t nfft, const uint32_t frames_num_for_istft);
+  ~IFftCalculator();
 
-  void CalculateISTFT(const uint32_t n_feats, const T* real_ptr, const T* imag_ptr, std::vector<T>& idft);
+  void calculate_istft(const uint32_t n_feats, const T* real_ptr, const T* imag_ptr, std::vector<T>& idft);
 
  private:
-  const uint32_t m_nfft;
-  const uint32_t m_feature_size;
-  const uint32_t m_frames_num_for_istft;
+  const uint32_t nfft;
+  const uint32_t feature_size;
+  const uint32_t frames_num_for_istft;
 
-  std::vector<std::complex<fft::buffer_type>> m_in_fft_buf;
-  std::vector<fft::buffer_type> m_out_fft_buf;
+  std::vector<std::complex<fft::BufferType>> in_fft_buf_;
+  std::vector<fft::BufferType> out_fft_buf_;
 
-  void ValidateIfftArgs(uint32_t n_feats) const;
+  void validate_ifft_args(uint32_t n_feats) const;
 
-  pocketfft::shape_t MakeShape(size_t frames) const;
+  pocketfft::ShapeT make_shape(size_t frames) const;
 
-  void MakeStrides(pocketfft::stride_t& stride_in,
-                   pocketfft::stride_t& stride_out) const;
+  void make_strides(pocketfft::StrideT& stride_in,
+                   pocketfft::StrideT& stride_out) const;
 
-  void BuildFullSpectrum(const T* real_ptr, const T* imag_ptr, size_t frames);
+  void build_full_spectrum(const T* real_ptr, const T* imag_ptr, size_t frames);
 
-  void CopyOutputToVector(std::vector<T>& idft) const;
+  void copy_output_to_vector(std::vector<T>& idft) const;
 
-  void CalculateIFft(const uint32_t n_feats, const T* real_ptr, const T* imag_ptr, std::vector<T>& idft);
+  void calculate_ifft(const uint32_t n_feats, const T* real_ptr, const T* imag_ptr, std::vector<T>& idft);
 };
 
 }  // namespace fe
