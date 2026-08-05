@@ -1,13 +1,13 @@
-#include <catch.hpp>
 #include <yaml-cpp/yaml.h>
-#include <fstream>
+
+#include <catch.hpp>
 #include <filesystem>  // NOLINT
+#include <fstream>
 #include <random>
 #include <string>
 
-#include "spench/src/spench_config_reader.h"
 #include "spench/src/packed_model_internal.h"
-#include "spench/util/echo/echo_canceler.h"
+#include "spench/src/spench_config_reader.h"
 
 namespace fs = std::filesystem;
 
@@ -18,7 +18,7 @@ struct TempYamlFile {
   std::string path;
   explicit TempYamlFile(const std::string& content) {
     auto base = fs::temp_directory_path();
-    std::mt19937_64 gen {std::random_device {}()};
+    std::mt19937_64 gen{std::random_device{}()};
     std::uniform_int_distribution<uint64_t> dist;
     for (int i = 0; i < 10; ++i) {
       auto cand = base / ("spench_cfg_" + std::to_string(dist(gen)) + ".yaml");
@@ -39,8 +39,7 @@ struct TempYamlFile {
 };
 
 // A minimal concrete reader so we can call merge_yaml(...)
-struct DummyReader : public spench::ConfigReader {
-};
+struct DummyReader : public spench::ConfigReader {};
 
 struct MiniNetworkReader final : public spench::NetworkConfig {
   using spench::NetworkConfig::NetworkConfig;
@@ -85,13 +84,13 @@ e: 7
 
   spench::merge_yaml(dest, src);
 
-  REQUIRE(dest["a"]["b"].as<int>() == 10);      // overridden
-  REQUIRE(dest["a"]["c"].as<int>() == 2);       // preserved
+  REQUIRE(dest["a"]["b"].as<int>() == 10);  // overridden
+  REQUIRE(dest["a"]["c"].as<int>() == 2);   // preserved
   REQUIRE(dest["d"].IsSequence());
   REQUIRE(dest["d"].size() == 2);
   REQUIRE(dest["d"][0].as<int>() == 3);
-  REQUIRE(dest["x"].as<int>() == 5);            // untouched
-  REQUIRE(dest["e"].as<int>() == 7);            // added
+  REQUIRE(dest["x"].as<int>() == 5);  // untouched
+  REQUIRE(dest["e"].as<int>() == 7);  // added
 }
 
 TEST_CASE("SUCCESS merge_yaml with non-map source is a no-op [config reader]") {
@@ -205,16 +204,16 @@ inference:
   REQUIRE_NOTHROW(base = spench::StringConfigReader(yaml));
   spench::DenoiserConfig cfg(base);
 
-  REQUIRE(cfg.model_path()    == "mod.onnx");
-  REQUIRE(cfg.model_inputs()  == std::vector<std::string>({"i1", "i2"}));
+  REQUIRE(cfg.model_path() == "mod.onnx");
+  REQUIRE(cfg.model_inputs() == std::vector<std::string>({"i1", "i2"}));
   REQUIRE(cfg.model_outputs() == std::vector<std::string>({"o1", "o2"}));
   REQUIRE(cfg.sampling_freq() == 12345u);
-  REQUIRE(cfg.frame_size_ms()  == 64u);
-  REQUIRE(cfg.frame_stride_ms()== 32u);
-  REQUIRE(cfg.window_type()   == "hamming");
-  REQUIRE(cfg.use_gpu()       == true);
-  REQUIRE(cfg.num_threads()   == 7u);
-  REQUIRE(cfg.model_type()    == "best_quality");
+  REQUIRE(cfg.frame_size_ms() == 64u);
+  REQUIRE(cfg.frame_stride_ms() == 32u);
+  REQUIRE(cfg.window_type() == "hamming");
+  REQUIRE(cfg.use_gpu() == true);
+  REQUIRE(cfg.num_threads() == 7u);
+  REQUIRE(cfg.model_type() == "best_quality");
 }
 
 TEST_CASE("SUCCESS DenoiserConfig uses defaults when fields are missing [denoiser config reader]") {
@@ -227,16 +226,16 @@ model:
   REQUIRE_NOTHROW(base = spench::StringConfigReader(yaml));
   spench::DenoiserConfig cfg(base);
 
-  REQUIRE(cfg.model_path()    == "onlypath.onnx");
+  REQUIRE(cfg.model_path() == "onlypath.onnx");
   REQUIRE(cfg.model_inputs().size() == 4);
   REQUIRE(cfg.model_outputs().size() == 4);
   REQUIRE(cfg.sampling_freq() == 24000u);
-  REQUIRE(cfg.frame_size_ms()  == 32u);
-  REQUIRE(cfg.frame_stride_ms()== 16u);
-  REQUIRE(cfg.window_type()   == "hanning");
-  REQUIRE(cfg.use_gpu()       == false);
-  REQUIRE(cfg.num_threads()   == 1u);
-  REQUIRE(cfg.model_type()    == "best_speed");
+  REQUIRE(cfg.frame_size_ms() == 32u);
+  REQUIRE(cfg.frame_stride_ms() == 16u);
+  REQUIRE(cfg.window_type() == "hanning");
+  REQUIRE(cfg.use_gpu() == false);
+  REQUIRE(cfg.num_threads() == 1u);
+  REQUIRE(cfg.model_type() == "best_speed");
 }
 
 TEST_CASE("SUCCESS DenoiserConfig throws if model_path is missing [denoiser config reader]") {
@@ -362,176 +361,6 @@ model:
   auto base = spench::StringConfigReader(yaml);
   std::unique_ptr<MiniNetworkReader> cfg;
   REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
-}
-
-// ------------------------------------------------------------------------------
-// DereverbConfig
-// ------------------------------------------------------------------------------
-TEST_CASE("SUCCESS DereverbConfig getters return correct override and default values [dereverb config reader]") {
-  const std::string yaml = R"(
-model:
-  model_path: "derev.onnx"
-  model_inputs: ["x_in"]
-  model_outputs: ["y_out"]
-feature_params:
-  sampling_freq: 48000
-  frame_size_ms:   20
-  frame_stride_ms: 10
-  window_type:    "hamming"
-inference:
-  gpu:                true
-  engine_num_threads: 6
-  model_type:        "best_quality"
-)";
-
-  auto base = spench::StringConfigReader(yaml);
-  std::unique_ptr<MiniNetworkReader> cfg;
-  REQUIRE_NOTHROW(cfg = std::make_unique<MiniNetworkReader>(base));
-
-  // Network-level getters
-  REQUIRE(cfg->model_path()    == "derev.onnx");
-  REQUIRE(cfg->model_inputs()  == std::vector<std::string>({"x_in"}));
-  REQUIRE(cfg->model_outputs() == std::vector<std::string>({"y_out"}));
-  REQUIRE(cfg->sampling_freq() == 48000u);
-  REQUIRE(cfg->frame_size_ms()  == 20u);
-  REQUIRE(cfg->frame_stride_ms()== 10u);
-  REQUIRE(cfg->window_type()   == "hamming");
-  REQUIRE(cfg->use_gpu()       == true);
-  REQUIRE(cfg->num_threads()   == 6u);
-  REQUIRE(cfg->model_type()    == "best_quality");
-}
-
-TEST_CASE("SUCCESS DereverbConfig uses defaults when optional fields are missing [dereverb config reader]") {
-  const std::string yaml = R"(
-model:
-  model_path: "only_derev.onnx"
-)";
-
-  auto base = spench::StringConfigReader(yaml);
-  std::unique_ptr<spench::DereverbConfig> cfg;
-  REQUIRE_NOTHROW(cfg = std::make_unique<spench::DereverbConfig>(base));
-
-#ifdef BUILD_TFLITE_ENGINE
-  const std::vector<std::string> exp_in  = {"noisy_spec_5"};
-  const std::vector<std::string> exp_out = {"model_out", "mu", "logvar"};
-#else
-  const std::vector<std::string> exp_in  = {"noisy_spec_5"};
-  const std::vector<std::string> exp_out = {"model_out", "mu", "logvar"};
-#endif
-
-  REQUIRE(cfg->model_path()    == "only_derev.onnx");
-  REQUIRE(cfg->model_inputs()  == exp_in);
-  REQUIRE(cfg->model_outputs() == exp_out);
-
-  // Defaults inherited from the built-in YAML used by StringConfigReader
-  REQUIRE(cfg->sampling_freq() == 48000u);
-  REQUIRE(cfg->frame_size_ms()  == 32u);
-  REQUIRE(cfg->frame_stride_ms()== 16u);
-  REQUIRE(cfg->window_type()   == "hanning");
-  REQUIRE(cfg->use_gpu()       == false);
-  REQUIRE(cfg->num_threads()   == 1u);
-  REQUIRE(cfg->model_type()    == "remove_reverb");
-}
-
-TEST_CASE("FAIL DereverbConfig throws when model_path is missing or invalid [dereverb config reader]") {
-  SECTION("model section exists but is empty") {
-    const std::string yaml = R"(
-model: {}
-)";
-    auto base = spench::StringConfigReader(yaml);
-    std::unique_ptr<spench::DereverbConfig> cfg;
-    REQUIRE_THROWS_AS(cfg = std::make_unique<spench::DereverbConfig>(base), std::runtime_error);
-  }
-
-  SECTION("model_path is empty") {
-    const std::string yaml = R"(
-model:
-  model_path: ""
-)";
-    auto base = spench::StringConfigReader(yaml);
-    std::unique_ptr<spench::DereverbConfig> cfg;
-    REQUIRE_THROWS_AS(cfg = std::make_unique<spench::DereverbConfig>(base), std::runtime_error);
-  }
-}
-
-TEST_CASE("FAIL DereverbConfig validates structure of inputs/outputs [dereverb config reader]") {
-  SECTION("inputs is non-sequence") {
-    const std::string yaml = R"(
-model:
-  model_path: "ok.onnx"
-  model_inputs: {a: 1}
-)";
-    auto base = spench::StringConfigReader(yaml);
-    std::unique_ptr<spench::DereverbConfig> cfg;
-    REQUIRE_THROWS_AS(cfg = std::make_unique<spench::DereverbConfig>(base), std::runtime_error);
-  }
-
-  SECTION("outputs contains a non-scalar item") {
-    const std::string yaml = R"(
-model:
-  model_path: "ok.onnx"
-  model_outputs: ["good", {bad: true}]
-)";
-    auto base = spench::StringConfigReader(yaml);
-    std::unique_ptr<spench::DereverbConfig> cfg;
-    REQUIRE_THROWS_AS(cfg = std::make_unique<spench::DereverbConfig>(base), std::runtime_error);
-  }
-}
-
-TEST_CASE("SUCCESS AecConfig full override [aec config reader]") {
-  const std::string yaml = R"(
-echo_cancellation:
-  sample_rate: 44100
-  filter_len: 2048
-  echo_premute_ms: 1
-  residual_echo_suppression_enabled: false
-  delay_compensator_enabled: false
-  chunk_len_ms: 32
-  type: speex
-)";
-
-  auto base = spench::StringConfigReader(yaml);
-  std::unique_ptr<spench::AecConfig> cfg;
-  REQUIRE_NOTHROW(cfg = std::make_unique<spench::AecConfig>(base));
-
-  REQUIRE(cfg->sample_rate()                       == 44100u);
-  REQUIRE(cfg->filter_len()                        == 2048u);
-  REQUIRE(cfg->echo_premute()                      == 1u);
-  REQUIRE(cfg->residual_echo_suppression_enabled()   == false);
-  REQUIRE(cfg->delay_compensator_enabled()          == false);
-  REQUIRE(cfg->frame_len()                         == uint16_t(std::round(44.1f*32)));
-  REQUIRE(cfg->type()                             == util::echo::EchoCancelerType::speex);
-}
-
-TEST_CASE("SUCCESS AecConfig partial override uses defaults [aec config reader]") {
-  const std::string yaml = R"(
-echo_cancellation:
-  sample_rate: 32000
-)";
-
-  auto base = spench::StringConfigReader(yaml);
-  std::unique_ptr<spench::AecConfig> cfg;
-  REQUIRE_NOTHROW(cfg = std::make_unique<spench::AecConfig>(base));
-
-  REQUIRE(cfg->sample_rate()                       == 32000u);
-  REQUIRE(cfg->filter_len()                        == 4096u);
-  REQUIRE(cfg->echo_premute()                      == 3u);
-  REQUIRE(cfg->residual_echo_suppression_enabled()   == true);
-  REQUIRE(cfg->delay_compensator_enabled()          == true);
-  // default chunk_len_ms=16 → frameLen = round(32 * 16) = 512
-  REQUIRE(cfg->frame_len()                         == 512u);
-  REQUIRE(cfg->type()                             == util::echo::EchoCancelerType::speex);
-}
-
-TEST_CASE("FAIL AecConfig invalid type throws [aec config reader]") {
-  const std::string yaml = R"(
-echo_cancellation:
-  type: unknown
-)";
-
-  auto base = spench::StringConfigReader(yaml);
-  std::unique_ptr<spench::AecConfig> cfg;
-  REQUIRE_THROWS_AS(cfg = std::make_unique<spench::AecConfig>(base), std::runtime_error);
 }
 
 // ------------------------------------------------------------------------------

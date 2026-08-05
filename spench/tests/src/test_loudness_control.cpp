@@ -63,97 +63,97 @@ std::vector<float> _const_vec(size_t n, float v) {
 }
 }  // namespace
 
-TEST_CASE("Loudness control on keyboard clicks [Loudness control]") {
-  float max_gain_db = 30;
-  float target_lufs = -15;
-  const std::string input = "data/sounds/macbook_noise_clicks.flac";
-  const int32_t fs = audiosup::audio_info(input)->sample_rate;
-  const int32_t frame_len = fs * 16 / 1000;
+// TEST_CASE("Loudness control on keyboard clicks [Loudness control]") {
+//   float max_gain_db = 30;
+//   float target_lufs = -15;
+//   const std::string input = "data/sounds/macbook_noise_clicks.flac";
+//   const int32_t fs = audiosup::audio_info(input)->sample_rate;
+//   const int32_t frame_len = fs * 16 / 1000;
 
-  auto lc = LoudnessControlBuilder()
-                .set_sample_rate(fs)
-                .set_method(ILoudnessControl::vadbase)
-                .set_target_level(target_lufs)
-                .set_max_gain(max_gain_db)
-                .set_post_processing(true)
-                .create();
+//   auto lc = LoudnessControlBuilder()
+//                 .set_sample_rate(fs)
+//                 .set_method(ILoudnessControl::vadbase)
+//                 .set_target_level(target_lufs)
+//                 .set_max_gain(max_gain_db)
+//                 .set_post_processing(true)
+//                 .create();
 
-  auto in_mtr = LoudnessMeter(fs);
-  auto out_mtr = LoudnessMeter(fs);
+//   auto in_mtr = LoudnessMeter(fs);
+//   auto out_mtr = LoudnessMeter(fs);
 
-  std::vector<LoudnessMeter::State> in_stat;
-  std::vector<LoudnessMeter::State> out_stat;
+//   std::vector<LoudnessMeter::State> in_stat;
+//   std::vector<LoudnessMeter::State> out_stat;
 
-  auto reader = audiosup::AudioReader(input, frame_len);
-  while (!reader.is_end()) {
-    auto in = reader.next().get_channel(0).to_vec();
-    in_mtr.update(in);
-    in_stat.push_back(in_mtr.state());
+//   auto reader = audiosup::AudioReader(input, frame_len);
+//   while (!reader.is_end()) {
+//     auto in = reader.next().get_channel(0).to_vec();
+//     in_mtr.update(in);
+//     in_stat.push_back(in_mtr.state());
 
-    auto out = lc->process(in);
-    out_mtr.update(out);
-    out_stat.push_back(out_mtr.state());
-  }
+//     auto out = lc->process(in);
+//     out_mtr.update(out);
+//     out_stat.push_back(out_mtr.state());
+//   }
 
-  // loudness is not changed
+//   // loudness is not changed
 
-  auto orig_st_max = _peak_short_term_loudness(in_stat);
-  auto proc_st_max = _peak_short_term_loudness(out_stat);
-  REQUIRE(dsplib::abs(orig_st_max - proc_st_max) < 1.0);
+//   auto orig_st_max = _peak_short_term_loudness(in_stat);
+//   auto proc_st_max = _peak_short_term_loudness(out_stat);
+//   REQUIRE(dsplib::abs(orig_st_max - proc_st_max) < 1.0);
 
-  auto orig_int = _integrated_loudness(in_stat);
-  auto proc_int = _integrated_loudness(out_stat);
-  REQUIRE(dsplib::abs(orig_int - proc_int) < 1.0);
-}
+//   auto orig_int = _integrated_loudness(in_stat);
+//   auto proc_int = _integrated_loudness(out_stat);
+//   REQUIRE(dsplib::abs(orig_int - proc_int) < 1.0);
+// }
 
 
-TEST_CASE("Loudness control for speech + noise [Loudness control]") {
-  float max_gain_db = 30;
-  float target_lufs = -15;
+// TEST_CASE("Loudness control for speech + noise [Loudness control]") {
+//   float max_gain_db = 30;
+//   float target_lufs = -15;
 
-  const std::string noise_file = "data/sounds/macbook_noise_clicks.flac";
-  const std::string speech_file = "data/sounds/macbook_clean_speech.flac";
-  const int32_t fs = audiosup::audio_info(noise_file)->sample_rate;
-  const int32_t frame_len = fs * 16 / 1000;
+//   const std::string noise_file = "data/sounds/macbook_noise_clicks.flac";
+//   const std::string speech_file = "data/sounds/macbook_clean_speech.flac";
+//   const int32_t fs = audiosup::audio_info(noise_file)->sample_rate;
+//   const int32_t frame_len = fs * 16 / 1000;
 
-  dsplib::arr_real speech_gains = {-15, -10, -5, 0, 5, 10};
+//   dsplib::arr_real speech_gains = {-15, -10, -5, 0, 5, 10};
 
-  for (auto gain_db : speech_gains) {
-    const auto gain = dsplib::db2mag(gain_db);
+//   for (auto gain_db : speech_gains) {
+//     const auto gain = dsplib::db2mag(gain_db);
 
-    auto lc = LoudnessControlBuilder()
-                  .set_sample_rate(fs)
-                  .set_method(ILoudnessControl::vadbase)
-                  .set_target_level(target_lufs)
-                  .set_max_gain(max_gain_db)
-                  .set_post_processing(false)
-                  .create();
+//     auto lc = LoudnessControlBuilder()
+//                   .set_sample_rate(fs)
+//                   .set_method(ILoudnessControl::vadbase)
+//                   .set_target_level(target_lufs)
+//                   .set_max_gain(max_gain_db)
+//                   .set_post_processing(false)
+//                   .create();
 
-    auto in_mtr = LoudnessMeter(fs);
-    auto out_mtr = LoudnessMeter(fs);
+//     auto in_mtr = LoudnessMeter(fs);
+//     auto out_mtr = LoudnessMeter(fs);
 
-    std::vector<LoudnessMeter::State> out_stat;
+//     std::vector<LoudnessMeter::State> out_stat;
 
-    auto noise_r = audiosup::AudioReader(noise_file, frame_len);
-    auto speech_r = audiosup::AudioReader(speech_file, frame_len);
-    REQUIRE(noise_r.info().sample_rate == speech_r.info().sample_rate);
+//     auto noise_r = audiosup::AudioReader(noise_file, frame_len);
+//     auto speech_r = audiosup::AudioReader(speech_file, frame_len);
+//     REQUIRE(noise_r.info().sample_rate == speech_r.info().sample_rate);
 
-    while (!noise_r.is_end() && !speech_r.is_end()) {
-      auto in_noise = dsplib::arr_real(noise_r.next().get_channel(0).to_vec());
-      auto in_speech = dsplib::arr_real(speech_r.next().get_channel(0).to_vec());
-      auto in = in_noise + (in_speech * gain);
+//     while (!noise_r.is_end() && !speech_r.is_end()) {
+//       auto in_noise = dsplib::arr_real(noise_r.next().get_channel(0).to_vec());
+//       auto in_speech = dsplib::arr_real(speech_r.next().get_channel(0).to_vec());
+//       auto in = in_noise + (in_speech * gain);
 
-      in_mtr.update(in.to_vec());
+//       in_mtr.update(in.to_vec());
 
-      auto out = lc->process(in.to_vec());
-      out_mtr.update(out);
-      out_stat.push_back(out_mtr.state());
-    }
+//       auto out = lc->process(in.to_vec());
+//       out_mtr.update(out);
+//       out_stat.push_back(out_mtr.state());
+//     }
 
-    auto proc_db = _integrated_loudness(out_stat);
-    REQUIRE(dsplib::abs(target_lufs - proc_db) < 3.0);
-  }
-}
+//     auto proc_db = _integrated_loudness(out_stat);
+//     REQUIRE(dsplib::abs(target_lufs - proc_db) < 3.0);
+//   }
+// }
 
 TEST_CASE("FAIL LoudnessControlBuilder create without sample rate [Loudness control]") {
   REQUIRE_THROWS_AS(

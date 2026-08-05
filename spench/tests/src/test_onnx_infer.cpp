@@ -1,61 +1,40 @@
-#include "spench/util/onnx/denoise_onnx_runner.h"
-#include "spench/util/onnx/dereverb_onnx_runner.h"
-#include <yaml-cpp/yaml.h>
-#include "tests/src/utils.h"
-#include <memory>
-#include <catch.hpp>
-#include <map>
-#include <iostream>
-#include <algorithm>
-#include <optional>
-#include "spench/src/spench_context.h"
 #include <contrib/onnxruntime/include/onnxruntime/core/session/onnxruntime_cxx_api.h>
+#include <yaml-cpp/yaml.h>
 
-void CreateConstInputsWithGivenShapes(
-                            const std::vector<std::vector<int64_t> >& input_shapes,
-                            std::vector<std::vector<float>>& const_allocated_data,
-                            std::vector<Ort::Value>& tensors,
-                            std::optional<std::reference_wrapper<std::vector<ONNXTensorElementDataType>>> types) {
+#include <algorithm>
+#include <catch.hpp>
+#include <iostream>
+#include <map>
+#include <memory>
+
+#include "spench/src/spench_context.h"
+#include "spench/util/onnx/denoise_onnx_runner.h"
+#include "tests/src/utils.h"
+
+void CreateConstInputsWithGivenShapes(const std::vector<std::vector<int64_t>>& input_shapes,
+                                      std::vector<std::vector<float>>& const_allocated_data,
+                                      std::vector<Ort::Value>& tensors) {
   uint32_t i = 0;
   for (auto& shape : input_shapes) {
     auto length = std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<int64_t>());
     const auto memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
 
-    auto type = (types == std::nullopt) ?
-                  ONNXTensorElementDataType::ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT :
-                  types->get()[i];
     // protection against dynamic axes
     std::vector<int64_t> shape_copy = shape;
     if (length < 0) {
       length = -length;
       std::transform(shape_copy.begin(), shape_copy.end(), shape_copy.begin(),
-               [](int64_t x) { return x < 0 ? -x : x; });
+                     [](int64_t x) { return x < 0 ? -x : x; });
     }
-    if (type == ONNXTensorElementDataType::ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT) {
-      const_allocated_data.emplace_back(std::vector<float>(length, 1.0));
-      tensors.emplace_back(Ort::Value::CreateTensor
-                                        (memory_info,
-                                          const_allocated_data.back().data(),
-                                          const_allocated_data.back().size() * sizeof(float),
-                                          shape_copy.data(),
-                                          shape_copy.size(),
-                                          type));
-    } else {
-      const_allocated_data.emplace_back(std::vector<float>(length, 0.0));
-      tensors.emplace_back(Ort::Value::CreateTensor
-                                        (memory_info,
-                                          reinterpret_cast<int64_t*>(const_allocated_data.back().data()),
-                                          const_allocated_data.back().size() * sizeof(int64_t),
-                                          shape_copy.data(),
-                                          shape_copy.size(),
-                                          type));
-    }
+    const_allocated_data.emplace_back(std::vector<float>(length, 1.0));
+    tensors.emplace_back(Ort::Value::CreateTensor(
+        memory_info, const_allocated_data.back().data(), const_allocated_data.back().size() * sizeof(float),
+        shape_copy.data(), shape_copy.size(), ONNXTensorElementDataType::ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT));
     ++i;
   }
 }
 
-void FreeNames(Ort::AllocatorWithDefaultOptions& allocator,
-               std::vector<char*>& tensors) {
+void FreeNames(Ort::AllocatorWithDefaultOptions& allocator, std::vector<char*>& tensors) {
   for (uint16_t i = 0; i < tensors.size(); ++i) {
     allocator.Free(tensors[i]);
   }
@@ -84,9 +63,7 @@ struct TestOnnx {
   TestOnnx& init_model(const std::string& model_name) {
     std::string full_model_path = data_root + "models/" + model_name;
 
-    denoiser = std::unique_ptr<Ort::Session>(new Ort::Session(session_env,
-                                                              full_model_path.c_str(),
-                                                              session_options));
+    denoiser = std::unique_ptr<Ort::Session>(new Ort::Session(session_env, full_model_path.c_str(), session_options));
     return *this;
   }
 
@@ -107,8 +84,7 @@ struct TestOnnxRunner {
   uint64_t sample_rate = 16000;
   TestOnnxRunner() = default;
 
-  TestOnnxRunner& InitRunner(const std::string& yaml_config_name,
-                             const std::string& password = "",
+  TestOnnxRunner& InitRunner(const std::string& yaml_config_name, const std::string& password = "",
                              const std::string& checksum = "") {
     std::string file_path = data_root + "config/" + yaml_config_name;
     auto reader = spench::FileConfigReader(file_path);
@@ -117,42 +93,24 @@ struct TestOnnxRunner {
 
     if (model_type == "best_quality") {
       auto config = std::make_shared<spench::DenoiserConfig>(reader);
-      spench_model_runner =
-                std::unique_ptr<util::onnx::BaseOnnxRunner>(
-                                            new util::onnx::SpenchQOnnxRunner(config,
-                                                                              password,
-                                                                              checksum,
-                                                                              on_gpu));
+      spench_model_runner = std::unique_ptr<util::onnx::BaseOnnxRunner>(
+          new util::onnx::SpenchQOnnxRunner(config, password, checksum, on_gpu));
     } else if (model_type == "best_speed") {
       auto config = std::make_shared<spench::DenoiserConfig>(reader);
-      spench_model_runner =
-                std::unique_ptr<util::onnx::BaseOnnxRunner>(
-                                            new util::onnx::SpenchFOnnxRunner(config,
-                                                                              password,
-                                                                              checksum,
-                                                                              on_gpu));
-    } else if (model_type == "remove_reverb") {
-      auto config = std::make_shared<spench::DereverbConfig>(reader);
-      spench_model_runner =
-                std::unique_ptr<util::onnx::BaseOnnxRunner>(
-                                            new util::onnx::SpenchDereverbOnnxRunner(config,
-                                                                              password,
-                                                                              checksum,
-                                                                              on_gpu));
+      spench_model_runner = std::unique_ptr<util::onnx::BaseOnnxRunner>(
+          new util::onnx::SpenchFOnnxRunner(config, password, checksum, on_gpu));
     }
     frame_size_ms = reader.params()["feature_params"]["frame_size_ms"].as<uint16_t>(16);
     sample_rate = reader.params()["feature_params"]["sampling_freq"].as<uint64_t>(16000);
     return *this;
   }
 
-  TestOnnxRunner& LoadDataFromBin(const std::string& dump,
-                        std::vector<float>& output) {
+  TestOnnxRunner& LoadDataFromBin(const std::string& dump, std::vector<float>& output) {
     std::string full_wav_path = data_root + "binary/" + dump;
     LoadBin(full_wav_path.c_str(), output);
     return *this;
   }
-  TestOnnxRunner& LoadDataFromBin(const std::string& dump,
-                        std::valarray<float>& output) {
+  TestOnnxRunner& LoadDataFromBin(const std::string& dump, std::valarray<float>& output) {
     std::string full_wav_path = data_root + "binary/" + dump;
     LoadBin(full_wav_path.c_str(), output);
     return *this;
@@ -160,14 +118,13 @@ struct TestOnnxRunner {
 };
 
 TEST_CASE("SUCCEED Run single dummy inference [onnx]") {
-  auto data = std::move(TestOnnx()
-      .init_model("quality_model_48khz.onnx"));
+  auto data = std::move(TestOnnx().init_model("quality_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<std::vector<int64_t>> input_shapes;
   std::vector<char*> output_names;
-  std::vector<std::vector<int64_t> > output_shapes;
+  std::vector<std::vector<int64_t>> output_shapes;
   std::vector<std::vector<float>> const_allocated_data;
 
   Ort::AllocatorWithDefaultOptions allocator;
@@ -183,14 +140,10 @@ TEST_CASE("SUCCEED Run single dummy inference [onnx]") {
     output_shapes.push_back(data.denoiser->GetOutputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   Ort::RunOptions opt;
-  auto outputs = data.denoiser->Run(opt,
-                                    input_names.data(),
-                                    inputs.data(),
-                                    inputs.size(),
-                                    output_names.data(),
+  auto outputs = data.denoiser->Run(opt, input_names.data(), inputs.data(), inputs.size(), output_names.data(),
                                     output_names.size());
 
   REQUIRE(output_shapes.size() == outputs.size());
@@ -212,62 +165,12 @@ TEST_CASE("SUCCEED Run single dummy inference [onnx]") {
   FreeNames(allocator, output_names);
 }
 
-TEST_CASE("SUCCEED Run single dummy inference for dereverb model [onnx]") {
-  auto data = std::move(TestOnnx()
-      .init_model("dereverb_model_48khz.onnx"));
-
-  std::vector<Ort::Value> inputs;
-  std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<ONNXTensorElementDataType> input_types;
-  std::vector<char*> output_names;
-  std::vector<std::vector<int64_t> > output_shapes;
-  std::vector<std::vector<float>> const_allocated_data;
-
-  Ort::AllocatorWithDefaultOptions allocator;
-  for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
-    // print input node names
-    std::string tmp_name = data.denoiser->GetInputNameAllocated(i, allocator).get();
-    input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
-    std::cout << tmp_name << std::endl;
-    input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-    input_types.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetElementType());
-  }
-
-  for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
-    // print output node names
-    std::string tmp_name = data.denoiser->GetOutputNameAllocated(i, allocator).get();
-    output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
-    std::cout << tmp_name << std::endl;
-    output_shapes.push_back(data.denoiser->GetOutputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-  }
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, input_types);
-
-  Ort::RunOptions opt;
-  auto outputs = data.denoiser->Run(opt,
-                                    input_names.data(),
-                                    inputs.data(),
-                                    inputs.size(),
-                                    output_names.data(),
-                                    output_names.size());
-
-  REQUIRE(output_shapes.size() == outputs.size());
-  for (size_t i = 0; i < output_shapes.size(); ++i) {
-    auto type_info = outputs[i].GetTensorTypeAndShapeInfo();
-    REQUIRE(type_info.GetShape() == output_shapes[i]);
-  }
-
-  FreeNames(allocator, input_names);
-  FreeNames(allocator, output_names);
-}
-
 TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with one thread [onnx]") {
-  auto data = std::move(TestOnnx()
-      .init_model("quality_model_48khz.onnx"));
+  auto data = std::move(TestOnnx().init_model("quality_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<std::vector<int64_t>> input_shapes;
   std::vector<char*> output_names;
   std::vector<std::vector<float>> const_allocated_data;
 
@@ -283,7 +186,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with 
     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
@@ -291,11 +194,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with 
     auto start = std::chrono::steady_clock::now();
 
     Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
+    auto outputs = data.denoiser->Run(opt, input_names.data(), inputs.data(), inputs.size(), output_names.data(),
                                       output_names.size());
     auto& out = outputs[0];
     auto out_shape = out.GetTensorTypeAndShapeInfo().GetShape();
@@ -305,23 +204,20 @@ TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with 
   }
   auto ts_2 = std::chrono::steady_clock::now();
 
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "48kHz quality model infer with 1 thread completed: " <<
-                                      tot << " | "
-                                      << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+  auto tot = std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "48kHz quality model infer with 1 thread completed: " << tot << " | "
+            << static_cast<double>(tot) / data.nattempts << " ms per infer" << std::endl;
 
   FreeNames(allocator, input_names);
   FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with two threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(2)
-      .init_model("quality_model_48khz.onnx"));
+  auto data = std::move(TestOnnx().SetThreadNum(2).init_model("quality_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<std::vector<int64_t>> input_shapes;
   std::vector<char*> output_names;
   std::vector<std::vector<float>> const_allocated_data;
 
@@ -337,40 +233,33 @@ TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with 
     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
   for (size_t i = 0; i < data.nattempts; ++i) {
     auto start = std::chrono::steady_clock::now();
     Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
+    auto outputs = data.denoiser->Run(opt, input_names.data(), inputs.data(), inputs.size(), output_names.data(),
                                       output_names.size());
     auto stop = std::chrono::steady_clock::now();
     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
   }
   auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "48kHz quality model infer with 2 threads completed: " <<
-                                      tot << " | "
-                                      << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+  auto tot = std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "48kHz quality model infer with 2 threads completed: " << tot << " | "
+            << static_cast<double>(tot) / data.nattempts << " ms per infer" << std::endl;
 
   FreeNames(allocator, input_names);
   FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with four threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(4)
-      .init_model("quality_model_48khz.onnx"));
+  auto data = std::move(TestOnnx().SetThreadNum(4).init_model("quality_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<std::vector<int64_t>> input_shapes;
   std::vector<char*> output_names;
   std::vector<std::vector<float>> const_allocated_data;
 
@@ -386,40 +275,33 @@ TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with 
     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
   for (size_t i = 0; i < data.nattempts; ++i) {
     auto start = std::chrono::steady_clock::now();
     Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
+    auto outputs = data.denoiser->Run(opt, input_names.data(), inputs.data(), inputs.size(), output_names.data(),
                                       output_names.size());
     auto stop = std::chrono::steady_clock::now();
     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
   }
   auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "48kHz quality model infer with 4 threads completed: " <<
-                                        tot <<
-                                        " | " << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+  auto tot = std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "48kHz quality model infer with 4 threads completed: " << tot << " | "
+            << static_cast<double>(tot) / data.nattempts << " ms per infer" << std::endl;
 
   FreeNames(allocator, input_names);
   FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with eight threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(8)
-      .init_model("quality_model_48khz.onnx"));
+  auto data = std::move(TestOnnx().SetThreadNum(8).init_model("quality_model_48khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<std::vector<int64_t>> input_shapes;
   std::vector<char*> output_names;
   std::vector<std::vector<float>> const_allocated_data;
 
@@ -435,40 +317,33 @@ TEST_CASE("SUCCEED Run dummy multi inference for a quality model 48kHz and with 
     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
   for (size_t i = 0; i < data.nattempts; ++i) {
     auto start = std::chrono::steady_clock::now();
     Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
+    auto outputs = data.denoiser->Run(opt, input_names.data(), inputs.data(), inputs.size(), output_names.data(),
                                       output_names.size());
     auto stop = std::chrono::steady_clock::now();
     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
   }
   auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "48kHz quality model infer with 8 threads completed: " <<
-                                        tot <<
-                                        " | " << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+  auto tot = std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "48kHz quality model infer with 8 threads completed: " << tot << " | "
+            << static_cast<double>(tot) / data.nattempts << " ms per infer" << std::endl;
 
   FreeNames(allocator, input_names);
   FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with one thread [onnx]") {
-  auto data = std::move(TestOnnx()
-      .init_model("fast_model_24khz.onnx"));
+  auto data = std::move(TestOnnx().init_model("fast_model_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<std::vector<int64_t>> input_shapes;
   std::vector<char*> output_names;
   std::vector<std::vector<float>> const_allocated_data;
 
@@ -484,41 +359,34 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with one
     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
   for (size_t i = 0; i < data.nattempts; ++i) {
     auto start = std::chrono::steady_clock::now();
     Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
+    auto outputs = data.denoiser->Run(opt, input_names.data(), inputs.data(), inputs.size(), output_names.data(),
                                       output_names.size());
     auto stop = std::chrono::steady_clock::now();
     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
   }
   auto ts_2 = std::chrono::steady_clock::now();
 
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "24kHz fast model infer with 1 thread completed: " <<
-                                      tot << " | "
-                                      << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+  auto tot = std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "24kHz fast model infer with 1 thread completed: " << tot << " | "
+            << static_cast<double>(tot) / data.nattempts << " ms per infer" << std::endl;
 
   FreeNames(allocator, input_names);
   FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with two threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(2)
-      .init_model("fast_model_24khz.onnx"));
+  auto data = std::move(TestOnnx().SetThreadNum(2).init_model("fast_model_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<std::vector<int64_t>> input_shapes;
   std::vector<char*> output_names;
   std::vector<std::vector<float>> const_allocated_data;
 
@@ -534,40 +402,33 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with two
     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
   for (size_t i = 0; i < data.nattempts; ++i) {
     auto start = std::chrono::steady_clock::now();
     Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
+    auto outputs = data.denoiser->Run(opt, input_names.data(), inputs.data(), inputs.size(), output_names.data(),
                                       output_names.size());
     auto stop = std::chrono::steady_clock::now();
     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
   }
   auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "24kHz fast model infer with 2 threads completed: " <<
-                                      tot << " | "
-                                      << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+  auto tot = std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "24kHz fast model infer with 2 threads completed: " << tot << " | "
+            << static_cast<double>(tot) / data.nattempts << " ms per infer" << std::endl;
 
   FreeNames(allocator, input_names);
   FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with four threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(4)
-      .init_model("fast_model_24khz.onnx"));
+  auto data = std::move(TestOnnx().SetThreadNum(4).init_model("fast_model_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<std::vector<int64_t>> input_shapes;
   std::vector<char*> output_names;
   std::vector<std::vector<float>> const_allocated_data;
 
@@ -583,40 +444,33 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with fou
     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
   for (size_t i = 0; i < data.nattempts; ++i) {
     auto start = std::chrono::steady_clock::now();
     Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
+    auto outputs = data.denoiser->Run(opt, input_names.data(), inputs.data(), inputs.size(), output_names.data(),
                                       output_names.size());
     auto stop = std::chrono::steady_clock::now();
     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
   }
   auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "24kHz fast model infer with 4 threads completed: " <<
-                                        tot <<
-                                        " | " << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+  auto tot = std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "24kHz fast model infer with 4 threads completed: " << tot << " | "
+            << static_cast<double>(tot) / data.nattempts << " ms per infer" << std::endl;
 
   FreeNames(allocator, input_names);
   FreeNames(allocator, output_names);
 }
 
 TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with eight threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(8)
-      .init_model("fast_model_24khz.onnx"));
+  auto data = std::move(TestOnnx().SetThreadNum(8).init_model("fast_model_24khz.onnx"));
 
   std::vector<Ort::Value> inputs;
   std::vector<char*> input_names;
-  std::vector<std::vector<int64_t> > input_shapes;
+  std::vector<std::vector<int64_t>> input_shapes;
   std::vector<char*> output_names;
   std::vector<std::vector<float>> const_allocated_data;
 
@@ -632,242 +486,30 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with eig
     output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
   }
 
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, std::nullopt);
+  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs);
 
   std::vector<size_t> timings(data.nattempts);
   auto ts_1 = std::chrono::steady_clock::now();
   for (size_t i = 0; i < data.nattempts; ++i) {
     auto start = std::chrono::steady_clock::now();
     Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
+    auto outputs = data.denoiser->Run(opt, input_names.data(), inputs.data(), inputs.size(), output_names.data(),
                                       output_names.size());
     auto stop = std::chrono::steady_clock::now();
     timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
   }
   auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "24kHz fast model infer with 8 threads completed: " <<
-                                        tot <<
-                                        " | " << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
-
-  FreeNames(allocator, input_names);
-  FreeNames(allocator, output_names);
-}
-
-TEST_CASE("SUCCEED Run dummy multi inference for a dereverb model 48kHz and with one thread [onnx]") {
-  auto data = std::move(TestOnnx()
-      .init_model("dereverb_model_48khz.onnx"));
-
-  std::vector<Ort::Value> inputs;
-  std::vector<char*> input_names;
-  std::vector<ONNXTensorElementDataType> input_types;
-  std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<char*> output_names;
-  std::vector<std::vector<float>> const_allocated_data;
-
-  Ort::AllocatorWithDefaultOptions allocator;
-  for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
-    // print input node names
-    input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
-    input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-    input_types.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetElementType());
-  }
-
-  for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
-    // print output node names
-    output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
-  }
-
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, input_types);
-
-  std::vector<size_t> timings(data.nattempts);
-  auto ts_1 = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < data.nattempts; ++i) {
-    auto start = std::chrono::steady_clock::now();
-    Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
-                                      output_names.size());
-    auto stop = std::chrono::steady_clock::now();
-    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-  }
-  auto ts_2 = std::chrono::steady_clock::now();
-
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "48kHz dereverb model infer with 1 thread completed: " <<
-                                      tot << " | "
-                                      << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
-
-  FreeNames(allocator, input_names);
-  FreeNames(allocator, output_names);
-}
-
-TEST_CASE("SUCCEED Run dummy multi inference for a dereverb model 48kHz and with two threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(2)
-      .init_model("dereverb_model_48khz.onnx"));
-
-  std::vector<Ort::Value> inputs;
-  std::vector<char*> input_names;
-  std::vector<ONNXTensorElementDataType> input_types;
-  std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<char*> output_names;
-  std::vector<std::vector<float>> const_allocated_data;
-
-  Ort::AllocatorWithDefaultOptions allocator;
-  for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
-    // print input node names
-    input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
-    input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-    input_types.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetElementType());
-  }
-
-  for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
-    // print output node names
-    output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
-  }
-
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, input_types);
-
-  std::vector<size_t> timings(data.nattempts);
-  auto ts_1 = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < data.nattempts; ++i) {
-    auto start = std::chrono::steady_clock::now();
-    Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
-                                      output_names.size());
-    auto stop = std::chrono::steady_clock::now();
-    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-  }
-  auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "48kHz dereverb model infer with 2 threads completed: " <<
-                                      tot << " | "
-                                      << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
-
-  FreeNames(allocator, input_names);
-  FreeNames(allocator, output_names);
-}
-
-TEST_CASE("SUCCEED Run dummy multi inference for a dereverb model 48kHz and with four threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(4)
-      .init_model("dereverb_model_48khz.onnx"));
-
-  std::vector<Ort::Value> inputs;
-  std::vector<char*> input_names;
-  std::vector<ONNXTensorElementDataType> input_types;
-  std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<char*> output_names;
-  std::vector<std::vector<float>> const_allocated_data;
-
-  Ort::AllocatorWithDefaultOptions allocator;
-  for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
-    // print input node names
-    input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
-    input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-    input_types.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetElementType());
-  }
-
-  for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
-    // print output node names
-    output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
-  }
-
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, input_types);
-
-  std::vector<size_t> timings(data.nattempts);
-  auto ts_1 = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < data.nattempts; ++i) {
-    auto start = std::chrono::steady_clock::now();
-    Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
-                                      output_names.size());
-    auto stop = std::chrono::steady_clock::now();
-    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-  }
-  auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "48kHz dereverb model infer with 4 threads completed: " <<
-                                        tot <<
-                                        " | " << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
-
-  FreeNames(allocator, input_names);
-  FreeNames(allocator, output_names);
-}
-
-TEST_CASE("SUCCEED Run dummy multi inference for a dereverb model 48kHz and with eight threads [onnx]") {
-  auto data = std::move(TestOnnx().SetThreadNum(8)
-      .init_model("dereverb_model_48khz.onnx"));
-
-  std::vector<Ort::Value> inputs;
-  std::vector<char*> input_names;
-  std::vector<ONNXTensorElementDataType> input_types;
-  std::vector<std::vector<int64_t> > input_shapes;
-  std::vector<char*> output_names;
-  std::vector<std::vector<float>> const_allocated_data;
-
-  Ort::AllocatorWithDefaultOptions allocator;
-  for (size_t i = 0; i < data.denoiser->GetInputCount(); ++i) {
-    // print input node names
-    input_names.push_back(data.denoiser->GetInputNameAllocated(i, allocator).release());
-    input_shapes.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-    input_types.push_back(data.denoiser->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetElementType());
-  }
-
-  for (size_t i = 0; i < data.denoiser->GetOutputCount(); ++i) {
-    // print output node names
-    output_names.push_back(data.denoiser->GetOutputNameAllocated(i, allocator).release());
-  }
-
-  CreateConstInputsWithGivenShapes(input_shapes, const_allocated_data, inputs, input_types);
-
-  std::vector<size_t> timings(data.nattempts);
-  auto ts_1 = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < data.nattempts; ++i) {
-    auto start = std::chrono::steady_clock::now();
-    Ort::RunOptions opt;
-    auto outputs = data.denoiser->Run(opt,
-                                      input_names.data(),
-                                      inputs.data(),
-                                      inputs.size(),
-                                      output_names.data(),
-                                      output_names.size());
-    auto stop = std::chrono::steady_clock::now();
-    timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-  }
-  auto ts_2 = std::chrono::steady_clock::now();
-  auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-  std::cout << "48kHz dereverb model infer with 8 threads completed: " <<
-                                        tot <<
-                                        " | " << static_cast<double>(tot) / data.nattempts <<
-                                        " ms per infer" << std::endl;
+  auto tot = std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+  std::cout << "24kHz fast model infer with 8 threads completed: " << tot << " | "
+            << static_cast<double>(tot) / data.nattempts << " ms per infer" << std::endl;
 
   FreeNames(allocator, input_names);
   FreeNames(allocator, output_names);
 }
 
 TEST_CASE("FAIL Read config for Inference Runner with incorrect model path [onnx runner]") {
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("test_configuration_with_incorrect_model_path.yaml"),
-                                            "Config reading error. Model path parameter is not a single string!");
+  CHECK_THROWS_WITH(TestOnnxRunner().InitRunner("test_configuration_with_incorrect_model_path.yaml"),
+                    "Config reading error. Model path parameter is not a single string!");
 }
 
 TEST_CASE("FAIL Read config for Inference Runner with not existed model path [onnx runner]") {
@@ -876,153 +518,24 @@ TEST_CASE("FAIL Read config for Inference Runner with not existed model path [on
                               std::string("data/models/not_existed_model.onnx failed. ") +
                               std::string("File doesn't exist");
 
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("test_configuration_with_not_existed_model_path.yaml"), error_message.c_str());
+  CHECK_THROWS_WITH(TestOnnxRunner().InitRunner("test_configuration_with_not_existed_model_path.yaml"),
+                    error_message.c_str());
 }
 
 TEST_CASE("FAIL Run cpu onnx runner with null pointer task and zeroed hidden layer [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
-  CHECK_THROWS_WITH(data.spench_model_runner->infer(nullptr),
-                                              "Task data or context are not initialized!");
+  auto data = std::move(TestOnnxRunner().InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
+  CHECK_THROWS_WITH(data.spench_model_runner->infer(nullptr), "Task data or context are not initialized!");
 }
 
 TEST_CASE("FAIL Run cpu onnx runner with null pointer context and zeroed hidden layer [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
+  auto data = std::move(TestOnnxRunner().InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
   spench::SpenchTask denoise_task;
-  CHECK_THROWS_WITH(data.spench_model_runner->infer(&denoise_task),
-                                            "Task data or context are not initialized!");
+  CHECK_THROWS_WITH(data.spench_model_runner->infer(&denoise_task), "Task data or context are not initialized!");
 }
-
-#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
-TEST_CASE("FAIL Read config with incorrect encrypted model name [onnx runner]") {
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("incorrect_configuration_best_quality_onnx_encrypted_16khz.yaml", "test"),
-                                            "Model reading error. Detailes: file doesn't contain header");
-}
-
-TEST_CASE("FAIL Pass incorrect password for encrypted model [onnx runner]") {
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("default_configuration_best_quality_onnx_encrypted_16khz.yaml", "test1"),
-                                            "Model reading error. Detailes: chunk is corrupted");
-}
-
-TEST_CASE("FAIL Pass no password for encrypted model [onnx runner]") {
-  std::string error_message = std::string("Model reading error. Detailes: Load model from ") +
-                              std::string("data/models/quality_model_with_layerNorm_16khz.onnx.crypt ") +
-                              std::string("failed:Protobuf parsing failed.");
-
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("default_configuration_best_quality_onnx_encrypted_16khz.yaml", ""), error_message.c_str());
-}
-
-TEST_CASE("FAIL Pass incorrect password for licensed encrypted model [onnx runner]") {
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("default_configuration_fast_onnx_lic_encrypted_24khz.yaml", "qwerty1"),
-                                            "Model reading error. Detailes: chunk is corrupted");
-}
-
-TEST_CASE("FAIL Pass incorrect checksum for licensed encrypted model [onnx runner]") {
-  CHECK_THROWS_WITH(TestOnnxRunner()
-      .InitRunner("default_configuration_fast_onnx_lic_encrypted_24khz.yaml",
-                  "qwerty",
-                  "gGQdBounxW0kIBEURpYXmNxSAuWprxcMIvoMVQLRmp1="),
-                                            "Model reading error. Detailes: error deserializing base64 checksum");
-}
-#endif
-
-TEST_CASE("SUCCEED Run the dereverb model and check network outputs (audio 48kHz) [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_dereverberation_onnx_48khz.yaml"));
-  std::valarray<float> real;
-  std::valarray<float> imag;
-  std::vector<float> noisy_spec_5_old_real;
-  std::vector<float> noisy_spec_5_old_imag;
-  std::vector<float> noisy_spec_for_model_input_5_new;
-  std::vector<float> gt_model_output_mag;
-  data.LoadDataFromBin("1_noisy_spec_5_old_real.dump", noisy_spec_5_old_real);
-  data.LoadDataFromBin("1_noisy_spec_5_old_imag.dump", noisy_spec_5_old_imag);
-  data.LoadDataFromBin("1_noisy_spec_1_new_real.dump", real);
-  data.LoadDataFromBin("1_noisy_spec_1_new_imag.dump", imag);
-  data.LoadDataFromBin("1_noisy_spec_5_new.dump", noisy_spec_for_model_input_5_new);
-  data.LoadDataFromBin("1_enhanced_frame_mag.dump", gt_model_output_mag);
-
-  std::vector<float> spec = noisy_spec_5_old_real;
-  spec.insert(std::end(spec), std::begin(noisy_spec_5_old_imag), std::end(noisy_spec_5_old_imag));
-
-  spench::SpenchTask dereverb_task;
-  std::unique_ptr<spench::DereverbContext<float>> ctx(new spench::DereverbContext<float>);
-  dereverb_task.data.context = ctx.get();
-  // pass resulted spec
-  ctx.get()->noisy_spec = spec;
-  dereverb_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-  dereverb_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.spench_model_runner->infer(&dereverb_task);
-
-  IsVectorsClose(ctx.get()->noisy_spec, noisy_spec_for_model_input_5_new, 0.000001);
-
-  auto& new_real_ref = dereverb_task.data.new_spectrogram.real;
-  auto& new_imag_ref = dereverb_task.data.new_spectrogram.imag;
-  std::vector<float> new_spec_mag(new_real_ref.size());
-
-  for (size_t i = 0; i < new_real_ref.size(); ++i) {
-      new_spec_mag[i] = std::sqrt((new_real_ref[i] * new_real_ref[i]) +
-                                   (new_imag_ref[i] * new_imag_ref[i]));
-  }
-
-  // As output is deterministic threshold chosen with a margin
-  // Maximum value in the vectors is about 4.5
-  IsVectorsClose(gt_model_output_mag, new_spec_mag, 0.8);
-
-  REQUIRE(dereverb_task.stage == spench::PipelineStage::predicted_spec);
-}
-
-#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
-// TEST_CASE("SUCCEED Run encrypted the best quality model and check network outputs (audio 16kHz) [onnx runner]") {
-//   auto data = std::move(TestOnnxRunner()
-//       .InitRunner("default_configuration_best_quality_onnx_encrypted_16khz.yaml", "test"));
-
-//   std::valarray<float> real;
-//   std::valarray<float> imag;
-//   std::vector<float> gt_real;
-//   std::vector<float> gt_imag;
-//   std::vector<float> gt_fullband_hidden;
-//   std::vector<float> gt_fullband_cell_state;
-//   std::vector<float> gt_subband_hidden;
-//   std::vector<float> gt_subband_cell_state;
-//   data.LoadDataFromBin("1_real_wav_stft.dump", real);
-//   data.LoadDataFromBin("1_imag_wav_stft.dump", imag);
-//   data.LoadDataFromBin("1_real_network_output_for_zeroed_hiddens_16khz.dump", gt_real);
-//   data.LoadDataFromBin("1_imag_network_output_for_zeroed_hiddens_16khz.dump", gt_imag);
-//   data.LoadDataFromBin("1_predicted_full_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_fullband_hidden);
-//   data.LoadDataFromBin("1_predicted_full_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_fullband_cell_state);
-//   data.LoadDataFromBin("1_predicted_sub_band_hidden_state_for_zeroed_hiddens_16khz.dump", gt_subband_hidden);
-//   data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
-
-//   spench::SpenchTask denoise_task;
-//   std::unique_ptr<spench::DenoiseContextQ<float>> ctx(new spench::DenoiseContextQ<float>);
-//   denoise_task.data.context = ctx.get();
-//   denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-//   denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-
-//   data.spench_model_runner->infer(&denoise_task);
-
-//   REQUIRE(denoise_task.stage == spench::PipelineStage::skipped_chunk);
-//   IsVectorsClose(gt_real, denoise_task.data.new_spectrogram.real, 0.000001);
-//   IsVectorsClose(gt_imag, denoise_task.data.new_spectrogram.imag, 0.000001);
-//   CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
-//                                                  denoise_task.data.enhanced_wav);
-//   IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.000001);
-//   IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.000001);
-//   IsVectorsClose(gt_subband_hidden, ctx.get()->subband_hidden, 0.000001);
-//   IsVectorsClose(gt_subband_cell_state, ctx.get()->subband_cell_state, 0.000001);
-// }
-#endif
 
 TEST_CASE("FAIL Read config for the best speed model 24kHz with error in inputs [onnx runner]") {
   CHECK_THROWS_WITH(TestOnnxRunner().InitRunner("test_configuration_with_error_in_inputs.yaml"),
-                     "The model has inputs inconsisted with provided ones");
+                    "The model has inputs inconsisted with provided ones");
 }
 
 TEST_CASE("FAIL Read config for the best speed model 24kHz with error number of outputs [onnx runner]") {
@@ -1031,13 +544,11 @@ TEST_CASE("FAIL Read config for the best speed model 24kHz with error number of 
 }
 
 TEST_CASE("SUCCEED Read default config for the best speed model 24kHz [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_fast_onnx_24khz.yaml"));
+  auto data = std::move(TestOnnxRunner().InitRunner("default_configuration_fast_onnx_24khz.yaml"));
 }
 
 TEST_CASE("SUCCEED Run prepare_input_in_place on one real frame with fast onnx model (audio 24 kHz) [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_fast_onnx_24khz.yaml"));
+  auto data = std::move(TestOnnxRunner().InitRunner("default_configuration_fast_onnx_24khz.yaml"));
   std::vector<float> noisy_mag_5_old;
   std::vector<float> noisy_mag_1_new;
   std::vector<float> noisy_mag_5_new;
@@ -1055,44 +566,8 @@ TEST_CASE("SUCCEED Run prepare_input_in_place on one real frame with fast onnx m
   IsVectorsClose(ctx.get()->noisy_mag, noisy_mag_5_new, 0.000001);
 }
 
-TEST_CASE("SUCCEED Run prepare_input_in_place on one real frame with dereverb onnx model "
-          "(audio 48 kHz) [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_dereverberation_onnx_48khz.yaml"));
-  std::vector<float> noisy_spec_5_old_real;
-  std::vector<float> noisy_spec_5_old_imag;
-  std::vector<float> noisy_frame_new_real;
-  std::vector<float> noisy_frame_new_imag;
-  std::vector<float> noisy_spec_for_model_input_5_new;
-  std::vector<std::vector<float>*> inputs;
-
-  data.LoadDataFromBin("1_noisy_spec_5_old_real.dump", noisy_spec_5_old_real);
-  data.LoadDataFromBin("1_noisy_spec_5_old_imag.dump", noisy_spec_5_old_imag);
-  data.LoadDataFromBin("1_noisy_spec_1_new_real.dump", noisy_frame_new_real);
-  data.LoadDataFromBin("1_noisy_spec_1_new_imag.dump", noisy_frame_new_imag);
-  data.LoadDataFromBin("1_noisy_spec_5_new.dump", noisy_spec_for_model_input_5_new);
-
-  std::unique_ptr<spench::DereverbContext<float>> ctx(new spench::DereverbContext<float>);
-  spench::SpenchContext<float>* spench_contex = ctx.get();
-  // concat real and imag for previous spec
-  std::vector<float> spec = noisy_spec_5_old_real;
-  spec.insert(std::end(spec), std::begin(noisy_spec_5_old_imag), std::end(noisy_spec_5_old_imag));
-  // pass resulted spec
-  ctx.get()->noisy_spec = spec;
-
-  // concat real and imag parts for input frame
-  std::vector<float> frame = noisy_frame_new_real;
-  frame.insert(std::end(frame), std::begin(noisy_frame_new_imag), std::end(noisy_frame_new_imag));
-
-  // pass all inputs
-  data.spench_model_runner->prepare_input_in_place(frame, inputs, spench_contex);
-
-  IsVectorsClose(ctx.get()->noisy_spec, noisy_spec_for_model_input_5_new, 0.000001);
-}
-
 TEST_CASE("SUCCEED Run fast onnx model with real data and check first two iterations (audio 24 kHz) [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_fast_onnx_24khz.yaml"));
+  auto data = std::move(TestOnnxRunner().InitRunner("default_configuration_fast_onnx_24khz.yaml"));
 
   std::valarray<float> real, imag;
   std::vector<float> gt_fullband_hidden, gt_fullband_cell_state;
@@ -1119,8 +594,7 @@ TEST_CASE("SUCCEED Run fast onnx model with real data and check first two iterat
   data.spench_model_runner->infer(&denoise_task);
 
   REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
-                           denoise_task.data.enhanced_wav);
+  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) == denoise_task.data.enhanced_wav);
 
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
@@ -1139,8 +613,7 @@ TEST_CASE("SUCCEED Run fast onnx model with real data and check first two iterat
 }
 
 TEST_CASE("SUCCEED Run quality onnx model with real data and check first two iterations (audio 48 kHz) [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
+  auto data = std::move(TestOnnxRunner().InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
 
   std::vector<float> gt_fb_hidden_step1;
   std::vector<float> gt_fb_hidden_step2;
@@ -1224,151 +697,3 @@ TEST_CASE("SUCCEED Run quality onnx model with real data and check first two ite
   IsVectorsClose(gt_b1_out_step2, ctx->fb_conv1_buf, 1e-5f);
   IsVectorsClose(gt_b3_out_step2, ctx->fb_conv3_buf, 1e-5f);
 }
-
-#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
-TEST_CASE("SUCCEED Run encrypted onnx model and check first two iterations (audio 24 kHz) [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_fast_onnx_encrypted_24khz.yaml", "test"));
-
-  std::valarray<float> real, imag;
-  std::vector<float> gt_fullband_hidden, gt_fullband_cell_state;
-  std::vector<float> gt_real_output, gt_imag_output;
-  std::vector<float> gt_prev_fb_out_5;
-  data.LoadDataFromBin("1_noisy_real_in.dump", real);
-  data.LoadDataFromBin("1_noisy_imag_in.dump", imag);
-  data.LoadDataFromBin("1_fb_h_new_fast_24kHz.dump", gt_fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_new_fast_24kHz.dump", gt_fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_new_fast_24kHz.dump", gt_prev_fb_out_5);
-  data.LoadDataFromBin("1_noisy_real_out.dump", gt_real_output);
-  data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
-
-  spench::SpenchTask denoise_task;
-  std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.spench_model_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
-                           denoise_task.data.enhanced_wav);
-
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.spench_model_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.000001);
-  IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.000001);
-  IsVectorsClose(gt_prev_fb_out_5, ctx.get()->prev_fb_out, 0.000001);
-  IsVectorsClose(gt_real_output, denoise_task.data.new_spectrogram.real, 0.000001);
-  IsVectorsClose(gt_imag_output, denoise_task.data.new_spectrogram.imag, 0.000001);
-}
-
-TEST_CASE("SUCCEED Run licensed encrypted model and check first two iterations (24 kHz) [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_fast_onnx_lic_encrypted_24khz.yaml",
-                  "qwerty", "gGQdBounxW0kIBEURpYXmNxSAuWprxcMIvoMVQLRmpU="));
-  std::valarray<float> real, imag;
-  std::vector<float> gt_fullband_hidden, gt_fullband_cell_state;
-  std::vector<float> gt_real_output, gt_imag_output;
-  std::vector<float> gt_prev_fb_out_5, gt_noisy_mag_5_new;
-  data.LoadDataFromBin("1_noisy_real_in.dump", real);
-  data.LoadDataFromBin("1_noisy_imag_in.dump", imag);
-  data.LoadDataFromBin("1_fb_h_new_fast_24kHz.dump", gt_fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_new_fast_24kHz.dump", gt_fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_new_fast_24kHz.dump", gt_prev_fb_out_5);
-  data.LoadDataFromBin("1_noisy_real_out.dump", gt_real_output);
-  data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
-  data.LoadDataFromBin("1_noisy_mag_5_new.dump", gt_noisy_mag_5_new);
-
-  spench::SpenchTask denoise_task;
-  std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.spench_model_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
-                           denoise_task.data.enhanced_wav);
-
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.spench_model_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.00001);
-  IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.00001);
-  IsVectorsClose(gt_prev_fb_out_5, ctx.get()->prev_fb_out, 0.00001);
-  IsVectorsClose(gt_real_output, denoise_task.data.new_spectrogram.real, 0.00001);
-  IsVectorsClose(gt_imag_output, denoise_task.data.new_spectrogram.imag, 0.00001);
-}
-
-TEST_CASE("SUCCEED Run licensed encrypted model w/o lic check (24 kHz) [onnx runner]") {
-  auto data = std::move(TestOnnxRunner()
-      .InitRunner("default_configuration_fast_onnx_lic_encrypted_24khz.yaml",
-                  "qwerty", ""));
-  std::valarray<float> real, imag;
-  std::vector<float> gt_fullband_hidden, gt_fullband_cell_state;
-  std::vector<float> gt_real_output, gt_imag_output;
-  std::vector<float> gt_prev_fb_out_5, gt_noisy_mag_5_new;
-  data.LoadDataFromBin("1_noisy_real_in.dump", real);
-  data.LoadDataFromBin("1_noisy_imag_in.dump", imag);
-  data.LoadDataFromBin("1_fb_h_new_fast_24kHz.dump", gt_fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_new_fast_24kHz.dump", gt_fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_new_fast_24kHz.dump", gt_prev_fb_out_5);
-  data.LoadDataFromBin("1_noisy_real_out.dump", gt_real_output);
-  data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
-  data.LoadDataFromBin("1_noisy_mag_5_new.dump", gt_noisy_mag_5_new);
-
-  spench::SpenchTask denoise_task;
-  std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.spench_model_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
-                           denoise_task.data.enhanced_wav);
-
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.spench_model_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.00001);
-  IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.00001);
-  IsVectorsClose(gt_prev_fb_out_5, ctx.get()->prev_fb_out, 0.00001);
-  IsVectorsClose(gt_real_output, denoise_task.data.new_spectrogram.real, 0.00001);
-  IsVectorsClose(gt_imag_output, denoise_task.data.new_spectrogram.imag, 0.00001);
-}
-#endif

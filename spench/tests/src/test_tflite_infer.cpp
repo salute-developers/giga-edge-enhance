@@ -1,9 +1,11 @@
-#include "tests/src/utils.h"
-#include <catch.hpp>
-#include <vector>
-#include <string>
 #include <spdlog/spdlog.h>
+
+#include <catch.hpp>
+#include <string>
+#include <vector>
+
 #include "spench/util/tflite/tflite_runner.h"
+#include "tests/src/utils.h"
 
 struct TestTfliteRunner {
   std::unique_ptr<util::tf_lite::BaseTfliteRunner> denoiser_runner;
@@ -15,39 +17,29 @@ struct TestTfliteRunner {
   uint64_t sample_rate = 16000;
   TestTfliteRunner() = default;
 
-  TestTfliteRunner& InitRunner(const std::string& yaml_config_name,
-                               const std::string& password = "",
-                               const std::string& checksum = "",
-                               uint16_t num_threads = 1) {
+  TestTfliteRunner& InitRunner(const std::string& yaml_config_name, const std::string& password = "",
+                               const std::string& checksum = "", uint16_t num_threads = 1) {
     std::string file_path = data_root + "config/" + yaml_config_name;
     YAML::Node node = YAML::LoadFile(file_path);
     // bool on_gpu = node["inference"]["gpu"].as<bool>(false);
     std::string model_type = node["inference"]["model_type"].as<std::string>("best_quality");
 
-    denoiser_runner = (model_type == "best_quality") ?
-                    std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
-                                                new util::tf_lite::SpenchQTfliteRunner(node["model"],
-                                                                                       password,
-                                                                                       checksum,
-                                                                                       num_threads)):
-                    std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
-                                                new util::tf_lite::SpenchFTfliteRunner(node["model"],
-                                                                                       password,
-                                                                                       checksum,
-                                                                                       num_threads));
+    denoiser_runner = (model_type == "best_quality")
+                          ? std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
+                                new util::tf_lite::SpenchQTfliteRunner(node["model"], password, checksum, num_threads))
+                          : std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
+                                new util::tf_lite::SpenchFTfliteRunner(node["model"], password, checksum, num_threads));
     frame_size_ms = node["feature_params"]["frame_size_ms"].as<uint16_t>(16);
     sample_rate = node["feature_params"]["sampling_freq"].as<uint64_t>(16000);
     return *this;
   }
 
-  TestTfliteRunner& LoadDataFromBin(const std::string& dump,
-                        std::vector<float>& output) {
+  TestTfliteRunner& LoadDataFromBin(const std::string& dump, std::vector<float>& output) {
     std::string full_wav_path = data_root + "binary/" + dump;
     LoadBin(full_wav_path.c_str(), output);
     return *this;
   }
-  TestTfliteRunner& LoadDataFromBin(const std::string& dump,
-                        std::valarray<float>& output) {
+  TestTfliteRunner& LoadDataFromBin(const std::string& dump, std::valarray<float>& output) {
     std::string full_wav_path = data_root + "binary/" + dump;
     LoadBin(full_wav_path.c_str(), output);
     return *this;
@@ -66,8 +58,8 @@ TEST_CASE("SUCCEED Run relu model dummy inference [tflite]") {
   REQUIRE(interpreter != nullptr);
 
   REQUIRE(interpreter->AllocateTensors() == kTfLiteOk);
-  std::vector<float> input_vector {-1.3, 0.3, 1.0};
-  std::vector<float> gt_vector {0, 0.3, 1.0};
+  std::vector<float> input_vector{-1.3, 0.3, 1.0};
+  std::vector<float> gt_vector{0, 0.3, 1.0};
 
   float* input_data_ptr = interpreter->typed_input_tensor<float>(0);
   for (auto const& value : input_vector) {
@@ -84,10 +76,10 @@ TEST_CASE("SUCCEED Run relu model dummy inference [tflite]") {
   IsVectorsClose(output, gt_vector, 0.0000001);
 }
 
-TEST_CASE("SUCCEED Run prepare_input_in_place on one real frame with fast tflite model "
-          "(audio 24 kHz) [tflite runner]") {
-  auto data = std::move(TestTfliteRunner()
-      .InitRunner("default_configuration_fast_tflite_24khz.yaml"));
+TEST_CASE(
+    "SUCCEED Run prepare_input_in_place on one real frame with fast tflite model "
+    "(audio 24 kHz) [tflite runner]") {
+  auto data = std::move(TestTfliteRunner().InitRunner("default_configuration_fast_tflite_24khz.yaml"));
   std::vector<float> noisy_mag_5_old;
   std::vector<float> noisy_mag_1_new;
   std::vector<float> noisy_mag_5_new;
@@ -107,49 +99,12 @@ TEST_CASE("SUCCEED Run prepare_input_in_place on one real frame with fast tflite
 }
 
 TEST_CASE("FAIL Read config with corrupted model [tflite runner]") {
-  CHECK_THROWS_WITH(TestTfliteRunner()
-      .InitRunner("test_configuration_with_corrupted_fast_tflite_24khz.yaml"),
-                                            "Model reading error. There is problem with checkpoint file.");
+  CHECK_THROWS_WITH(TestTfliteRunner().InitRunner("test_configuration_with_corrupted_fast_tflite_24khz.yaml"),
+                    "Model reading error. There is problem with checkpoint file.");
 }
-
-#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
-TEST_CASE("FAIL Read config with incorrect encrypted model path or name [tflite runner]") {
-  CHECK_THROWS_WITH(TestTfliteRunner()
-      .InitRunner("incorrect_configuration_fast_tflite_encrypted_24khz.yaml", "test"),
-                                            "Model reading error. Detailes: file doesn't contain header");
-}
-
-TEST_CASE("FAIL Pass incorrect password for encrypted model [tflite runner]") {
-  CHECK_THROWS_WITH(TestTfliteRunner()
-      .InitRunner("default_configuration_fast_tflite_encrypted_24khz.yaml", "test1"),
-                                            "Model reading error. Detailes: chunk is corrupted");
-}
-
-TEST_CASE("FAIL Pass no password for encrypted model [tflite runner]") {
-  std::string error_message = std::string("Model reading error. There is problem with checkpoint file.");
-  CHECK_THROWS_WITH(TestTfliteRunner()
-      .InitRunner("default_configuration_fast_tflite_encrypted_24khz.yaml", ""), error_message.c_str());
-}
-
-TEST_CASE("FAIL Pass incorrect password for licensed encrypted model[tflite runner]") {
-  CHECK_THROWS_WITH(TestTfliteRunner()
-      .InitRunner("default_configuration_fast_tflite_lic_encrypted_24khz.yaml", "qwerty1"),
-                                            "Model reading error. Detailes: chunk is corrupted");
-}
-
-
-TEST_CASE("FAIL Pass incorrect checksum for licensed encrypted model [tflite runner]") {
-  CHECK_THROWS_WITH(TestTfliteRunner()
-      .InitRunner("default_configuration_fast_tflite_lic_encrypted_24khz.yaml",
-                  "qwerty",
-                  "Hhlr0ZEoL7KcTNoM9rbFVbpfN+k6yuamg3K2THn4K+i="),
-                                            "Model reading error. Detailes: error deserializing base64 checksum");
-}
-#endif
 
 TEST_CASE("SUCCEED Run fast tflite model with real data and check first two iterations (24 kHz) [tflite runner]") {
-  auto data = std::move(TestTfliteRunner()
-      .InitRunner("default_configuration_fast_tflite_24khz.yaml"));
+  auto data = std::move(TestTfliteRunner().InitRunner("default_configuration_fast_tflite_24khz.yaml"));
 
   std::valarray<float> real, imag;
   std::vector<float> gt_fullband_hidden, gt_fullband_cell_state;
@@ -177,8 +132,7 @@ TEST_CASE("SUCCEED Run fast tflite model with real data and check first two iter
   data.denoiser_runner->infer(&denoise_task);
 
   REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
-                           denoise_task.data.enhanced_wav);
+  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) == denoise_task.data.enhanced_wav);
 
   data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
   data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
@@ -197,8 +151,7 @@ TEST_CASE("SUCCEED Run fast tflite model with real data and check first two iter
 }
 
 TEST_CASE("SUCCEED Run quality tflite model with real data and check first two iterations (48 kHz) [tflite runner]") {
-  auto data = std::move(TestTfliteRunner()
-      .InitRunner("default_configuration_best_quality_tflite_48khz.yaml"));
+  auto data = std::move(TestTfliteRunner().InitRunner("default_configuration_best_quality_tflite_48khz.yaml"));
 
   std::vector<float> gt_fb_hidden_step1;
   std::vector<float> gt_fb_hidden_step2;
@@ -290,160 +243,12 @@ TEST_CASE("SUCCEED Run quality tflite model with real data and check first two i
   IsVectorsClose(gt_b3_out_step2, ctx->fb_conv3_buf, 1e-2f);
 }
 
-#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
-TEST_CASE("SUCCEED Run encrypted model with real data and check first two iterations (24 kHz) [tflite runner]") {
-  auto data = std::move(TestTfliteRunner()
-      .InitRunner("default_configuration_fast_tflite_encrypted_24khz.yaml", "test"));
-  std::valarray<float> real, imag;
-  std::vector<float> gt_fullband_hidden, gt_fullband_cell_state;
-  std::vector<float> gt_real_output, gt_imag_output;
-  std::vector<float> gt_prev_fb_out_5, gt_noisy_mag_5_new;
-  data.LoadDataFromBin("1_noisy_real_in.dump", real);
-  data.LoadDataFromBin("1_noisy_imag_in.dump", imag);
-  data.LoadDataFromBin("1_fb_h_new_fast_24kHz.dump", gt_fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_new_fast_24kHz.dump", gt_fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_new_fast_24kHz.dump", gt_prev_fb_out_5);
-  data.LoadDataFromBin("1_noisy_real_out.dump", gt_real_output);
-  data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
-  data.LoadDataFromBin("1_noisy_mag_5_new.dump", gt_noisy_mag_5_new);
-
-  spench::SpenchTask denoise_task;
-  std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.denoiser_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
-                           denoise_task.data.enhanced_wav);
-
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.denoiser_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.00001);
-  IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.00001);
-  IsVectorsClose(gt_prev_fb_out_5, ctx.get()->prev_fb_out, 0.00001);
-  IsVectorsClose(gt_real_output, denoise_task.data.new_spectrogram.real, 0.00001);
-  IsVectorsClose(gt_imag_output, denoise_task.data.new_spectrogram.imag, 0.00001);
-}
-
-TEST_CASE("SUCCEED Run licensed encrypted model and check first two iterations (24 kHz) [tflite runner]") {
-  auto data = std::move(TestTfliteRunner()
-      .InitRunner("default_configuration_fast_tflite_lic_encrypted_24khz.yaml",
-                  "qwerty", "Hhlr0ZEoL7KcTNoM9rbFVbpfN+k6yuamg3K2THn4K+I="));
-  std::valarray<float> real, imag;
-  std::vector<float> gt_fullband_hidden, gt_fullband_cell_state;
-  std::vector<float> gt_real_output, gt_imag_output;
-  std::vector<float> gt_prev_fb_out_5, gt_noisy_mag_5_new;
-  data.LoadDataFromBin("1_noisy_real_in.dump", real);
-  data.LoadDataFromBin("1_noisy_imag_in.dump", imag);
-  data.LoadDataFromBin("1_fb_h_new_fast_24kHz.dump", gt_fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_new_fast_24kHz.dump", gt_fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_new_fast_24kHz.dump", gt_prev_fb_out_5);
-  data.LoadDataFromBin("1_noisy_real_out.dump", gt_real_output);
-  data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
-  data.LoadDataFromBin("1_noisy_mag_5_new.dump", gt_noisy_mag_5_new);
-
-  spench::SpenchTask denoise_task;
-  std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.denoiser_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
-                           denoise_task.data.enhanced_wav);
-
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.denoiser_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.00001);
-  IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.00001);
-  IsVectorsClose(gt_prev_fb_out_5, ctx.get()->prev_fb_out, 0.00001);
-  IsVectorsClose(gt_real_output, denoise_task.data.new_spectrogram.real, 0.00001);
-  IsVectorsClose(gt_imag_output, denoise_task.data.new_spectrogram.imag, 0.00001);
-}
-
-TEST_CASE("SUCCEED Run licensed encrypted model w/o lic check (24 kHz) [tflite runner]") {
-  auto data = std::move(TestTfliteRunner()
-      .InitRunner("default_configuration_fast_tflite_lic_encrypted_24khz.yaml",
-                  "qwerty", ""));
-  std::valarray<float> real, imag;
-  std::vector<float> gt_fullband_hidden, gt_fullband_cell_state;
-  std::vector<float> gt_real_output, gt_imag_output;
-  std::vector<float> gt_prev_fb_out_5, gt_noisy_mag_5_new;
-  data.LoadDataFromBin("1_noisy_real_in.dump", real);
-  data.LoadDataFromBin("1_noisy_imag_in.dump", imag);
-  data.LoadDataFromBin("1_fb_h_new_fast_24kHz.dump", gt_fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_new_fast_24kHz.dump", gt_fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_new_fast_24kHz.dump", gt_prev_fb_out_5);
-  data.LoadDataFromBin("1_noisy_real_out.dump", gt_real_output);
-  data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
-  data.LoadDataFromBin("1_noisy_mag_5_new.dump", gt_noisy_mag_5_new);
-
-  spench::SpenchTask denoise_task;
-  std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.denoiser_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) ==
-                           denoise_task.data.enhanced_wav);
-
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.denoiser_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.00001);
-  IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.00001);
-  IsVectorsClose(gt_prev_fb_out_5, ctx.get()->prev_fb_out, 0.00001);
-  IsVectorsClose(gt_real_output, denoise_task.data.new_spectrogram.real, 0.00001);
-  IsVectorsClose(gt_imag_output, denoise_task.data.new_spectrogram.imag, 0.00001);
-}
-#endif
-
 TEST_CASE("SUCCEED Run dummy multi inference for a model 48kHz and with different number of threads [tflite]") {
   const std::size_t nattempts = 100;
 
   for (uint16_t num_threads : {1, 2, 4, 8}) {
-    auto data = std::move(TestTfliteRunner()
-      .InitRunner("default_configuration_best_quality_tflite_48khz.yaml", "", "", num_threads));
+    auto data = std::move(
+        TestTfliteRunner().InitRunner("default_configuration_best_quality_tflite_48khz.yaml", "", "", num_threads));
 
     std::vector<size_t> timings(nattempts);
     std::vector<std::vector<float>*> inputs;
@@ -460,12 +265,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 48kHz and with differen
     }
     auto ts_2 = std::chrono::steady_clock::now();
 
-    auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+    auto tot = std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
 
-    spdlog::info("48kHz quality model infer with {} threads completed: {} | {} ms per infer",
-               num_threads,
-               tot,
-               static_cast<double>(tot) / nattempts);
+    spdlog::info("48kHz quality model infer with {} threads completed: {} | {} ms per infer", num_threads, tot,
+                 static_cast<double>(tot) / nattempts);
 
     for (uint16_t i = 0; i < data.denoiser_runner->input_tensor_sizes.size(); i++) {
       delete inputs[i];
@@ -477,8 +280,8 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
   const std::size_t nattempts = 100;
 
   for (uint16_t num_threads : {1, 2, 4, 8}) {
-    auto data = std::move(TestTfliteRunner()
-      .InitRunner("default_configuration_fast_tflite_24khz.yaml", "", "", num_threads));
+    auto data =
+        std::move(TestTfliteRunner().InitRunner("default_configuration_fast_tflite_24khz.yaml", "", "", num_threads));
 
     std::vector<size_t> timings(nattempts);
     std::vector<std::vector<float>*> inputs;
@@ -495,12 +298,10 @@ TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with dif
     }
     auto ts_2 = std::chrono::steady_clock::now();
 
-    auto tot =  std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
+    auto tot = std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
 
-    spdlog::info("24kHz fast model infer with {} threads completed: {} | {} ms per infer",
-               num_threads,
-               tot,
-               static_cast<double>(tot) / nattempts);
+    spdlog::info("24kHz fast model infer with {} threads completed: {} | {} ms per infer", num_threads, tot,
+                 static_cast<double>(tot) / nattempts);
 
     for (uint16_t i = 0; i < data.denoiser_runner->input_tensor_sizes.size(); i++) {
       delete inputs[i];
