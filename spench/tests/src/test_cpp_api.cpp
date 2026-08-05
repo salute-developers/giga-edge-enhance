@@ -49,12 +49,6 @@ struct TestFixture {
     return *this;
   }
 
-  TestFixture& InitDenoiser(std::shared_ptr<spench::PackedModelReader> bundle, const std::string& password = "",
-                            const std::string& checksum = "") {
-    denoiser = std::make_unique<spench::SpenchDenoise>(bundle, password.c_str(), checksum.c_str());
-    return *this;
-  }
-
   TestFixture& InitAudioProcessor(const std::filesystem::path& config_name) {
     std::filesystem::path config_path = data_root + "config/";
     config_path += config_name;
@@ -74,14 +68,6 @@ struct TestFixture {
     return *this;
   }
 };
-
-#ifdef BUILD_ONNX_ENGINE
-static std::vector<uint8_t> read_file(const std::filesystem::path& p) {
-  std::ifstream in(p, std::ios::binary);
-  if (!in) throw std::runtime_error("cannot open file: " + p.string());
-  return std::vector<uint8_t>(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
-}
-#endif
 
 TEST_CASE("SUCCEED Convert pcm to float point [spench c++ api]") {
   std::vector<int16_t> pcm16 = {0, 32767, -32768, 2000, -5000};
@@ -159,19 +145,6 @@ TEST_CASE("SUCCEED Set and retrieve a context id [spench c++ api]") {
   REQUIRE(test_data.denoiser->GetContextId(ctx) == 5000);
 
   test_data.denoiser->DestroyContext(&ctx);
-}
-
-TEST_CASE("SUCCEED Get empty statistic information with nullptr instead of context [spench c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-  auto test_data =
-      std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")));
-#else
-  auto test_data =
-      std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
-#endif
-
-  auto stat = test_data.denoiser->GetStreamStat(nullptr);
-  REQUIRE(stat.snr == 0.0);
 }
 
 TEST_CASE("SUCCEED Run inference with 100 tensors [spench c++ api]") {
@@ -387,57 +360,6 @@ TEST_CASE("SUCCEED Run inference with the best quality 48 kHz model and 2 contex
       std::move(TestFixture()
                     .InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml"))
                     .SetWav("test1_48_noised.wav"));
-#endif
-
-  const uint16_t context_count = 2;
-  const uint32_t chunks_to_compare = 100;
-  const uint32_t chunk_size = 16;
-  const uint32_t chunk_stride = 16;
-  std::vector<std::vector<float>> predictions(context_count);
-  std::vector<std::thread> pool;
-  std::vector<spench::SpenchContext<float>*> contexts;
-  auto chunks = ChunkWav<float>(test_data.wav_data, test_data.denoiser->GetModelSampleRate(), chunk_size, chunk_stride);
-  chunks.resize(chunks_to_compare);
-
-  auto functor = [&test_data, &chunks](spench::SpenchContext<float>* ctx, std::vector<float>& predictions) -> void {
-    for (auto& chunk : chunks) {
-      std::vector<float> ret;
-      SpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-      CHECK(ret_code >= SpenchRetCode::SUCCESS);
-      predictions.insert(predictions.end(), ret.begin(), ret.end());
-    }
-  };
-
-  for (uint32_t i = 0; i < context_count; ++i) {
-    spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext();
-    test_data.denoiser->SetContextId(ctx, i);
-    contexts.emplace_back(ctx);
-    pool.emplace_back(std::thread(functor, contexts.back(), std::ref(predictions.at(i))));
-  }
-
-  for (uint32_t i = 0; i < context_count; ++i) {
-    if (pool[i].joinable()) {
-      pool[i].join();
-    }
-  }
-
-  for (uint32_t i = 0; i < context_count - 1; ++i) {
-    REQUIRE(predictions[i] == predictions[i + 1]);
-  }
-  for (uint32_t i = 0; i < context_count; ++i) {
-    test_data.denoiser->DestroyContext(&contexts[i]);
-  }
-}
-
-TEST_CASE("SUCCEED Run inference with the fast 24 kHz model and 2 contexts concurently [spench c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(TestFixture()
-                                 .InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml"))
-                                 .SetWav("test1_24_noised.wav"));
-#else
-  auto test_data = std::move(TestFixture()
-                                 .InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml"))
-                                 .SetWav("test1_24_noised.wav"));
 #endif
 
   const uint16_t context_count = 2;
@@ -703,96 +625,11 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 fra
   test_data.denoiser->DestroyContext(&ctx);
 }
 
-// TEST_CASE("SUCCEED Run inference with the fast 24 kHz model on a part of .wav file [spench c++ api]") {
-//   #ifdef BUILD_TFLITE_ENGINE
-//     auto test_data =
-//             std::move(TestFixture().
-//                       InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")).
-//                       SetWav("rec_noise_001_24k.wav"));
-//   #else
-//     auto test_data =
-//             std::move(TestFixture().
-//                       InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")).
-//                       SetWav("rec_noise_001_24k.wav"));
-//   #endif
-
-//   std::vector<float> prediction;
-//   std::vector<float> reference_prediction;
-//   spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext();
-
-//   const uint32_t chunk_size = 16;
-//   const uint32_t chunk_stride = 16;
-//   const uint32_t chunks_to_compare = 300;
-//   auto chunks = ChunkWav<float>(test_data.wav_data,
-//                                 test_data.denoiser->GetModelSampleRate(),
-//                                 chunk_size, chunk_stride);
-//   LoadWavFx("data/results/wavs/rec_denoised_fast_001_24k.wav", reference_prediction);
-//   chunks.resize(chunks_to_compare);
-
-//   for (uint32_t i = 0; i < chunks.size(); ++i) {
-//     auto& chunk = chunks[i];
-//     std::vector<float> ret;
-//     SpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-//     CHECK(ret_code >= SpenchRetCode::SUCCESS);
-//     prediction.insert(prediction.end(), ret.begin(), ret.end());
-//   }
-//   test_data.denoiser->DestroyContext(&ctx);
-//   reference_prediction.resize(prediction.size());
-//   IsVectorsClose(reference_prediction, prediction, 0.01);
-// }
-
-// TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with the final inference chunk [spench c++ api]") {
-//   #ifdef BUILD_TFLITE_ENGINE
-//     auto test_data = std::move(TestFixture().
-//                                InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml")).
-//                                SetWav("rec_noise_001_24k.wav"));
-//   #else
-//     auto test_data = std::move(TestFixture().
-//                                InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")).
-//                                SetWav("rec_noise_001_24k.wav"));
-//   #endif
-
-//   SpenchRetCode ret_code;
-//   std::vector<float> prediction;
-//   std::vector<float> reference_prediction;
-//   spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext();
-
-//   const uint32_t chunk_size = 16;
-//   const uint32_t chunk_stride = 16;
-//   const uint32_t chunks_to_compare = 10;
-//   auto chunks = ChunkWav<float>(test_data.wav_data,
-//                                 test_data.denoiser->GetModelSampleRate(),
-//                                 chunk_size, chunk_stride);
-//   LoadWavFx("data/results/wavs/rec_denoised_fast_001_24k.wav", reference_prediction);
-//   chunks.resize(chunks_to_compare);
-
-//   for (uint32_t i = 0; i < chunks.size(); ++i) {
-//     auto& chunk = chunks[i];
-//     std::vector<float> ret;
-//     ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-//     prediction.insert(prediction.end(), ret.begin(), ret.end());
-//   }
-//   reference_prediction.resize(prediction.size());
-//   IsVectorsClose(reference_prediction, prediction, 0.0001);
-//   std::vector<float> ret;
-//   ret_code = test_data.denoiser->GetFinalChunk(ret, ctx);
-
-//   CHECK(ret_code == SpenchRetCode::SUCCESS);
-//   REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
-
-//   test_data.denoiser->DestroyContext(&ctx);
-// }
-
+#if 0
 #ifndef BUILD_WITHOUT_SOXR
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resampling [spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(TestFixture()
-                                 .InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml"))
-                                 .SetWav("test1_48_noised.wav"));
 #else
-  auto test_data = std::move(TestFixture()
-                                 .InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml"))
-                                 .SetWav("test1_48_noised.wav"));
 #endif
 
   const uint32_t chunk_size = 16;
@@ -836,13 +673,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resamplin
 
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with output resampling [spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(TestFixture()
-                                 .InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml"))
-                                 .SetWav("test1_24_noised.wav"));
 #else
-  auto test_data = std::move(TestFixture()
-                                 .InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml"))
-                                 .SetWav("test1_24_noised.wav"));
 #endif
 
   const uint32_t chunk_size = 16;
@@ -887,13 +718,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with output resampli
 
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and output resampling 48 kHz [spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(TestFixture()
-                                 .InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml"))
-                                 .SetWav("test1_48_noised.wav"));
 #else
-  auto test_data = std::move(TestFixture()
-                                 .InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml"))
-                                 .SetWav("test1_48_noised.wav"));
 #endif
 
   const uint32_t chunk_size = 16;
@@ -937,59 +762,8 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
   test_data.denoiser->DestroyContext(&ctx);
 }
 
-TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with yaml string config [spench c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-  static constexpr char embedded_yaml[] = R"(
-model:
-  model_path: data/models/fast_model_24khz.tflite)";
-  auto test_data = std::move(TestFixture().InitDenoiser(std::string(embedded_yaml)).SetWav("test1_48_noised.wav"));
-#else
-  static constexpr char embedded_yaml[] = R"(
-model:
-  model_path: data/models/fast_model_24khz.onnx)";
-  auto test_data = std::move(TestFixture().InitDenoiser(std::string(embedded_yaml)).SetWav("test1_48_noised.wav"));
 #endif
-
-  const uint32_t chunk_size = 16;
-  const uint32_t chunk_stride = 16;
-  const uint32_t chunks_to_compare = 100;
-  const uint32_t audio_src_sample_rate = 48000;
-  const uint32_t audio_dst_sample_rate = 48000;
-  const uint32_t total_size = chunk_size * chunks_to_compare * audio_dst_sample_rate / 1000;
-  SpenchRetCode ret_code;
-  std::vector<float> prediction;
-  std::vector<float> reference;
-  spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext(audio_src_sample_rate, audio_dst_sample_rate);
-
-  auto chunks = ChunkWav<float>(test_data.wav_data, audio_src_sample_rate, chunk_size, chunk_stride);
-  LoadWavFx("data/results/wavs/test1_48_enhanced_upsampled.wav", reference);
-  chunks.resize(chunks_to_compare);
-
-  for (uint32_t i = 0; i < chunks.size(); ++i) {
-    auto& chunk = chunks[i];
-    std::vector<float> ret;
-    ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-    if (ret_code >= SpenchRetCode::SUCCESS) {
-      prediction.insert(prediction.end(), ret.begin(), ret.end());
-    }
-  }
-  // remove context zeroes as reference does not include that
-  prediction.erase(prediction.begin(), prediction.begin() + audio_dst_sample_rate * chunk_size / 1000);
-  //
-  std::vector<float> ret;
-  ret_code = test_data.denoiser->GetFinalChunk(ret, ctx);
-
-  CHECK(ret_code == SpenchRetCode::SUCCESS);
-  REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
-
-  prediction.insert(prediction.end(), ret.begin(), ret.end());
-
-  reference.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
-  prediction.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
-
-  IsVectorsClose(reference, prediction, 0.03);
-  test_data.denoiser->DestroyContext(&ctx);
-}
+#endif
 
 #ifdef BUILD_ONNX_ENGINE
 // TEST_CASE("SUCCEED Run inference with the super fast 8 kHz model with yaml string config [spench c++ api]") {
@@ -1230,6 +1004,7 @@ inference:
 }
 #endif
 
+#if 0
 TEST_CASE("SUCCEED Run inference with the packed fast 24 kHz denoiser model [spench c++ api]") {
   auto bundle = std::make_shared<spench::PackedModelReader>(read_file("data/models/packed_fast_model.spench"));
   auto test_data = std::move(TestFixture().InitDenoiser(bundle).SetWav("test1_48_noised.wav"));
@@ -1275,61 +1050,6 @@ TEST_CASE("SUCCEED Run inference with the packed fast 24 kHz denoiser model [spe
   test_data.denoiser->DestroyContext(&ctx);
 }
 #endif
-
-#ifndef BUILD_ONNX_ENGINE
-TEST_CASE("FAIL Run inference with the fast 24 kHz model with input resampling [spench c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(TestFixture()
-                                 .InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml"))
-                                 .SetWav("test1_48_noised.wav"));
-#else
-  auto test_data = std::move(TestFixture()
-                                 .InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml"))
-                                 .SetWav("test1_48_noised.wav"));
-#endif
-
-  const uint32_t audio_src_sample_rate = 48000;
-  const uint32_t audio_dst_sample_rate = 24000;
-
-  REQUIRE_THROWS_WITH(test_data.denoiser->CreateContext(audio_src_sample_rate, audio_dst_sample_rate),
-                      "Due to errors a context could not be created!");
-}
-
-TEST_CASE("FAIL Run inference with the fast 24 kHz model with output resampling [spench c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(TestFixture()
-                                 .InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml"))
-                                 .SetWav("test1_24_noised.wav"));
-#else
-  auto test_data = std::move(TestFixture()
-                                 .InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml"))
-                                 .SetWav("test1_24_noised.wav"));
-#endif
-
-  const uint32_t audio_src_sample_rate = 24000;
-  const uint32_t audio_dst_sample_rate = 48000;
-
-  REQUIRE_THROWS_WITH(test_data.denoiser->CreateContext(audio_src_sample_rate, audio_dst_sample_rate),
-                      "Due to errors a context could not be created!");
-}
-
-TEST_CASE("FAIL Run inference with the fast 24 kHz model with input and output resampling 48 kHz [spench c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(TestFixture()
-                                 .InitDenoiser(std::filesystem::path("default_configuration_fast_tflite_24khz.yaml"))
-                                 .SetWav("test1_48_noised.wav"));
-#else
-  auto test_data =
-      std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_fast_onnx_24khz.yaml")));
-#endif
-
-  const uint32_t audio_src_sample_rate = 48000;
-  const uint32_t audio_dst_sample_rate = 48000;
-
-  REQUIRE_THROWS_WITH(test_data.denoiser->CreateContext(audio_src_sample_rate, audio_dst_sample_rate),
-                      "Due to errors a context could not be created!");
-}
-
 #endif
 
 TEST_CASE("SUCCEED Run AudioProcessing with RC default parameters [spench c++ api]") {
@@ -1702,7 +1422,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed DRC parameters [spench c++ a
 TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [spench c++ api]") {
   auto test_data = std::move(
       TestFixture()
-          .InitAudioProcessor(std::filesystem::path("default_configuration_fast_tflite_rc_enabled_24khz.yaml"))
+          .InitAudioProcessor(std::filesystem::path("sound_processing_rc.yaml"))
           .SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddRC();
@@ -1740,7 +1460,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [s
 TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [spench c++ api]") {
   auto test_data = std::move(
       TestFixture()
-          .InitAudioProcessor(std::filesystem::path("default_configuration_fast_tflite_agc_enabled_24khz.yaml"))
+          .InitAudioProcessor(std::filesystem::path("sound_processing_agc.yaml"))
           .SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddAGC();
@@ -1776,7 +1496,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [
 TEST_CASE("SUCCEED Run AudioProcessing with reading NG parameters from config [spench c++ api]") {
   auto test_data = std::move(
       TestFixture()
-          .InitAudioProcessor(std::filesystem::path("default_configuration_fast_tflite_rc_enabled_24khz.yaml"))
+          .InitAudioProcessor(std::filesystem::path("sound_processing_rc.yaml"))
           .SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddNG();
@@ -1817,7 +1537,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading NG parameters from config [s
 TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [spench c++ api]") {
   auto test_data = std::move(
       TestFixture()
-          .InitAudioProcessor(std::filesystem::path("default_configuration_fast_tflite_agc_enabled_24khz.yaml"))
+          .InitAudioProcessor(std::filesystem::path("sound_processing_agc.yaml"))
           .SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddDRC();

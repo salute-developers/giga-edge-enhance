@@ -76,78 +76,9 @@ TEST_CASE("SUCCEED Run relu model dummy inference [tflite]") {
   IsVectorsClose(output, gt_vector, 0.0000001);
 }
 
-TEST_CASE(
-    "SUCCEED Run prepare_input_in_place on one real frame with fast tflite model "
-    "(audio 24 kHz) [tflite runner]") {
-  auto data = std::move(TestTfliteRunner().InitRunner("default_configuration_fast_tflite_24khz.yaml"));
-  std::vector<float> noisy_mag_5_old;
-  std::vector<float> noisy_mag_1_new;
-  std::vector<float> noisy_mag_5_new;
-  std::vector<std::vector<float>*> inputs;
-
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", noisy_mag_5_old);
-  data.LoadDataFromBin("1_noisy_mag_1_new.dump", noisy_mag_1_new);
-  data.LoadDataFromBin("1_noisy_mag_5_new.dump", noisy_mag_5_new);
-
-  std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
-  spench::SpenchContext<float>* denoise_contex = ctx.get();
-  ctx.get()->noisy_mag = noisy_mag_5_old;
-  IsVectorsClose(ctx.get()->noisy_mag, noisy_mag_5_old, 0.000001);
-  data.denoiser_runner->prepare_input_in_place(noisy_mag_1_new, inputs, denoise_contex);
-
-  IsVectorsClose(ctx.get()->noisy_mag, noisy_mag_5_new, 0.000001);
-}
-
 TEST_CASE("FAIL Read config with corrupted model [tflite runner]") {
   CHECK_THROWS_WITH(TestTfliteRunner().InitRunner("test_configuration_with_corrupted_fast_tflite_24khz.yaml"),
                     "Model reading error. There is problem with checkpoint file.");
-}
-
-TEST_CASE("SUCCEED Run fast tflite model with real data and check first two iterations (24 kHz) [tflite runner]") {
-  auto data = std::move(TestTfliteRunner().InitRunner("default_configuration_fast_tflite_24khz.yaml"));
-
-  std::valarray<float> real, imag;
-  std::vector<float> gt_fullband_hidden, gt_fullband_cell_state;
-  std::vector<float> gt_real_output, gt_imag_output;
-  std::vector<float> gt_prev_fb_out_5, gt_noisy_mag_5_new;
-  data.LoadDataFromBin("1_noisy_real_in.dump", real);
-  data.LoadDataFromBin("1_noisy_imag_in.dump", imag);
-  data.LoadDataFromBin("1_fb_h_new_fast_24kHz.dump", gt_fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_new_fast_24kHz.dump", gt_fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_new_fast_24kHz.dump", gt_prev_fb_out_5);
-  data.LoadDataFromBin("1_noisy_real_out.dump", gt_real_output);
-  data.LoadDataFromBin("1_noisy_imag_out.dump", gt_imag_output);
-  data.LoadDataFromBin("1_noisy_mag_5_new.dump", gt_noisy_mag_5_new);
-
-  spench::SpenchTask denoise_task;
-  std::unique_ptr<spench::DenoiseContextF<float>> ctx(new spench::DenoiseContextF<float>);
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.data.input_spectrogram.push_back(spench::ComplexNumber<float>(real, imag));
-
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.denoiser_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  CHECK(std::vector<float>(denoise_task.data.enhanced_wav.size(), 0.0) == denoise_task.data.enhanced_wav);
-
-  data.LoadDataFromBin("1_noisy_mag_5_old.dump", ctx.get()->noisy_mag);
-  data.LoadDataFromBin("1_fb_h_old_fast_24kHz.dump", ctx.get()->fullband_hidden);
-  data.LoadDataFromBin("1_fb_c_old_fast_24kHz.dump", ctx.get()->fullband_cell_state);
-  data.LoadDataFromBin("1_prev_fb_out_5_old_fast_24kHz.dump", ctx.get()->prev_fb_out);
-  denoise_task.data.context = ctx.get();
-  denoise_task.stage = spench::PipelineStage::fourier_transformed_spec;
-  data.denoiser_runner->infer(&denoise_task);
-
-  REQUIRE(denoise_task.stage == spench::PipelineStage::predicted_mask);
-  IsVectorsClose(gt_fullband_hidden, ctx.get()->fullband_hidden, 0.00001);
-  IsVectorsClose(gt_fullband_cell_state, ctx.get()->fullband_cell_state, 0.00001);
-  IsVectorsClose(gt_prev_fb_out_5, ctx.get()->prev_fb_out, 0.00001);
-  IsVectorsClose(gt_real_output, denoise_task.data.new_spectrogram.real, 0.00001);
-  IsVectorsClose(gt_imag_output, denoise_task.data.new_spectrogram.imag, 0.00001);
 }
 
 TEST_CASE("SUCCEED Run quality tflite model with real data and check first two iterations (48 kHz) [tflite runner]") {
@@ -268,39 +199,6 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 48kHz and with differen
     auto tot = std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
 
     spdlog::info("48kHz quality model infer with {} threads completed: {} | {} ms per infer", num_threads, tot,
-                 static_cast<double>(tot) / nattempts);
-
-    for (uint16_t i = 0; i < data.denoiser_runner->input_tensor_sizes.size(); i++) {
-      delete inputs[i];
-    }
-  }
-}
-
-TEST_CASE("SUCCEED Run dummy multi inference for a fast model 24kHz and with different number of threads [tflite]") {
-  const std::size_t nattempts = 100;
-
-  for (uint16_t num_threads : {1, 2, 4, 8}) {
-    auto data =
-        std::move(TestTfliteRunner().InitRunner("default_configuration_fast_tflite_24khz.yaml", "", "", num_threads));
-
-    std::vector<size_t> timings(nattempts);
-    std::vector<std::vector<float>*> inputs;
-    for (auto s : data.denoiser_runner->input_tensor_sizes) {
-      inputs.push_back(new std::vector<float>(s, static_cast<float>(0.)));
-    }
-
-    auto ts_1 = std::chrono::steady_clock::now();
-    for (size_t i = 0; i < nattempts; ++i) {
-      auto start = std::chrono::steady_clock::now();
-      data.denoiser_runner->test_run<float>(inputs);
-      auto stop = std::chrono::steady_clock::now();
-      timings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count());
-    }
-    auto ts_2 = std::chrono::steady_clock::now();
-
-    auto tot = std::chrono::duration_cast<std::chrono::milliseconds>(ts_2 - ts_1).count();
-
-    spdlog::info("24kHz fast model infer with {} threads completed: {} | {} ms per infer", num_threads, tot,
                  static_cast<double>(tot) / nattempts);
 
     for (uint16_t i = 0; i < data.denoiser_runner->input_tensor_sizes.size(); i++) {

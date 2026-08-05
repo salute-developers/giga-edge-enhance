@@ -273,7 +273,7 @@ TEST_CASE("SUCCEED Create and run audio processing with RC specific parameters [
 TEST_CASE("SUCCEED Run audio processing with reading AGC parameters from config [audio processing handler]") {
   auto audio_proc_test_env = std::move(
       TestAudioProcessing()
-          .InitAudioProcessing((std::filesystem::path("default_configuration_fast_tflite_agc_enabled_24khz.yaml")))
+          .InitAudioProcessing((std::filesystem::path("sound_processing_agc.yaml")))
           .SetWav("test1_48_noised.wav"));
   audio_proc_test_env.getAudioProc().add_agc();
   const uint32_t chunk_size = 16;
@@ -309,7 +309,7 @@ TEST_CASE("SUCCEED Run audio processing with reading AGC parameters from config 
 TEST_CASE("SUCCEED Run audio processing with reading RC parameters from config [audio processing handler]") {
   auto audio_proc_test_env = std::move(
       TestAudioProcessing()
-          .InitAudioProcessing(std::filesystem::path("default_configuration_fast_tflite_rc_enabled_24khz.yaml"))
+          .InitAudioProcessing(std::filesystem::path("sound_processing_rc.yaml"))
           .SetWav("test1_48_noised.wav"));
   audio_proc_test_env.getAudioProc().add_rc();
   const uint32_t chunk_size = 16;
@@ -346,7 +346,7 @@ TEST_CASE("SUCCEED Run audio processing with reading RC parameters from config [
 
 TEST_CASE("SUCCEED Run audio processing with reading LC parameters from config [audio processing handler]") {
   auto audio_proc_test_env = std::move(TestAudioProcessing().InitAudioProcessing(
-      std::filesystem::path("default_configuration_fast_tflite_rc_enabled_24khz.yaml")));
+      std::filesystem::path("sound_processing_rc.yaml")));
   audio_proc_test_env.getAudioProc().add_lc();
   constexpr int32_t fs = 48000;
   constexpr int32_t chunk_ms = 16;
@@ -389,7 +389,7 @@ TEST_CASE("SUCCEED Run audio processing with reading LC parameters from config [
 TEST_CASE("SUCCEED Run audio processing with reading RC and NG parameters from config [audio processing handler]") {
   auto audio_proc_test_env = std::move(
       TestAudioProcessing()
-          .InitAudioProcessing(std::filesystem::path("default_configuration_fast_tflite_dsp_enabled_24khz.yaml"))
+          .InitAudioProcessing(std::filesystem::path("sound_processing_dsp.yaml"))
           .SetWav("test1_48_noised.wav"));
   audio_proc_test_env.getAudioProc().add_rc().add_noise_gate();
   const uint32_t chunk_size = 16;
@@ -482,7 +482,7 @@ sound_processing:
 TEST_CASE("SUCCEED Run audio processing with reading NG parameters from config [audio processing handler]") {
   auto audio_proc_test_env = std::move(
       TestAudioProcessing()
-          .InitAudioProcessing(std::filesystem::path("default_configuration_fast_tflite_agc_enabled_24khz.yaml"))
+          .InitAudioProcessing(std::filesystem::path("sound_processing_agc.yaml"))
           .SetWav("test1_48_noised.wav"));
   audio_proc_test_env.getAudioProc().add_noise_gate();
   const uint32_t chunk_size = 16;
@@ -599,7 +599,7 @@ TEST_CASE("SUCCEED Create and run audio processing with DRC default parameters [
 TEST_CASE("SUCCEED Run audio processing with reading DRC parameters from config [audio processing handler]") {
   auto audio_proc_test_env = std::move(
       TestAudioProcessing()
-          .InitAudioProcessing(std::filesystem::path("default_configuration_fast_tflite_agc_enabled_24khz.yaml"))
+          .InitAudioProcessing(std::filesystem::path("sound_processing_agc.yaml"))
           .SetWav("test1_48_noised.wav"));
   audio_proc_test_env.getAudioProc().add_dr_compressor();
   const uint32_t chunk_size = 16;
@@ -838,7 +838,7 @@ TEST_CASE("SUCCEED Processing order affects result (AGC+Limiter vs Limiter+AGC) 
 TEST_CASE("SUCCEED Run audio processing with reading Limiter parameters from config [audio processing handler]") {
   auto env = std::move(
       TestAudioProcessing()
-          .InitAudioProcessing(std::filesystem::path("default_configuration_fast_tflite_dsp_enabled_24khz.yaml"))
+          .InitAudioProcessing(std::filesystem::path("sound_processing_dsp.yaml"))
           .SetWav("test1_48_noised.wav"));
   env.getAudioProc().add_limiter();
 
