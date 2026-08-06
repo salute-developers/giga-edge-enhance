@@ -1,20 +1,14 @@
 #include "spench/util/onnx/denoise_onnx_runner.h"
 #include <algorithm>
 
-#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
-#include "spench/submodules/modelencryption/lib/include/crypto.h"
-#endif
-
 namespace util {
 namespace onnx {
 
 SpenchQOnnxRunner::SpenchQOnnxRunner(const std::shared_ptr<spench::NetworkConfig> config,
-                                     const std::string& password,
-                                     const std::string& checksum,
-                                     uint32_t inference_engine_threads,
-                                     bool on_gpu) {
+                                      uint32_t inference_engine_threads,
+                                      bool on_gpu) {
     read_config(config->params()["model"]);
-    init_model(config, password, checksum, inference_engine_threads, on_gpu);
+    init_model(config, inference_engine_threads, on_gpu);
     validate_model(model_params_.model_inputs, model_params_.model_outputs);
     warm_up<float>();
 }
@@ -137,12 +131,10 @@ void SpenchQOnnxRunner::infer(spench::SpenchTask* denoise_task) {
 }
 
 SpenchFOnnxRunner::SpenchFOnnxRunner(const std::shared_ptr<spench::NetworkConfig> config,
-                                     const std::string& password,
-                                     const std::string& checksum,
-                                     uint32_t inference_engine_threads,
-                                     bool on_gpu) {
+                                      uint32_t inference_engine_threads,
+                                      bool on_gpu) {
     read_config(config->params()["model"]);
-    init_model(config, password, checksum, inference_engine_threads, on_gpu);
+    init_model(config, inference_engine_threads, on_gpu);
     validate_model(model_params_.model_inputs, model_params_.model_outputs);
     warm_up<float>();
 }
@@ -229,12 +221,10 @@ void SpenchFOnnxRunner::infer(spench::SpenchTask* denoise_task) {
 }
 
 SpenchSFOnnxRunner::SpenchSFOnnxRunner(const std::shared_ptr<spench::NetworkConfig> config,
-                                       const std::string& password,
-                                       const std::string& checksum,
-                                       uint32_t inference_engine_threads,
-                                       bool on_gpu) {
+                                        uint32_t inference_engine_threads,
+                                        bool on_gpu) {
   read_config(config->params()["model"]);
-  init_model(config, password, checksum, inference_engine_threads, on_gpu);
+  init_model(config, inference_engine_threads, on_gpu);
   validate_model(model_params_.model_inputs, model_params_.model_outputs);
   warm_up<float>();
 }

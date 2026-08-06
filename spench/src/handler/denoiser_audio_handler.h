@@ -18,10 +18,6 @@ class DenoiserAudioHandler : public NeuralNetworkAudioHandler {
 
   explicit DenoiserAudioHandler(std::shared_ptr<DenoiserConfig> config);
 
-  DenoiserAudioHandler(std::shared_ptr<DenoiserConfig> config,
-                       const std::string& password,
-                       const std::string& checksum);
-
   SpenchContext<float>* create_context(uint32_t input_sample_rate = 0,
                                       uint32_t output_sample_rate = 0) override;
 

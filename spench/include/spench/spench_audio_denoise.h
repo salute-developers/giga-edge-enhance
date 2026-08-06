@@ -27,48 +27,28 @@ class SPENCH_API SpenchDenoise : public ISpenchSequencer {
  public:
   /**
    *  \brief: Constructor which loads model from configuration file.
-   *          If no password provided it considers that model is not encrypted.
    *  \param config_file: A pointer to the string with path to .yaml config file.
-   *  \param password: A pointer to string with password for a model decryption.
-   *                   Could be empty, if a model was not encrypted.
-   *  \param checksum: A pointer to string with licence checksum for a model decryption.
-   *                   Could be empty, if a model was not encrypted or was not involved
-   *                   licencing.
    *  \return: None
    *  \ingroup group_cpp
    */
-  explicit SpenchDenoise(const char* config_file, const char* password = "", const char* checksum = "");
+  explicit SpenchDenoise(const char* config_file);
 
   /**
    *  \brief: Constructor which loads model from YAML string configuration.
-   *          If no password provided it considers that model is not encrypted.
    *  \param yaml_str: A string with YAML configuration. Only provided parameters will be changed. Other ones
    *                    will be passed by default.
-   *  \param password: A pointer to string with password for a model decryption.
-   *                   Could be empty, if a model was not encrypted.
-   *  \param checksum: A pointer to string with licence checksum for a model decryption.
-   *                   Could be empty, if a model was not encrypted or was not involved
-   *                   licencing.
    *  \return: None
    *  \ingroup group_cpp
    */
-  explicit SpenchDenoise(const std::string& yaml_str, const char* password = "", const char* checksum = "");
+  explicit SpenchDenoise(const std::string& yaml_str);
 
   /**
    *  \brief: Constructor which loads model from packed model reader.
-   *          If no password provided it considers that model is not encrypted.
    *  \param bundle: A PackedModelReader instance.
-   *  \param password: A pointer to string with password for a model decryption.
-   *                   Could be empty, if a model was not encrypted.
-   *  \param checksum: A pointer to string with licence checksum for a model decryption.
-   *                   Could be empty, if a model was not encrypted or was not involved
-   *                   licencing.
    *  \return: None
    *  \ingroup group_cpp
    */
-  explicit SpenchDenoise(std::shared_ptr<spench::PackedModelReader> bundle,
-                          const char* password = "",
-                          const char* checksum = "");
+  explicit SpenchDenoise(std::shared_ptr<spench::PackedModelReader> bundle);
 
   /**
    *  \brief: Destructor.

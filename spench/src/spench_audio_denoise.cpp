@@ -7,41 +7,26 @@
 
 namespace spench {
 
-// File-based config constructor
-SpenchDenoise::SpenchDenoise(const char* config_file,
-                             const char* password,
-                             const char* checksum)
+SpenchDenoise::SpenchDenoise(const char* config_file)
 : ISpenchSequencer(),
   handler_(std::make_unique<DenoiserAudioHandler>(
-                              std::make_shared<spench::DenoiserConfig>(
-                                FileConfigReader(std::string(config_file))),
-                              std::string(password),
-                              std::string(checksum))) {
+                               std::make_shared<spench::DenoiserConfig>(
+                                 FileConfigReader(std::string(config_file))))) {
   spdlog::info("Create Spench denoiser from config file {}", config_file);
 }
 
-// YAML-based config constructor
-SpenchDenoise::SpenchDenoise(const std::string& yaml_str,
-                             const char* password,
-                             const char* checksum)
+SpenchDenoise::SpenchDenoise(const std::string& yaml_str)
 : ISpenchSequencer(),
   handler_(std::make_unique<DenoiserAudioHandler>(
-                              std::make_shared<spench::DenoiserConfig>(
-                                StringConfigReader(yaml_str)),
-                              password,
-                              checksum)) {
+                               std::make_shared<spench::DenoiserConfig>(
+                                 StringConfigReader(yaml_str)))) {
   spdlog::info("Create Spench denoiser from YAML string config");
 }
 
-// PackedModelReader-based constructor
-SpenchDenoise::SpenchDenoise(std::shared_ptr<spench::PackedModelReader> bundle,
-                             const char* password,
-                             const char* checksum)
+SpenchDenoise::SpenchDenoise(std::shared_ptr<spench::PackedModelReader> bundle)
 : ISpenchSequencer(),
   handler_(std::make_unique<DenoiserAudioHandler>(
-                              std::make_shared<spench::DenoiserConfig>(bundle),
-                              password,
-                              checksum)) {
+                               std::make_shared<spench::DenoiserConfig>(bundle))) {
   spdlog::info("Create Spench denoiser from packed model");
 }
 

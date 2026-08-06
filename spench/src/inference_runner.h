@@ -29,8 +29,6 @@ class InferenceRunner {
   InferenceRunner(const InferenceRunner&) = delete;
 
   InferenceRunner(std::shared_ptr<spench::NetworkConfig> config,
-                  const std::string& password,
-                  const std::string& checksum,
                   uint32_t inference_engine_threads,
                   bool gpu);
   ~InferenceRunner();

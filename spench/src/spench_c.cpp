@@ -57,22 +57,6 @@ SpenchRetCode SpenchDenoiseInit(const char* config_file, SpenchDenoise* model) {
   return SpenchRetCode::SUCCESS;
 }
 
-SpenchRetCode SpenchEncryptedDenoiseInit(const char*  config_file,
-                                         const char*  password,
-                                         const char*  checksum,
-                                         SpenchDenoise* model) {
-  (void)checksum;  // Not used in current constructor, kept for API symmetry.
-  if (config_file == nullptr || password == nullptr || model == nullptr) {
-    return SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-  }
-  try {
-    *model = reinterpret_cast<void*>(new spench::SpenchDenoise(config_file, password));
-  } catch (...) {
-    return SpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM;
-  }
-  return SpenchRetCode::SUCCESS;
-}
-
 void SpenchDenoiseFree(SpenchDenoise* model) {
   if (model == nullptr || *model == nullptr) {
     return;

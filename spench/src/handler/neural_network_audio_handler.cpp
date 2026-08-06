@@ -9,16 +9,9 @@
 namespace spench {
 
 NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::shared_ptr<NetworkConfig> config)
-    : NeuralNetworkAudioHandler(std::move(config), "", "") {}
-
-NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::shared_ptr<NetworkConfig> config,
-                                                     const std::string& password,
-                                                     const std::string& checksum)
     : BaseAudioHandler(std::move(config)),
       feature_extractor_runner_ptr_(nullptr),
-      inference_runner_ptr_(nullptr),
-      enc_password_(password),
-      lic_checksum_(checksum) {
+      inference_runner_ptr_(nullptr) {
   // Ensure do_start() runs after derived members are initialized.
   SpenchRetCode ret_code = restart();
   if (ret_code != SpenchRetCode::SUCCESS) {
@@ -37,9 +30,7 @@ NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::shared_ptr<NetworkConf
 NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(NeuralNetworkAudioHandler&& orig) noexcept
     : BaseAudioHandler(std::move(orig)),
       feature_extractor_runner_ptr_(std::move(orig.feature_extractor_runner_ptr_)),
-      inference_runner_ptr_(std::move(orig.inference_runner_ptr_)),
-      enc_password_(std::move(orig.enc_password_)),
-      lic_checksum_(std::move(orig.lic_checksum_)) {}
+      inference_runner_ptr_(std::move(orig.inference_runner_ptr_)) {}
 
 NeuralNetworkAudioHandler::~NeuralNetworkAudioHandler() = default;
 
@@ -91,11 +82,9 @@ SpenchRetCode NeuralNetworkAudioHandler::launch_inference_runner() {
 
   try {
     if (!inference_runner_ptr_) {
-      inference_runner_ptr_ = std::unique_ptr<spench::InferenceRunner>(
-        new spench::InferenceRunner(std::dynamic_pointer_cast<spench::NetworkConfig>(config_),
-                                    enc_password_,
-                                    lic_checksum_,
-                                    inference_engine_threads,
+       inference_runner_ptr_ = std::unique_ptr<spench::InferenceRunner>(
+         new spench::InferenceRunner(std::dynamic_pointer_cast<spench::NetworkConfig>(config_),
+                                     inference_engine_threads,
                                     false));
     }
   } catch (const std::exception& e) {

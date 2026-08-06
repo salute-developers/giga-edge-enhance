@@ -30,8 +30,6 @@ class BaseOnnxRunner {
   BaseOnnxRunner(const std::vector<std::string>& inputs,
                  const std::vector<std::string>& outputs,
                  const std::shared_ptr<spench::NetworkConfig> config,
-                 const std::string& password,
-                 const std::string& checksum,
                  const uint32_t num_threads,
                  bool gpu);
   virtual ~BaseOnnxRunner();
@@ -64,11 +62,9 @@ class BaseOnnxRunner {
   }
 
   void validate_model(const std::vector<std::string>& input_names,
-                     const std::vector<std::string>& output_names);
+                      const std::vector<std::string>& output_names);
   void init_model(const std::shared_ptr<spench::NetworkConfig> config,
-                 const std::string& password,
-                 const std::string& checksum,
-                 const uint32_t num_threads,
+                  const uint32_t num_threads,
                  bool gpu);
 
   template<typename T>

@@ -34,18 +34,16 @@ struct TestFixture {
     LoadWavFx(full_wav_path.c_str(), wav_data, false);
     return *this;
   }
-  TestFixture& InitDenoiser(const std::filesystem::path& config_name, const std::string& password = "",
-                            const std::string& checksum = "") {
+  TestFixture& InitDenoiser(const std::filesystem::path& config_name) {
     std::filesystem::path config_path = data_root + "config/";
     config_path += config_name;
     const std::string cfg = config_path.string();  // narrow on Windows
-    denoiser = std::make_unique<spench::SpenchDenoise>(cfg.c_str(), password.c_str(), checksum.c_str());
+    denoiser = std::make_unique<spench::SpenchDenoise>(cfg.c_str());
     return *this;
   }
 
-  TestFixture& InitDenoiser(const std::string& yaml, const std::string& password = "",
-                            const std::string& checksum = "") {
-    denoiser = std::make_unique<spench::SpenchDenoise>(yaml, password.c_str(), checksum.c_str());
+  TestFixture& InitDenoiser(const std::string& yaml) {
+    denoiser = std::make_unique<spench::SpenchDenoise>(yaml);
     return *this;
   }
 

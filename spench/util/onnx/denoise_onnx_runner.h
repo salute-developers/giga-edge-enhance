@@ -75,9 +75,7 @@ class SpenchQOnnxRunner: public BaseOnnxRunner {
   SpenchQOnnxRunner() = delete;
   virtual ~SpenchQOnnxRunner() = default;
   explicit SpenchQOnnxRunner(const std::shared_ptr<spench::NetworkConfig> config,
-                             const std::string& password,
-                             const std::string& checksum,
-                             uint32_t inference_engine_threads = 1,
+                              uint32_t inference_engine_threads = 1,
                              bool on_gpu = false);
   void prepare_input_in_place(std::vector<float>& mag,
                            std::vector<std::vector<float>*>& inputs,
@@ -144,9 +142,7 @@ class SpenchFOnnxRunner: public BaseOnnxRunner {
   SpenchFOnnxRunner() = delete;
   virtual ~SpenchFOnnxRunner() = default;
   explicit SpenchFOnnxRunner(const std::shared_ptr<spench::NetworkConfig> config,
-                             const std::string& password,
-                             const std::string& checksum,
-                             uint32_t inference_engine_threads = 1,
+                              uint32_t inference_engine_threads = 1,
                              bool on_gpu = false);
 
   // change two last arguments
@@ -246,9 +242,7 @@ class SpenchSFOnnxRunner : public BaseOnnxRunner {
   SpenchSFOnnxRunner() = delete;
   virtual ~SpenchSFOnnxRunner() = default;
   explicit SpenchSFOnnxRunner(const std::shared_ptr<spench::NetworkConfig> config,
-                              const std::string& password,
-                              const std::string& checksum,
-                              uint32_t inference_engine_threads = 1,
+                               uint32_t inference_engine_threads = 1,
                               bool on_gpu = false);
 
   void prepare_input_in_place(std::vector<float>& mag,

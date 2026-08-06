@@ -42,12 +42,9 @@ struct TestCAPI {
     return *this;
   }
 
-  TestCAPI& InitDenoiser(const std::string& config_name, SpenchRetCode& ret, const std::string& password = "",
-                         const std::string& checksum = "") {
+  TestCAPI& InitDenoiser(const std::string& config_name, SpenchRetCode& ret) {
     std::string config_path = data_root + "config/" + config_name;
-    ret = password.empty()
-              ? SpenchDenoiseInit(config_path.c_str(), &denoiser)
-              : SpenchEncryptedDenoiseInit(config_path.c_str(), password.c_str(), checksum.c_str(), &denoiser);
+    ret = SpenchDenoiseInit(config_path.c_str(), &denoiser);
     return *this;
   }
 

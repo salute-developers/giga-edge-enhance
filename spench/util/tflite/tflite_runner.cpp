@@ -5,10 +5,6 @@
 #include <sstream>
 #include "spench/util/tflite/tflite_runner.h"
 
-#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
-#include "spench/submodules/modelencryption/lib/include/crypto.h"
-#endif
-
 namespace util {
 namespace tf_lite {
 
@@ -19,48 +15,17 @@ BaseTfliteRunner::~BaseTfliteRunner() {}
 BaseTfliteRunner::BaseTfliteRunner(std::vector<std::string>& input_names,
                                    std::vector<std::string>& output_names,
                                    const std::string& model_path,
-                                   const std::string& password,
-                                   const std::string& checksum,
                                    const uint32_t num_threads, bool on_gpu) {
   (void)(on_gpu);
-  init_model(input_names, output_names,
-            model_path, password,
-            checksum, num_threads,
-            on_gpu);
+  init_model(input_names, output_names, model_path, num_threads, on_gpu);
 }
 
 void BaseTfliteRunner::init_model(std::vector<std::string>& input_names,
-                                 std::vector<std::string>& output_names,
-                                 const std::string& model_path,
-                                 const std::string& password,
-                                 const std::string& checksum,
-                                 const uint32_t num_threads, bool on_gpu) {
+                                  std::vector<std::string>& output_names,
+                                  const std::string& model_path,
+                                  const uint32_t num_threads, bool on_gpu) {
   (void)(on_gpu);
-  if (password.empty() && checksum.empty()) {
-    model_ = tflite::FlatBufferModel::VerifyAndBuildFromFile(model_path.c_str());
-  } else {
-#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
-    modelencryption::Decryptor decryptor;
-    modelencryption::Hasher hasher;
-    try {
-      std::unique_ptr<modelencryption::Checksum> license_checksum = nullptr;
-      if (!checksum.empty()) {
-        license_checksum.reset(new modelencryption::Checksum(hasher.DeserializeChecksum(checksum.c_str())));
-      }
-      std::vector<uint8_t> model_data =
-                              decryptor.DecryptFile(model_path, modelencryption::Key(password), license_checksum.get());
-      model_data_ = std::make_unique<std::vector<char>>(model_data.data(), model_data.data()+model_data.size());
-    } catch (const std::exception& ex) {
-      std::string err_message = std::string("Model reading error. Detailes: ")
-                                + ex.what();
-      throw TfliteValidationException(err_message);
-    }
-    model_ = tflite::FlatBufferModel::VerifyAndBuildFromBuffer(model_data_->data(),
-                                                                model_data_->size());
-#else
-    throw TfliteValidationException("Password must be empty or library should be built with encryption support");
-#endif
-  }
+  model_ = tflite::FlatBufferModel::VerifyAndBuildFromFile(model_path.c_str());
 
   if (model_ == nullptr) {
     throw TfliteValidationException("Model reading error. There is problem with checkpoint file.");
@@ -313,14 +278,11 @@ void BaseTfliteRunner::resize_inputs_if_needed(const std::vector<std::vector<int
 }
 
 SpenchFTfliteRunner::SpenchFTfliteRunner(const YAML::Node& yaml_config,
-                                         const std::string& password,
-                                         const std::string& checksum,
                                          uint32_t inference_engine_threads, bool on_gpu) :
                                          BaseTfliteRunner::BaseTfliteRunner() {
     read_config(yaml_config);
     init_model(model_params_.model_inputs, model_params_.model_outputs,
-              model_params_.model_path, password, checksum, inference_engine_threads,
-              on_gpu);
+               model_params_.model_path, inference_engine_threads, on_gpu);
     warm_up<float>();
 }
 
@@ -467,14 +429,11 @@ void SpenchFTfliteRunner::infer(spench::SpenchTask* denoise_task) {
 }
 
 SpenchQTfliteRunner::SpenchQTfliteRunner(const YAML::Node& yaml_config,
-                                         const std::string& password,
-                                         const std::string& checksum,
                                          uint32_t inference_engine_threads, bool on_gpu) :
                                          BaseTfliteRunner::BaseTfliteRunner() {
     read_config(yaml_config);
     init_model(model_params_.model_inputs, model_params_.model_outputs,
-              model_params_.model_path, password, checksum,
-              inference_engine_threads, on_gpu);
+               model_params_.model_path, inference_engine_threads, on_gpu);
     warm_up<float>();
 }
 

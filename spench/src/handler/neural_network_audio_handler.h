@@ -15,8 +15,6 @@ class NeuralNetworkAudioHandler : public BaseAudioHandler {
  protected:
   std::unique_ptr<spench::FeatureExtractorRunner> feature_extractor_runner_ptr_;
   std::unique_ptr<spench::InferenceRunner> inference_runner_ptr_;
-  std::string enc_password_;
-  std::string lic_checksum_;
   bool skip_zero_chunk_ = false;
 
  public:
@@ -25,9 +23,6 @@ class NeuralNetworkAudioHandler : public BaseAudioHandler {
   NeuralNetworkAudioHandler(const NeuralNetworkAudioHandler&) = delete;
 
   explicit NeuralNetworkAudioHandler(std::shared_ptr<NetworkConfig> config);
-  NeuralNetworkAudioHandler(std::shared_ptr<NetworkConfig> config,
-                            const std::string& password,
-                            const std::string& checksum);
   NeuralNetworkAudioHandler(NeuralNetworkAudioHandler&& orig) noexcept;
 
   ~NeuralNetworkAudioHandler() override;

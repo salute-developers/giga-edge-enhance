@@ -7,13 +7,8 @@
 namespace spench {
 
 DenoiserAudioHandler::DenoiserAudioHandler(std::shared_ptr<DenoiserConfig> config):
-                                  DenoiserAudioHandler(std::move(config), "", "") {}
-
-DenoiserAudioHandler::DenoiserAudioHandler(std::shared_ptr<DenoiserConfig> config,
-                                          const std::string& password,
-                                          const std::string& checksum):
-                                          NeuralNetworkAudioHandler(std::move(config), password, checksum),
-                                          adviser_(nullptr) {
+                                           NeuralNetworkAudioHandler(std::move(config)),
+                                           adviser_(nullptr) {
   float frame_shift_ms = dynamic_cast<spench::DenoiserConfig*>(config_.get())->frame_stride_ms();
   static constexpr float window_duration_ms = 1000 * 5;
   adviser_ = std::make_unique<DenoiserModelAdviser<float>>(window_duration_ms, frame_shift_ms);

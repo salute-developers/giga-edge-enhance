@@ -17,8 +17,7 @@ struct TestTfliteRunner {
   uint64_t sample_rate = 16000;
   TestTfliteRunner() = default;
 
-  TestTfliteRunner& InitRunner(const std::string& yaml_config_name, const std::string& password = "",
-                               const std::string& checksum = "", uint16_t num_threads = 1) {
+  TestTfliteRunner& InitRunner(const std::string& yaml_config_name, uint16_t num_threads = 1) {
     std::string file_path = data_root + "config/" + yaml_config_name;
     YAML::Node node = YAML::LoadFile(file_path);
     // bool on_gpu = node["inference"]["gpu"].as<bool>(false);
@@ -26,9 +25,9 @@ struct TestTfliteRunner {
 
     denoiser_runner = (model_type == "best_quality")
                           ? std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
-                                new util::tf_lite::SpenchQTfliteRunner(node["model"], password, checksum, num_threads))
+                                 new util::tf_lite::SpenchQTfliteRunner(node["model"], num_threads))
                           : std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
-                                new util::tf_lite::SpenchFTfliteRunner(node["model"], password, checksum, num_threads));
+                                 new util::tf_lite::SpenchFTfliteRunner(node["model"], num_threads));
     frame_size_ms = node["feature_params"]["frame_size_ms"].as<uint16_t>(16);
     sample_rate = node["feature_params"]["sampling_freq"].as<uint64_t>(16000);
     return *this;
@@ -179,7 +178,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 48kHz and with differen
 
   for (uint16_t num_threads : {1, 2, 4, 8}) {
     auto data = std::move(
-        TestTfliteRunner().InitRunner("default_configuration_best_quality_tflite_48khz.yaml", "", "", num_threads));
+        TestTfliteRunner().InitRunner("default_configuration_best_quality_tflite_48khz.yaml", num_threads));
 
     std::vector<size_t> timings(nattempts);
     std::vector<std::vector<float>*> inputs;
@@ -323,7 +322,7 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 48kHz and with differen
 
 //   for (uint16_t num_threads : {1, 2, 4, 8}) {
 //     auto data = std::move(TestTfliteRunner()
-//       .InitRunner("default_configuration_best_quality_tflite_16khz.yaml", "", "", num_threads));
+//       .InitRunner("default_configuration_best_quality_tflite_16khz.yaml", num_threads));
 
 //     std::vector<size_t> timings(nattempts);
 //     std::vector<std::vector<float>*> inputs;

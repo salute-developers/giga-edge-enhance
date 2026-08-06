@@ -84,8 +84,7 @@ struct TestOnnxRunner {
   uint64_t sample_rate = 16000;
   TestOnnxRunner() = default;
 
-  TestOnnxRunner& InitRunner(const std::string& yaml_config_name, const std::string& password = "",
-                             const std::string& checksum = "") {
+  TestOnnxRunner& InitRunner(const std::string& yaml_config_name) {
     std::string file_path = data_root + "config/" + yaml_config_name;
     auto reader = spench::FileConfigReader(file_path);
     bool on_gpu = reader.params()["inference"]["gpu"].as<bool>(false);
@@ -94,11 +93,11 @@ struct TestOnnxRunner {
     if (model_type == "best_quality") {
       auto config = std::make_shared<spench::DenoiserConfig>(reader);
       spench_model_runner = std::unique_ptr<util::onnx::BaseOnnxRunner>(
-          new util::onnx::SpenchQOnnxRunner(config, password, checksum, on_gpu));
+          new util::onnx::SpenchQOnnxRunner(config, 1, on_gpu));
     } else if (model_type == "best_speed") {
       auto config = std::make_shared<spench::DenoiserConfig>(reader);
       spench_model_runner = std::unique_ptr<util::onnx::BaseOnnxRunner>(
-          new util::onnx::SpenchFOnnxRunner(config, password, checksum, on_gpu));
+          new util::onnx::SpenchFOnnxRunner(config, 1, on_gpu));
     }
     frame_size_ms = reader.params()["feature_params"]["frame_size_ms"].as<uint16_t>(16);
     sample_rate = reader.params()["feature_params"]["sampling_freq"].as<uint64_t>(16000);

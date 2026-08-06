@@ -16,11 +16,6 @@ NSErrorDomain const SpenchErrorDomain = @"com.gigaedge.SpenchAudioKit.SpenchErro
 
 namespace spench_ios {
 
-// Encryption token must match the model build configuration. The C++ core is
-// built with `BUILD_WITHOUT_MODEL_ENCRYPTION=OFF` (see scripts/build_core.sh),
-// so the bundled .spench models are encrypted with this token.
-constexpr char kModelEncryptionToken[] = "REDACTED";
-
 // Reused chunk size for `reserve`; matches a typical render-buffer size at
 // 48 kHz/16 ms and lets the first calls avoid allocations.
 constexpr size_t kInitialScratchCapacity = 1024;
@@ -87,7 +82,7 @@ class DenoisePipelineElementCore final : public PipelineElementCore {
  public:
     DenoisePipelineElementCore(const std::string& modelPath, uint32_t sampleRate)
         : PipelineElementCore(sampleRate),
-          denoiser_(std::make_shared<spench::PackedModelReader>(modelPath), kModelEncryptionToken) {
+          denoiser_(std::make_shared<spench::PackedModelReader>(modelPath)) {
         context_ = denoiser_.CreateContext(sampleRate_, sampleRate_);
     }
 

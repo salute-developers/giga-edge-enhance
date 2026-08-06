@@ -1,9 +1,5 @@
 #include "spench/util/onnx/base_onnx_runner.h"
 
-#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
-#include "spench/submodules/modelencryption/lib/include/crypto.h"
-#endif
-
 namespace util {
 namespace onnx {
 
@@ -13,14 +9,10 @@ BaseOnnxRunner::BaseOnnxRunner()
 BaseOnnxRunner::BaseOnnxRunner(const std::vector<std::string>& inputs,
                                const std::vector<std::string>& outputs,
                                const std::shared_ptr<spench::NetworkConfig> config,
-                               const std::string& password,
-                               const std::string& checksum,
                                const uint32_t num_threads,
                                bool gpu)
     : run_options_ptr_(std::make_unique<Ort::RunOptions>(nullptr)) {
-  init_model(config, password,
-            checksum, num_threads,
-            gpu);
+  init_model(config, num_threads, gpu);
   validate_model(inputs, outputs);
 }
 
@@ -36,9 +28,7 @@ BaseOnnxRunner::~BaseOnnxRunner() {
 }
 
 void BaseOnnxRunner::init_model(const std::shared_ptr<spench::NetworkConfig> config,
-                               const std::string& password,
-                               const std::string& checksum,
-                               const uint32_t num_threads,
+                                const uint32_t num_threads,
                                bool gpu) {
   if (!gpu) {
     std::lock_guard<std::mutex> lock(get_cpu_session_mutex());
@@ -46,45 +36,16 @@ void BaseOnnxRunner::init_model(const std::shared_ptr<spench::NetworkConfig> con
 
     try {
       if (session_ptr_ == nullptr) {
-        if (!password.empty() || !checksum.empty()) {
-#ifndef BUILD_WITHOUT_MODEL_ENCRYPTION
-          modelencryption::Decryptor decryptor;
-          modelencryption::Hasher hasher;
-          std::vector<uint8_t> model_data;
-
-          std::unique_ptr<modelencryption::Checksum> license_checksum = nullptr;
-          if (!checksum.empty()) {
-            license_checksum.reset(new modelencryption::Checksum(hasher.DeserializeChecksum(checksum.c_str())));
-          }
-          if (config->is_model_bundled()) {
-            model_data = decryptor.DecryptArray(config->get_model(),
-                                                modelencryption::Key(password),
-                                                license_checksum.get());
-          } else {
-            model_data = decryptor.DecryptFile(config->model_path(),
-                                              modelencryption::Key(password),
-                                              license_checksum.get());
-          }
-
+        if (config->is_model_bundled()) {
+          const auto& model_data = config->get_model();
           session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(),
                                                          model_data.data(),
                                                          model_data.size(),
                                                          session_options);
-#else
-          throw OnnxValidationException("Password must be empty or library should be built with encryption support");
-#endif
         } else {
-          if (config->is_model_bundled()) {
-            const auto& model_data = config->get_model();
-            session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(),
-                                                            model_data.data(),
-                                                            model_data.size(),
-                                                            session_options);
-          } else {
-            session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(),
-                                                            config->model_path().c_str(),
-                                                            session_options);
-          }
+          session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(),
+                                                          config->model_path().c_str(),
+                                                          session_options);
         }
       }
     } catch (const std::exception& ex) {

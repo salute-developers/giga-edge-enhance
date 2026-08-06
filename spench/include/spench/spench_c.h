@@ -48,20 +48,6 @@ typedef uint8_t u_int8_t;
 SPENCH_API SpenchRetCode SpenchDenoiseInit(const char* config_file, SpenchDenoise* model);
 
 /**
- * \brief Allocate and return an encrypted audio enhancement model.
- * \param config_file Pointer to a string with the path to a .yaml config file.
- * \param password    Pointer to a string with the password for model decryption. Can be empty if the
- *                    model is not encrypted.
- * \param checksum    Pointer to a string with the license checksum for model decryption. Can be empty
- *                    if the model is not encrypted or licensing is not used.
- * \param model       Pointer to the model handle to be allocated.
- * \return SpenchRetCode::SUCCESS on success, otherwise an error code.
- * \ingroup group_c
- */
-SPENCH_API SpenchRetCode SpenchEncryptedDenoiseInit(const char* config_file, const char* password, const char* checksum,
-                                                    SpenchDenoise* model);
-
-/**
  * \brief Deallocate a model structure.
  * \param model Pointer to the model handle to be destroyed. The handle will be set to NULL.
  * \ingroup group_c

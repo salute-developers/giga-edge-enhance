@@ -33,11 +33,9 @@ class BaseTfliteRunner {
   BaseTfliteRunner(const BaseTfliteRunner&) = delete;
 
   BaseTfliteRunner(std::vector<std::string>& input_names,
-                  std::vector<std::string>& output_names,
-                  const std::string& model_path,
-                  const std::string& password,
-                  const std::string& checksum,
-                  const uint32_t num_threads,
+                   std::vector<std::string>& output_names,
+                   const std::string& model_path,
+                   const uint32_t num_threads,
                   bool on_gpu = false);
   virtual ~BaseTfliteRunner();
 
@@ -58,11 +56,9 @@ class BaseTfliteRunner {
   }
 
   void init_model(std::vector<std::string>& input_names,
-                 std::vector<std::string>& output_names,
-                 const std::string& model_path,
-                 const std::string& password,
-                 const std::string& checksum,
-                 const uint32_t num_threads, bool on_gpu);
+                  std::vector<std::string>& output_names,
+                  const std::string& model_path,
+                  const uint32_t num_threads, bool on_gpu);
 
   template<typename T>
   void run(std::vector<std::vector<T>*>& inputs,
@@ -99,7 +95,6 @@ class BaseTfliteRunner {
   std::mutex model_run_mutex_;
   std::unique_ptr<tflite::FlatBufferModel> model_ = nullptr;
   std::unique_ptr<tflite::Interpreter> interpreter_ = nullptr;
-  std::unique_ptr<std::vector<char> > model_data_ = nullptr;
   std::vector<TfLiteTensor*> model_inputs_;
   std::vector<const TfLiteTensor*> model_outputs_;
   tflite::SignatureRunner* signature_runner_;
@@ -117,8 +112,6 @@ class SpenchFTfliteRunner: public BaseTfliteRunner {
   SpenchFTfliteRunner() = delete;
   virtual ~SpenchFTfliteRunner() = default;
   explicit SpenchFTfliteRunner(const YAML::Node& yaml_config,
-                               const std::string& password,
-                               const std::string& checksum,
                                uint32_t inference_engine_threads = 1,
                                bool on_gpu = false);
   void infer(spench::SpenchTask* denoise_task);
@@ -136,8 +129,6 @@ class SpenchQTfliteRunner: public BaseTfliteRunner {
   SpenchQTfliteRunner() = delete;
   virtual ~SpenchQTfliteRunner() = default;
   explicit SpenchQTfliteRunner(const YAML::Node& yaml_config,
-                               const std::string& password,
-                               const std::string& checksum,
                                uint32_t inference_engine_threads = 1,
                                bool on_gpu = false);
   void infer(spench::SpenchTask* denoise_task);
