@@ -1,0 +1,29 @@
+---
+# clang-format style for the iOS wrapper's Objective-C++ sources.
+# Mirrors the existing manual layout so running `clang-format` on
+# `Sources/SpenchAudioKit/ObjC/` and `include/` files is a no-op.
+# Run with: ./scripts/lint.sh format
+Language: ObjC
+BasedOnStyle: Google
+ColumnLimit: 110
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+DerivePointerAlignment: false
+PointerAlignment: Left
+SpacesBeforeTrailingComments: 2
+ObjCBlockIndentWidth: 4
+ObjCSpaceAfterProperty: false
+ObjCSpaceBeforeProtocolList: false
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+BinPackArguments: false
+BinPackParameters: false
+BreakBeforeBraces: Attach
+NamespaceIndentation: None
+SortIncludes: false
+IncludeBlocks: Preserve
+SpaceBeforeCpp11BracedList: false
+Standard: c++20

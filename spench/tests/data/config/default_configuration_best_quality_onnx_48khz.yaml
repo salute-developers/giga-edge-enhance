@@ -1,0 +1,86 @@
+model:
+ # model path
+  model_path: data/models/quality_model_48khz.onnx
+  model_inputs:
+    - noisy_mag_in
+    - prev_fb_hidden_in
+    - prev_fb_snr_noise_psd_in
+    - prev_fb_snr_noise_pg_in
+    - prev_sb_snr_noise_psd_in
+    - prev_sb_snr_noise_pg_in
+    - prev_fb_conv1_buf_in
+    - prev_fb_conv3_buf_in
+
+
+  model_outputs:
+    - cur_fb_hidden_out
+    - cur_fb_snr_noise_psd_out
+    - cur_fb_snr_noise_pg_out
+    - cur_sb_snr_noise_psd_out
+    - cur_sb_snr_noise_pg_out
+    - cur_fb_conv1_buf_out
+    - cur_fb_conv3_buf_out
+    - predicted_mask_out
+
+
+feature_params:
+ # sampling rate
+ sampling_freq: 48000
+ # window length
+ frame_size_ms: 32
+ # window hop length
+ frame_stride_ms: 16
+ # hamming or hanning
+ window_type: hanning
+
+
+inference:
+ gpu: false
+ engine_num_threads: 1
+ # best_speed or best_quality
+ model_type: best_quality
+
+
+sound_processing:
+  range_ctrl:
+    sample_rate: 48000
+    target_level_db: -3.0
+    max_gain_db: 20
+    attack_time: 0.0004
+    release_time: 10
+    hold_time: 3
+  auto_gain_ctrl:
+    target_level: 1
+    max_gain: 20.0
+    # sample_rate / 4
+    average_len: 6000
+    step_size_rise: 0.01
+    step_size_fall: 0.01
+  noise_gate_ctrl:
+    sample_rate: 48000
+    threshold: -40.0
+    attack_time: 0.05
+    release_time: 0.02
+    hold_time: 0.05
+  dynamic_range_compressor_ctrl:
+    sample_rate: 48000
+    threshold: -15.0
+    ratio: 5
+    knee_width: 0.0
+    attack_time: 0.01
+    release_time: 0.2
+  loudness_ctrl:
+    sample_rate: 48000
+    target_level_db: -23.0
+    bypass_time: 3.0
+    max_gain_db: 40
+    post_processing: true
+
+
+echo_cancellation:
+ sample_rate: 48000
+ filter_len: 4096
+ chunk_len_ms: 16
+ residual_echo_suppression_enabled: true
+ delay_compensator_enabled: true
+ type: speex

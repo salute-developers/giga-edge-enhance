@@ -1,0 +1,51 @@
+model:
+  # model path
+  model_path: text.onnx
+  model_inputs: ["noisy_mag", "fb_h.1", "fb_c.1", "sb_h.1", "sb_c.1"]
+  model_outputs: ["fb_h", "fb_c", "sb_h", "sb_c", "sb_out"]
+  model_input_ctx_len: 2
+
+feature_params:
+  # sampling rate
+  sampling_freq: 24000
+  # window length
+  frame_size_ms: ["40"]
+  # window hop length
+  frame_stride_ms: 20
+  # hamming or hanning
+  window_type: hamming
+
+inference:
+  gpu: false
+  engine_num_threads: 4
+  # best_speed or best_quality
+  model_type: best_quality
+
+sound_processing:
+  range_ctrl:
+    sample_rate: 48000
+    target_level_db: -3.0
+    max_gain_db: 10
+    attack_time: 0.0
+    release_time: 300
+    hold_time: 5
+  auto_gain_ctrl:
+    target_level: 1
+    max_gain: 20.0
+    # sample_rate / 4
+    average_len: 6000
+    step_size_rise: 0.01
+    step_size_fall: 0.01
+  noise_gate_ctrl:
+    sample_rate: 48000
+    threshold: -15.0
+    attack_time: 0.05
+    release_time: 0.02
+    hold_time: 0.05
+  dynamic_range_compressor_ctrl:
+    sample_rate: 48000
+    threshold: -15.0
+    ratio: 5
+    knee_width: 0.0
+    attack_time: 0.01
+    release_time: 0.2

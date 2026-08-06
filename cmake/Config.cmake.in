@@ -1,0 +1,16 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+
+include(CMakeFindDependencyMacro)
+
+if (@BUILD_ONNX_ENGINE@)
+	find_dependency(onnxruntime 1.20)
+endif ()
+
+# TODO: use shared tflite
+#if (@BUILD_TFLITE_ENGINE@)
+#	find_dependency(tensorflowlite 1.15)
+#endif ()
+
+check_required_components(@PROJECT_NAME@)

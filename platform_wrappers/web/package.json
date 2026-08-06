@@ -1,0 +1,10 @@
+{
+  "name": "spench-web",
+  "description": "Spench Web monorepo",
+  "private": true,
+  "devDependencies": {
+    "lerna": "3.22.1",
+    "markdownlint-cli": "0.41.0",
+    "prettier": "3.1.1"
+  }
+}
