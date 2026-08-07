@@ -1,4 +1,4 @@
-#include <contrib/onnxruntime/include/onnxruntime/core/session/onnxruntime_cxx_api.h>
+#include <onnxruntime/include/onnxruntime/core/session/onnxruntime_cxx_api.h>
 #include <yaml-cpp/yaml.h>
 
 #include <algorithm>

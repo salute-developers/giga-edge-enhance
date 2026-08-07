@@ -1,4 +1,3 @@
-#include <audiosup/audio-reader.h>
 #include <dsplib.h>
 
 #include <catch.hpp>

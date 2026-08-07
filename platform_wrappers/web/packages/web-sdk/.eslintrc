@@ -1,5 +1,4 @@
 {
-    "extends": ["@salutejs/eslint-config"],
     "ignorePatterns": ["node_modules", "*.d.ts", "coverage/*", "build/*", "lib/spench.js", "lib/spench.dsp.js", "dist/*"],
     "settings": {
         "import/resolver": {

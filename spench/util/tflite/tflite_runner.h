@@ -1,10 +1,10 @@
 #pragma once
 
-#include "contrib/tflite/tensorflow/lite/interpreter.h"
-#include "contrib/tflite/tensorflow/lite/kernels/register.h"
-#include "contrib/tflite/tensorflow/lite/model.h"
-#include "contrib/tflite/tensorflow/lite/signature_runner.h"
-#include "contrib/tflite/tensorflow/lite/kernels/internal/tensor_ctypes.h"
+#include "tflite/interpreter.h"
+#include "tflite/kernels/register.h"
+#include "tflite/model.h"
+#include "tflite/signature_runner.h"
+#include "tflite/kernels/internal/tensor_ctypes.h"
 
 #include <vector>
 #include <numeric>

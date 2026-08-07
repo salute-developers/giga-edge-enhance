@@ -32,9 +32,7 @@ include_directories(${CMAKE_SOURCE_DIR}/spench/contrib/Catch2)
 
 add_executable(spench_tests ${TEST_SRC})
 
-CPMGetPackage(audiosup)
-
-target_link_libraries(spench_tests spench yaml-cpp util::sound util__echo util__metrics dsplib spdlog_header_only audiosup)
+target_link_libraries(spench_tests spench yaml-cpp util::sound util__echo util__metrics dsplib spdlog_header_only)
 
 if (NOT BUILD_WITHOUT_SOXR)
   target_link_libraries(spench_tests soxr)

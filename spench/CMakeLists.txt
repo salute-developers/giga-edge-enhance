@@ -14,7 +14,17 @@ set(SPENCH_DEPS
 )
 
 add_subdirectory(contrib)
-add_subdirectory(submodules)
+
+if (NOT BUILD_WITHOUT_SOXR)
+  if (EMSCRIPTEN)
+    set(WITH_LSR_BINDINGS OFF)
+  endif()
+  set(WITH_OPENMP OFF)
+  set(BUILD_TESTS OFF)
+  set(BUILD_SHARED_LIBS OFF)
+  CPMGetPackage(soxr)
+endif()
+
 add_subdirectory(util EXCLUDE_FROM_ALL)
 
 set(SRC

@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.17.3)
 
-include_directories(${CMAKE_SOURCE_DIR}/spench/contrib/tflite)
-include_directories(${CMAKE_SOURCE_DIR}/spench/contrib/tflite/flatbuffers/include)
+CPMGetPackage(tflite)
 
 add_library(util__tf_lite STATIC
         tflite_runner.cpp
