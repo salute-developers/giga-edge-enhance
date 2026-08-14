@@ -14,6 +14,10 @@ if(BUILD_TFLITE_ENGINE)
   set(BUILD_ONNX_ENGINE OFF CACHE BOOL "Build with onnx inference engine." FORCE)
 elseif(BUILD_ONNX_ENGINE)
   set(BUILD_TFLITE_ENGINE OFF CACHE BOOL "Build with tflite inference engine." FORCE)
+  # ONNX Runtime 1.20 requires FlatBuffers 23.5.9. Do not use the newer
+  # Android SDK package when it is present on the host.
+  set(CMAKE_DISABLE_FIND_PACKAGE_flatbuffers ON)
+  unset(flatbuffers_DIR CACHE)
 endif()
 
 # Preserve whether the spench target itself is shared. CPM deps and contrib/

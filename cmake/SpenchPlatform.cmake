@@ -14,6 +14,9 @@ endif()
 
 if(APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
   message(STATUS "Platform: Apple macOS")
+  # ONNX Runtime 1.20 uses pre-C++11 literal-operator spacing that modern
+  # AppleClang diagnoses as an error in the dependency's own targets.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=deprecated-literal-operator -Wno-error=deprecated-pragma")
   set(CMAKE_OSX_DEPLOYMENT_TARGET 13.0)
   if(BUILD_APPLE_ARCH STREQUAL "arm")
     message(STATUS "Apple architecture: arm64 (Apple Silicon)")
