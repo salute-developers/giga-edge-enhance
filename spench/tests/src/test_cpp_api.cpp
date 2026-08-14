@@ -1682,4 +1682,3 @@ sound_processing:
 )";
   REQUIRE_THROWS(TestFixture().InitAudioProcessor(bad));
 }
-#endif

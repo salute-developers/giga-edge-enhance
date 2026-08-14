@@ -221,7 +221,7 @@ class AecConfig final : public PipelineConfig {
     bool                         delay_compensator_enabled()         const;
     uint16_t                     frame_len()                        const;
     uint16_t                     echo_premute()                     const;
-    util::echo::EchoCancelerType type()                            const;
+    ::util::echo::EchoCancelerType type()                          const;
 };
 
 }  // namespace spench

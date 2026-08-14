@@ -50,6 +50,9 @@ if (BUILD_TFLITE_ENGINE)
 elseif (BUILD_ONNX_ENGINE)
   set(BUILD_TFLITE_ENGINE OFF)
   add_definitions(-DBUILD_ONNX_ENGINE)
+  # ONNX Runtime 1.20 requires FlatBuffers 23.5.9; do not pick up Android SDK's newer package.
+  set(CMAKE_DISABLE_FIND_PACKAGE_flatbuffers ON)
+  unset(flatbuffers_DIR CACHE)
 endif()
 
 if (BUILD_WITHOUT_SOXR MATCHES "ON")
@@ -95,6 +98,8 @@ endif()
 
 if (APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
   message("Building for apple platform")
+  # ONNX Runtime 1.20 transitively includes headers using pre-C++11 UDL spacing.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=deprecated-literal-operator -Wno-error=deprecated-pragma")
   set(CMAKE_OSX_DEPLOYMENT_TARGET 13.0)
   if (BUILD_APPLE_ARCH STREQUAL "arm")
     message("Building for apple silicon architecture")

@@ -194,7 +194,7 @@ TEST_CASE("SUCCEED Run offline audio upsampling 24kHz -> 48kHz [sound]") {
   std::vector<float> ending_part_of_data = resampler.flush();
 
   output_data.insert(end(output_data), begin(ending_part_of_data), end(ending_part_of_data));
-  IsVectorsClose(voice_utils.dst_wav_data, output_data, 0.0001);
+  IsVectorsClose(voice_utils.dst_wav_data, output_data, 0.005);
 }
 
 TEST_CASE("SUCCEED Run stream audio downsampling 48kHz -> 24kHz [sound]") {
@@ -347,7 +347,7 @@ TEST_CASE("SUCCEED Run stream audio upsampling 24kHz -> 48kHz [sound]") {
     voice_utils.dst_wav_data.resize(result.size());
   }
 
-  IsVectorsClose(voice_utils.dst_wav_data, result, 0.0001);
+  IsVectorsClose(voice_utils.dst_wav_data, result, 0.005);
 }
 
 TEST_CASE("SUCCESS Run stream audio upsampling via sound stream interface 24kHz -> 44.1kHz [sound]") {

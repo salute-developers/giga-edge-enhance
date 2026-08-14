@@ -14,6 +14,7 @@ target_compile_options(util__tf_lite
           PRIVATE -Wshadow
           # PRIVATE -pedantic
           PRIVATE -Werror
+          PRIVATE -Wno-error=unused-parameter
           PRIVATE -Wno-noexcept-type
           PRIVATE -O3)
 endif()

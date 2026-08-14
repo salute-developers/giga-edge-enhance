@@ -642,9 +642,9 @@ uint16_t AecConfig::frame_len() const {
   return static_cast<uint16_t>(std::round(ppm * chunk_ms));
 }
 
-util::echo::EchoCancelerType AecConfig::type() const {
+::util::echo::EchoCancelerType AecConfig::type() const {
   // validate() guarantees "speex".
-  return util::echo::EchoCancelerType::speex;
+  return ::util::echo::EchoCancelerType::speex;
 }
 
 }  // namespace spench

@@ -1,7 +1,7 @@
 #include "spench/util/sound/resampler.h"
 
 #ifndef BUILD_WITHOUT_SOXR
-#include <soxr/src/soxr.h>
+#include <soxr.h>
 #include <spench/util/sound/resampler_fwd.h>
 #endif
 

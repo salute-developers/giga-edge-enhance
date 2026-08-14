@@ -33,6 +33,11 @@ else()
   endif()
 endif()
 
+if (TARGET onnxruntime)
+  get_target_property(onnxruntime_cmake_dir onnxruntime SOURCE_DIR)
+  target_include_directories(util__onnx PUBLIC "${onnxruntime_cmake_dir}/../include")
+endif()
+
 target_link_libraries(util__onnx PRIVATE yaml-cpp spdlog_header_only)
 
 target_link_libraries(util__onnx PUBLIC yaml-cpp)

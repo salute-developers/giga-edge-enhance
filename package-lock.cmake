@@ -78,15 +78,17 @@ CPMDeclarePackage(spdlog
 string_option(ONNXRUNTIME_URL "https://github.com/microsoft/onnxruntime.git")
 CPMDeclarePackage(onnxruntime
   NAME onnxruntime
+  PATCHES "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/onnxruntime.patch"
   GIT_TAG v1.20.1
   GIT_REPOSITORY ${ONNXRUNTIME_URL}
   SOURCE_SUBDIR cmake
   EXCLUDE_FROM_ALL OFF
 )
 
-string_option(TENSORFLOW_URL "https://github.com/microsoft/onnxruntime.git")
+string_option(TENSORFLOW_URL "https://github.com/tensorflow/tensorflow.git")
 CPMDeclarePackage(tflite
   NAME tflite
+  PATCHES "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/tflite.patch"
   GIT_TAG v2.13.0
   GIT_REPOSITORY ${TENSORFLOW_URL}
   SOURCE_SUBDIR tensorflow/lite
@@ -99,5 +101,9 @@ CPMDeclarePackage(soxr
   PATCHES "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/soxr.patch"
   GIT_TAG 0.1.3
   GIT_REPOSITORY ${SOXR_URL}
+  OPTIONS
+    "WITH_OPENMP OFF"
+    "BUILD_TESTS OFF"
+    "BUILD_SHARED_LIBS OFF"
   EXCLUDE_FROM_ALL ON
 )

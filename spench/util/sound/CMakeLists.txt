@@ -17,7 +17,8 @@ if (NOT WIN32)
 endif()
 
 
-target_link_libraries(${PROJECT_NAME} PRIVATE spdlog_header_only dsplib rnnoise)
+target_include_directories(${PROJECT_NAME} PRIVATE ${soxr_SOURCE_DIR}/src)
+target_link_libraries(${PROJECT_NAME} PRIVATE spdlog_header_only dsplib rnnoise soxr)
 
 #TODO(?): use spench::* aliases
 add_library(util::sound ALIAS ${PROJECT_NAME})

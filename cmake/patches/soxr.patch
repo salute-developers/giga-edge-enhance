@@ -2,6 +2,13 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 index 73af421..9642283 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
+@@ -85,5 +85,5 @@
+ # Introspection:
+ 
+-list (APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
++list (APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
+ 
+ include (CheckFunctionExists)
 @@ -116,6 +116,12 @@ if (WITH_OPENMP)
    endif()
  endif ()
