@@ -7,6 +7,8 @@ add_library(util__onnx STATIC
         dereverb_onnx_runner.cpp
 )
 
+spench_apply_build_config(util__onnx)
+
 set_property(TARGET util__onnx PROPERTY CXX_STANDARD 14)
 if (NOT WIN32)
 target_compile_options(util__onnx

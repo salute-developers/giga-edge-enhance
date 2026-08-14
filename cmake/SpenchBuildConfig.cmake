@@ -1,0 +1,29 @@
+add_library(spench_build_config INTERFACE)
+
+target_include_directories(spench_build_config INTERFACE
+  "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
+  "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/spench>"
+  "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/spench/include>"
+)
+
+if(BUILD_TFLITE_ENGINE)
+  target_compile_definitions(spench_build_config INTERFACE BUILD_TFLITE_ENGINE)
+elseif(BUILD_ONNX_ENGINE)
+  target_compile_definitions(spench_build_config INTERFACE BUILD_ONNX_ENGINE)
+endif()
+
+if(BUILD_WITHOUT_SOXR)
+  target_compile_definitions(spench_build_config INTERFACE BUILD_WITHOUT_SOXR)
+endif()
+
+if(BUILD_WITH_ADDRESS_SANITIZER)
+  target_compile_definitions(spench_build_config INTERFACE BUILD_WITH_ADDRESS_SANITIZER)
+endif()
+
+if(BUILD_DSP_WASM)
+  target_compile_definitions(spench_build_config INTERFACE BUILD_DSP_WASM)
+endif()
+
+function(spench_apply_build_config target)
+  target_link_libraries(${target} PRIVATE spench_build_config)
+endfunction()

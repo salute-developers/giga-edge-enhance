@@ -6,6 +6,8 @@ add_library(util__tf_lite STATIC
         tflite_runner.cpp
 )
 
+spench_apply_build_config(util__tf_lite)
+
 set_property(TARGET util__tf_lite PROPERTY CXX_STANDARD 17)
 if (NOT WIN32)
 target_compile_options(util__tf_lite
