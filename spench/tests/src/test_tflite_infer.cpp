@@ -19,17 +19,16 @@ struct TestTfliteRunner {
 
   TestTfliteRunner& InitRunner(const std::string& yaml_config_name, uint16_t num_threads = 1) {
     std::string file_path = data_root + "config/" + yaml_config_name;
-    YAML::Node node = YAML::LoadFile(file_path);
-    // bool on_gpu = node["inference"]["gpu"].as<bool>(false);
-    std::string model_type = node["inference"]["model_type"].as<std::string>("best_quality");
+    auto config = std::make_shared<spench::DenoiserConfig>(spench::FileConfigReader(file_path));
+    std::string model_type = config->model_type();
 
     denoiser_runner = (model_type == "best_quality")
                           ? std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
-                                 new util::tf_lite::SpenchQTfliteRunner(node["model"], num_threads))
-                          : std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
-                                 new util::tf_lite::SpenchFTfliteRunner(node["model"], num_threads));
-    frame_size_ms = node["feature_params"]["frame_size_ms"].as<uint16_t>(16);
-    sample_rate = node["feature_params"]["sampling_freq"].as<uint64_t>(16000);
+                                  new util::tf_lite::SpenchQTfliteRunner(config, num_threads))
+                           : std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
+                                  new util::tf_lite::SpenchFTfliteRunner(config, num_threads));
+    frame_size_ms = config->frame_size_ms();
+    sample_rate = config->sampling_freq();
     return *this;
   }
 

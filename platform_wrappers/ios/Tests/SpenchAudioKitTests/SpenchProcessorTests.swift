@@ -74,6 +74,11 @@ final class SpenchProcessorTests: XCTestCase {
         XCTAssertThrowsError(try SpenchProcessor(sampleRate: 44_100, settings: settings))
     }
 
+    func testInvalidMaxProcessingChunkThrows() {
+        XCTAssertThrowsError(try SpenchSettings(maxProcessingChunkSeconds: 0).validated())
+        XCTAssertThrowsError(try SpenchSettings(maxProcessingChunkSeconds: .infinity).validated())
+    }
+
     func testMismatchedBuffersThrow() throws {
         let processor = try SpenchProcessor(sampleRate: 44_100)
         let input: [Float] = [1, 2]
@@ -125,6 +130,24 @@ final class SpenchProcessorTests: XCTestCase {
         let telemetry = processor.telemetry
         XCTAssertEqual(telemetry.audioProcessingCounters.values.reduce(0, +), 1)
         XCTAssertEqual(telemetry.denoiserCounters.values.reduce(0, +), 1)
+    }
+
+    func testDenoiserReportsNativeChunkFailure() throws {
+        let processor = try SpenchProcessor(
+            sampleRate: 48_000,
+            features: SpenchFeatures(normalization: false, noiseSuppression: .lite24k)
+        )
+        var samples = Array(repeating: Float(0.25), count: 1_536)
+        let frameCount = samples.count
+        var processingFailure: String?
+
+        for _ in 0..<4 {
+            processingFailure = samples.withUnsafeMutableBufferPointer { pointer in
+                processor.processInPlace(pointer.baseAddress!, frameCount: frameCount)
+            }
+        }
+
+        XCTAssertEqual(processingFailure, "Denoising failed with native error code -2.")
     }
 
     func testTelemetrySurvivesSampleRateUpdate() throws {

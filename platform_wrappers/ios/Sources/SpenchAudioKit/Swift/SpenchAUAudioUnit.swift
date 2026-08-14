@@ -24,7 +24,7 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
     // The buses need a valid format before the host negotiates the real one.
     // This value is only a bootstrap and is replaced during allocation.
     private static let bootstrapSampleRate: Double = 48_000
-    private static let frameDurationSeconds: Double = 0.016
+    private static let processingChunkStepSeconds: Double = 0.016
     private static let maxOutputBufferDuration: Double = 0.256
     private static let meanProcessTimeCount = 60
 
@@ -38,6 +38,7 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
     private var inputRing: RingBuffer
     private var outputRing: RingBuffer
     private var outputPrimed = false
+    private var processingFailureReported = false
     private var lowPerformanceMonitor: SpenchLowPerformanceMonitor
     private let meanProcessingTimeStore = AtomicOptionalDouble()
 
@@ -69,6 +70,10 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
 
     /// Low-performance callback delivered on the main queue.
     public var onLowPerformance: ((SpenchLowPerformanceEvent) -> Void)?
+
+    /// Processing-failure callback delivered on the main queue. A failure is
+    /// reported once per render-resource cycle.
+    public var onProcessingFailure: ((String) -> Void)?
 
     /// Rebuilds pipeline stages whose feature configuration changed.
     public func setFeatures(_ features: SpenchFeatures) throws {
@@ -106,7 +111,7 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
                          options: AudioComponentInstantiationOptions = []) throws {
         let format = Self.bootstrapFormat()
         let settings = try SpenchSettings.default.validated()
-        let ringFrames = Self.ringCapacityFrames(sampleRate: format.sampleRate)
+        let ringFrames = Self.ringCapacityFrames(sampleRate: format.sampleRate, settings: settings)
 
         currentSettings = settings
         processor = try SpenchProcessor(sampleRate: Float(format.sampleRate), settings: settings)
@@ -272,18 +277,14 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
     }
 
     private func runWorkerLoop(workerEvent: WorkerThreadEvent) {
-        let bufferCapacity = Int(maximumFramesToRender)
-        var processingBuffer = [Float](repeating: 0, count: bufferCapacity)
-
         // Sample rate is fixed for the lifetime of one render-resource cycle,
         // so we cache it once instead of paying for the locked accessor on
         // every iteration.
         let workerSampleRate = Double(processor.sampleRate)
-        let chunkFrameCount = min(
-            bufferCapacity,
-            max(1, Int((workerSampleRate * Self.frameDurationSeconds).rounded()))
-        )
+        let chunkFrameCount = Self.processingChunkFrameCount(sampleRate: workerSampleRate,
+                                                              settings: currentSettings)
         let chunkFramesU32 = UInt32(chunkFrameCount)
+        var processingBuffer = [Float](repeating: 0, count: chunkFrameCount)
 
         var meanProcessTimeAggregator = MeanProcessTimeAggregator(window: Self.meanProcessTimeCount)
 
@@ -301,7 +302,7 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
                 readFrames = inputRing.pop(baseAddress, count: chunkFramesU32)
             }
 
-            if readFrames == 0 {
+            if readFrames != chunkFramesU32 {
                 if !workerEvent.waitForNotification() {
                     break
                 }
@@ -312,10 +313,15 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
                 guard let baseAddress = pointer.baseAddress else { return }
 
                 let startTime = CACurrentMediaTime()
-                processor.processInPlace(baseAddress, frameCount: Int(readFrames))
+                let processingFailure = processor.processInPlace(baseAddress, frameCount: Int(readFrames))
                 let elapsedMilliseconds = (CACurrentMediaTime() - startTime) * 1_000
                 meanProcessingTimeStore.storeValue(meanProcessTimeAggregator.append(elapsedMilliseconds))
                 _ = outputRing.push(baseAddress, count: readFrames)
+
+                if let processingFailure, !processingFailureReported {
+                    processingFailureReported = true
+                    emitProcessingFailure(processingFailure)
+                }
             }
         }
     }
@@ -327,7 +333,7 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
     }
 
     private func configureRuntimeState(sampleRate: Double) {
-        let ringFrames = Self.ringCapacityFrames(sampleRate: sampleRate)
+        let ringFrames = Self.ringCapacityFrames(sampleRate: sampleRate, settings: currentSettings)
         inputRing = RingBuffer(capacity: ringFrames)
         outputRing = RingBuffer(capacity: ringFrames)
         inputRing.reset()
@@ -404,6 +410,7 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
 
     private func resetCongestionControlState(sampleRate: Double) {
         outputPrimed = false
+        processingFailureReported = false
         meanProcessingTimeStore.storeNil()
         lowPerformanceMonitor.reset(sampleRate: sampleRate)
     }
@@ -423,13 +430,37 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
         }
     }
 
+    internal func emitProcessingFailure(_ message: String) {
+        DispatchQueue.main.async { [weak self] in
+            self?.onProcessingFailure?(message)
+        }
+    }
+
     private static func bootstrapFormat() -> AVAudioFormat {
         let sessionSampleRate = AVAudioSession.sharedInstance().sampleRate
         let sampleRate = sessionSampleRate > 0 && sessionSampleRate.isFinite ? sessionSampleRate : bootstrapSampleRate
         return AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1)!
     }
 
-    private static func ringCapacityFrames(sampleRate: Double) -> UInt32 {
-        UInt32((sampleRate * maxOutputBufferDuration).rounded(.up))
+    internal static func processingChunkSeconds(settings: SpenchSettings) -> Double {
+        let requestedSeconds = min(settings.maxProcessingChunkSeconds,
+                                   settings.minLatency,
+                                   maxOutputBufferDuration)
+        guard requestedSeconds > processingChunkStepSeconds else {
+            return processingChunkStepSeconds
+        }
+
+        return max((requestedSeconds / processingChunkStepSeconds).rounded(.down) * processingChunkStepSeconds,
+                   processingChunkStepSeconds)
+    }
+
+    internal static func processingChunkFrameCount(sampleRate: Double, settings: SpenchSettings) -> Int {
+        Int((sampleRate * processingChunkSeconds(settings: settings)).rounded(.up))
+    }
+
+    private static func ringCapacityFrames(sampleRate: Double, settings: SpenchSettings) -> UInt32 {
+        let processingChunkFrames = processingChunkFrameCount(sampleRate: sampleRate, settings: settings)
+        let minimumRingFrames = Int((sampleRate * maxOutputBufferDuration).rounded(.up))
+        return UInt32(max(minimumRingFrames, processingChunkFrames * 2))
     }
 }

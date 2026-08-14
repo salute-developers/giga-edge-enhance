@@ -14,18 +14,24 @@ BaseTfliteRunner::~BaseTfliteRunner() {}
 
 BaseTfliteRunner::BaseTfliteRunner(std::vector<std::string>& input_names,
                                    std::vector<std::string>& output_names,
-                                   const std::string& model_path,
+                                   const std::shared_ptr<spench::NetworkConfig> config,
                                    const uint32_t num_threads, bool on_gpu) {
   (void)(on_gpu);
-  init_model(input_names, output_names, model_path, num_threads, on_gpu);
+  init_model(input_names, output_names, config, num_threads, on_gpu);
 }
 
 void BaseTfliteRunner::init_model(std::vector<std::string>& input_names,
                                   std::vector<std::string>& output_names,
-                                  const std::string& model_path,
-                                  const uint32_t num_threads, bool on_gpu) {
+                                   const std::shared_ptr<spench::NetworkConfig> config,
+                                   const uint32_t num_threads, bool on_gpu) {
   (void)(on_gpu);
-  model_ = tflite::FlatBufferModel::VerifyAndBuildFromFile(model_path.c_str());
+  if (config->is_model_bundled()) {
+    const auto& model_data = config->get_model();
+    model_data_ = std::make_unique<std::vector<char>>(model_data.begin(), model_data.end());
+    model_ = tflite::FlatBufferModel::VerifyAndBuildFromBuffer(model_data_->data(), model_data_->size());
+  } else {
+    model_ = tflite::FlatBufferModel::VerifyAndBuildFromFile(config->model_path().c_str());
+  }
 
   if (model_ == nullptr) {
     throw TfliteValidationException("Model reading error. There is problem with checkpoint file.");
@@ -277,12 +283,12 @@ void BaseTfliteRunner::resize_inputs_if_needed(const std::vector<std::vector<int
   refresh_tensor_metadata();
 }
 
-SpenchFTfliteRunner::SpenchFTfliteRunner(const YAML::Node& yaml_config,
+SpenchFTfliteRunner::SpenchFTfliteRunner(const std::shared_ptr<spench::NetworkConfig> config,
                                          uint32_t inference_engine_threads, bool on_gpu) :
                                          BaseTfliteRunner::BaseTfliteRunner() {
-    read_config(yaml_config);
+    read_config(config->params()["model"]);
     init_model(model_params_.model_inputs, model_params_.model_outputs,
-               model_params_.model_path, inference_engine_threads, on_gpu);
+                config, inference_engine_threads, on_gpu);
     warm_up<float>();
 }
 
@@ -428,12 +434,12 @@ void SpenchFTfliteRunner::infer(spench::SpenchTask* denoise_task) {
   }
 }
 
-SpenchQTfliteRunner::SpenchQTfliteRunner(const YAML::Node& yaml_config,
+SpenchQTfliteRunner::SpenchQTfliteRunner(const std::shared_ptr<spench::NetworkConfig> config,
                                          uint32_t inference_engine_threads, bool on_gpu) :
                                          BaseTfliteRunner::BaseTfliteRunner() {
-    read_config(yaml_config);
+    read_config(config->params()["model"]);
     init_model(model_params_.model_inputs, model_params_.model_outputs,
-               model_params_.model_path, inference_engine_threads, on_gpu);
+                config, inference_engine_threads, on_gpu);
     warm_up<float>();
 }
 

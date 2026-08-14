@@ -7,18 +7,16 @@ InferenceRunner::InferenceRunner(std::shared_ptr<spench::NetworkConfig> config,
                                 bool gpu) {
   model_type_ = string_to_model_type_enum(config->params()["inference"]["model_type"].as<std::string>(""));
 #ifdef BUILD_TFLITE_ENGINE
-  auto model_config = config->params()["model"];
-
   if (model_type_ == ModelType::denoiser_best_quality) {
       engine_runner_ptr_ =
-                    std::make_unique<util::tf_lite::SpenchQTfliteRunner>(model_config,
-                                                                          inference_engine_threads,
-                                                                         gpu);
+                    std::make_unique<util::tf_lite::SpenchQTfliteRunner>(config,
+                                                                           inference_engine_threads,
+                                                                          gpu);
   } else if (model_type_ == ModelType::denoiser_best_speed) {
       engine_runner_ptr_ =
-                    std::make_unique<util::tf_lite::SpenchFTfliteRunner>(model_config,
-                                                                          inference_engine_threads,
-                                                                         gpu);
+                    std::make_unique<util::tf_lite::SpenchFTfliteRunner>(config,
+                                                                           inference_engine_threads,
+                                                                          gpu);
   }
 #else
   if (model_type_ == ModelType::denoiser_best_quality) {

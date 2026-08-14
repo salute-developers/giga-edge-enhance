@@ -27,6 +27,11 @@ public struct SpenchSettings: Hashable, Sendable {
     /// Increment, in seconds, added to the target latency after each
     /// detected underrun until the worker can keep up again.
     public var latencyIncreaseStep: Double
+    /// Maximum duration, in seconds, of one real-time audio-unit worker
+    /// processing chunk. The effective duration is capped at ``minLatency``
+    /// and 256 ms, quantized down to 16 ms steps, and never falls below 16 ms.
+    /// This setting does not change direct ``SpenchProcessor`` calls.
+    public var maxProcessingChunkSeconds: Double
     /// Histogram bucket size, in milliseconds, used by ``SpenchTelemetry``.
     /// Smaller values capture more detail but use more memory.
     public var telemetryRoundingMilliseconds: Double
@@ -49,12 +54,14 @@ public struct SpenchSettings: Hashable, Sendable {
                 telemetryRoundingMilliseconds: Double = 0.25,
                 useVadNormalization: Bool = false,
                 unstableReverseProcessingOrder: Bool = false,
-                unstableCustomNormalizationConfig: String? = nil) {
+                unstableCustomNormalizationConfig: String? = nil,
+                maxProcessingChunkSeconds: Double = 0.016) {
         self.lowPerformanceWindowSeconds = lowPerformanceWindowSeconds
         self.lowPerformanceMaxRefillTimes = lowPerformanceMaxRefillTimes
         self.lowPerformanceMaxRefillTimeFactor = lowPerformanceMaxRefillTimeFactor
         self.minLatency = minLatency
         self.latencyIncreaseStep = latencyIncreaseStep
+        self.maxProcessingChunkSeconds = maxProcessingChunkSeconds
         self.telemetryRoundingMilliseconds = telemetryRoundingMilliseconds
         self.useVadNormalization = useVadNormalization
         self.unstableReverseProcessingOrder = unstableReverseProcessingOrder
@@ -79,6 +86,9 @@ public struct SpenchSettings: Hashable, Sendable {
         }
         guard latencyIncreaseStep >= 0, latencyIncreaseStep.isFinite else {
             throw SpenchError.invalidArgument("latencyIncreaseStep must be finite and non-negative")
+        }
+        guard maxProcessingChunkSeconds > 0, maxProcessingChunkSeconds.isFinite else {
+            throw SpenchError.invalidArgument("maxProcessingChunkSeconds must be finite and greater than zero")
         }
         guard telemetryRoundingMilliseconds > 0, telemetryRoundingMilliseconds.isFinite else {
             throw SpenchError.invalidArgument("telemetryRoundingMilliseconds must be greater than zero")

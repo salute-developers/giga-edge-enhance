@@ -24,9 +24,13 @@ The render block:
 ## Worker thread
 
 The worker thread runs at `.userInteractive` quality of service, polls the
-input ring with a `WorkerThreadEvent`, and aggregates per-chunk processing
-time using a sliding-window mean. If the worker falls behind, the unit
-emits a ``SpenchLowPerformanceEvent`` and bumps target latency in
+input ring with a `WorkerThreadEvent`, and processes complete chunks selected
+by ``SpenchSettings/maxProcessingChunkSeconds``. Chunks are quantized to 16 ms
+steps, bounded by ``SpenchSettings/minLatency`` and 256 ms, and have a 16 ms
+minimum. The render callback can use any host-provided frame count; it does
+not change the worker chunk duration. The worker aggregates per-chunk
+processing time using a sliding-window mean. If the worker falls behind, the
+unit emits a ``SpenchLowPerformanceEvent`` and bumps target latency in
 ``SpenchSettings/latencyIncreaseStep`` increments.
 
 ## Lifecycle rules
@@ -59,3 +63,7 @@ Internal state mutation is locked, but the underlying ObjC++ pipeline
 keeps scratch buffers per instance. Serialise calls from one thread, or
 wrap the instance with your own synchronisation if you need to share it
 across actors.
+
+``SpenchSettings/maxProcessingChunkSeconds`` applies only to the real-time
+audio-unit worker. Direct processor calls preserve the caller-provided buffer
+boundaries.

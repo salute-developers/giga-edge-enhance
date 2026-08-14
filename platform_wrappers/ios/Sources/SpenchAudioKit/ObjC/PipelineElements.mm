@@ -78,6 +78,7 @@ class DenoisePipelineElementCore final : public PipelineElementCore {
  private:
     spench::SpenchDenoise denoiser_;
     spench::SpenchContext<float>* context_ = nullptr;
+    std::string lastProcessingError_;
 
  public:
     DenoisePipelineElementCore(const std::string& modelPath, uint32_t sampleRate)
@@ -96,9 +97,12 @@ class DenoisePipelineElementCore final : public PipelineElementCore {
                      float* __restrict dst,
                      uint32_t frameCount) noexcept final {
         input_.assign(src, src + frameCount);
+        lastProcessingError_.clear();
 
         const SpenchRetCode retCode = denoiser_.ProcessChunk(input_, output_, context_);
         if (retCode < SUCCESS) {
+            lastProcessingError_ = "Denoising failed with native error code " +
+                                   std::to_string(static_cast<int32_t>(retCode)) + ".";
             return 0;
         }
 
@@ -114,6 +118,11 @@ class DenoisePipelineElementCore final : public PipelineElementCore {
             denoiser_.DestroyContext(&context_);
         }
         context_ = denoiser_.CreateContext(sampleRate_, sampleRate_);
+        lastProcessingError_.clear();
+    }
+
+    const std::string& lastProcessingError() const noexcept {
+        return lastProcessingError_;
     }
 };
 
@@ -195,6 +204,14 @@ NSError* SpenchErrorFromException(const std::exception& exception) {
 
 - (float)sampleRate {
     return _core == nullptr ? 0.0F : static_cast<float>(_core->sampleRate());
+}
+
+- (nullable NSString *)lastProcessingError {
+    const auto* core = dynamic_cast<const spench_ios::DenoisePipelineElementCore*>(_core.get());
+    if (core == nullptr || core->lastProcessingError().empty()) {
+        return nil;
+    }
+    return [NSString stringWithUTF8String:core->lastProcessingError().c_str()];
 }
 
 @end

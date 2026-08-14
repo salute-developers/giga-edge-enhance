@@ -7,8 +7,9 @@ import AVFoundation
 import SpenchAudioKit
 
 let settings = SpenchSettings(minLatency: 0.08,
-                              latencyIncreaseStep: 0.04,
-                              telemetryRoundingMilliseconds: 0.25)
+                               latencyIncreaseStep: 0.04,
+                               telemetryRoundingMilliseconds: 0.25,
+                               maxProcessingChunkSeconds: 0.032)
 
 let features = SpenchFeatures(normalization: true,
                               noiseSuppression: .lite24k)
@@ -55,3 +56,6 @@ buffer.withUnsafeMutableBufferPointer { pointer in
     processor.processInPlace(pointer.baseAddress!, frameCount: pointer.count)
 }
 ```
+
+`maxProcessingChunkSeconds` controls only the real-time audio-unit worker;
+direct processing keeps the buffer boundaries supplied by the caller.

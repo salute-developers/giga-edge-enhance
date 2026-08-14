@@ -10,6 +10,7 @@ final class FileProcessingController {
     var telemetry: SpenchTelemetry {
         spenchUnit?.telemetry ?? .empty
     }
+    var onProcessingFailure: ((String) -> Void)?
 
     func process(inputURL: URL,
                  features: SpenchFeatures,
@@ -19,6 +20,7 @@ final class FileProcessingController {
         do {
             let spenchUnit = try SpenchAVAudioUnit(features: features, settings: settings)
             spenchUnit.onLowPerformance = onLowPerformance
+            spenchUnit.onProcessingFailure = onProcessingFailure
             try startProcessing(inputURL: inputURL,
                                 spenchUnit: spenchUnit,
                                 completion: completion)
@@ -102,6 +104,7 @@ final class FileProcessingController {
 
             if let spenchUnit {
                 spenchUnit.onLowPerformance = nil
+                spenchUnit.onProcessingFailure = nil
                 spenchUnit.removeTap(onBus: 0)
                 engine.disconnectAndDetachIfNeeded(spenchUnit)
             }

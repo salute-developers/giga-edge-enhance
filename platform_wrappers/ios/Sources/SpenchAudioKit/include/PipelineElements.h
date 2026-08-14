@@ -44,6 +44,8 @@ typedef NS_ERROR_ENUM(SpenchErrorDomain, SpenchErrorCode) {
 
 - (float)sampleRate;
 
+@property (nonatomic, readonly, nullable) NSString *lastProcessingError;
+
 @end
 
 NS_ASSUME_NONNULL_END

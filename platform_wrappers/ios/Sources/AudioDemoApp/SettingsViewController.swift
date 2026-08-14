@@ -12,6 +12,7 @@ final class SettingsViewController: UIViewController {
     private let lowPerformanceMaxRefillTimeFactorField = UITextField()
     private let minLatencyField = UITextField()
     private let latencyIncreaseStepField = UITextField()
+    private let maxProcessingChunkSecondsField = UITextField()
     private let telemetryRoundingMillisecondsField = UITextField()
     private let useVadNormalizationSwitch = UISwitch()
     private let reverseProcessingOrderSwitch = UISwitch()
@@ -80,9 +81,13 @@ final class SettingsViewController: UIViewController {
                                                       identifier: "minLatencyField",
                                                       keyboardType: .decimalPad))
         stackView.addArrangedSubview(makeTextFieldRow(title: "Latency increase step",
-                                                      field: latencyIncreaseStepField,
-                                                      identifier: "latencyIncreaseStepField",
-                                                      keyboardType: .decimalPad))
+                                                       field: latencyIncreaseStepField,
+                                                       identifier: "latencyIncreaseStepField",
+                                                       keyboardType: .decimalPad))
+        stackView.addArrangedSubview(makeTextFieldRow(title: "Max processing chunk seconds",
+                                                       field: maxProcessingChunkSecondsField,
+                                                       identifier: "maxProcessingChunkSecondsField",
+                                                       keyboardType: .decimalPad))
         stackView.addArrangedSubview(makeTextFieldRow(title: "Telemetry rounding (ms)",
                                                       field: telemetryRoundingMillisecondsField,
                                                       identifier: "telemetryRoundingMillisecondsField",
@@ -129,6 +134,7 @@ final class SettingsViewController: UIViewController {
         lowPerformanceMaxRefillTimeFactorField.text = Self.string(from: settings.lowPerformanceMaxRefillTimeFactor)
         minLatencyField.text = Self.string(from: settings.minLatency)
         latencyIncreaseStepField.text = Self.string(from: settings.latencyIncreaseStep)
+        maxProcessingChunkSecondsField.text = Self.string(from: settings.maxProcessingChunkSeconds)
         telemetryRoundingMillisecondsField.text = Self.string(from: settings.telemetryRoundingMilliseconds)
         useVadNormalizationSwitch.isOn = settings.useVadNormalization
         reverseProcessingOrderSwitch.isOn = settings.unstableReverseProcessingOrder
@@ -151,13 +157,17 @@ final class SettingsViewController: UIViewController {
         let settings = SpenchSettings(
             lowPerformanceWindowSeconds: try requiredDouble(from: lowPerformanceWindowField, name: "Window seconds"),
             lowPerformanceMaxRefillTimes: try requiredInt(from: lowPerformanceMaxRefillTimesField, name: "Max refill times"),
-            lowPerformanceMaxRefillTimeFactor: try requiredDouble(from: lowPerformanceMaxRefillTimeFactorField, name: "Max refill time factor"),
+            lowPerformanceMaxRefillTimeFactor: try requiredDouble(from: lowPerformanceMaxRefillTimeFactorField,
+                                                                   name: "Max refill time factor"),
             minLatency: try requiredDouble(from: minLatencyField, name: "Min latency"),
             latencyIncreaseStep: try requiredDouble(from: latencyIncreaseStepField, name: "Latency increase step"),
-            telemetryRoundingMilliseconds: try requiredDouble(from: telemetryRoundingMillisecondsField, name: "Telemetry rounding"),
+            telemetryRoundingMilliseconds: try requiredDouble(from: telemetryRoundingMillisecondsField,
+                                                               name: "Telemetry rounding"),
             useVadNormalization: useVadNormalizationSwitch.isOn,
             unstableReverseProcessingOrder: reverseProcessingOrderSwitch.isOn,
-            unstableCustomNormalizationConfig: customConfig.isEmpty ? nil : customConfig
+            unstableCustomNormalizationConfig: customConfig.isEmpty ? nil : customConfig,
+            maxProcessingChunkSeconds: try requiredDouble(from: maxProcessingChunkSecondsField,
+                                                           name: "Max processing chunk seconds")
         )
 
         return try settings.validated()

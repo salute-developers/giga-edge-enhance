@@ -17,6 +17,7 @@ configure_build() {
     -DBUILD_DEMO=OFF \
     -DBUILD_TESTING=OFF \
     -DPLATFORM="$platform" \
+    -DCMAKE_DISABLE_FIND_PACKAGE_flatbuffers=ON \
     -DCMAKE_CXX_FLAGS="-Wno-deprecated-literal-operator -Wno-error=deprecated-literal-operator -Wno-dangling-capture" \
     -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN_FILE" \
     -DDEPLOYMENT_TARGET=15.0

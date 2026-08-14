@@ -15,6 +15,7 @@
 
 #include "spench/src/spench_task.h"
 #include "spench/src/spench_context.h"
+#include "spench/src/spench_config_reader.h"
 
 
 namespace util {
@@ -34,9 +35,9 @@ class BaseTfliteRunner {
 
   BaseTfliteRunner(std::vector<std::string>& input_names,
                    std::vector<std::string>& output_names,
-                   const std::string& model_path,
+                   const std::shared_ptr<spench::NetworkConfig> config,
                    const uint32_t num_threads,
-                  bool on_gpu = false);
+                   bool on_gpu = false);
   virtual ~BaseTfliteRunner();
 
   virtual void infer(spench::SpenchTask* denoise_task) = 0;
@@ -56,9 +57,9 @@ class BaseTfliteRunner {
   }
 
   void init_model(std::vector<std::string>& input_names,
-                  std::vector<std::string>& output_names,
-                  const std::string& model_path,
-                  const uint32_t num_threads, bool on_gpu);
+                 std::vector<std::string>& output_names,
+                 const std::shared_ptr<spench::NetworkConfig> config,
+                 const uint32_t num_threads, bool on_gpu);
 
   template<typename T>
   void run(std::vector<std::vector<T>*>& inputs,
@@ -93,6 +94,7 @@ class BaseTfliteRunner {
 
  protected:
   std::mutex model_run_mutex_;
+  std::unique_ptr<std::vector<char>> model_data_ = nullptr;
   std::unique_ptr<tflite::FlatBufferModel> model_ = nullptr;
   std::unique_ptr<tflite::Interpreter> interpreter_ = nullptr;
   std::vector<TfLiteTensor*> model_inputs_;
@@ -111,7 +113,7 @@ class SpenchFTfliteRunner: public BaseTfliteRunner {
  public:
   SpenchFTfliteRunner() = delete;
   virtual ~SpenchFTfliteRunner() = default;
-  explicit SpenchFTfliteRunner(const YAML::Node& yaml_config,
+  explicit SpenchFTfliteRunner(const std::shared_ptr<spench::NetworkConfig> config,
                                uint32_t inference_engine_threads = 1,
                                bool on_gpu = false);
   void infer(spench::SpenchTask* denoise_task);
@@ -128,7 +130,7 @@ class SpenchQTfliteRunner: public BaseTfliteRunner {
  public:
   SpenchQTfliteRunner() = delete;
   virtual ~SpenchQTfliteRunner() = default;
-  explicit SpenchQTfliteRunner(const YAML::Node& yaml_config,
+  explicit SpenchQTfliteRunner(const std::shared_ptr<spench::NetworkConfig> config,
                                uint32_t inference_engine_threads = 1,
                                bool on_gpu = false);
   void infer(spench::SpenchTask* denoise_task);

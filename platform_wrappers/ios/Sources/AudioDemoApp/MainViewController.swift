@@ -26,6 +26,7 @@ final class MainViewController: UIViewController {
     private var availableModels: [SpenchModelDescriptor] = []
     private var selectedModel: SpenchModelDescriptor?
     private var currentSettings = SpenchSettings.default
+    private var processingFailureMessage: String?
     private var telemetryTimer: Timer?
     private var previousTelemetry = SpenchTelemetry.empty
 
@@ -52,6 +53,12 @@ final class MainViewController: UIViewController {
                                                             target: self,
                                                             action: #selector(openSettings))
         configureUI()
+        liveController.onProcessingFailure = { [weak self] message in
+            self?.showProcessingFailure(message)
+        }
+        fileController.onProcessingFailure = { [weak self] message in
+            self?.showProcessingFailure(message)
+        }
         updateStatus(ok: true, message: nil)
         loadModels()
     }
@@ -178,17 +185,19 @@ final class MainViewController: UIViewController {
             liveButton.setTitle("Live Demo", for: .normal)
             resetTelemetryDisplay()
             resetLowPerformanceIndicator()
+            processingFailureMessage = nil
             updateStatus(ok: true, message: nil)
             return
         }
 
         resetLowPerformanceIndicator()
         resetTelemetryDisplay()
+        processingFailureMessage = nil
         liveController.start(features: currentFeatures,
-                             settings: currentSettings,
-                             onLowPerformance: { [weak self] _ in
-                                 self?.showLowPerformanceIndicator()
-                             }) { [weak self] error in
+                              settings: currentSettings,
+                              onLowPerformance: { [weak self] _ in
+                                  self?.showLowPerformanceIndicator()
+                              }) { [weak self] error in
             guard let self else { return }
             if let error {
                 self.updateStatus(ok: false, message: error.localizedDescription)
@@ -212,6 +221,7 @@ final class MainViewController: UIViewController {
             fileButton.setTitle("Choose File", for: .normal)
             resetTelemetryDisplay()
             resetLowPerformanceIndicator()
+            processingFailureMessage = nil
             updateStatus(ok: true, message: nil)
             return
         }
@@ -262,14 +272,15 @@ final class MainViewController: UIViewController {
         saveButton.isHidden = true
         resetTelemetryDisplay()
         resetLowPerformanceIndicator()
+        processingFailureMessage = nil
         updateStatus(ok: true, message: nil)
 
         fileController.process(inputURL: url,
                                features: features,
-                               settings: currentSettings,
-                               onLowPerformance: { [weak self] _ in
-                                   self?.showLowPerformanceIndicator()
-                               }) { [weak self] result in
+                                settings: currentSettings,
+                                onLowPerformance: { [weak self] _ in
+                                    self?.showLowPerformanceIndicator()
+                                }) { [weak self] result in
             guard let self else { return }
             self.fileProcessing = false
             self.fileButton.setTitle("Choose File", for: .normal)
@@ -279,7 +290,11 @@ final class MainViewController: UIViewController {
                 self.processedFileURL = outputURL
                 self.saveButton.isHidden = false
                 self.refreshTelemetrySnapshot()
-                self.updateStatus(ok: true, message: nil)
+                if let processingFailureMessage = self.processingFailureMessage {
+                    self.updateStatus(ok: false, message: processingFailureMessage)
+                } else {
+                    self.updateStatus(ok: true, message: nil)
+                }
             case .failure(let error):
                 self.processedFileURL = nil
                 self.saveButton.isHidden = true
@@ -353,6 +368,11 @@ final class MainViewController: UIViewController {
         DispatchQueue.main.async { [weak self] in
             self?.lowPerformanceLabel.isHidden = false
         }
+    }
+
+    private func showProcessingFailure(_ message: String) {
+        processingFailureMessage = message
+        updateStatus(ok: false, message: message)
     }
 
     private func loadModels() {

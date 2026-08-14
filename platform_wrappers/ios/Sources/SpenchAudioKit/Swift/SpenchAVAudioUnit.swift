@@ -83,6 +83,12 @@ public final class SpenchAVAudioUnit: AVAudioUnitEffect {
         set { typedAU?.onLowPerformance = newValue }
     }
 
+    /// Processing-failure callback delivered on the main queue.
+    public var onProcessingFailure: ((String) -> Void)? {
+        get { typedAU?.onProcessingFailure }
+        set { typedAU?.onProcessingFailure = newValue }
+    }
+
     /// Updates the feature set used by the wrapped audio unit.
     public func setFeatures(_ features: SpenchFeatures) throws {
         try typedAU?.setFeatures(features)

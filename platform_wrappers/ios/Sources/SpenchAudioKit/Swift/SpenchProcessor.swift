@@ -184,21 +184,23 @@ public final class SpenchProcessor {
     }
 
     // Used by the audio unit worker thread to process one mono chunk in place.
-    func processInPlace(_ samples: UnsafeMutablePointer<Float>, frameCount: Int) {
+    func processInPlace(_ samples: UnsafeMutablePointer<Float>, frameCount: Int) -> String? {
         let state = snapshotState()
 
         if state.settings.unstableReverseProcessingOrder {
+            var processingError: String?
             if let denoiseElement = state.denoiseElement {
                 _ = measureDenoiser {
                     denoiseElement.processInput(samples, output: samples, frameCount: UInt32(frameCount))
                 }
+                processingError = denoiseElement.lastProcessingError
             }
             if let audioProcessElement = state.audioProcessElement {
                 _ = measureAudioProcessing {
                     audioProcessElement.processInput(samples, output: samples, frameCount: UInt32(frameCount))
                 }
             }
-            return
+            return processingError
         }
 
         if let audioProcessElement = state.audioProcessElement {
@@ -210,7 +212,10 @@ public final class SpenchProcessor {
             _ = measureDenoiser {
                 denoiseElement.processInput(samples, output: samples, frameCount: UInt32(frameCount))
             }
+            return denoiseElement.lastProcessingError
         }
+
+        return nil
     }
 
     private func measureAudioProcessing<T>(_ body: () -> T) -> T {

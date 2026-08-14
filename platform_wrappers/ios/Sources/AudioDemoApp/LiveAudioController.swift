@@ -9,6 +9,7 @@ final class LiveAudioController {
     var telemetry: SpenchTelemetry {
         spenchUnit?.telemetry ?? .empty
     }
+    var onProcessingFailure: ((String) -> Void)?
 
     func start(features: SpenchFeatures,
                settings: SpenchSettings,
@@ -20,6 +21,7 @@ final class LiveAudioController {
             try session.setActive(true)
             let spenchUnit = try SpenchAVAudioUnit(features: features, settings: settings)
             spenchUnit.onLowPerformance = onLowPerformance
+            spenchUnit.onProcessingFailure = onProcessingFailure
             try configureEngine(spenchUnit: spenchUnit)
             completion(nil)
         } catch {
@@ -34,6 +36,7 @@ final class LiveAudioController {
 
             if let spenchUnit {
                 spenchUnit.onLowPerformance = nil
+                spenchUnit.onProcessingFailure = nil
                 spenchUnit.reset()
                 if let audioUnit = spenchUnit.auAudioUnit as? SpenchAUAudioUnit,
                    audioUnit.renderResourcesAllocated {

@@ -137,6 +137,7 @@ Available fields:
 - `lowPerformanceMaxRefillTimeFactor`
 - `minLatency`
 - `latencyIncreaseStep`
+- `maxProcessingChunkSeconds`
 - `telemetryRoundingMilliseconds`
 - `useVadNormalization`
 - `unstableReverseProcessingOrder`
@@ -146,9 +147,10 @@ Usage example:
 
 ```swift
 let settings = SpenchSettings(minLatency: 0.08,
-                              latencyIncreaseStep: 0.04,
-                              telemetryRoundingMilliseconds: 0.25,
-                              useVadNormalization: true)
+                               latencyIncreaseStep: 0.04,
+                               telemetryRoundingMilliseconds: 0.25,
+                               useVadNormalization: true,
+                               maxProcessingChunkSeconds: 0.032)
 
 let unit = try SpenchAVAudioUnit(features: .standard, settings: settings)
 ```
@@ -157,6 +159,9 @@ Notes:
 
 - Settings are init-time only for a given `SpenchAUAudioUnit` / `SpenchAVAudioUnit` instance.
 - To apply different settings, create a new audio unit or restart the processing flow that owns it.
+- `maxProcessingChunkSeconds` defaults to 16 ms. The AU worker floors it to 16 ms steps, caps it by
+  `minLatency` and 256 ms, and never processes less than 16 ms. It does not change direct
+  `SpenchProcessor` buffer processing.
 
 ## Models
 

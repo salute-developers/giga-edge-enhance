@@ -7,8 +7,11 @@ final class AudioDemoAppUITests: XCTestCase {
         app.navigationBars.buttons["Settings"].tap()
 
         let windowField = app.textFields["lowPerformanceWindowField"]
+        let maxProcessingChunkField = app.textFields["maxProcessingChunkSecondsField"]
 
         XCTAssertTrue(windowField.waitForExistence(timeout: 5))
+        XCTAssertTrue(maxProcessingChunkField.waitForExistence(timeout: 5))
+        clearAndType("0.032", into: maxProcessingChunkField)
         clearAndType("2.5", into: windowField)
         app.navigationBars.buttons["Save"].tap()
 
