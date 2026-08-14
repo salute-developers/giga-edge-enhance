@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings"
+            android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/settings_help"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+
+        <TextView style="@style/SpenchDemoSettingsLabel" android:text="@string/setting_low_performance_window_seconds" />
+        <EditText android:id="@+id/lowPerformanceWindowSecondsEdit" style="@style/SpenchDemoSettingsEdit" />
+
+        <TextView style="@style/SpenchDemoSettingsLabel" android:text="@string/setting_low_performance_max_refill_times" />
+        <EditText android:id="@+id/lowPerformanceMaxRefillTimesEdit" style="@style/SpenchDemoSettingsEdit" android:inputType="number" />
+
+        <TextView style="@style/SpenchDemoSettingsLabel" android:text="@string/setting_low_performance_max_refill_time_factor" />
+        <EditText android:id="@+id/lowPerformanceMaxRefillTimeFactorEdit" style="@style/SpenchDemoSettingsEdit" />
+
+        <TextView style="@style/SpenchDemoSettingsLabel" android:text="@string/setting_min_latency" />
+        <EditText android:id="@+id/minLatencyEdit" style="@style/SpenchDemoSettingsEdit" />
+
+        <TextView style="@style/SpenchDemoSettingsLabel" android:text="@string/setting_latency_increase_step" />
+        <EditText android:id="@+id/latencyIncreaseStepEdit" style="@style/SpenchDemoSettingsEdit" />
+
+        <TextView style="@style/SpenchDemoSettingsLabel" android:text="@string/setting_max_processing_chunk_seconds" />
+        <EditText android:id="@+id/maxProcessingChunkSecondsEdit" style="@style/SpenchDemoSettingsEdit" />
+
+        <TextView style="@style/SpenchDemoSettingsLabel" android:text="@string/setting_telemetry_rounding_milliseconds" />
+        <EditText android:id="@+id/telemetryRoundingMillisecondsEdit" style="@style/SpenchDemoSettingsEdit" />
+
+        <CheckBox
+            android:id="@+id/useVadNormalizationCheckbox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/setting_use_vad_normalization" />
+
+        <CheckBox
+            android:id="@+id/reverseProcessingOrderCheckbox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/setting_reverse_processing_order" />
+
+        <TextView style="@style/SpenchDemoSettingsLabel" android:text="@string/setting_custom_normalization_config" />
+        <EditText
+            android:id="@+id/customNormalizationConfigEdit"
+            style="@style/SpenchDemoSettingsEdit"
+            android:gravity="top|start"
+            android:inputType="textMultiLine"
+            android:minLines="3"
+            android:singleLine="false" />
+
+        <TextView
+            android:id="@+id/settingsErrorText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/cancelSettingsButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="@string/cancel" />
+
+            <Button
+                android:id="@+id/saveSettingsButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="@string/save" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,20 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.SpenchDemo" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#0C5A53</item>
+        <item name="colorSecondary">#C77D2B</item>
+        <item name="android:statusBarColor" tools:targetApi="l">@android:color/transparent</item>
+    </style>
+
+    <style name="SpenchDemoSettingsLabel" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">14dp</item>
+    </style>
+
+    <style name="SpenchDemoSettingsEdit">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:inputType">numberDecimal|numberSigned</item>
+        <item name="android:singleLine">true</item>
+    </style>
+</resources>

@@ -1,0 +1,27 @@
+.gradle/
+.kotlin/
+.idea/
+local.properties
+build/
+captures/
+*.iml
+
+# Module build outputs
+**/build/
+
+# Android artifacts
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Native outputs
+*.so
+.cxx/
+externalNativeBuild/
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
