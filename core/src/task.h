@@ -9,21 +9,13 @@
 #include <vector>
 
 #include "src/context.h"
+#include "src/pipeline_stage.h"
 
 namespace gigaedge::denoiser {
 
 class Task;
 
 using TaskPtr = std::shared_ptr<gigaedge::denoiser::Task>;
-
-enum PipelineStage {
-  orig_chunk = 0,
-  fourier_transformed_spec = 1,
-  predicted_mask = 2,
-  predicted_spec = 3,
-  enhanced_chunk = 4,
-  skipped_chunk = 5
-};
 
 struct TaskData {
   TaskData() : context(nullptr) {}
@@ -52,8 +44,7 @@ class Task {
   TaskData data;
   std::string session_id;
   std::string message_id;
-  PipelineStage stage;
-  Task() : stage(orig_chunk) {}
+  TaskState state;
 };
 
 // float Frame2Seconds(int frames, const TaskParams& params);

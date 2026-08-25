@@ -80,54 +80,36 @@ void DenoiserQOnnxRunner::infer(gigaedge::denoiser::Task* denoise_task) {
     denoise_context->prev_features.pop();
   }
 
-  if (denoise_task->stage == gigaedge::denoiser::PipelineStage::fourier_transformed_spec) {
-    std::vector<std::vector<float>*> inputs;
-    std::vector<float> mag;
-    const auto& specs = denoise_data.input_spectrogram;
+  denoise_task->state.require(gigaedge::denoiser::PipelineStage::input_spectrum_ready);
 
-    const std::size_t num_feats = specs.front().size();
-    const std::size_t num_frames = specs.size();
+  std::vector<std::vector<float>*> inputs;
+  std::vector<float> mag;
+  const auto& specs = denoise_data.input_spectrogram;
+  const std::size_t num_feats = specs.front().size();
+  const std::size_t num_frames = specs.size();
 
-    // Pre-size output buffer for (freq, time) layout: [F * T]
-    mag.resize(num_feats * num_frames);
-
-    // Fill mag so that time is the fastest axis: mag[f * T + t]
-    for (std::size_t t = 0; t < num_frames; ++t) {
-      specs[t].write_magnitude_interleaved(mag, t, num_frames);
-    }
-
-    if (mag.size() % num_feats != 0) {
-      throw std::runtime_error("mag size is not divisible by num_feats");
-    }
-
-    std::vector<std::vector<int64_t>> resolved_input_shapes = model_input_shapes_;
-    set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], num_frames);
-
-    prepare_input_in_place(mag, inputs, denoise_context);
-    init_output_tensors(denoise_data, num_feats * num_frames * 2);
-    std::vector<Ort::Value> outputs;
-
-    run(inputs, outputs, resolved_input_shapes);
-    parse_results<float>(outputs, denoise_data);
-
-    if (denoise_context->prev_features.size() < model_params_.network_input_ctx_len) {
-      denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
-      std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
-      denoise_task->stage = gigaedge::denoiser::PipelineStage::skipped_chunk;
-    } else if (denoise_context->prev_features.size() == model_params_.network_input_ctx_len &&
-               denoise_context->prev_spectrogram.real.size() == 0) {
-      denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
-      std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
-      denoise_task->stage = gigaedge::denoiser::PipelineStage::predicted_mask;
-    } else {
-      denoise_task->stage = gigaedge::denoiser::PipelineStage::predicted_mask;
-    }
-
-    denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
-
-  } else {
-    throw std::runtime_error("State is not appropriate");
+  mag.resize(num_feats * num_frames);
+  for (std::size_t t = 0; t < num_frames; ++t) {
+    specs[t].write_magnitude_interleaved(mag, t, num_frames);
   }
+
+  if (mag.size() % num_feats != 0) {
+    throw std::runtime_error("mag size is not divisible by num_feats");
+  }
+
+  std::vector<std::vector<int64_t>> resolved_input_shapes = model_input_shapes_;
+  set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], num_frames);
+  prepare_input_in_place(mag, inputs, denoise_context);
+  init_output_tensors(denoise_data, num_feats * num_frames * 2);
+  std::vector<Ort::Value> outputs;
+  run(inputs, outputs, resolved_input_shapes);
+  parse_results<float>(outputs, denoise_data);
+
+  if (denoise_context->prev_features.size() < model_params_.network_input_ctx_len) {
+    denoise_task->state.set_outcome(gigaedge::denoiser::ChunkOutcome::warming_up);
+  }
+  denoise_task->state.advance_to(gigaedge::denoiser::PipelineStage::model_output_ready);
+  denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
 }
 
 DenoiserFOnnxRunner::DenoiserFOnnxRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
@@ -194,28 +176,20 @@ void DenoiserFOnnxRunner::infer(gigaedge::denoiser::Task* denoise_task) {
   }
   denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
 
-  if (denoise_task->stage == gigaedge::denoiser::PipelineStage::fourier_transformed_spec) {
-    std::vector<std::vector<float>*> inputs;
-    std::vector<float> mag = denoise_data.input_spectrogram[0].get_magnitude();
-    DenoiserFOnnxRunner::prepare_input_in_place(mag, inputs, denoise_context);
-    init_output_tensors(denoise_data);
-    std::vector<Ort::Value> outputs;
+  denoise_task->state.require(gigaedge::denoiser::PipelineStage::input_spectrum_ready);
 
-    run(inputs, outputs);
-    parse_results<float>(outputs, denoise_data);
+  std::vector<std::vector<float>*> inputs;
+  std::vector<float> mag = denoise_data.input_spectrogram[0].get_magnitude();
+  DenoiserFOnnxRunner::prepare_input_in_place(mag, inputs, denoise_context);
+  init_output_tensors(denoise_data);
+  std::vector<Ort::Value> outputs;
+  run(inputs, outputs);
+  parse_results<float>(outputs, denoise_data);
 
-    if (denoise_context->prev_spectrogram.real.size() == 0) {
-      denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
-      std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
-      denoise_task->stage = gigaedge::denoiser::PipelineStage::predicted_mask;
-    } else if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len + 1) {
-      throw std::runtime_error("Incorrect number of previous states!");
-    } else {
-      denoise_task->stage = gigaedge::denoiser::PipelineStage::predicted_mask;
-    }
-  } else {
-    throw std::runtime_error("State is not appropriate");
+  if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len + 1) {
+    throw std::runtime_error("Incorrect number of previous states!");
   }
+  denoise_task->state.advance_to(gigaedge::denoiser::PipelineStage::model_output_ready);
 }
 
 DenoiserSFOnnxRunner::DenoiserSFOnnxRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
@@ -292,44 +266,34 @@ void DenoiserSFOnnxRunner::infer(gigaedge::denoiser::Task* denoise_task) {
   }
   denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
 
-  if (denoise_task->stage == gigaedge::denoiser::PipelineStage::fourier_transformed_spec) {
-    std::vector<std::vector<float>*> inputs;
-    std::vector<float> mag;
-    const auto& specs = denoise_data.input_spectrogram;
+  denoise_task->state.require(gigaedge::denoiser::PipelineStage::input_spectrum_ready);
 
-    const std::size_t num_feats = specs.front().size();
-    const std::size_t num_frames = specs.size();
+  std::vector<std::vector<float>*> inputs;
+  std::vector<float> mag;
+  const auto& specs = denoise_data.input_spectrogram;
+  const std::size_t num_feats = specs.front().size();
+  const std::size_t num_frames = specs.size();
 
-    // Layout: [F * T], where time is fastest axis: mag[f * T + t]
-    mag.resize(num_feats * num_frames);
-    for (std::size_t t = 0; t < num_frames; ++t) {
-      specs[t].write_magnitude_interleaved(mag, t, num_frames);
-    }
-
-    if (mag.size() % num_feats != 0) {
-      throw std::runtime_error("mag size is not divisible by num_feats");
-    }
-
-    std::vector<std::vector<int64_t>> resolved_input_shapes = model_input_shapes_;
-    set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], num_frames);
-
-    prepare_input_in_place(mag, inputs, denoise_context);
-    init_output_tensors(denoise_data, static_cast<uint32_t>(num_feats * num_frames * 2));
-    std::vector<Ort::Value> outputs;
-    run(inputs, outputs, resolved_input_shapes);
-    parse_results<float>(outputs, denoise_data);
-    if (denoise_context->prev_spectrogram.real.size() == 0) {
-      denoise_data.enhanced_wav.resize(denoise_data.waveform.size() / 2);
-      std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
-      denoise_task->stage = gigaedge::denoiser::PipelineStage::predicted_mask;
-    } else if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len + 1) {
-      throw std::runtime_error("Incorrect number of previous states!");
-    } else {
-      denoise_task->stage = gigaedge::denoiser::PipelineStage::predicted_mask;
-    }
-  } else {
-    throw std::runtime_error("State is not appropriate");
+  mag.resize(num_feats * num_frames);
+  for (std::size_t t = 0; t < num_frames; ++t) {
+    specs[t].write_magnitude_interleaved(mag, t, num_frames);
   }
+  if (mag.size() % num_feats != 0) {
+    throw std::runtime_error("mag size is not divisible by num_feats");
+  }
+
+  std::vector<std::vector<int64_t>> resolved_input_shapes = model_input_shapes_;
+  set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], num_frames);
+  prepare_input_in_place(mag, inputs, denoise_context);
+  init_output_tensors(denoise_data, static_cast<uint32_t>(num_feats * num_frames * 2));
+  std::vector<Ort::Value> outputs;
+  run(inputs, outputs, resolved_input_shapes);
+  parse_results<float>(outputs, denoise_data);
+
+  if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len + 1) {
+    throw std::runtime_error("Incorrect number of previous states!");
+  }
+  denoise_task->state.advance_to(gigaedge::denoiser::PipelineStage::model_output_ready);
 }
 }  // namespace onnx
 }  // namespace util

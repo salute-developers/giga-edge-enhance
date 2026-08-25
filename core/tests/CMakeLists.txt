@@ -7,6 +7,7 @@ set(TEST_SRC
     src/test_cpp_api.cpp
     src/test_c_api.cpp
     src/test_config_reader.cpp
+    src/test_pipeline_stage.cpp
     src/test_packed_model.cpp
     src/test_audio_handler.cpp
     src/test_audio_processing.cpp

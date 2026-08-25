@@ -8,6 +8,7 @@
 #include <cmath>
 #include <deque>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace gigaedge::denoiser {
@@ -91,7 +92,17 @@ void FeatureExtractorRunner::update_prev_from_new_spec(gigaedge::denoiser::Conte
   new_spec.copy_frame_to(ctx.prev_spectrogram, feat_num, input_chunk_num - 1);
 }
 
-void FeatureExtractorRunner::handle_predicted_mask(gigaedge::denoiser::Task* task) {
+void FeatureExtractorRunner::fill_warming_up_output(gigaedge::denoiser::Task* task) {
+  task->data.enhanced_wav.resize(params_.num_frame_stride_samples());
+  task->state.advance_to(PipelineStage::enhanced_ready);
+}
+
+void FeatureExtractorRunner::handle_model_output(gigaedge::denoiser::Task* task) {
+  if (task->state.is(ChunkOutcome::warming_up)) {
+    fill_warming_up_output(task);
+    return;
+  }
+
   auto& d = task->data;
   auto& ctx = *d.context;
 
@@ -114,7 +125,8 @@ void FeatureExtractorRunner::handle_predicted_mask(gigaedge::denoiser::Task* tas
       }
 
       d.new_spectrogram.copy_frame_to(ctx.prev_spectrogram, feat_num, 0);
-      task->stage = PipelineStage::skipped_chunk;
+      task->state.set_outcome(ChunkOutcome::warming_up);
+      fill_warming_up_output(task);
       return;
     }
 
@@ -123,7 +135,7 @@ void FeatureExtractorRunner::handle_predicted_mask(gigaedge::denoiser::Task* tas
     feature_extractor_ptr_->istft_apply(d.new_spectrogram, d.enhanced_wav);
 
     update_prev_from_new_spec(ctx, d.new_spectrogram, input_chunk_num, feat_num);
-    task->stage = PipelineStage::enhanced_chunk;
+    task->state.advance_to(PipelineStage::enhanced_ready);
     return;
   }
 
@@ -133,60 +145,44 @@ void FeatureExtractorRunner::handle_predicted_mask(gigaedge::denoiser::Task* tas
   feature_extractor_ptr_->istft_apply(concat, d.enhanced_wav);
 
   update_prev_from_new_spec(ctx, d.new_spectrogram, input_chunk_num, feat_num);
-  task->stage = PipelineStage::enhanced_chunk;
+  task->state.advance_to(PipelineStage::enhanced_ready);
+}
+
+void FeatureExtractorRunner::handle_waveform(gigaedge::denoiser::Task* task) {
+  auto& gigadenoiser_data = task->data;
+
+  if (gigadenoiser_data.waveform.empty()) {
+    throw std::runtime_error("Input signal is empty!");
+  }
+
+  feature_extractor_ptr_->stft_apply(gigadenoiser_data.waveform, gigadenoiser_data.input_spectrogram);
+
+  if (gigadenoiser_data.input_spectrogram.empty()) {
+    throw std::runtime_error("Spectrogram is calculated incorrectly! Something with input data!");
+  }
+
+  task->state.advance_to(PipelineStage::input_spectrum_ready);
 }
 
 void FeatureExtractorRunner::run(gigaedge::denoiser::Task* task) {
   if (!task) {
     throw std::invalid_argument("FeatureExtractorRunner::run: task is null");
   }
-  auto& gigadenoiser_data = task->data;
-  auto& context = gigadenoiser_data.context;
 
-  if (task->stage == PipelineStage::orig_chunk) {
-    if (gigadenoiser_data.waveform.size() == 0) {
-      // error
-      throw std::runtime_error("Input signal is empty!");
-    }
-
-    feature_extractor_ptr_->stft_apply(gigadenoiser_data.waveform, gigadenoiser_data.input_spectrogram);
-
-    if (gigadenoiser_data.input_spectrogram.size() < 1) {
-      // error
-      throw std::runtime_error("Spectrogram is calculated incorectly! Something with input data!");
-    }
-
-    task->stage = PipelineStage::fourier_transformed_spec;
-  } else if (task->stage == PipelineStage::predicted_mask) {
-    handle_predicted_mask(task);
-    return;
-  } else if (task->stage == PipelineStage::predicted_spec) {
-    uint32_t feat_num = context->prev_spectrogram.real.size();
-    if (feat_num == 0) {
-      context->prev_spectrogram = gigadenoiser_data.new_spectrogram;
-      task->stage = PipelineStage::skipped_chunk;
+  switch (task->state.stage()) {
+    case PipelineStage::waveform_ready:
+      handle_waveform(task);
       return;
-    }
-
-    ComplexNumber<float> concatenated_spec(feat_num * 2, feat_num * 2);
-
-    auto previous_frame = std::slice(0, feat_num, 1);
-    concatenated_spec.real[previous_frame] = context->prev_spectrogram.real;
-    concatenated_spec.imag[previous_frame] = context->prev_spectrogram.imag;
-
-    auto current_frame = std::slice(feat_num, feat_num, 1);
-    concatenated_spec.real[current_frame] = gigadenoiser_data.new_spectrogram.real;
-    concatenated_spec.imag[current_frame] = gigadenoiser_data.new_spectrogram.imag;
-
-    feature_extractor_ptr_->istft_apply(concatenated_spec, gigadenoiser_data.enhanced_wav);
-    context->prev_spectrogram = gigadenoiser_data.new_spectrogram;
-    task->stage = PipelineStage::enhanced_chunk;
-  } else if (task->stage == PipelineStage::skipped_chunk) {
-    // network pass the input to output and nothing to do
-    gigadenoiser_data.enhanced_wav.resize(params_.num_frame_stride_samples());
-  } else {
-    throw std::runtime_error("State is incorrect!");
+    case PipelineStage::model_output_ready:
+      handle_model_output(task);
+      return;
+    case PipelineStage::input_spectrum_ready:
+    case PipelineStage::enhanced_ready:
+      break;
   }
+
+  throw std::runtime_error(std::string("FeatureExtractorRunner::run: unexpected stage '") +
+                           to_string(task->state.stage()) + "'");
 }
 
 void FeatureExtractorRunner::warm_up() {

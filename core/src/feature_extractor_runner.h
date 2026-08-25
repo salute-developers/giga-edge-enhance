@@ -37,8 +37,9 @@ class FeatureExtractorRunner {
   [[nodiscard]] uint64_t get_pow_spec_feat_size_samples() const;
 
  private:
-  // Handles PipelineStage::predicted_mask.
-  void handle_predicted_mask(gigaedge::denoiser::Task* task);
+  void handle_waveform(gigaedge::denoiser::Task* task);
+  void handle_model_output(gigaedge::denoiser::Task* task);
+  void fill_warming_up_output(gigaedge::denoiser::Task* task);
 
   // Concatenates frames from input_spectrogram into a single ComplexNumber (frames laid out sequentially).
   static gigaedge::denoiser::ComplexNumber<float> merge_input_spectrogram(
