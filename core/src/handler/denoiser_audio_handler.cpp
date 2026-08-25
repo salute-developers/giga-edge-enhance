@@ -116,7 +116,7 @@ GigaDenoiserRetCode DenoiserAudioHandler::infer_frame(std::unique_ptr<gigaedge::
   if (ret_code == GigaDenoiserRetCode::SUCCESS) {
     try {
       feature_extractor_runner_ptr_->run(task_ptr.get());
-      if (task_ptr->stage != PipelineStage::enhanced_chunk) {
+      if (task_ptr->state.is(ChunkOutcome::warming_up)) {
         ret_code = GigaDenoiserRetCode::CONTEXT_ACCUMULATION;
       }
     } catch (const std::exception& e) {
@@ -214,7 +214,6 @@ GigaDenoiserRetCode DenoiserAudioHandler::process_frame_internal(Context<float>*
     }
   }
 
-  task_ptr->stage = PipelineStage::orig_chunk;
   if (ret_code == GigaDenoiserRetCode::SUCCESS) {
     if (skip_inference) {
       task_ptr->data.enhanced_wav = resampled_input_result;
@@ -281,10 +280,9 @@ GigaDenoiserRetCode DenoiserAudioHandler::finalize_inference(struct gigaedge::de
           last_input_resampled_data.begin() + feature_extractor_runner_ptr_->get_frame_hop_size_samples() * (i + 1));
 
       fill_in_data_for_processing(task_ptr, input_audio_frame);
-      task_ptr->stage = PipelineStage::orig_chunk;
       ret_code = infer_frame(task_ptr);
 
-      if (task_ptr->stage != PipelineStage::enhanced_chunk ||
+      if (!task_ptr->state.is(PipelineStage::enhanced_ready) ||
           (ret_code != GigaDenoiserRetCode::SUCCESS && ret_code != GigaDenoiserRetCode::CONTEXT_ACCUMULATION)) {
         spdlog::warn("Unexpected case happend");
         break;

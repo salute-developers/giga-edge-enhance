@@ -27,6 +27,7 @@ set(GDN_SOURCES
   src/audio_processor.cpp
   src/echo_canceller.cpp
   src/logger.cpp
+  src/pipeline_stage.cpp
   src/task.cpp
   src/feature_params.cpp
 )
