@@ -157,6 +157,7 @@ toolchain. Docker Web builds automatically use `platform_wrappers/web/.nvmrc`.
 | `native-release-onnx` | `build`, `test`, `package` | Release ONNX Runtime build, tests, and packages. |
 | `native-release-tflite` | `build`, `test`, `package` | Release TensorFlow Lite build, tests, and packages. |
 | `native-asan-onnx` | `build`, `test` | Clang AddressSanitizer ONNX Runtime validation. |
+| `native-model-packer` | `build` | Standalone packed-model tool without an inference engine. |
 | `wasm-release` | `build`, `test` | Standard ONNX Runtime WebAssembly wrapper. |
 | `wasm-dsp-release` | `build`, `test` | Engine-free DSP WebAssembly wrapper and size-budget check. |
 | `android` | `build`, `test` | Android SDK build and test workflow. |
@@ -207,7 +208,6 @@ There are some options which could be passed for cmake configuration:
 -DCMAKE_TOOLCHAIN_FILE=<file_path> - NDK path for Android platforms building
 -DANDROID_ABI=architecture - CPU architecture
 -DANDROID_NATIVE_API_LEVEL=version - Android API version
--DBUILD_JAVA_BIND=OFF (default) - Build Java wrapper library for __spench__
 ```
 
 ```
@@ -221,7 +221,7 @@ There are some options which could be passed for cmake configuration:
 
 ```
 -DBUILD_WITH_ADDRESS_SANITIZER=OFF (default) - Build library with or without memory sanitizer
--DBUILD_WITHOUT_SOXR=OFF (default) - Build with or without libsoxr library for audio resampling.
+-DBUILD_RESAMPLER=ON (default) - Build with libsoxr audio resampling.
 ```
 Example:
 
@@ -237,7 +237,7 @@ make -j$(nproc)
 For MacOS platform, only the following __spench__ configuration is supported:
 
 ```
-cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_TFLITE_ENGINE=ON -DBUILD_DEMO=ON ..
+cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_TFLITE_ENGINE=ON -DBUILD_CLI=ON ..
 make -j$(nproc)
 ```
 Set BUILD_APPLE_ARCH to arm for Apple Silicon (M1/M2), or to intel for Intel-based Mac.
@@ -246,7 +246,7 @@ For iOS device platform, only the following __spench__ configuration is supporte
 
 ```
 cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DBUILD_ONNX_ENGINE=ON \
--DBUILD_DEMO=ON -DBUILD_APPLE_ARCH=arm -DCMAKE_SYSTEM_NAME=iOS ..
+-DBUILD_CLI=ON -DBUILD_APPLE_ARCH=arm -DCMAKE_SYSTEM_NAME=iOS ..
 make -j$(nproc)
 ```
 
@@ -254,7 +254,7 @@ For Android platform, __spench__ could be configured with Java binding library b
 
 ```
 cmake -DCMAKE_TOOLCHAIN_FILE=/<path_to_ndk>/build/cmake/android.toolchain.cmake \
-        -DANDROID_ABI=x86_64 -DANDROID_NATIVE_API_LEVEL=29 -DBUILD_JAVA_BIND=ON ..
+        -DANDROID_ABI=x86_64 -DANDROID_NATIVE_API_LEVEL=29 ..
 make -j$(nproc)
 ```
 
@@ -262,7 +262,7 @@ For Windows platform, __spench__ could be built by the following way:
 
 ```
 cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_TFLITE_ENGINE=ON \
--DBUILD_DEMO=OFF -DCPUINFO_BUILD_UNIT_TESTS=OFF ..
+-DBUILD_CLI=OFF -DCPUINFO_BUILD_UNIT_TESTS=OFF ..
 msbuild spench.sln /property:Configuration=Release /property:Platform=x64 -m -target:ALL_BUILD
 ```
 
@@ -782,14 +782,14 @@ Both are located under `spench/demo/`.
 Enable demos in CMake and build:
 
 ```bash
-cmake -S . -B build -DBUILD_DEMO=ON
+cmake -S . -B build -DBUILD_CLI=ON
 cmake --build build -j
 ```
 
 ---
 
 ## Binaries produced
-When `-DBUILD_DEMO=ON` is set, the build generates at least these executables:
+When `-DBUILD_CLI=ON` is set, the build generates at least these executables:
 
 - **`demo_cpp`** — from `1-cpp_denoiser_api_demo.cpp`
 - **`spench-tool`** — from `spench_cli.cpp` (subcommands: `denoise`, `norm`, `echo`)

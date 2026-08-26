@@ -34,9 +34,9 @@ add_executable(spench_tests ${TEST_SRC})
 
 spench_apply_build_config(spench_tests)
 
-target_link_libraries(spench_tests PRIVATE spench yaml-cpp util::sound util__echo util__metrics dsplib spdlog_header_only)
+target_link_libraries(spench_tests PRIVATE spench util::packed_model yaml-cpp util::sound util__echo util__metrics dsplib spdlog_header_only)
 
-if (NOT BUILD_WITHOUT_SOXR)
+if(BUILD_RESAMPLER)
   target_link_libraries(spench_tests PRIVATE soxr)
 endif()
 

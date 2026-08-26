@@ -1,6 +1,6 @@
 #include <catch.hpp>
 #include <spench/packed_model.h>
-#include <spench/src/packed_model_internal.h>
+#include <spench/util/packed_model/packed_model_writer.h>
 #include <string>
 #include <vector>
 

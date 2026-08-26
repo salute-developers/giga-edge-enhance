@@ -1,6 +1,6 @@
 #include "spench/util/sound/resampler.h"
 
-#ifndef BUILD_WITHOUT_SOXR
+#ifdef BUILD_RESAMPLER
 #include <soxr.h>
 #include <spench/util/sound/resampler_fwd.h>
 #endif
@@ -14,7 +14,7 @@
 namespace util {
 namespace sound {
 
-#ifndef BUILD_WITHOUT_SOXR
+#ifdef BUILD_RESAMPLER
 
 class ResamplerImpl {
  public:

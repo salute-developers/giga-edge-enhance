@@ -19,27 +19,31 @@ include(SpenchProfile)
 include(SpenchBuildConfig)
 include(SpenchDependencies)
 
-add_subdirectory(spench)
+if(SPENCH_PROFILE STREQUAL "model-packer")
+  add_subdirectory(spench/util/packed_model)
+  add_subdirectory(spench/cli/model_packer)
+else()
+  add_subdirectory(spench)
 
-include(CTest)
-enable_testing()
+  include(CTest)
+  enable_testing()
 
-if(BUILD_TESTING)
-  add_subdirectory(spench/tests)
+  if(BUILD_TESTING)
+    add_subdirectory(spench/tests)
+  endif()
+
+  if(BUILD_CLI)
+    add_subdirectory(spench/cli)
+  endif()
+
+  if(EMSCRIPTEN)
+    message(STATUS "Building spench for WebAssembly")
+    add_subdirectory(platform_wrappers/wasm)
+  endif()
 endif()
 
-if(BUILD_DEMO)
-  add_subdirectory(spench/demo)
+if(NOT SPENCH_PROFILE STREQUAL "model-packer")
+  include(SpenchInstall)
 endif()
 
-if(BUILD_CLI_TOOLS)
-  add_subdirectory(spench/cli_tools)
-endif()
-
-if(EMSCRIPTEN)
-  message(STATUS "Building spench for WebAssembly")
-  add_subdirectory(platform_wrappers/wasm)
-endif()
-
-include(SpenchInstall)
 include(SpenchSummary)

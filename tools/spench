@@ -19,6 +19,7 @@ PRESET_STAGES = {
     "native-release-onnx": "native",
     "native-release-tflite": "native",
     "native-asan-onnx": "native",
+    "native-model-packer": "native",
     "wasm-release": "wasm",
     "wasm-dsp-release": "wasm",
 }
@@ -106,7 +107,7 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
     build_command = ["cmake", "--build", "--preset", preset]
     if build_dir is not None:
         configure_command.extend(("-B", build_dir))
-        if stage in {"native", "wasm"}:
+        if stage in {"native", "wasm"} and preset != "native-model-packer":
             configure_command.extend(("-Donnxruntime_USE_PREINSTALLED_EIGEN=ON",
                                       "-Deigen_SOURCE_PATH=/opt/eigen",
                                       "-DCMAKE_AR=/usr/bin/llvm-ar",

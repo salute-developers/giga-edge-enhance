@@ -8,11 +8,10 @@ endif()
 
 set(BUILD_TFLITE_ENGINE ON CACHE BOOL "Build with tflite inference engine." FORCE)
 set(BUILD_ONNX_ENGINE OFF CACHE BOOL "Build with onnx inference engine." FORCE)
-set(BUILD_JAVA_BIND OFF CACHE BOOL "Compile java bind library." FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build all libraries dynamically." FORCE)
-set(BUILD_DEMO OFF CACHE BOOL "Build with demo." FORCE)
+set(BUILD_CLI OFF CACHE BOOL "Build command-line tools and demos." FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "Build tests." FORCE)
-set(BUILD_WITHOUT_SOXR OFF CACHE BOOL "Build with or without libsoxr library for audio resampling." FORCE)
+set(BUILD_RESAMPLER ON CACHE BOOL "Build with libsoxr audio resampling." FORCE)
 
 add_subdirectory("${SPENCH_ROOT_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/spench-core")
 
@@ -22,7 +21,6 @@ add_executable(
     spench_processor_async_test.cpp
     ../ring_buffer.cpp
     ../spench_processor.cpp
-    "${SPENCH_ROOT_DIR}/spench/src/packed_model.cpp"
 )
 
 target_include_directories(
@@ -43,4 +41,5 @@ target_link_libraries(
     spench-native-tests
     PRIVATE
     spench
+    util::packed_model
 )

@@ -6,7 +6,7 @@
 #include <random>
 #include <string>
 
-#include "spench/src/packed_model_internal.h"
+#include "spench/util/packed_model/packed_model_writer.h"
 #include "spench/src/spench_config_reader.h"
 
 namespace fs = std::filesystem;

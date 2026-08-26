@@ -624,7 +624,7 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 fra
 }
 
 #if 0
-#ifndef BUILD_WITHOUT_SOXR
+#ifdef BUILD_RESAMPLER
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resampling [spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
 #else
@@ -945,7 +945,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
 //   IsVectorsClose(reference, prediction, 0.01);
 // }
 
-#ifndef BUILD_WITHOUT_SOXR
+#ifdef BUILD_RESAMPLER
 TEST_CASE("SUCCEED Run inference with the super fast 8 kHz on huge single chunk (16000 frames) [spench c++ api]") {
   static constexpr char yaml[] = R"(
 model:

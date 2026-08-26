@@ -152,7 +152,7 @@ TEST_CASE("SUCCEED Create RangeControl and check process method [sound]") {
   IsVectorsClose(test_out.out, gt_out, 0.1);
 }
 
-#ifndef BUILD_WITHOUT_SOXR
+#ifdef BUILD_RESAMPLER
 TEST_CASE("SUCCEED Resampler identity when sample rates match [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().Init(16, 16, 48000, 48000));
 

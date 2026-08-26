@@ -9,7 +9,7 @@ set(SPENCH_DEPS
 add_subdirectory(contrib)
 spench_relax_ios_third_party_warnings()
 
-if(NOT BUILD_WITHOUT_SOXR)
+if(BUILD_RESAMPLER)
   if(EMSCRIPTEN)
     set(WITH_LSR_BINDINGS OFF)
   endif()
@@ -45,8 +45,8 @@ if(BUILD_TFLITE_ENGINE OR BUILD_ONNX_ENGINE OR TARGET onnxruntime::onnxruntime)
     src/inference_runner.cpp
     src/spench_audio_denoise.cpp
     src/spench_c.cpp
-    src/packed_model.cpp
   )
+  list(APPEND SPENCH_DEPS util__packed_model)
 endif()
 
 if(BUILD_TFLITE_ENGINE)
@@ -55,7 +55,7 @@ elseif(BUILD_ONNX_ENGINE OR TARGET onnxruntime::onnxruntime)
   list(APPEND SPENCH_DEPS util__onnx)
 endif()
 
-if(NOT BUILD_WITHOUT_SOXR)
+if(BUILD_RESAMPLER)
   list(APPEND SPENCH_DEPS soxr)
 endif()
 

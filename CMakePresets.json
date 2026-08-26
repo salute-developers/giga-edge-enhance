@@ -35,7 +35,7 @@
         "BUILD_ONNX_ENGINE": "ON",
         "BUILD_TFLITE_ENGINE": "OFF",
         "BUILD_TESTING": "ON",
-        "BUILD_DEMO": "ON"
+        "BUILD_CLI": "ON"
       }
     },
     {
@@ -48,7 +48,7 @@
         "BUILD_ONNX_ENGINE": "ON",
         "BUILD_TFLITE_ENGINE": "OFF",
         "BUILD_TESTING": "ON",
-        "BUILD_DEMO": "ON"
+        "BUILD_CLI": "ON"
       }
     },
     {
@@ -60,7 +60,8 @@
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_ONNX_ENGINE": "OFF",
         "BUILD_TFLITE_ENGINE": "ON",
-        "BUILD_TESTING": "ON"
+        "BUILD_TESTING": "ON",
+        "BUILD_CLI": "ON"
       }
     },
     {
@@ -77,6 +78,20 @@
       }
     },
     {
+      "name": "native-model-packer",
+      "displayName": "Native Model Packer",
+      "inherits": "native-base",
+      "cacheVariables": {
+        "SPENCH_PROFILE": "model-packer",
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_ONNX_ENGINE": "OFF",
+        "BUILD_TFLITE_ENGINE": "OFF",
+        "BUILD_CLI": "ON",
+        "BUILD_RESAMPLER": "OFF",
+        "BUILD_TESTING": "OFF"
+      }
+    },
+    {
       "name": "wasm-release",
       "displayName": "WebAssembly Release",
       "inherits": "base",
@@ -87,7 +102,7 @@
         "BUILD_ONNX_ENGINE": "ON",
         "BUILD_TFLITE_ENGINE": "OFF",
         "BUILD_TESTING": "OFF",
-        "BUILD_DEMO": "OFF"
+        "BUILD_CLI": "OFF"
       }
     },
     {
@@ -97,7 +112,7 @@
       "cacheVariables": {
         "BUILD_ONNX_ENGINE": "OFF",
         "BUILD_TFLITE_ENGINE": "OFF",
-        "BUILD_DSP_WASM": "ON"
+        "BUILD_DSP": "ON"
       }
     },
     {
@@ -114,7 +129,7 @@
         "BUILD_TFLITE_ENGINE": "OFF",
         "BUILD_SHARED_LIBS": "OFF",
         "BUILD_TESTING": "OFF",
-        "BUILD_DEMO": "OFF"
+        "BUILD_CLI": "OFF"
       }
     },
     {
@@ -142,6 +157,11 @@
     {
       "name": "native-asan-onnx",
       "configurePreset": "native-asan-onnx"
+    },
+    {
+      "name": "native-model-packer",
+      "configurePreset": "native-model-packer",
+      "targets": ["model_packer"]
     },
     {
       "name": "wasm-release",

@@ -13,16 +13,16 @@ elseif(BUILD_ONNX_ENGINE)
   target_compile_definitions(spench_build_config INTERFACE BUILD_ONNX_ENGINE)
 endif()
 
-if(BUILD_WITHOUT_SOXR)
-  target_compile_definitions(spench_build_config INTERFACE BUILD_WITHOUT_SOXR)
+if(BUILD_RESAMPLER)
+  target_compile_definitions(spench_build_config INTERFACE BUILD_RESAMPLER)
 endif()
 
 if(BUILD_WITH_ADDRESS_SANITIZER)
   target_compile_definitions(spench_build_config INTERFACE BUILD_WITH_ADDRESS_SANITIZER)
 endif()
 
-if(BUILD_DSP_WASM)
-  target_compile_definitions(spench_build_config INTERFACE BUILD_DSP_WASM)
+if(BUILD_DSP)
+  target_compile_definitions(spench_build_config INTERFACE BUILD_DSP)
 endif()
 
 function(spench_apply_build_config target)
