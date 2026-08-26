@@ -30,8 +30,6 @@ struct TaskData {
 class DenoiseModelParams {
  public:
   std::string model_path;
-  std::vector<std::string> model_inputs;
-  std::vector<std::string> model_outputs;
   uint32_t network_input_ctx_len = 0;
 
   DenoiseModelParams() = default;

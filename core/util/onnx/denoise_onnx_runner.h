@@ -20,7 +20,7 @@ class DenoiserQOnnxRunner : public BaseOnnxRunner {
 
   template <typename T>
   void parse_results(std::vector<Ort::Value>& network_output, gigaedge::denoiser::TaskData& data) {
-    if (model_params_.model_outputs.size() != network_output.size()) {
+    if (model_output_names_.size() != network_output.size()) {
       throw std::runtime_error("Model output error");
     }
     if (data.context == nullptr) {
@@ -99,7 +99,7 @@ class DenoiserFOnnxRunner : public BaseOnnxRunner {
 
   template <typename T>
   void parse_results(std::vector<Ort::Value>& network_output, gigaedge::denoiser::TaskData& data) {
-    if (model_params_.model_outputs.size() != network_output.size()) {
+    if (model_output_names_.size() != network_output.size()) {
       throw std::runtime_error("Model output error");
     }
     if (data.context == nullptr) {
@@ -161,7 +161,7 @@ class DenoiserSFOnnxRunner : public BaseOnnxRunner {
 
   template <typename T>
   void parse_results(std::vector<Ort::Value>& network_output, gigaedge::denoiser::TaskData& data) {
-    if (model_params_.model_outputs.size() != network_output.size()) {
+    if (model_output_names_.size() != network_output.size()) {
       throw std::runtime_error("Model output error");
     }
     if (data.context == nullptr) {

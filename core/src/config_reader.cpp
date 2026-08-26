@@ -29,30 +29,6 @@ T as_or(const YAML::Node& node, const T& fallback) {
   }
 }
 
-// Validates optional sequence-of-scalars node with exact logging texts used in tests.
-inline void validate_optional_seq_of_scalars(const YAML::Node& node,
-                                             const char* noun,        // e.g. "Model inputs"
-                                             const char* fq_field) {  // e.g. "model.model_inputs"
-  if (node && !node.IsNull()) {
-    if (!node.IsSequence()) {
-      spdlog::critical("Config reading error. {} parameter is not a sequence!", noun);
-      throw std::runtime_error("Config reading error. " + std::string(noun) + " parameter is not a sequence!");
-    }
-    for (const auto& item : node) {
-      if (!item || !item.IsScalar()) {
-        spdlog::critical("Config reading error. {} parameter must be a sequence of scalars!", noun);
-        throw std::runtime_error("Config reading error. " + std::string(noun) +
-                                 " parameter must be a sequence of scalars!");
-      }
-    }
-    if (node.size() == 0) {
-      spdlog::warn("network: empty '{}'; using defaults", fq_field);
-    }
-  } else {
-    spdlog::warn("network: missing '{}'; using defaults", fq_field);
-  }
-}
-
 // Requires a scalar node; logs and throws with the provided exact message.
 inline void require_scalar_node(const YAML::Node& node, const char* err_msg) {
   if (!node || node.Type() != YAML::NodeType::Scalar) {
@@ -206,14 +182,6 @@ void NetworkConfig::validate() const {
     spdlog::info("Model path {}", n_path.as<std::string>());
   }
 
-  // model.model_inputs (optional sequence of scalars).
-  const auto& n_inputs = model["model_inputs"];
-  validate_optional_seq_of_scalars(n_inputs, "Model inputs", "model.model_inputs");
-
-  // model.model_outputs (optional sequence of scalars).
-  const auto& n_outputs = model["model_outputs"];
-  validate_optional_seq_of_scalars(n_outputs, "Model outputs", "model.model_outputs");
-
   // model_input_ctx_len (optional scalar).
   const auto& n_ctx = model["model_input_ctx_len"];
   require_if_present_scalar_node(n_ctx, "Config reading error. Model context length is not a scalar!");
@@ -246,38 +214,6 @@ std::string NetworkConfig::model_path() const {
     return "";
   }
   return as<std::string>(lookup(params(), {"model", "model_path"}));
-}
-
-std::vector<std::string> NetworkConfig::model_inputs() const {
-  auto n = lookup(params(), {"model", "model_inputs"});
-  if (n && n.IsSequence() && n.size() > 0) {
-    std::vector<std::string> out;
-    out.reserve(n.size());
-    for (const auto& item : n) {
-      if (!item || !item.IsScalar()) {
-        return default_model_inputs();
-      }
-      out.push_back(item.as<std::string>());
-    }
-    return out;
-  }
-  return default_model_inputs();
-}
-
-std::vector<std::string> NetworkConfig::model_outputs() const {
-  auto n = lookup(params(), {"model", "model_outputs"});
-  if (n && n.IsSequence() && n.size() > 0) {
-    std::vector<std::string> out;
-    out.reserve(n.size());
-    for (const auto& item : n) {
-      if (!item || !item.IsScalar()) {
-        return default_model_outputs();
-      }
-      out.push_back(item.as<std::string>());
-    }
-    return out;
-  }
-  return default_model_outputs();
 }
 
 uint32_t NetworkConfig::sampling_freq() const {
@@ -320,24 +256,6 @@ const std::vector<uint8_t>& NetworkConfig::get_model() const {
     throw std::runtime_error("the model is not bundled or not present");
   }
   return bundle_->model();
-}
-
-// -----------------------------------------------------------------------------
-
-std::vector<std::string> DenoiserConfig::default_model_inputs() const {
-#ifdef BUILD_TFLITE_ENGINE
-  return {"noisy_mag", "fb_h", "fb_c", "prev_fb_out"};
-#else
-  return {"noisy_mag_5", "fb_h.1", "fb_c.1", "prev_fb_out_5"};
-#endif
-}
-
-std::vector<std::string> DenoiserConfig::default_model_outputs() const {
-#ifdef BUILD_TFLITE_ENGINE
-  return {"fb_h", "fb_c", "updated_fb_out", "out_mask"};
-#else
-  return {"fb_h", "fb_c", "new_fb_out_5", "model_out"};
-#endif
 }
 
 // -----------------------------------------------------------------------------

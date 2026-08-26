@@ -1,25 +1,6 @@
 model:
   # model path
   model_path: model.tflite
-  model_inputs:
-    - noisy_mag_in
-    - prev_fb_hidden_in
-    - prev_fb_snr_noise_psd_in
-    - prev_fb_snr_noise_pg_in
-    - prev_sb_snr_noise_psd_in
-    - prev_sb_snr_noise_pg_in
-    - prev_fb_conv1_buf_in
-    - prev_fb_conv3_buf_in
-
-  model_outputs:
-    - cur_fb_hidden_out
-    - cur_fb_snr_noise_psd_out
-    - cur_fb_snr_noise_pg_out
-    - cur_sb_snr_noise_psd_out
-    - cur_sb_snr_noise_pg_out
-    - cur_fb_conv1_buf_out
-    - cur_fb_conv3_buf_out
-    - predicted_mask_out
 
 feature_params:
   # sampling rate

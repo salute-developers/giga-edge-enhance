@@ -1,17 +1,5 @@
 model:
   model_path: model.onnx
-  model_inputs:
-    - noisy_mag_in
-    - prev_fb_h_in
-    - prev_fb_c_in
-    - prev_fb_conv1_buf_in
-    - prev_fb_conv3_buf_in
-  model_outputs:
-    - cur_fb_h_out
-    - cur_fb_c_out
-    - cur_fb_conv1_buf_out
-    - cur_fb_conv3_buf_out
-    - predicted_mask_out
 
 feature_params:
   sampling_freq: 8000

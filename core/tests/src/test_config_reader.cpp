@@ -43,22 +43,6 @@ struct DummyReader : public gigaedge::denoiser::ConfigReader {};
 
 struct MiniNetworkReader final : public gigaedge::denoiser::NetworkConfig {
   using gigaedge::denoiser::NetworkConfig::NetworkConfig;
-
-  // Provide harmless defaults so the abstract base can be instantiated
-  std::vector<std::string> default_model_inputs() const override {
-#ifdef BUILD_TFLITE_ENGINE
-    return {"in_tfl"};
-#else
-    return {"in_onnx"};
-#endif
-  }
-  std::vector<std::string> default_model_outputs() const override {
-#ifdef BUILD_TFLITE_ENGINE
-    return {"out_tfl"};
-#else
-    return {"out_onnx"};
-#endif
-  }
 };
 
 }  // namespace
@@ -187,8 +171,6 @@ TEST_CASE("SUCCESS DenoiserConfig getters return correct override and default va
   const std::string yaml = R"(
 model:
   model_path: "mod.onnx"
-  model_inputs: ["i1","i2"]
-  model_outputs: ["o1","o2"]
 feature_params:
   sampling_freq: 12345
   frame_size_ms:   64
@@ -205,8 +187,6 @@ inference:
   gigaedge::denoiser::DenoiserConfig cfg(base);
 
   REQUIRE(cfg.model_path() == "mod.onnx");
-  REQUIRE(cfg.model_inputs() == std::vector<std::string>({"i1", "i2"}));
-  REQUIRE(cfg.model_outputs() == std::vector<std::string>({"o1", "o2"}));
   REQUIRE(cfg.sampling_freq() == 12345u);
   REQUIRE(cfg.frame_size_ms() == 64u);
   REQUIRE(cfg.frame_stride_ms() == 32u);
@@ -227,8 +207,6 @@ model:
   gigaedge::denoiser::DenoiserConfig cfg(base);
 
   REQUIRE(cfg.model_path() == "onlypath.onnx");
-  REQUIRE(cfg.model_inputs().size() == 4);
-  REQUIRE(cfg.model_outputs().size() == 4);
   REQUIRE(cfg.sampling_freq() == 24000u);
   REQUIRE(cfg.frame_size_ms() == 32u);
   REQUIRE(cfg.frame_stride_ms() == 16u);
@@ -299,52 +277,6 @@ model: {}
     const std::string yaml = R"(
 model:
   model_path: ""
-)";
-    auto base = gigaedge::denoiser::StringConfigReader(yaml);
-    std::unique_ptr<MiniNetworkReader> cfg;
-    REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
-  }
-}
-
-TEST_CASE("FAIL NetworkConfig inputs and outputs must be sequences of scalars [network config reader]") {
-  SECTION("model_inputs is not a sequence") {
-    const std::string yaml = R"(
-model:
-  model_path: "ok.onnx"
-  model_inputs: 123
-)";
-    auto base = gigaedge::denoiser::StringConfigReader(yaml);
-    std::unique_ptr<MiniNetworkReader> cfg;
-    REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
-  }
-
-  SECTION("model_inputs contains a non-scalar item") {
-    const std::string yaml = R"(
-model:
-  model_path: "ok.onnx"
-  model_inputs: [foo, {bar: 1}]
-)";
-    auto base = gigaedge::denoiser::StringConfigReader(yaml);
-    std::unique_ptr<MiniNetworkReader> cfg;
-    REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
-  }
-
-  SECTION("model_outputs is not a sequence") {
-    const std::string yaml = R"(
-model:
-  model_path: "ok.onnx"
-  model_outputs: true
-)";
-    auto base = gigaedge::denoiser::StringConfigReader(yaml);
-    std::unique_ptr<MiniNetworkReader> cfg;
-    REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
-  }
-
-  SECTION("model_outputs contains a non-scalar item") {
-    const std::string yaml = R"(
-model:
-  model_path: "ok.onnx"
-  model_outputs: ["y", [1,2,3]]
 )";
     auto base = gigaedge::denoiser::StringConfigReader(yaml);
     std::unique_ptr<MiniNetworkReader> cfg;

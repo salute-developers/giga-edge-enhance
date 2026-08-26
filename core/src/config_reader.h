@@ -84,8 +84,6 @@ class NetworkConfig : public PipelineConfig {
 
   void validate() const override;
   std::string model_path() const;
-  std::vector<std::string> model_inputs() const;
-  std::vector<std::string> model_outputs() const;
   uint32_t sampling_freq() const;
   uint32_t frame_size_ms() const;
   uint32_t frame_stride_ms() const;
@@ -101,9 +99,6 @@ class NetworkConfig : public PipelineConfig {
   NetworkConfig(std::shared_ptr<gigaedge::denoiser::PackedModelReader> bundle, std::string default_config)
       : PipelineConfig(StringConfigReader(bundle->config()), std::move(default_config)), bundle_(std::move(bundle)) {}
 
-  virtual std::vector<std::string> default_model_inputs() const = 0;
-  virtual std::vector<std::string> default_model_outputs() const = 0;
-
   std::shared_ptr<gigaedge::denoiser::PackedModelReader> bundle_ = nullptr;
 };
 
@@ -116,10 +111,6 @@ class DenoiserConfig final : public NetworkConfig {
 
   explicit DenoiserConfig(std::shared_ptr<gigaedge::denoiser::PackedModelReader> bundle)
       : NetworkConfig(std::move(bundle), gigaedge::denoiser::default_denoiser_config_yaml) {}
-
- protected:
-  std::vector<std::string> default_model_inputs() const override;
-  std::vector<std::string> default_model_outputs() const override;
 };
 
 // -----------------------------------------------------------------------------
