@@ -81,6 +81,23 @@ def run(command: list[str], *, container_stage: str | None = None,
     subprocess.run(container_command, check=True)
 
 
+def run_web_node(command: list[str], *, container_stage: str | None,
+                 environment: dict[str, str], workdir: Path) -> None:
+    if container_stage is None:
+        if not (Path.home() / ".nvm" / "nvm.sh").is_file():
+            run(command, workdir=workdir)
+            return
+        nvm_script = 'source "$HOME/.nvm/nvm.sh"; nvm install; nvm use; exec "$@"'
+    else:
+        nvm_script = (
+            'export NVM_DIR="$HOME/.nvm"; source /usr/local/lib/nvm/nvm.sh; '
+            'nvm install; nvm use; exec "$@"'
+        )
+
+    run(["bash", "-lc", nvm_script, "bash", *command], container_stage=container_stage,
+        environment=environment, workdir=workdir)
+
+
 def cmake_workflow(action: str, preset: str, host: bool) -> None:
     stage = None if host else PRESET_STAGES[preset]
     build_dir = None if host else f"/workspace/out/build/container-clang-llvm-tools/{preset}"
@@ -143,15 +160,15 @@ def ios_workflow(action: str) -> None:
 
 def web_workflow(host: bool) -> None:
     stage = None if host else "wasm"
-    web_dir = "platform_wrappers/web"
+    web_dir = ROOT / "platform_wrappers/web"
     build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-release"
     artifact_dir = (ROOT / "out" / "build" /
                     ("wasm-release" if host else "container-clang-llvm-tools/wasm-release") /
                     "platform_wrappers" / "wasm")
     environment = {} if build_dir is None else {"SPENCH_BUILD_DIR": build_dir}
-    run(["npm", "--prefix", web_dir, "ci"], container_stage=stage, environment=environment)
-    run(["npx", "lerna", "bootstrap"], container_stage=stage, environment=environment,
-        workdir=ROOT / web_dir)
+    run_web_node(["npm", "ci"], container_stage=stage, environment=environment, workdir=web_dir)
+    run_web_node(["npx", "lerna", "bootstrap"], container_stage=stage, environment=environment,
+                 workdir=web_dir)
     configure_command = ["cmake", "--preset", "wasm-release"]
     build_command = ["cmake", "--build", "out/build/wasm-release"]
     if build_dir is not None:
@@ -187,8 +204,7 @@ def web_workflow(host: bool) -> None:
     run(dsp_configure_command, container_stage=stage, environment=dsp_environment)
     run(dsp_build_command, container_stage=stage, environment=dsp_environment)
 
-    package_dir = "platform_wrappers/web/packages/web-sdk"
-    sdk_dir = ROOT / package_dir
+    sdk_dir = web_dir / "packages/web-sdk"
     bin_dir = sdk_dir / "bin"
     lib_dir = sdk_dir / "lib"
     bin_dir.mkdir(exist_ok=True)
@@ -199,9 +215,9 @@ def web_workflow(host: bool) -> None:
         for suffix in (".js", ".d.ts"):
             shutil.copy2(source_dir / f"{module_name}{suffix}", lib_dir / f"{module_name}{suffix}")
 
-    run(["npm", "--prefix", package_dir, "ci"], container_stage=stage, environment=environment)
-    run(["npm", "--prefix", package_dir, "test"], container_stage=stage, environment=environment)
-    run(["npm", "--prefix", package_dir, "run", "build"], container_stage=stage, environment=environment)
+    run_web_node(["npm", "ci"], container_stage=stage, environment=environment, workdir=sdk_dir)
+    run_web_node(["npm", "test"], container_stage=stage, environment=environment, workdir=sdk_dir)
+    run_web_node(["npm", "run", "build"], container_stage=stage, environment=environment, workdir=sdk_dir)
 
 
 def main() -> None:

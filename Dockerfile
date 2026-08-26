@@ -3,6 +3,7 @@
 FROM ubuntu:24.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
+ARG NVM_VERSION=v0.40.7
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
@@ -14,8 +15,6 @@ RUN apt-get update && \
         curl \
         git \
         ninja-build \
-        nodejs \
-        npm \
         openjdk-17-jdk-headless \
         pkg-config \
         python3 \
@@ -23,6 +22,11 @@ RUN apt-get update && \
         llvm \
         zip && \
     rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /usr/local/lib/nvm && \
+    /bin/bash -o pipefail -c 'curl --fail --location --retry 3 \
+        "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh" | \
+        NVM_DIR=/usr/local/lib/nvm PROFILE=/dev/null bash'
 
 FROM base AS native
 

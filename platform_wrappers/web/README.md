@@ -4,6 +4,10 @@
 
 * Install NVM <https://github.com/nvm-sh/nvm#installing-and-updating>
 * `nvm use`
+
+`tools/spench build web` installs and uses the version in `.nvmrc` automatically
+inside Docker. With `--host`, it uses NVM when available and otherwise leaves
+the host Node.js version unchanged.
 * `npm ci`
 
 ## Настройка Git LFS

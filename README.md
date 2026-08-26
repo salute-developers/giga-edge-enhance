@@ -149,7 +149,7 @@ uses Linux/amd64 images, stores dependency caches in `out/cache/`, and writes
 build directories to `out/build/`. On Apple Silicon, enable Docker Desktop's
 Rosetta option for x86/amd64 emulation. Use `--host` only when the required
 local toolchain is installed. iOS targets always run with the host Xcode
-toolchain.
+toolchain. Docker Web builds automatically use `platform_wrappers/web/.nvmrc`.
 
 | Target | Supported actions | Purpose |
 | --- | --- | --- |
