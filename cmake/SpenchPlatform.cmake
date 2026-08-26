@@ -80,12 +80,15 @@ function(spench_relax_ios_third_party_warnings)
   set(_spench_named_targets
     onnxruntime_common
     onnxruntime_mlas
+    onnxruntime_mlas_x86_64
+    onnxruntime_mlas_arm64
     onnxruntime_graph
     onnxruntime_framework
     onnxruntime_util
     onnxruntime_providers
     onnxruntime_session
     onnxruntime_optimizer
+    onnxruntime_lora
     onnxruntime
     onnx
     onnx_proto
@@ -96,27 +99,4 @@ function(spench_relax_ios_third_party_warnings)
     endif()
   endforeach()
 
-  # Only scan cmake directories that were actually add_subdirectory()'d.
-  # Paths that exist on disk but were never configured (e.g. TFLite when
-  # BUILD_ONNX_ENGINE=ON) must not be passed to get_property(DIRECTORY ...).
-  set(_spench_dirs_to_scan)
-  if(BUILD_ONNX_ENGINE OR TARGET onnxruntime_common)
-    list(APPEND _spench_dirs_to_scan
-      "${CMAKE_CURRENT_SOURCE_DIR}/contrib/onnxruntime/cmake"
-    )
-  endif()
-  if(BUILD_TFLITE_ENGINE AND TARGET tensorflow-lite)
-    list(APPEND _spench_dirs_to_scan
-      "${CMAKE_CURRENT_SOURCE_DIR}/contrib/tflite/tensorflow/lite"
-    )
-  endif()
-
-  foreach(_spench_dir IN LISTS _spench_dirs_to_scan)
-    get_property(_spench_targets DIRECTORY "${_spench_dir}" PROPERTY BUILDSYSTEM_TARGETS)
-    foreach(_spench_tgt IN LISTS _spench_targets)
-      if(TARGET ${_spench_tgt})
-        _spench_ios_relax_target(${_spench_tgt})
-      endif()
-    endforeach()
-  endforeach()
 endfunction()

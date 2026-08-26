@@ -35,8 +35,14 @@ else()
   endif()
 endif()
 
-if (TARGET onnxruntime)
-  get_target_property(onnxruntime_cmake_dir onnxruntime SOURCE_DIR)
+if (EMSCRIPTEN)
+  set(onnxruntime_target onnxruntime_webassembly)
+else()
+  set(onnxruntime_target onnxruntime)
+endif()
+
+if (TARGET ${onnxruntime_target})
+  get_target_property(onnxruntime_cmake_dir ${onnxruntime_target} SOURCE_DIR)
   target_include_directories(util__onnx PUBLIC "${onnxruntime_cmake_dir}/../include")
 endif()
 

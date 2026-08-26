@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+"""Run supported local and containerized Spench development workflows."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+
+
+ROOT = Path(__file__).resolve().parents[1]
+DOCKERFILE = ROOT / "Dockerfile"
+PRESET_STAGES = {
+    "native-debug-onnx": "native",
+    "native-release-onnx": "native",
+    "native-release-tflite": "native",
+    "native-asan-onnx": "native",
+    "wasm-release": "wasm",
+    "wasm-dsp-release": "wasm",
+}
+NATIVE_PRESETS = {
+    "native-debug-onnx",
+    "native-release-onnx",
+    "native-release-tflite",
+    "native-asan-onnx",
+}
+
+
+def run(command: list[str], *, container_stage: str | None = None,
+        environment: dict[str, str] | None = None) -> None:
+    if container_stage is None:
+        subprocess.run(command, cwd=ROOT, check=True)
+        return
+
+    if shutil.which("docker") is None:
+        raise SystemExit("Docker is required for this target. Use --host for a local toolchain.")
+    if subprocess.run(["docker", "info"], stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL).returncode != 0:
+        raise SystemExit("Docker is installed but its daemon is unavailable. Start Docker or use --host.")
+
+    image_hash = hashlib.sha256(DOCKERFILE.read_bytes()).hexdigest()[:12]
+    image = f"spench-dev:{container_stage}-{image_hash}"
+    if subprocess.run(["docker", "image", "inspect", image], stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL).returncode != 0:
+        subprocess.run([
+            "docker", "build", "--platform", "linux/amd64", "--target", container_stage,
+            "--tag", image, str(ROOT),
+        ], check=True)
+
+    cache_home = ROOT / "out" / "cache" / "container-home"
+    cache_home.mkdir(parents=True, exist_ok=True)
+    container_command = [
+        "docker", "run", "--rm", "--init", "--platform", "linux/amd64",
+        "--user", f"{os.getuid()}:{os.getgid()}",
+        "--volume", f"{ROOT}:/workspace",
+        "--workdir", "/workspace",
+    ]
+    container_command.extend((
+        "--env", "HOME=/workspace/out/cache/container-home",
+        "--env", "CPM_SOURCE_CACHE=/workspace/out/cache/cpm",
+        "--env", "GRADLE_USER_HOME=/workspace/out/cache/gradle",
+        "--env", "npm_config_cache=/workspace/out/cache/npm",
+        "--env", "GIT_CONFIG_COUNT=1",
+        "--env", "GIT_CONFIG_KEY_0=safe.directory",
+        "--env", "GIT_CONFIG_VALUE_0=*",
+    ))
+    for name, value in (environment or {}).items():
+        container_command.extend(("--env", f"{name}={value}"))
+    container_command.extend((
+        image,
+        "sh",
+        "-c",
+        "exec \"$@\"",
+        "sh",
+        *command,
+    ))
+    subprocess.run(container_command, check=True)
+
+
+def cmake_workflow(action: str, preset: str, host: bool) -> None:
+    stage = None if host else PRESET_STAGES[preset]
+    build_dir = None if host else f"/workspace/out/build/container-clang-llvm-tools/{preset}"
+    environment = {} if build_dir is None else {"SPENCH_BUILD_DIR": build_dir}
+    configure_command = ["cmake", "--preset", preset]
+    build_command = ["cmake", "--build", "--preset", preset]
+    if build_dir is not None:
+        configure_command.extend(("-B", build_dir))
+        if stage in {"native", "wasm"}:
+            configure_command.extend(("-Donnxruntime_USE_PREINSTALLED_EIGEN=ON",
+                                      "-Deigen_SOURCE_PATH=/opt/eigen",
+                                      "-DCMAKE_AR=/usr/bin/llvm-ar",
+                                      "-DCMAKE_RANLIB=/usr/bin/llvm-ranlib"))
+        build_command = ["cmake", "--build", build_dir]
+
+    run(configure_command, container_stage=stage, environment=environment)
+    run(build_command, container_stage=stage, environment=environment)
+    if action == "test":
+        if preset in NATIVE_PRESETS:
+            test_command = ["ctest", "--preset", preset]
+            if build_dir is not None:
+                test_command = ["ctest", "--test-dir", build_dir, "--output-on-failure"]
+            run(test_command, container_stage=stage, environment=environment)
+        else:
+            run(["platform_wrappers/wasm/scripts/test.sh", preset],
+                container_stage=stage, environment=environment)
+    elif action == "package":
+        if preset not in {"native-release-onnx", "native-release-tflite"}:
+            raise SystemExit(f"Packaging is not supported for {preset}.")
+        package_dir = ROOT / "out" / "artifacts" / preset
+        package_dir.mkdir(parents=True, exist_ok=True)
+        package_output_dir = str(package_dir) if stage is None else f"/workspace/out/artifacts/{preset}"
+        package_command = ["cpack", "--preset", preset, "-B", package_output_dir]
+        if build_dir is not None:
+            package_command = [
+                "cpack", "--config", f"{build_dir}/CPackConfig.cmake",
+                "-B", package_output_dir,
+            ]
+        run(package_command, container_stage=stage, environment=environment)
+
+
+def android_workflow(action: str, host: bool) -> None:
+    stage = None if host else "android"
+    script = "test-all.sh" if action == "test" else "build.sh"
+    environment = ({} if host else
+                   {"SPENCH_ANDROID_NATIVE_BUILD_DIR": "/workspace/out/build/container-android-native-tests",
+                    "GRADLE_OPTS": "-Dorg.gradle.vfs.watch=false"})
+    run([f"platform_wrappers/android/scripts/{script}"], container_stage=stage,
+        environment=environment)
+
+
+def ios_workflow(action: str) -> None:
+    scripts = {
+        "build": "build_xcframework.sh",
+        "test": "test.sh",
+        "core": "build_core.sh",
+    }
+    run([f"platform_wrappers/ios/scripts/{scripts[action]}"])
+
+
+def web_workflow(host: bool) -> None:
+    stage = None if host else "wasm"
+    build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-release"
+    artifact_dir = (ROOT / "out" / "build" /
+                    ("wasm-release" if host else "container-clang-llvm-tools/wasm-release") /
+                    "platform_wrappers" / "wasm")
+    environment = {} if build_dir is None else {"SPENCH_BUILD_DIR": build_dir}
+    configure_command = ["cmake", "--preset", "wasm-release"]
+    build_command = ["cmake", "--build", "out/build/wasm-release"]
+    if build_dir is not None:
+        configure_command.extend((
+            "-B", build_dir,
+            "-Donnxruntime_USE_PREINSTALLED_EIGEN=ON",
+            "-Deigen_SOURCE_PATH=/opt/eigen",
+            "-DCMAKE_AR=/usr/bin/llvm-ar",
+            "-DCMAKE_RANLIB=/usr/bin/llvm-ranlib",
+        ))
+        build_command = ["cmake", "--build", build_dir]
+
+    run(configure_command, container_stage=stage, environment=environment)
+    run(build_command, container_stage=stage, environment=environment)
+
+    dsp_build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-dsp-release"
+    dsp_artifact_dir = (ROOT / "out" / "build" /
+                        ("wasm-dsp-release" if host else "container-clang-llvm-tools/wasm-dsp-release") /
+                        "platform_wrappers" / "wasm")
+    dsp_environment = {} if dsp_build_dir is None else {"SPENCH_BUILD_DIR": dsp_build_dir}
+    dsp_configure_command = ["cmake", "--preset", "wasm-dsp-release"]
+    dsp_build_command = ["cmake", "--build", "out/build/wasm-dsp-release"]
+    if dsp_build_dir is not None:
+        dsp_configure_command.extend((
+            "-B", dsp_build_dir,
+            "-Donnxruntime_USE_PREINSTALLED_EIGEN=ON",
+            "-Deigen_SOURCE_PATH=/opt/eigen",
+            "-DCMAKE_AR=/usr/bin/llvm-ar",
+            "-DCMAKE_RANLIB=/usr/bin/llvm-ranlib",
+        ))
+        dsp_build_command = ["cmake", "--build", dsp_build_dir]
+
+    run(dsp_configure_command, container_stage=stage, environment=dsp_environment)
+    run(dsp_build_command, container_stage=stage, environment=dsp_environment)
+
+    package_dir = "platform_wrappers/web/packages/web-sdk"
+    sdk_dir = ROOT / package_dir
+    bin_dir = sdk_dir / "bin"
+    lib_dir = sdk_dir / "lib"
+    bin_dir.mkdir(exist_ok=True)
+    lib_dir.mkdir(exist_ok=True)
+    for source_dir, module_name in ((artifact_dir, "spench"), (dsp_artifact_dir, "spench.dsp")):
+        for suffix in (".js", ".wasm", ".d.ts"):
+            shutil.copy2(source_dir / f"{module_name}{suffix}", bin_dir / f"{module_name}{suffix}")
+        for suffix in (".js", ".d.ts"):
+            shutil.copy2(source_dir / f"{module_name}{suffix}", lib_dir / f"{module_name}{suffix}")
+
+    run(["npm", "--prefix", package_dir, "ci"], container_stage=stage, environment=environment)
+    run(["npm", "--prefix", package_dir, "test"], container_stage=stage, environment=environment)
+    run(["npm", "--prefix", package_dir, "run", "build"], container_stage=stage, environment=environment)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("action", choices=("build", "test", "package", "core"))
+    parser.add_argument(
+        "target",
+        choices=(*PRESET_STAGES, "android", "ios", "web"),
+        help="CMake preset or platform workflow",
+    )
+    parser.add_argument("--host", action="store_true",
+                        help="Use locally installed tools instead of Docker where Docker is the default.")
+    args = parser.parse_args()
+
+    if args.target in PRESET_STAGES:
+        if args.action == "core":
+            raise SystemExit("The core action is only valid for the iOS workflow.")
+        cmake_workflow(args.action, args.target, args.host)
+    elif args.target == "android":
+        if args.action not in {"build", "test"}:
+            raise SystemExit("Android supports build and test.")
+        android_workflow(args.action, args.host)
+    elif args.target == "ios":
+        if args.action not in {"build", "test", "core"}:
+            raise SystemExit("iOS supports build, core, and test.")
+        ios_workflow(args.action)
+    elif args.target == "web":
+        if args.action != "build":
+            raise SystemExit("The web SDK supports build.")
+        web_workflow(args.host)
+
+
+if __name__ == "__main__":
+    main()

@@ -299,6 +299,10 @@ final class SpenchAUAudioUnitWorkerTests: XCTestCase {
     }
 
     func testLiveGraphStopReleasesAttachedAudioUnits() throws {
+        #if targetEnvironment(simulator)
+        throw XCTSkip("The iOS Simulator cannot configure the live play-and-record graph reliably.")
+        #endif
+
         weak var weakEngine: AVAudioEngine?
         weak var weakAVAudioUnit: SpenchAVAudioUnit?
         weak var weakAUAudioUnit: SpenchAUAudioUnit?

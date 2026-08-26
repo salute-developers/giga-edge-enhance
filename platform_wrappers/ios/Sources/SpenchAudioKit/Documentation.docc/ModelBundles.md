@@ -2,11 +2,10 @@
 
 ## Overview
 
-Spench denoiser models are packaged as `.bundle` resources with metadata that identifies each model. SpenchAudioKit ships with three default bundles:
+Spench denoiser models are packaged as `.bundle` resources with metadata that identifies each model. SpenchAudioKit ships with two default bundles:
 
 - ``SpenchModelDescriptor/lite8k``
-- ``SpenchModelDescriptor/lite24k``
-- ``SpenchModelDescriptor/full24k``
+- ``SpenchModelDescriptor/quality48k``
 
 Custom builds can ship additional bundles; ``SpenchModelCatalog`` discovers anything in the framework, the main bundle, or the loaded bundles list.
 
@@ -32,7 +31,7 @@ dynamically (e.g. through On-Demand Resources).
 
 ```swift
 let features = SpenchFeatures(normalization: true,
-                              noiseSuppression: .lite24k)
+                               noiseSuppression: .quality48k)
 ```
 
 You can also build a descriptor from a custom raw value:

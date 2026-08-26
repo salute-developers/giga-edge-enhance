@@ -29,8 +29,13 @@ targets:
           - "$(SRCROOT)/../../spench/include"
         LIBRARY_SEARCH_PATHS:
           - "$(inherited)"
-        LIBRARY_SEARCH_PATHS[sdk=iphoneos*]: "$(SRCROOT)/build/core/device"
-        LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]: "$(SRCROOT)/build/core/simulator"
+        LIBRARY_SEARCH_PATHS[sdk=iphoneos*]: "$(SRCROOT)/../../out/artifacts/ios/device"
+        LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]: "$(SRCROOT)/../../out/artifacts/ios/simulator"
+    preBuildScripts:
+      - name: Build Spench core
+        script: |
+          set -euo pipefail
+          "$SRCROOT/scripts/build_core.sh"
     sources:
       - path: Sources/SpenchAudioKit/Swift
       - path: Sources/SpenchAudioKit/ObjC
@@ -60,29 +65,18 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Resources/ModelBundles/SpenchModelLite8k-Info.plist
     sources:
-      - path: Resources/Models/fast_model_int8_8k.spench
+      - path: Resources/Models/fast8.spench
 
-  SpenchModelLite24k:
+  SpenchModelQuality48k:
     type: bundle
     platform: iOS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.SpenchModelLite24k
+        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.SpenchModelQuality48k
         GENERATE_INFOPLIST_FILE: NO
-        INFOPLIST_FILE: Resources/ModelBundles/SpenchModelLite24k-Info.plist
+        INFOPLIST_FILE: Resources/ModelBundles/SpenchModelQuality48k-Info.plist
     sources:
-      - path: Resources/Models/fast_model_int8.spench
-
-  SpenchModelFull24k:
-    type: bundle
-    platform: iOS
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.SpenchModelFull24k
-        GENERATE_INFOPLIST_FILE: NO
-        INFOPLIST_FILE: Resources/ModelBundles/SpenchModelFull24k-Info.plist
-    sources:
-      - path: Resources/Models/mobile_group8_hybrid_loss_fp32.spench
+      - path: Resources/Models/quality48.spench
 
   AudioDemoApp:
     type: application
@@ -95,8 +89,7 @@ targets:
     dependencies:
       - target: SpenchAudioKit
       - target: SpenchModelLite8k
-      - target: SpenchModelLite24k
-      - target: SpenchModelFull24k
+      - target: SpenchModelQuality48k
     sources:
       - path: Sources/AudioDemoApp
     postBuildScripts:
@@ -106,8 +99,7 @@ targets:
           "$SRCROOT/scripts/copy_model_bundles.sh" \
             "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH" \
             SpenchModelLite8k \
-            SpenchModelLite24k \
-            SpenchModelFull24k
+            SpenchModelQuality48k
 
   SpenchAudioKitTests:
     type: bundle.unit-test
@@ -119,8 +111,7 @@ targets:
     dependencies:
       - target: SpenchAudioKit
       - target: SpenchModelLite8k
-      - target: SpenchModelLite24k
-      - target: SpenchModelFull24k
+      - target: SpenchModelQuality48k
     sources:
       - path: Tests/SpenchAudioKitTests
     postBuildScripts:
@@ -130,8 +121,7 @@ targets:
           "$SRCROOT/scripts/copy_model_bundles.sh" \
             "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH" \
             SpenchModelLite8k \
-            SpenchModelLite24k \
-            SpenchModelFull24k
+            SpenchModelQuality48k
 
   AudioDemoAppUITests:
     type: bundle.ui-testing
@@ -155,8 +145,7 @@ schemes:
       targets:
         SpenchAudioKit: all
         SpenchModelLite8k: all
-        SpenchModelLite24k: all
-        SpenchModelFull24k: all
+        SpenchModelQuality48k: all
         SpenchAudioKitTests: [test]
     test:
       gatherCoverageData: true

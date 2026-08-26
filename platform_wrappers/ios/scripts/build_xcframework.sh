@@ -7,6 +7,7 @@ BUNDLE_BUILD_DIR="$BUILD_DIR/bundle-products"
 PROJECT="$ROOT_DIR/SpenchSDK.xcodeproj"
 SCHEME="SpenchAudioKit"
 
+"$ROOT_DIR/scripts/build_core.sh"
 "$ROOT_DIR/scripts/generate_project.sh"
 
 rm -rf "$BUILD_DIR"
@@ -52,7 +53,6 @@ xcodebuild build \
   CODE_SIGNING_ALLOWED=NO
 
 cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/SpenchModelLite8k.bundle" "$BUILD_DIR"
-cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/SpenchModelLite24k.bundle" "$BUILD_DIR"
-cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/SpenchModelFull24k.bundle" "$BUILD_DIR"
+cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/SpenchModelQuality48k.bundle" "$BUILD_DIR"
 
 echo "Built XCFramework at $BUILD_DIR/SpenchAudioKit.xcframework"

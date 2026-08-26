@@ -1,0 +1,26 @@
+model:
+  model_path: model.onnx
+  model_inputs:
+    - noisy_mag_in
+    - prev_fb_h_in
+    - prev_fb_c_in
+    - prev_fb_conv1_buf_in
+    - prev_fb_conv3_buf_in
+  model_outputs:
+    - cur_fb_h_out
+    - cur_fb_c_out
+    - cur_fb_conv1_buf_out
+    - cur_fb_conv3_buf_out
+    - predicted_mask_out
+
+feature_params:
+  sampling_freq: 8000
+  frame_size_ms: 32
+  frame_stride_ms: 16
+  window_type: hanning
+
+inference:
+  gpu: false
+  engine_num_threads: 1
+  skip_zeroed_chunks: true
+  model_type: best_speed_new

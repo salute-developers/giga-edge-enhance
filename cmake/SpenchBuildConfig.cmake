@@ -1,9 +1,10 @@
 add_library(spench_build_config INTERFACE)
+get_filename_component(_spench_root_dir "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 
 target_include_directories(spench_build_config INTERFACE
-  "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
-  "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/spench>"
-  "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/spench/include>"
+  "$<BUILD_INTERFACE:${_spench_root_dir}>"
+  "$<BUILD_INTERFACE:${_spench_root_dir}/spench>"
+  "$<BUILD_INTERFACE:${_spench_root_dir}/spench/include>"
 )
 
 if(BUILD_TFLITE_ENGINE)

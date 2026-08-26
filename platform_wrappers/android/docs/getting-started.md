@@ -18,7 +18,7 @@ app; the SDK only does DSP.
 - **JDK 17**
 - **Android SDK** with **API 35** (`compileSdk = 35`, `targetSdk = 35` for the demo). Minimum
   supported device API is **26**.
-- **Android NDK 27.1.12297006** and **CMake 3.22.1** (installed via Android Studio / SDK Manager).
+- **Android NDK 29.0.14206865** and **CMake 3.22.1** (installed via Android Studio / SDK Manager).
   These are only required to build the SDK's native library from source.
 - At least one emulator or physical device to run instrumented tests.
 

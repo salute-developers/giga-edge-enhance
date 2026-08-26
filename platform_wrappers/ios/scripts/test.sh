@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT="$ROOT_DIR/SpenchSDK.xcodeproj"
 DEVICE_NAME="${TEST_DEVICE_NAME:-iPhone 17}"
-SPENCH_RETRIES="${SPENCH_TEST_RETRIES:-1}"
+SPENCH_RETRIES="${SPENCH_TEST_RETRIES:-2}"
 APP_RETRIES="${APP_TEST_RETRIES:-3}"
 ERASE_SIMULATOR="${ERASE_SIMULATOR:-1}"
 
@@ -14,7 +14,7 @@ COMMON_XCODEBUILD_ARGS=(
   -maximum-concurrent-test-simulator-destinations 1
 )
 
-SIMULATOR_FLAKE_PATTERN='Mach error -308|server died|Application failed preflight checks|FBSOpenApplicationServiceErrorDomain|SBMainWorkspace.*Busy|Failed to launch app with identifier'
+SIMULATOR_FLAKE_PATTERN='Mach error -308|server died|Application failed preflight checks|FBSOpenApplicationServiceErrorDomain|SBMainWorkspace.*Busy|Failed to launch app with identifier|error -10868'
 
 destination_for_tests() {
   local udid
@@ -95,6 +95,7 @@ run_tests_with_retry() {
   done
 }
 
+"$ROOT_DIR/scripts/build_core.sh"
 "$ROOT_DIR/scripts/generate_project.sh"
 
 DESTINATION=""

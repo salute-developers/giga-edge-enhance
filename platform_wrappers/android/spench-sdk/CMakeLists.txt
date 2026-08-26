@@ -9,11 +9,9 @@ set(BUILD_JAVA_BIND OFF CACHE BOOL "Compile java bind library." FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build all libraries dynamically." FORCE)
 set(BUILD_DEMO OFF CACHE BOOL "Build with demo." FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "Build tests." FORCE)
-set(BUILD_WITHOUT_MODEL_ENCRYPTION ON CACHE BOOL "Build with or without model encryption supporting." FORCE)
 set(BUILD_WITHOUT_SOXR OFF CACHE BOOL "Build with or without libsoxr library for audio resampling." FORCE)
-set(GIT_SUBMODULE OFF CACHE BOOL "Check submodules during build" FORCE)
-set(TENSORFLOW_SOURCE_DIR "${SPENCH_ROOT_DIR}/spench/contrib/tflite" CACHE PATH "Directory that contains the TensorFlow project" FORCE)
-
+set(SPENCH_PROFILE android-tflite CACHE STRING "Supported product profile" FORCE)
+set(CPM_SOURCE_CACHE "${SPENCH_ROOT_DIR}/out/cache/cpm" CACHE PATH "CPM source cache" FORCE)
 add_subdirectory("${SPENCH_ROOT_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/spench-core")
 
 add_library(

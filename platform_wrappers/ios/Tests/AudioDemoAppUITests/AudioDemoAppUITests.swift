@@ -49,8 +49,8 @@ final class AudioDemoAppUITests: XCTestCase {
         XCTAssertTrue(modelButton.isEnabled)
         XCTAssertTrue(processingSwitch.isEnabled)
 
-        selectModel(withID: "lite24k", in: app)
-        XCTAssertEqual(modelButton.label, "lite24k")
+        selectModel(withID: "quality48k", in: app)
+        XCTAssertEqual(modelButton.label, "quality48k")
 
         XCTAssertTrue(saveButton.waitForExistence(timeout: 15))
         XCTAssertEqual(statusLabel.label, "OK")
@@ -65,12 +65,8 @@ final class AudioDemoAppUITests: XCTestCase {
         try runFileProcessingFlow(selectedModelID: "lite8k")
     }
 
-    func testFileProcessingAndSaveWithoutErrorsForLite24k() throws {
-        try runFileProcessingFlow(selectedModelID: "lite24k")
-    }
-
-    func testFileProcessingAndSaveWithoutErrorsForFull24k() throws {
-        try runFileProcessingFlow(selectedModelID: "full24k")
+    func testFileProcessingAndSaveWithoutErrorsForQuality48k() throws {
+        try runFileProcessingFlow(selectedModelID: "quality48k")
     }
 
     private func runFileProcessingFlow(selectedModelID: String?) throws {

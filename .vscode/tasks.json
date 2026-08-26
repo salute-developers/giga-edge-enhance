@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "spench: native debug",
+      "type": "shell",
+      "command": "${workspaceFolder}/tools/spench",
+      "args": ["build", "native-debug-onnx", "--host"],
+      "problemMatcher": "$gcc",
+      "group": "build"
+    },
+    {
+      "label": "spench: native tests",
+      "type": "shell",
+      "command": "${workspaceFolder}/tools/spench",
+      "args": ["test", "native-debug-onnx", "--host"],
+      "problemMatcher": "$gcc",
+      "group": "test"
+    }
+  ]
+}

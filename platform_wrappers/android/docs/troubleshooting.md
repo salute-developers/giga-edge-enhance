@@ -26,7 +26,7 @@ The native library `libspench-sdk.so` failed to load or a JNI method could not b
 
 - Your device/emulator ABI is one of `arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86` (all are built by
   default).
-- The SDK module actually built its native library (build from source needs **NDK 27.1.12297006**
+- The SDK module actually built its native library (build from source needs **NDK 29.0.14206865**
   and **CMake 3.22.1**).
 - You have **not** overridden the SDK's consumer ProGuard rules. In minified builds the JNI-facing
   types and native methods must be kept — the SDK ships these keeps automatically. See

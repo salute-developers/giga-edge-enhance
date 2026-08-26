@@ -3,52 +3,71 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_DIR="$(cd "$ROOT_DIR/../.." && pwd)"
-BUILD_DIR="$ROOT_DIR/build/core"
-TOOLCHAIN_FILE="$ROOT_DIR/cmake/ios.toolchain.cmake"
+ARTIFACT_DIR="$REPO_DIR/out/artifacts/ios"
+CORE_STAMP="$ARTIFACT_DIR/.core-build.stamp"
+CORE_INPUTS=(
+  "$REPO_DIR/CMakeLists.txt"
+  "$REPO_DIR/CMakePresets.json"
+  "$REPO_DIR/cmake"
+  "$REPO_DIR/spench"
+  "$ROOT_DIR/cmake/ios.toolchain.cmake"
+)
 
-configure_build() {
-  local build_dir="$1"
-  local platform="$2"
+cd "$REPO_DIR"
 
-  cmake -S "$REPO_DIR" -B "$build_dir" \
-    -G Xcode \
-    -DBUILD_SHARED_LIBS=OFF \
-    -DBUILD_ONNX_ENGINE=ON \
-    -DBUILD_DEMO=OFF \
-    -DBUILD_TESTING=OFF \
-    -DPLATFORM="$platform" \
-    -DCMAKE_DISABLE_FIND_PACKAGE_flatbuffers=ON \
-    -DCMAKE_CXX_FLAGS="-Wno-deprecated-literal-operator -Wno-error=deprecated-literal-operator -Wno-dangling-capture" \
-    -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN_FILE" \
-    -DDEPLOYMENT_TARGET=15.0
+core_is_current() {
+  [[ -f "$ARTIFACT_DIR/device/libspench.a" ]] || return 1
+  [[ -f "$ARTIFACT_DIR/simulator/libspench.a" ]] || return 1
+  [[ -d "$REPO_DIR/out/build/ios-device-release" ]] || return 1
+  [[ -d "$REPO_DIR/out/build/ios-simulator-release" ]] || return 1
+
+  local reference="$CORE_STAMP"
+  if [[ ! -f "$reference" ]]; then
+    reference="$ARTIFACT_DIR/device/libspench.a"
+  fi
+
+  [[ -z "$(find "${CORE_INPUTS[@]}" -newer "$reference" -print -quit)" ]]
 }
 
 build_target() {
-  local build_dir="$1"
-  cmake --build "$build_dir" --config Release --target spench
+  local preset="$1"
+  cmake --preset "$preset"
+  cmake --build --preset "$preset"
 }
 
 merge_archives() {
   local build_dir="$1"
   local output_path="$2"
 
+  local archives=()
+  while IFS= read -r archive; do
+    archives+=("$archive")
+  done < <(find "$build_dir" -type f -name '*.a' -print | LC_ALL=C sort)
+
+  if [[ "${#archives[@]}" -eq 0 ]]; then
+    echo "error: no static archives were produced in $build_dir" >&2
+    exit 1
+  fi
+
+  mkdir -p "$(dirname "$output_path")"
   rm -f "$output_path"
-  find "$build_dir" -type f -name '*.a' -print0 | xargs -0 libtool -static -o "$output_path"
+  xcrun libtool -static -o "$output_path" "${archives[@]}"
 }
 
-rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR/device" "$BUILD_DIR/simulator"
+if core_is_current; then
+  touch "$CORE_STAMP"
+  echo "iOS core is current; reusing $ARTIFACT_DIR"
+  exit 0
+fi
 
-configure_build "$BUILD_DIR/device" OS64
-build_target "$BUILD_DIR/device"
+build_target ios-device-release
+build_target ios-simulator-release
 
-configure_build "$BUILD_DIR/simulator" SIMULATOR64COMBINED
-build_target "$BUILD_DIR/simulator"
+merge_archives "$REPO_DIR/out/build/ios-device-release" "$ARTIFACT_DIR/device/libspench.a"
+merge_archives "$REPO_DIR/out/build/ios-simulator-release" "$ARTIFACT_DIR/simulator/libspench.a"
+touch "$CORE_STAMP"
 
-merge_archives "$BUILD_DIR/device" "$BUILD_DIR/device/libspench.a"
-merge_archives "$BUILD_DIR/simulator" "$BUILD_DIR/simulator/libspench.a"
-
-echo "Built device static library: $BUILD_DIR/device/libspench.a"
-echo "Built simulator static library: $BUILD_DIR/simulator/libspench.a"
-lipo -info "$BUILD_DIR/device/libspench.a"
-lipo -info "$BUILD_DIR/simulator/libspench.a"
+echo "Built device static library: $ARTIFACT_DIR/device/libspench.a"
+echo "Built simulator static library: $ARTIFACT_DIR/simulator/libspench.a"
+lipo -info "$ARTIFACT_DIR/device/libspench.a"
+lipo -info "$ARTIFACT_DIR/simulator/libspench.a"

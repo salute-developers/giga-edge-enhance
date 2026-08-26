@@ -7,7 +7,11 @@
 *.lib
 *.exe
 *~
-.vscode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+CMakeUserPresets.json
 build
 .cache
 .cpm
@@ -90,6 +94,7 @@ fabric.properties
 .idea/caches/build_file_checksums.ser
 
 # Builds
+_CPack_Packages/
 .distrib/
 build_shared_tflite_pocketfft/
 platform_wrappers/jazz_ios/include/

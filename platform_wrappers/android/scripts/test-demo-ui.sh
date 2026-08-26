@@ -3,4 +3,4 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-"$ROOT_DIR/gradlew" :demo-app:connectedDebugAndroidTest
+"$ROOT_DIR/gradlew" -p "$ROOT_DIR" :demo-app:connectedDebugAndroidTest

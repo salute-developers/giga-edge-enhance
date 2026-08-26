@@ -34,23 +34,23 @@ add_executable(spench_tests ${TEST_SRC})
 
 spench_apply_build_config(spench_tests)
 
-target_link_libraries(spench_tests spench yaml-cpp util::sound util__echo util__metrics dsplib spdlog_header_only)
+target_link_libraries(spench_tests PRIVATE spench yaml-cpp util::sound util__echo util__metrics dsplib spdlog_header_only)
 
 if (NOT BUILD_WITHOUT_SOXR)
-  target_link_libraries(spench_tests soxr)
+  target_link_libraries(spench_tests PRIVATE soxr)
 endif()
 
 if(NOT (CMAKE_SYSTEM_NAME MATCHES "Android" OR WIN32))
-  target_link_libraries(spench_tests pthread)
+  target_link_libraries(spench_tests PRIVATE pthread)
 endif()
 
 if (BUILD_TFLITE_ENGINE)
-  target_link_libraries(spench_tests tensorflow-lite util__tf_lite)
+  target_link_libraries(spench_tests PRIVATE tensorflow-lite util__tf_lite)
 elseif (BUILD_ONNX_ENGINE)
-  target_link_libraries(spench_tests onnxruntime util__onnx)
+  target_link_libraries(spench_tests PRIVATE onnxruntime util__onnx)
 
   if (NOT APPLE)
-    target_link_libraries(spench_tests gomp)
+    target_link_libraries(spench_tests PRIVATE gomp)
   endif()
 endif()
 

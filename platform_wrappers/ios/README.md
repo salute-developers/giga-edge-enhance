@@ -168,12 +168,11 @@ Notes:
 Built-in model descriptors:
 
 - `SpenchModelDescriptor.lite8k`
-- `SpenchModelDescriptor.lite24k`
-- `SpenchModelDescriptor.full24k`
+- `SpenchModelDescriptor.quality48k`
 
 ```swift
 let features = SpenchFeatures(normalization: true,
-                              noiseSuppression: .lite24k)
+                               noiseSuppression: .quality48k)
 ```
 
 `SpenchModelCatalog.availableModels()` discovers every bundle whose

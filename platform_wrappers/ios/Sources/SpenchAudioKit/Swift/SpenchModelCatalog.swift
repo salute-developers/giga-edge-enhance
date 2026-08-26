@@ -2,7 +2,7 @@ import Foundation
 
 /// Stable identifier for a bundled Spench denoiser model.
 ///
-/// Use one of the bundled descriptors (``lite8k``, ``lite24k``, ``full24k``)
+/// Use one of the bundled descriptors (``lite8k``, ``quality48k``)
 /// or build your own with ``init(rawValue:)``. The raw value must match the
 /// `SpenchModelID` key inside the model bundle's `Info.plist`.
 public struct SpenchModelDescriptor: RawRepresentable, Hashable, Comparable, Sendable {
@@ -20,12 +20,9 @@ public struct SpenchModelDescriptor: RawRepresentable, Hashable, Comparable, Sen
     /// Lightweight 8 kHz model. Lowest CPU cost; recommended for narrow-band
     /// telephony scenarios on older devices.
     public static let lite8k = SpenchModelDescriptor(rawValue: "lite8k")
-    /// Lightweight 24 kHz model. Balanced quality and cost; recommended for
-    /// most real-time voice scenarios.
-    public static let lite24k = SpenchModelDescriptor(rawValue: "lite24k")
-    /// Full-quality 24 kHz model. Highest fidelity at the cost of CPU; best
+    /// Full-quality 48 kHz model. Highest fidelity at the cost of CPU; best
     /// for offline rendering or when hardware can sustain it.
-    public static let full24k = SpenchModelDescriptor(rawValue: "full24k")
+    public static let quality48k = SpenchModelDescriptor(rawValue: "quality48k")
 }
 
 /// Discovers Spench model bundles packaged with an application or framework.

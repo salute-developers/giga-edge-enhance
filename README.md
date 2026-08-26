@@ -9,8 +9,8 @@ This is the implementation of speech enhancement library called __spench__.
 - [Setup](#setup)
 - [Models](#models)
 - [Building spench and its dependencies](#building-spench-and-its-dependencies)
-  - [Building in container](#building-in-container)
-  - [Building manually](#building-manually)
+  - [Build helper](#build-helper)
+  - [Manual CMake builds](#manual-cmake-builds)
 - [Configuration restrictions](#configuration-restrictions)
 - [How to use spench ?](#how-to-use-spench-)
 - [Usage samples](#usage-samples)
@@ -136,7 +136,57 @@ Path to model should be mentioned in configuration file. The examples of configu
 
 ## Building __spench__ and it's dependencies
 
-### Building manually
+### Build helper
+
+Use `tools/spench` from the repository root for supported builds, tests, and
+packages:
+
+```shell
+tools/spench <build|test|package|core> <target> [--host]
+```
+
+Docker is the default for native, WASM, Android, and web targets. The helper
+uses Linux/amd64 images, stores dependency caches in `out/cache/`, and writes
+build directories to `out/build/`. On Apple Silicon, enable Docker Desktop's
+Rosetta option for x86/amd64 emulation. Use `--host` only when the required
+local toolchain is installed. iOS targets always run with the host Xcode
+toolchain.
+
+| Target | Supported actions | Purpose |
+| --- | --- | --- |
+| `native-debug-onnx` | `build`, `test` | Debug ONNX Runtime build and tests. |
+| `native-release-onnx` | `build`, `test`, `package` | Release ONNX Runtime build, tests, and packages. |
+| `native-release-tflite` | `build`, `test`, `package` | Release TensorFlow Lite build, tests, and packages. |
+| `native-asan-onnx` | `build`, `test` | Clang AddressSanitizer ONNX Runtime validation. |
+| `wasm-release` | `build`, `test` | Standard ONNX Runtime WebAssembly wrapper. |
+| `wasm-dsp-release` | `build`, `test` | Engine-free DSP WebAssembly wrapper and size-budget check. |
+| `android` | `build`, `test` | Android SDK build and test workflow. |
+| `ios` | `build`, `test`, `core` | iOS XCFramework, test, and C++ core workflows. |
+| `web` | `build` | Builds both WASM wrappers, then installs, tests, and bundles the web SDK. |
+
+Common validation commands:
+
+```shell
+tools/spench test native-release-onnx
+tools/spench test native-release-tflite
+tools/spench test native-asan-onnx
+tools/spench test wasm-release
+tools/spench test wasm-dsp-release
+tools/spench build web
+```
+
+Package files are written to `out/artifacts/<preset>/`. The web workflow copies
+generated WASM modules from `out/build/` into the web SDK's ignored `bin/` and
+`lib/` directories before running npm scripts.
+
+Android requires SDK API 35, CMake 3.22.1, and NDK 29.0.14206865. Instrumented
+Android tests additionally require an attached device or running emulator and
+`RUN_ANDROID_INSTRUMENTED_TESTS=1`.
+
+For VS Code, reopen the repository in the `Spench Native` Dev Container. It
+uses the native Dockerfile stage and persists the CPM dependency cache.
+
+### Manual CMake builds
 
 The __spench__ project is a CMake based. To compile the library you need to follow the steps below:
 

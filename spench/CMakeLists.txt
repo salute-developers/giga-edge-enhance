@@ -7,6 +7,7 @@ set(SPENCH_DEPS
 )
 
 add_subdirectory(contrib)
+spench_relax_ios_third_party_warnings()
 
 if(NOT BUILD_WITHOUT_SOXR)
   if(EMSCRIPTEN)

@@ -19,7 +19,7 @@
     <key>SpenchModelFileExtension</key>
     <string>spench</string>
     <key>SpenchModelFileName</key>
-    <string>fast_model_int8_8k</string>
+    <string>fast8</string>
     <key>SpenchModelID</key>
     <string>lite8k</string>
 </dict>

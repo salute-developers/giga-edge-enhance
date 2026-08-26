@@ -66,7 +66,7 @@ Full guides live in [`docs/`](docs/README.md):
 
 ## Building and testing
 
-Requires JDK 17, Android SDK API 35, and (to build the native library) NDK 27.1.12297006 with CMake
+Requires JDK 17, Android SDK API 35, and (to build the native library) NDK 29.0.14206865 with CMake
 3.22.1. Use the Gradle wrapper:
 
 ```bash

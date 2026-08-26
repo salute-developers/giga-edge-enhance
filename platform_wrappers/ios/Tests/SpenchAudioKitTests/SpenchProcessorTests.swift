@@ -28,7 +28,7 @@ final class SpenchProcessorTests: XCTestCase {
         XCTAssertEqual(processor.features, disabledFeatures)
 
         let enabledFeatures = SpenchFeatures(normalization: true,
-                                             noiseSuppression: SpenchModelDescriptor(rawValue: "lite24k"))
+                                              noiseSuppression: SpenchModelDescriptor(rawValue: "quality48k"))
         try processor.setFeatures(enabledFeatures)
         XCTAssertEqual(processor.features, enabledFeatures)
     }
@@ -42,7 +42,7 @@ final class SpenchProcessorTests: XCTestCase {
 
     func testSampleRateCanBeUpdated() throws {
         let features = SpenchFeatures(normalization: true,
-                                      noiseSuppression: SpenchModelDescriptor(rawValue: "lite24k"))
+                                       noiseSuppression: SpenchModelDescriptor(rawValue: "quality48k"))
         let processor = try SpenchProcessor(sampleRate: 44_100, features: features)
 
         try processor.setSampleRate(48_000)
@@ -89,7 +89,7 @@ final class SpenchProcessorTests: XCTestCase {
     func testResetSucceedsForConfiguredPipelines() throws {
         let processor = try SpenchProcessor(sampleRate: 44_100,
                                             features: SpenchFeatures(normalization: true,
-                                                                     noiseSuppression: SpenchModelDescriptor(rawValue: "lite24k")))
+                                                                      noiseSuppression: SpenchModelDescriptor(rawValue: "quality48k")))
 
         let input = Array(repeating: Float(0.25), count: 512)
         var output = Array(repeating: Float.zero, count: input.count)
@@ -98,7 +98,7 @@ final class SpenchProcessorTests: XCTestCase {
 
         processor.reset()
 
-        XCTAssertEqual(processor.features.noiseSuppression, SpenchModelDescriptor(rawValue: "lite24k"))
+        XCTAssertEqual(processor.features.noiseSuppression, SpenchModelDescriptor(rawValue: "quality48k"))
         XCTAssertEqual(processor.telemetry, telemetryBeforeReset)
     }
 
@@ -120,7 +120,7 @@ final class SpenchProcessorTests: XCTestCase {
     func testTelemetryRecordsBothProcessingStages() throws {
         let processor = try SpenchProcessor(sampleRate: 44_100,
                                             features: SpenchFeatures(normalization: true,
-                                                                     noiseSuppression: SpenchModelDescriptor(rawValue: "lite24k")),
+                                                                     noiseSuppression: SpenchModelDescriptor(rawValue: "quality48k")),
                                             settings: SpenchSettings(telemetryRoundingMilliseconds: 0.25))
 
         let input = Array(repeating: Float(0.25), count: 512)
@@ -132,10 +132,10 @@ final class SpenchProcessorTests: XCTestCase {
         XCTAssertEqual(telemetry.denoiserCounters.values.reduce(0, +), 1)
     }
 
-    func testDenoiserReportsNativeChunkFailure() throws {
+    func testDenoiserProcessesNativeChunk() throws {
         let processor = try SpenchProcessor(
             sampleRate: 48_000,
-            features: SpenchFeatures(normalization: false, noiseSuppression: .lite24k)
+            features: SpenchFeatures(normalization: false, noiseSuppression: .quality48k)
         )
         var samples = Array(repeating: Float(0.25), count: 1_536)
         let frameCount = samples.count
@@ -147,7 +147,7 @@ final class SpenchProcessorTests: XCTestCase {
             }
         }
 
-        XCTAssertEqual(processingFailure, "Denoising failed with native error code -2.")
+        XCTAssertNil(processingFailure)
     }
 
     func testTelemetrySurvivesSampleRateUpdate() throws {
@@ -168,7 +168,7 @@ final class SpenchProcessorTests: XCTestCase {
     func testAvailableModelsFindInstalledBundles() throws {
         let modelIDs = try SpenchModelCatalog.availableModels().map(\.rawValue)
 
-        XCTAssertEqual(modelIDs, ["full24k", "lite24k", "lite8k"])
+        XCTAssertEqual(modelIDs, ["lite8k", "quality48k"])
     }
 
     func testNormalizationConfigIncludesVadParametersWhenEnabled() {

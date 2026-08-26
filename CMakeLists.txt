@@ -15,6 +15,7 @@ find_package(Git QUIET)
 include(SpenchOptions)
 include(SpenchCompilerSettings)
 include(SpenchPlatform)
+include(SpenchProfile)
 include(SpenchBuildConfig)
 include(SpenchDependencies)
 

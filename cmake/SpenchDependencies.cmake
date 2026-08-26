@@ -1,5 +1,6 @@
 include("${CMAKE_CURRENT_LIST_DIR}/CPM.cmake")
-CPMUsePackageLock("${CMAKE_SOURCE_DIR}/package-lock.cmake")
+get_filename_component(_spench_root_dir "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+CPMUsePackageLock("${_spench_root_dir}/package-lock.cmake")
 
 if(NOT TARGET dsplib)
   CPMGetPackage(dsplib)

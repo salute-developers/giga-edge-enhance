@@ -12,5 +12,6 @@ cmake --build "$ROOT_DIR/build/native-tests"
 "$ROOT_DIR/build/native-tests/spench-native-tests"
 
 "$ROOT_DIR/gradlew" \
+    -p "$ROOT_DIR" \
     :spench-sdk:testDebugUnitTest \
     :spench-sdk:connectedDebugAndroidTest

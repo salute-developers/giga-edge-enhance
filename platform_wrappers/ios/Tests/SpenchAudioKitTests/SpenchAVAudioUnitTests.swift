@@ -20,7 +20,7 @@ final class SpenchAVAudioUnitTests: XCTestCase {
 
     func testInitSpenchAudioUnit() throws {
         let features = SpenchFeatures(normalization: false,
-                                      noiseSuppression: SpenchModelDescriptor(rawValue: "lite24k"))
+                                       noiseSuppression: SpenchModelDescriptor(rawValue: "quality48k"))
         let settings = SpenchSettings(lowPerformanceWindowSeconds: 2,
                                       lowPerformanceMaxRefillTimes: 5,
                                       lowPerformanceMaxRefillTimeFactor: 4,

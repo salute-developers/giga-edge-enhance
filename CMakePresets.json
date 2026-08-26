@@ -1,0 +1,211 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CPM_SOURCE_CACHE": "${sourceDir}/out/cache/cpm"
+      }
+    },
+    {
+      "name": "native-base",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "native-debug-onnx",
+      "displayName": "Native Debug (ONNX)",
+      "inherits": "native-base",
+      "cacheVariables": {
+        "SPENCH_PROFILE": "native",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_ONNX_ENGINE": "ON",
+        "BUILD_TFLITE_ENGINE": "OFF",
+        "BUILD_TESTING": "ON",
+        "BUILD_DEMO": "ON"
+      }
+    },
+    {
+      "name": "native-release-onnx",
+      "displayName": "Native Release (ONNX)",
+      "inherits": "native-base",
+      "cacheVariables": {
+        "SPENCH_PROFILE": "native",
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_ONNX_ENGINE": "ON",
+        "BUILD_TFLITE_ENGINE": "OFF",
+        "BUILD_TESTING": "ON",
+        "BUILD_DEMO": "ON"
+      }
+    },
+    {
+      "name": "native-release-tflite",
+      "displayName": "Native Release (TensorFlow Lite)",
+      "inherits": "native-base",
+      "cacheVariables": {
+        "SPENCH_PROFILE": "native",
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_ONNX_ENGINE": "OFF",
+        "BUILD_TFLITE_ENGINE": "ON",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "native-asan-onnx",
+      "displayName": "Native ASan (ONNX)",
+      "inherits": "native-base",
+      "cacheVariables": {
+        "SPENCH_PROFILE": "native",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_ONNX_ENGINE": "ON",
+        "BUILD_TFLITE_ENGINE": "OFF",
+        "BUILD_TESTING": "ON",
+        "BUILD_WITH_ADDRESS_SANITIZER": "ON"
+      }
+    },
+    {
+      "name": "wasm-release",
+      "displayName": "WebAssembly Release",
+      "inherits": "base",
+      "cacheVariables": {
+        "SPENCH_PROFILE": "wasm",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+        "BUILD_ONNX_ENGINE": "ON",
+        "BUILD_TFLITE_ENGINE": "OFF",
+        "BUILD_TESTING": "OFF",
+        "BUILD_DEMO": "OFF"
+      }
+    },
+    {
+      "name": "wasm-dsp-release",
+      "displayName": "WebAssembly DSP Release",
+      "inherits": "wasm-release",
+      "cacheVariables": {
+        "BUILD_ONNX_ENGINE": "OFF",
+        "BUILD_TFLITE_ENGINE": "OFF",
+        "BUILD_DSP_WASM": "ON"
+      }
+    },
+    {
+      "name": "ios-device-release",
+      "displayName": "iOS Device Release",
+      "inherits": "base",
+      "generator": "Xcode",
+      "cacheVariables": {
+        "SPENCH_PROFILE": "ios",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/platform_wrappers/ios/cmake/ios.toolchain.cmake",
+        "PLATFORM": "OS64",
+        "DEPLOYMENT_TARGET": "15.0",
+        "BUILD_ONNX_ENGINE": "ON",
+        "BUILD_TFLITE_ENGINE": "OFF",
+        "BUILD_SHARED_LIBS": "OFF",
+        "BUILD_TESTING": "OFF",
+        "BUILD_DEMO": "OFF"
+      }
+    },
+    {
+      "name": "ios-simulator-release",
+      "displayName": "iOS Simulator Release",
+      "inherits": "ios-device-release",
+      "cacheVariables": {
+        "PLATFORM": "SIMULATOR64COMBINED"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "native-debug-onnx",
+      "configurePreset": "native-debug-onnx"
+    },
+    {
+      "name": "native-release-onnx",
+      "configurePreset": "native-release-onnx"
+    },
+    {
+      "name": "native-release-tflite",
+      "configurePreset": "native-release-tflite"
+    },
+    {
+      "name": "native-asan-onnx",
+      "configurePreset": "native-asan-onnx"
+    },
+    {
+      "name": "wasm-release",
+      "configurePreset": "wasm-release",
+      "targets": ["stage_web_sdk"]
+    },
+    {
+      "name": "wasm-dsp-release",
+      "configurePreset": "wasm-dsp-release",
+      "targets": ["stage_web_sdk"]
+    },
+    {
+      "name": "ios-device-release",
+      "configurePreset": "ios-device-release",
+      "configuration": "Release",
+      "targets": ["spench"]
+    },
+    {
+      "name": "ios-simulator-release",
+      "configurePreset": "ios-simulator-release",
+      "configuration": "Release",
+      "targets": ["spench"]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "native-debug-onnx",
+      "configurePreset": "native-debug-onnx",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "native-release-onnx",
+      "configurePreset": "native-release-onnx",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "native-release-tflite",
+      "configurePreset": "native-release-tflite",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "native-asan-onnx",
+      "configurePreset": "native-asan-onnx",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ],
+  "packagePresets": [
+    {
+      "name": "native-release-onnx",
+      "configurePreset": "native-release-onnx",
+      "generators": ["TGZ"]
+    },
+    {
+      "name": "native-release-tflite",
+      "configurePreset": "native-release-tflite",
+      "generators": ["TGZ"]
+    }
+  ]
+}

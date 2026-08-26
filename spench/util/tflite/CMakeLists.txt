@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.17.3)
 
 CPMGetPackage(tflite)
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    # TensorFlow Lite 2.13's spectrogram source omits the uint32_t declaration.
+    target_compile_options(tensorflow-lite PRIVATE -include cstdint)
+endif()
+
 add_library(util__tf_lite STATIC
         tflite_runner.cpp
 )
@@ -16,7 +21,9 @@ target_compile_options(util__tf_lite
           PRIVATE -Wshadow
           # PRIVATE -pedantic
           PRIVATE -Werror
+          PRIVATE -Wno-error=shadow
           PRIVATE -Wno-error=unused-parameter
+          PRIVATE -Wno-error=comment
           PRIVATE -Wno-noexcept-type
           PRIVATE -O3)
 endif()
