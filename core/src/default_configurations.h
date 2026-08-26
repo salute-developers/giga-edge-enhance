@@ -6,8 +6,6 @@ namespace gigaedge::denoiser {
 static constexpr char default_denoiser_config_yaml[] = R"(
 model:
   model_path: ""
-  model_inputs:  ["noisy_mag", "fb_h", "fb_c", "prev_fb_out"]
-  model_outputs: ["fb_h", "fb_c", "updated_fb_out", "out_mask"]
 feature_params:
   sampling_freq:    24000
   frame_size_ms:    32
@@ -24,8 +22,6 @@ inference:
 static constexpr char default_denoiser_config_yaml[] = R"(
 model:
   model_path: ""
-  model_inputs:  ["noisy_mag_5", "fb_h.1", "fb_c.1", "prev_fb_out_5"]
-  model_outputs: ["fb_h", "fb_c", "new_fb_out_5", "model_out"]
 feature_params:
   sampling_freq:    24000
   frame_size_ms:    32

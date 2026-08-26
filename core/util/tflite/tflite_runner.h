@@ -31,8 +31,7 @@ class BaseTfliteRunner {
   BaseTfliteRunner& operator=(const BaseTfliteRunner&) = delete;
   BaseTfliteRunner(const BaseTfliteRunner&) = delete;
 
-  BaseTfliteRunner(std::vector<std::string>& input_names, std::vector<std::string>& output_names,
-                   const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config, const uint32_t num_threads,
+  BaseTfliteRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config, const uint32_t num_threads,
                    bool on_gpu = false);
   virtual ~BaseTfliteRunner();
 
@@ -50,8 +49,7 @@ class BaseTfliteRunner {
  protected:
   void read_config(const YAML::Node& yaml_config) { model_params_.read_model_node(yaml_config); }
 
-  void init_model(std::vector<std::string>& input_names, std::vector<std::string>& output_names,
-                  const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config, const uint32_t num_threads,
+  void init_model(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config, const uint32_t num_threads,
                   bool on_gpu);
 
   template <typename T>

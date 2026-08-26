@@ -8,14 +8,6 @@ namespace onnx {
 
 BaseOnnxRunner::BaseOnnxRunner() : run_options_ptr_(std::make_unique<Ort::RunOptions>(nullptr)) {}
 
-BaseOnnxRunner::BaseOnnxRunner(const std::vector<std::string>& inputs, const std::vector<std::string>& outputs,
-                               const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
-                               const uint32_t num_threads, bool gpu)
-    : run_options_ptr_(std::make_unique<Ort::RunOptions>(nullptr)) {
-  init_model(config, num_threads, gpu);
-  validate_model(inputs, outputs);
-}
-
 BaseOnnxRunner::~BaseOnnxRunner() {
   for (size_t i = 0; i < model_input_names_.size(); ++i) {
     default_allocator_.Free(model_input_names_[i]);
@@ -79,67 +71,33 @@ int32_t BaseOnnxRunner::get_single_dynamic_axis(const std::vector<int64_t>& shap
   return found;
 }
 
-void BaseOnnxRunner::validate_model(const std::vector<std::string>& input_names,
-                                    const std::vector<std::string>& output_names) {
+void BaseOnnxRunner::load_model_io_metadata() {
   if (!session_ptr_) {
     std::stringstream iss;
     iss << "The model has not defined session or allocator";
     throw OnnxValidationException(iss.str());
   }
 
-  // Inputs
   const size_t inputs_count = session_ptr_->GetInputCount();
-  if (inputs_count != input_names.size()) {
-    std::stringstream iss;
-    iss << "The model has " << inputs_count << " inputs, but you provided " << input_names.size();
-    throw OnnxValidationException(iss.str());
-  }
-
-  bool inputs_names_same = true;
+  model_input_names_.reserve(inputs_count);
+  model_input_shapes_.reserve(inputs_count);
   for (size_t i = 0; i < inputs_count; ++i) {
     model_input_names_.push_back(session_ptr_->GetInputNameAllocated(i, default_allocator_).release());
     model_input_shapes_.push_back(session_ptr_->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-    const std::string cur_model_input_name = model_input_names_.back();
-    if (input_names[i] != cur_model_input_name) {
-      inputs_names_same = false;
-    }
   }
 
   // Cache time axis (only dynamic dim) for each input tensor.
   time_axis_in_.resize(model_input_shapes_.size(), -1);
   for (size_t i = 0; i < model_input_shapes_.size(); ++i) {
-    // English comment: dynamic time axis is encoded as -1 in ONNX shapes
     time_axis_in_[i] = get_single_dynamic_axis(model_input_shapes_[i], "input");
   }
 
-  if (!inputs_names_same) {
-    std::stringstream iss;
-    iss << "The model has inputs inconsisted with provided ones";
-    throw OnnxValidationException(iss.str());
-  }
-
-  // Outputs
   const size_t outputs_count = session_ptr_->GetOutputCount();
-  if (outputs_count != output_names.size()) {
-    std::stringstream iss;
-    iss << "The model has " << outputs_count << " outputs, but you provided " << output_names.size();
-    throw OnnxValidationException(iss.str());
-  }
-
-  bool outputs_names_same = true;
+  model_output_names_.reserve(outputs_count);
+  model_output_shapes_.reserve(outputs_count);
   for (size_t i = 0; i < outputs_count; ++i) {
     model_output_names_.push_back(session_ptr_->GetOutputNameAllocated(i, default_allocator_).release());
     model_output_shapes_.push_back(session_ptr_->GetOutputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
-    const std::string cur_model_output_name = model_output_names_.back();
-    if (output_names[i] != cur_model_output_name) {
-      outputs_names_same = false;
-    }
-  }
-
-  if (!outputs_names_same) {
-    std::stringstream iss;
-    iss << "The model has outputs inconsisted with provided ones";
-    throw OnnxValidationException(iss.str());
   }
 }
 

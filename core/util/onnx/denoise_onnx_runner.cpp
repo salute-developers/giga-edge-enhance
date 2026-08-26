@@ -10,7 +10,7 @@ DenoiserQOnnxRunner::DenoiserQOnnxRunner(const std::shared_ptr<gigaedge::denoise
                                          uint32_t inference_engine_threads, bool on_gpu) {
   read_config(config->params()["model"]);
   init_model(config, inference_engine_threads, on_gpu);
-  validate_model(model_params_.model_inputs, model_params_.model_outputs);
+  load_model_io_metadata();
   warm_up<float>();
 }
 
@@ -116,7 +116,7 @@ DenoiserFOnnxRunner::DenoiserFOnnxRunner(const std::shared_ptr<gigaedge::denoise
                                          uint32_t inference_engine_threads, bool on_gpu) {
   read_config(config->params()["model"]);
   init_model(config, inference_engine_threads, on_gpu);
-  validate_model(model_params_.model_inputs, model_params_.model_outputs);
+  load_model_io_metadata();
   warm_up<float>();
 }
 
@@ -196,7 +196,7 @@ DenoiserSFOnnxRunner::DenoiserSFOnnxRunner(const std::shared_ptr<gigaedge::denoi
                                            uint32_t inference_engine_threads, bool on_gpu) {
   read_config(config->params()["model"]);
   init_model(config, inference_engine_threads, on_gpu);
-  validate_model(model_params_.model_inputs, model_params_.model_outputs);
+  load_model_io_metadata();
   warm_up<float>();
 }
 

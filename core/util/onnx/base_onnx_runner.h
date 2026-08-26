@@ -27,8 +27,6 @@ class BaseOnnxRunner {
   BaseOnnxRunner& operator=(const BaseOnnxRunner&) = delete;
   BaseOnnxRunner(const BaseOnnxRunner&) = delete;
 
-  BaseOnnxRunner(const std::vector<std::string>& inputs, const std::vector<std::string>& outputs,
-                 const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config, const uint32_t num_threads, bool gpu);
   virtual ~BaseOnnxRunner();
 
   virtual void infer(gigaedge::denoiser::Task* denoise_task) = 0;
@@ -55,7 +53,7 @@ class BaseOnnxRunner {
     }
   }
 
-  void validate_model(const std::vector<std::string>& input_names, const std::vector<std::string>& output_names);
+  void load_model_io_metadata();
   void init_model(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config, const uint32_t num_threads,
                   bool gpu);
 

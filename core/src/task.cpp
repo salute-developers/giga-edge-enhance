@@ -18,14 +18,6 @@ void DenoiseModelParams::read_model_node(const YAML::Node& yaml_config) {
   try {
     model_path = yaml_config["model_path"].as<std::string>();
 
-    for (auto& item : yaml_config["model_inputs"]) {
-      model_inputs.push_back(item.as<std::string>());
-    }
-
-    for (auto& item : yaml_config["model_outputs"]) {
-      model_outputs.push_back(item.as<std::string>());
-    }
-
     network_input_ctx_len = yaml_config["model_input_ctx_len"].as<uint32_t>(0);
   } catch (...) {
     throw std::runtime_error("Config reading error!");

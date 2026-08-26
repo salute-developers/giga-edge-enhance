@@ -15,15 +15,13 @@ BaseTfliteRunner::BaseTfliteRunner() {}
 
 BaseTfliteRunner::~BaseTfliteRunner() {}
 
-BaseTfliteRunner::BaseTfliteRunner(std::vector<std::string>& input_names, std::vector<std::string>& output_names,
-                                   const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
+BaseTfliteRunner::BaseTfliteRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
                                    const uint32_t num_threads, bool on_gpu) {
   (void)(on_gpu);
-  init_model(input_names, output_names, config, num_threads, on_gpu);
+  init_model(config, num_threads, on_gpu);
 }
 
-void BaseTfliteRunner::init_model(std::vector<std::string>& input_names, std::vector<std::string>& output_names,
-                                  const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
+void BaseTfliteRunner::init_model(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
                                   const uint32_t num_threads, bool on_gpu) {
   (void)(on_gpu);
   if (config->is_model_bundled()) {
@@ -56,15 +54,8 @@ void BaseTfliteRunner::init_model(std::vector<std::string>& input_names, std::ve
     throw TfliteValidationException("Model does not has required 'serving_default' signature");
   }
 
-  if (signature_runner_->input_names().size() != input_names.size()) {
-    throw TfliteValidationException("Model and config file have different number of inputs");
-  }
-  if (signature_runner_->output_names().size() != output_names.size()) {
-    throw TfliteValidationException("Model and config file have different number of outputs");
-  }
-
-  model_input_names_.assign(input_names.begin(), input_names.end());
-  model_output_names_.assign(output_names.begin(), output_names.end());
+  model_input_names_.assign(signature_runner_->input_names().begin(), signature_runner_->input_names().end());
+  model_output_names_.assign(signature_runner_->output_names().begin(), signature_runner_->output_names().end());
 
   refresh_tensor_metadata();
 }
@@ -283,7 +274,7 @@ DenoiserFTfliteRunner::DenoiserFTfliteRunner(const std::shared_ptr<gigaedge::den
                                              uint32_t inference_engine_threads, bool on_gpu)
     : BaseTfliteRunner::BaseTfliteRunner() {
   read_config(config->params()["model"]);
-  init_model(model_params_.model_inputs, model_params_.model_outputs, config, inference_engine_threads, on_gpu);
+  init_model(config, inference_engine_threads, on_gpu);
   warm_up<float>();
 }
 
@@ -420,7 +411,7 @@ DenoiserQTfliteRunner::DenoiserQTfliteRunner(const std::shared_ptr<gigaedge::den
                                              uint32_t inference_engine_threads, bool on_gpu)
     : BaseTfliteRunner::BaseTfliteRunner() {
   read_config(config->params()["model"]);
-  init_model(model_params_.model_inputs, model_params_.model_outputs, config, inference_engine_threads, on_gpu);
+  init_model(config, inference_engine_threads, on_gpu);
   warm_up<float>();
 }
 
