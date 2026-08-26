@@ -16,8 +16,7 @@ export type ModelKey = 'lite8k' | 'lite24k' | 'full24k' | 'lite48k' | 'full48k';
 export type ModelValue = string | URL | ArrayBuffer;
 
 /**
- * A map from a main feature (`noiseCancellation` / `dereverberation`) to the
- * available model URLs for each {@link ModelKey}.  The type is generic over the
+ * A map from a main feature to the available model URLs for each {@link ModelKey}. The type is generic over the
  * model value type `V` to allow for flexibility.
  *
  * @template V - The type of the model value.
@@ -28,9 +27,6 @@ export type MainFeatures<M extends ModelsTmpl> = {
     /** Enable/disable Noise Cancellation.  When truthy, the string must be a
      * {@link ModelKey} selecting the model to load. */
     noiseCancellation: boolean | keyof M['noiseCancellation'];
-    /** Enable/disable Dereverberation.  When truthy, the string must be a
-     * {@link ModelKey} selecting the model to load. */
-    dereverberation: boolean | keyof M['dereverberation'];
 };
 
 /**
@@ -170,9 +166,9 @@ export function isSharedMemorySupported() {
 }
 
 export function getMainFeatures<M extends ModelsTmpl>(features: Partial<MainFeatures<M>> = {}): MainFeatures<M> {
-    const { noiseCancellation = false, dereverberation = false } = features;
+    const { noiseCancellation = false } = features;
 
-    return { noiseCancellation, dereverberation };
+    return { noiseCancellation };
 }
 
 export function getDspFeatures(features: Partial<DspFeatures> = {}): DspFeatures {
@@ -189,16 +185,6 @@ export function getDefaultNoiseCancellationModel(models: ModelsTmpl | undefined,
 
     for (const type of modelTypeLoadOrder) {
         if (models?.noiseCancellation?.[type]) {
-            return type;
-        }
-    }
-
-    return 'lite24k';
-}
-
-export function getDefaultDereverberationModel(models: ModelsTmpl | undefined): ModelKey {
-    for (const type of modelTypeLoadOrder) {
-        if (models?.dereverberation?.[type]) {
             return type;
         }
     }

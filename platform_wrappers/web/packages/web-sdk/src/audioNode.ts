@@ -23,7 +23,6 @@ import {
     areMainFeaturesChanged,
     ModelsTmpl,
     getDefaultNoiseCancellationModel,
-    getDefaultDereverberationModel,
     getMainFeatures,
     isSharedMemorySupported,
 } from './utils/common';
@@ -193,7 +192,6 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         normalization: false,
         echoCancellation: false,
         noiseCancellation: false,
-        dereverberation: false,
     };
 
     /** Reference to the worker thread, if running. */
@@ -277,10 +275,6 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
                           super.context.sampleRate,
                       ) as keyof M['noiseCancellation'])
                     : features.noiseCancellation || false,
-            dereverberation:
-                features.dereverberation === true
-                    ? (getDefaultDereverberationModel(this.#loader.models) as keyof M['dereverberation'])
-                    : features.dereverberation || false,
         };
         this.#logger.info('Setting Spench features:', enrichedFeatures);
 
@@ -369,7 +363,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
             workerFeaturesEnabled,
         });
 
-        if (!this.#initialized && (this.#features.noiseCancellation || this.#features.dereverberation)) {
+        if (!this.#initialized && this.#features.noiseCancellation) {
             this.#initialized = true;
             this.#telemetry?.sendMetric('initTime', performance.now() - this.#initStartTime);
         }

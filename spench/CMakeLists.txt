@@ -37,7 +37,6 @@ if(BUILD_TFLITE_ENGINE OR BUILD_ONNX_ENGINE OR TARGET onnxruntime::onnxruntime)
     src/denoiser_model_adviser.cpp
     src/handler/neural_network_audio_handler.cpp
     src/handler/denoiser_audio_handler.cpp
-    src/handler/dereverberator_audio_handler.cpp
     src/windowing.cpp
     src/feature_extractor.cpp
     src/feature_extractor_runner.cpp
@@ -45,7 +44,6 @@ if(BUILD_TFLITE_ENGINE OR BUILD_ONNX_ENGINE OR TARGET onnxruntime::onnxruntime)
     src/fft_calculator.cpp
     src/inference_runner.cpp
     src/spench_audio_denoise.cpp
-    src/spench_audio_dereverb.cpp
     src/spench_c.cpp
     src/packed_model.cpp
   )

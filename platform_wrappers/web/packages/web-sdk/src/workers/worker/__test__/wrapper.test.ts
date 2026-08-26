@@ -15,7 +15,6 @@ jest.mock('../../../../lib/spench', () => {
         HEAPF32: new Float32Array(1024),
         HEAPU8: new Uint8Array(1024),
         DenoisePipelineElement: jest.fn(() => dummyElement()),
-        DereverbPipelineElement: jest.fn(() => dummyElement()),
         PackedModelReader: jest.fn(() => dummyPackedModelReader()),
     };
 
@@ -76,9 +75,6 @@ class DummyLoader {
         return new ArrayBuffer(8);
     }
 
-    async loadDereverberationModel(_type: string) {
-        return new ArrayBuffer(8);
-    }
 }
 
 describe('SpenchWrapper', () => {
@@ -189,43 +185,6 @@ describe('SpenchWrapper', () => {
             onHeavyLoadStart: heavyStart,
             onHeavyLoadEnd: heavyEnd,
         }).then((w) => (w as any).addNoiseCanceller('tiny'));
-        expect(res).toBeInstanceOf(LoadError);
-    });
-
-    /* ---------------------- Dereverberator ---------------------- */
-
-    test('addDereverberator loads model, creates element, and caches it', async () => {
-        expect(heavyStart).toHaveBeenCalledTimes(1);
-        expect(heavyEnd).toHaveBeenCalledTimes(1);
-        heavyStart.mockClear();
-        heavyEnd.mockClear();
-        const res = await wrapper.addDereverberator('big' as any);
-        expect(res).toBeUndefined();
-        expect(heavyStart).toHaveBeenCalledTimes(1);
-        expect(heavyEnd).toHaveBeenCalledTimes(1);
-        expect((wrapper as any).pipeline.length).toBe(1);
-        expect((wrapper as any).pipeline[0][0]).toBe('dereverb-big');
-
-        // second call should hit cache
-        heavyStart.mockClear();
-        heavyEnd.mockClear();
-        wrapper.clear();
-        const res2 = await wrapper.addDereverberator('big' as any);
-        expect(res2).toBeUndefined();
-        expect(heavyStart).not.toHaveBeenCalled();
-        expect(heavyEnd).not.toHaveBeenCalled();
-    });
-
-    test('addDereverberator propagates Loader errors', async () => {
-        const badLoader = new DummyLoader() as any;
-        badLoader.loadDereverberationModel = jest.fn(() => Promise.resolve(new LoadError('bad model')));
-        const res = await SpenchWrapper.create({
-            sampleRate: 48000,
-            logger,
-            loader: badLoader,
-            onHeavyLoadStart: heavyStart,
-            onHeavyLoadEnd: heavyEnd,
-        }).then((w) => (w as any).addDereverberator('big'));
         expect(res).toBeInstanceOf(LoadError);
     });
 

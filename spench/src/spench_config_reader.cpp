@@ -365,24 +365,6 @@ std::vector<std::string> DenoiserConfig::default_model_outputs() const {
 
 // -----------------------------------------------------------------------------
 
-std::vector<std::string> DereverbConfig::default_model_inputs() const {
-#ifdef BUILD_TFLITE_ENGINE
-  return {""};
-#else
-  return {"noisy_spec_5"};
-#endif
-}
-
-std::vector<std::string> DereverbConfig::default_model_outputs() const {
-#ifdef BUILD_TFLITE_ENGINE
-  return {""};
-#else
-  return {"model_out", "mu", "logvar"};
-#endif
-}
-
-// -----------------------------------------------------------------------------
-
 void AudioProcessorConfigYamlBlock::validate_section(
     const YAML::Node& section, const std::string& section_name,
     std::initializer_list<Field> fields) {

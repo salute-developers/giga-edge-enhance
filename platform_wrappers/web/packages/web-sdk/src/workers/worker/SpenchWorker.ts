@@ -121,7 +121,6 @@ export class SpenchWorker {
 
         if (mainResult instanceof SpenchError) {
             errors.push(mainResult);
-            resultFeatures.dereverberation = false;
             resultFeatures.noiseCancellation = false;
         }
 
@@ -169,15 +168,6 @@ export class SpenchWorker {
         }
 
         this.instance.clear();
-
-        if (features.dereverberation) {
-            assert(typeof features.dereverberation === 'string', 'dereverberation model type must be specified');
-            const result = await this.instance.addDereverberator(features.dereverberation);
-
-            if (result instanceof SpenchError) {
-                return result;
-            }
-        }
 
         if (features.noiseCancellation) {
             shared.logger.debug('Setting noiseCancellation');

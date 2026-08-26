@@ -33,7 +33,7 @@ endif()
 
 if(TARGET spench_demo)
   install(
-    TARGETS spench_demo demo_cpp demo_c demo_dsp demo_dereverb
+    TARGETS spench_demo demo_cpp demo_c demo_dsp
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     COMPONENT spench_demo
   )

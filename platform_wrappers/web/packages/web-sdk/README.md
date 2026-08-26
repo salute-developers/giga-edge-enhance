@@ -10,7 +10,6 @@ The SDK exposes a single class – `SpenchSDK` – that lets you create a
 | `normalization` | Sound normalization. |
 | `echoCancellation` | Acoustic echo cancellation. |
 | `noiseCancellation` | Acoustic noise cancellation. |
-| `dereverberation` | Reverberation reduction. |
 
 The SDK also exposes a tiny telemetry API for measuring performance, a pluggable
 logger and an optional “shared‑memory” transport that reduces message‑passing
@@ -47,7 +46,6 @@ const sdk = SpenchSDK.create(audioCtx);
 // 3️⃣ Define the feature set
 const features: Features = {
   noiseCancellation: 'lite24k',
-  dereverberation: false,
   normalization: true,
   echoCancellation: false,
 };
@@ -145,7 +143,6 @@ audio processing is lagging.  The event contains the most probable cause
 | `normalization` | `boolean` | `false` |
 | `echoCancellation` | `boolean` | `false` |
 | `noiseCancellation` | `boolean \| "lite24k" \| "full24k"` | `false` |
-| `dereverberation` | `boolean \| "full48k"` | `false` |
 
 ## Testing
 
@@ -176,8 +173,7 @@ npm start & npm run pw:open
 The folder `services/spench-demo` is a small React application that demonstrates
 all SDK capabilities:
 
-1. **Feature toggles** – noise cancellation, dereverberation, normalization
-   and echo cancellation.
+1. **Feature toggles** – noise cancellation, normalization and echo cancellation.
 2. **Transport selection** – MessageChannel vs SharedArrayBuffer.
 3. **Live demo** – connects to the microphone, processes the stream and
    records both raw & processed audio.

@@ -4,7 +4,6 @@
 #include "spench/util/tflite/tflite_runner.h"
 #else
 #include "spench/util/onnx/denoise_onnx_runner.h"
-#include "spench/util/onnx/dereverb_onnx_runner.h"
 #endif
 #include <vector>
 #include <string>
@@ -21,8 +20,7 @@ class InferenceRunner {
   typedef enum class ModelType {
     denoiser_best_quality = 0,
     denoiser_best_speed = 1,
-    denoiser_best_speed_new = 2,
-    dereverberator_base = 3
+    denoiser_best_speed_new = 2
   } ModelTypeEnum;
   InferenceRunner() = delete;
   InferenceRunner& operator=(const InferenceRunner&) = delete;
@@ -56,10 +54,8 @@ class InferenceRunner {
       return ModelType::denoiser_best_speed;
     } else if (type == "best_speed_new") {
       return ModelType::denoiser_best_speed_new;
-    } else if (type == "remove_reverb") {
-      return ModelType::dereverberator_base;
     }
-    throw std::invalid_argument("Model type must be in [\"best_quality\", \"best_speed\", \"remove_reverb\"]");
+    throw std::invalid_argument("Model type must be in [\"best_quality\", \"best_speed\", \"best_speed_new\"]");
   }
 };
 

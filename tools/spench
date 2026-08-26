@@ -31,9 +31,9 @@ NATIVE_PRESETS = {
 
 
 def run(command: list[str], *, container_stage: str | None = None,
-        environment: dict[str, str] | None = None) -> None:
+        environment: dict[str, str] | None = None, workdir: Path = ROOT) -> None:
     if container_stage is None:
-        subprocess.run(command, cwd=ROOT, check=True)
+        subprocess.run(command, cwd=workdir, check=True)
         return
 
     if shutil.which("docker") is None:
@@ -57,7 +57,7 @@ def run(command: list[str], *, container_stage: str | None = None,
         "docker", "run", "--rm", "--init", "--platform", "linux/amd64",
         "--user", f"{os.getuid()}:{os.getgid()}",
         "--volume", f"{ROOT}:/workspace",
-        "--workdir", "/workspace",
+        "--workdir", f"/workspace/{workdir.relative_to(ROOT)}",
     ]
     container_command.extend((
         "--env", "HOME=/workspace/out/cache/container-home",
@@ -143,11 +143,15 @@ def ios_workflow(action: str) -> None:
 
 def web_workflow(host: bool) -> None:
     stage = None if host else "wasm"
+    web_dir = "platform_wrappers/web"
     build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-release"
     artifact_dir = (ROOT / "out" / "build" /
                     ("wasm-release" if host else "container-clang-llvm-tools/wasm-release") /
                     "platform_wrappers" / "wasm")
     environment = {} if build_dir is None else {"SPENCH_BUILD_DIR": build_dir}
+    run(["npm", "--prefix", web_dir, "ci"], container_stage=stage, environment=environment)
+    run(["npx", "lerna", "bootstrap"], container_stage=stage, environment=environment,
+        workdir=ROOT / web_dir)
     configure_command = ["cmake", "--preset", "wasm-release"]
     build_command = ["cmake", "--build", "out/build/wasm-release"]
     if build_dir is not None:

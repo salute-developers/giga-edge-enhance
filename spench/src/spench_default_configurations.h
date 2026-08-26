@@ -20,23 +20,6 @@ inference:
   model_type:        best_speed
 )";
 
-static constexpr char default_dereverb_config_yaml[] = R"(
-model:
-  model_path: ""
-  model_inputs:  ["noisy_spec_5"]
-  model_outputs: ["model_out", "mu", "logvar"]
-feature_params:
-  sampling_freq:    48000
-  frame_size_ms:    32
-  frame_stride_ms:  16
-  window_type:      hanning
-inference:
-  gpu:                false
-  skip_zeroed_chunks: false
-  engine_num_threads: 1
-  model_type:        remove_reverb
-)";
-
 #else
 static constexpr char default_denoiser_config_yaml[] = R"(
 model:
@@ -55,23 +38,6 @@ inference:
   model_type:        best_speed
 )";
 
-// Dereverb defaults
-static constexpr char default_dereverb_config_yaml[] = R"(
-model:
-  model_path: ""
-  model_inputs:  ["noisy_spec_5"]
-  model_outputs: ["model_out", "mu", "logvar"]
-feature_params:
-  sampling_freq:    48000
-  frame_size_ms:    32
-  frame_stride_ms:  16
-  window_type:      hanning
-inference:
-  gpu:                false
-  skip_zeroed_chunks: false
-  engine_num_threads: 1
-  model_type:        remove_reverb
-)";
 #endif
 
 // AEC defaults (as above)
@@ -131,4 +97,3 @@ sound_processing:
 )";
 
 }  // namespace spench
-

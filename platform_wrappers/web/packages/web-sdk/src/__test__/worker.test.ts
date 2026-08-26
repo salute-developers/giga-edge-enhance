@@ -146,28 +146,6 @@ describe('getTransferableModelRepresentation', () => {
         });
     });
 
-    test('keeps multiple ArrayBuffers in the transfer list', () => {
-        const raw = {
-            dereverberation: {
-                full24k: new ArrayBuffer(8),
-                lite24k: new ArrayBuffer(16),
-            },
-        } as unknown as ModelsTmpl<string | ArrayBuffer>;
-
-        const [models, trans] = getTransferableModelRepresentation(raw);
-
-        expect(trans).toHaveLength(2);
-        expect(trans).toContain(raw.dereverberation!.full24k);
-        expect(trans).toContain(raw.dereverberation!.lite24k);
-
-        // The map should contain the same ArrayBuffer instances.
-        expect(models).toMatchObject({
-            dereverberation: {
-                full24k: raw.dereverberation!.full24k,
-                lite24k: raw.dereverberation!.lite24k,
-            },
-        });
-    });
 });
 
 /* -------------------------------------------------------------------------- */

@@ -29,13 +29,8 @@ InferenceRunner::InferenceRunner(std::shared_ptr<spench::NetworkConfig> config,
                                                                           gpu);
   } else if (model_type_ == ModelType::denoiser_best_speed_new) {
     engine_runner_ptr_ = std::make_unique<util::onnx::SpenchSFOnnxRunner>(config,
-                                                                            inference_engine_threads,
-                                                                           gpu);
-  } else {
-    engine_runner_ptr_ =
-                    std::make_unique<util::onnx::SpenchDereverbOnnxRunner>(config,
-                                                                            inference_engine_threads,
-                                                                           gpu);
+                                                                             inference_engine_threads,
+                                                                            gpu);
   }
 #endif
 }

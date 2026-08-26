@@ -4,7 +4,6 @@ add_library(util__onnx STATIC
         onnx_env.cpp
         base_onnx_runner.cpp
         denoise_onnx_runner.cpp
-        dereverb_onnx_runner.cpp
 )
 
 spench_apply_build_config(util__onnx)

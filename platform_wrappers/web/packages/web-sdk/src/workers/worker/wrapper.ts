@@ -238,41 +238,6 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
         this.logger.debug(`Add noise canceller to Spench Pipeline. Model type: ${type}${cached ? ' (cached)' : ''}.`);
     }
 
-    async addDereverberator(type: ModelKey): Promise<void | LoadError | ModelNotFoundError> {
-        const key = `dereverb-${type}`;
-        const cached = this.tryGetFromCache(key);
-
-        if (cached) {
-            this.pipeline.push([key, cached]);
-        } else {
-            const loadedModel = await this.loader.loadDereverberationModel(type);
-
-            if (loadedModel instanceof SpenchError) {
-                return loadedModel;
-            }
-
-            this.onHeavyLoadStart();
-            const model = this.loadModel(loadedModel);
-
-            if (model instanceof SpenchError) {
-                this.onHeavyLoadEnd();
-
-                return model;
-            }
-
-            try {
-                this.pipeline.push([key, new this.bridge.DereverbPipelineElement(this.sampleRate, model)]);
-                this.onHeavyLoadEnd();
-            } catch (e) {
-                return new InternalError(e);
-            } finally {
-                model.delete();
-            }
-        }
-
-        this.logger.debug(`Add dereverberator to Spench Pipeline. Model type: ${type}${cached ? ' (cached)' : ''}.`);
-    }
-
     destroy() {
         super.destroy();
 

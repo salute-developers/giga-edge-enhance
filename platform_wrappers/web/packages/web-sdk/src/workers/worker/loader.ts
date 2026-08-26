@@ -44,20 +44,6 @@ class Loader {
         return this.loadResource(resource);
     }
 
-    async loadDereverberationModel(type: ModelKey): Promise<ArrayBuffer | ModelNotFoundError | LoadError> {
-        const resource = this.resourceUrls.models?.dereverberation?.[type];
-
-        if (!resource) {
-            return new ModelNotFoundError(`Dereverberation model not found for type ${type}`);
-        }
-
-        if (resource instanceof ArrayBuffer) {
-            return resource;
-        }
-
-        return this.loadResource(resource);
-    }
-
     loadResource(
         url: string,
         metricName?: Parameters<WorkerTelemetry['sendMetric']>[0],

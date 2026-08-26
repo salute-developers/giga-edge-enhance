@@ -255,10 +255,4 @@ struct DenoiseContextSF: public SpenchContext<T> {
   std::vector<float> noisy_mag;
 };
 
-template <typename T>
-struct DereverbContext: public SpenchContext<T> {
-  std::vector<T> noisy_spec;
-  std::vector<T> prev_out;
-  std::vector<T> phase;
-};
 }  // namespace spench

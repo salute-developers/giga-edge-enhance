@@ -16,7 +16,6 @@ This is the implementation of speech enhancement library called __spench__.
 - [Usage samples](#usage-samples)
   - [Denoising (C++ API)](#denoising-c-api)
   - [Denoising (C API)](#denoising-c-api-1)
-  - [Dereverberation (C++ API)](#dereverberation-c-api)
   - [Normalization (C++ API)](#normalization-c-api)
   - [Normalization and Denoising using YAML string configuration (C++ API)](#normalization-and-denoising-using-yaml-string-configuration-c-api)
   - [Normalization (C API)](#normalization-c-api-1)
@@ -367,27 +366,6 @@ int main(int argc, char **argv) {
 ```
 
 ---
-### Dereverberation (C++ API)
-
-```cpp
-#include "spench/spench.h"
-
-int main() {
-    spench::SpenchAudioDereverb dereverb("dereverb_config.yaml");
-    auto ctx = dereverb.CreateContext();
-
-    std::vector<float> reverberated;
-    load_wav("reverb.wav", reverberated);
-
-    std::vector<float> enhanced;
-    dereverb.ProcessChunk(reverberated, enhanced, ctx);
-
-    write_wav(enhanced, dereverb.GetModelSampleRate(), "dereverb.wav");
-    dereverb.DestroyContext(&ctx);
-}
-```
-
----
 ### Normalization (C++ API)
 
 ```cpp
@@ -596,21 +574,6 @@ inference:
   gpu:                false
   engine_num_threads: 1
   model_type:        best_speed
-
-# Dereverberation
-model:
-  model_path: ""
-  model_inputs:  ["noisy_spec_5"]
-  model_outputs: ["model_out", "mu", "logvar"]
-feature_params:
-  sampling_freq:    48000
-  frame_size_ms:    32
-  frame_stride_ms:  16
-  window_type:      hanning
-inference:
-  gpu:                false
-  engine_num_threads: 1
-  model_type:        remove_reverb
 
 # Sound processing
 sound_processing:

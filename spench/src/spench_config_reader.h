@@ -130,21 +130,6 @@ class DenoiserConfig final : public NetworkConfig {
 
 // -----------------------------------------------------------------------------
 
-class DereverbConfig final : public NetworkConfig {
- public:
-  explicit DereverbConfig(const ConfigReader& base_reader)
-      : NetworkConfig(base_reader, spench::default_dereverb_config_yaml) {}
-
-  explicit DereverbConfig(std::shared_ptr<spench::PackedModelReader> bundle)
-      : NetworkConfig(std::move(bundle), spench::default_dereverb_config_yaml) {}
-
- protected:
-  std::vector<std::string> default_model_inputs() const override;
-  std::vector<std::string> default_model_outputs() const override;
-};
-
-// -----------------------------------------------------------------------------
-
 class AudioProcessorConfigYamlBlock {
  public:
   enum class Kind { scalar, sequence, map };
