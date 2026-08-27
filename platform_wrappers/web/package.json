@@ -1,9 +1,16 @@
 {
   "name": "spench-web",
-  "description": "Spench Web monorepo",
   "private": true,
+  "workspaces": [
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "stage:wasm:release": "node packages/web-sdk/scripts/stage-wasm.mjs release",
+    "build:web-sdk": "npm run build --workspace=@gigaedge/spench-web-sdk",
+    "test:web-sdk": "npm test --workspace=@gigaedge/spench-web-sdk"
+  },
   "devDependencies": {
-    "lerna": "3.22.1",
     "markdownlint-cli": "0.41.0",
     "prettier": "3.1.1"
   }

@@ -177,7 +177,7 @@ export function getDspFeatures(features: Partial<DspFeatures> = {}): DspFeatures
     return { normalization, echoCancellation };
 }
 
-const modelTypeLoadOrder = ['lite24k', 'full24k', 'lite24k', 'full48k'] as const;
+const modelTypeLoadOrder = ['lite24k', 'full24k', 'lite48k', 'full48k'] as const;
 export function getDefaultNoiseCancellationModel(models: ModelsTmpl | undefined, sampleRate: number): ModelKey {
     if (sampleRate <= 8000 && models?.noiseCancellation?.lite8k) {
         return 'lite8k';
@@ -189,7 +189,7 @@ export function getDefaultNoiseCancellationModel(models: ModelsTmpl | undefined,
         }
     }
 
-    return 'lite24k';
+    return 'full48k';
 }
 
 export async function downloadFileAsBuffer(

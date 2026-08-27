@@ -629,13 +629,13 @@ echo_cancellation:
 
 For easy integration, we provide the **Spench Web SDK**.
 
-**Package name:** `spench-web-sdk`
+**Package name:** `@gigaedge/spench-web-sdk`
 
 **Usage example (TypeScript):**
 
 
 ```ts
-import { SpenchAudioNode, SpenchError, SpenchSDK } from 'spench-web-sdk';
+import { SpenchAudioNode, SpenchError, SpenchSDK } from '@gigaedge/spench-web-sdk';
 
 // You can set the sample rate (SR) of the incoming stream, or pass undefined to use the output device's default SR.
 const sampleRate: number | undefined = 24000;
@@ -701,7 +701,7 @@ WASM modules are built within this repository's CI.
 After WASM release (see Releases section) Web SDK CI is then triggered in order to test,
 build and release a new SDK version.
 
-[Spench for WASM readme.](./platform_wrappers/wasm/README.md)
+[Spench for WASM readme.](./platform_wrappers/web/packages/web-sdk/wasm/README.md)
 
 ## Releases
 

@@ -1,5 +1,5 @@
 {
-    "include": ["@types/audioworklet", "lib/spench.d.ts", "bin", "src", "dist/workers"],
+    "include": ["@types/audioworklet", "generated/wasm", "src", "dist/workers"],
     "compilerOptions": {
         "baseUrl": ".",
         "rootDir": "./src",

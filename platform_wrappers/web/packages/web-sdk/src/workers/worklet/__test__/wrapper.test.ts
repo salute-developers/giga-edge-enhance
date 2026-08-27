@@ -23,7 +23,7 @@ jest.mock('../../../utils/constants', () => ({
 // 2. Mock hash function (deterministic)
 jest.mock('../../../utils/hash', () => () => 'mockedHash');
 
-jest.mock('../../../../lib/spench.dsp', () => {
+jest.mock('../../../../generated/wasm/spench.dsp', () => {
     return {
         __esModule: true,
         default: () => ({
@@ -48,7 +48,7 @@ jest.mock('../../../../lib/spench.dsp', () => {
         }),
         MainModule: () => ({}), // type placeholder
     };
-});
+}, { virtual: true });
 
 // ---------------------------------------------------------------------------
 // Helper utilities

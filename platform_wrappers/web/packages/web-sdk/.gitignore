@@ -1,3 +1,2 @@
-bin/
-lib/
+generated/
 src/utils/version.ts

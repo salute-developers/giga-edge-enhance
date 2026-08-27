@@ -166,12 +166,12 @@
     {
       "name": "wasm-release",
       "configurePreset": "wasm-release",
-      "targets": ["stage_web_sdk"]
+      "targets": ["spench_wasm"]
     },
     {
       "name": "wasm-dsp-release",
       "configurePreset": "wasm-dsp-release",
-      "targets": ["stage_web_sdk"]
+      "targets": ["spench_wasm"]
     },
     {
       "name": "ios-device-release",

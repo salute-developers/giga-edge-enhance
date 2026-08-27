@@ -1,4 +1,4 @@
-import { copyArrayBuffer, getSettingsWithDefaults } from '../common';
+import { copyArrayBuffer, getDefaultNoiseCancellationModel, getSettingsWithDefaults } from '../common';
 import { getOutputBufferSeconds, getProcessingChunkSizeSeconds, TRANSPORT_SIZE_SECONDS } from '../constants';
 
 describe('copyArrayBuffer', () => {
@@ -51,5 +51,22 @@ describe('chunk size settings', () => {
         });
 
         expect(getOutputBufferSeconds(settings)).toBe(0.16);
+    });
+});
+
+describe('default noise cancellation models', () => {
+    const models = {
+        noiseCancellation: {
+            lite8k: new URL('https://example.com/fast8.spench'),
+            full48k: new URL('https://example.com/quality48.spench'),
+        },
+    };
+
+    it('uses the bundled fast model for 8 kHz input', () => {
+        expect(getDefaultNoiseCancellationModel(models, 8000)).toBe('lite8k');
+    });
+
+    it('uses the bundled quality model above 8 kHz', () => {
+        expect(getDefaultNoiseCancellationModel(models, 8001)).toBe('full48k');
     });
 });

@@ -8,7 +8,7 @@ import getHashCode from '../../../utils/hash';
 import { getDefaultAECConfig, getDefaultNormalizationConfig } from '../../../utils/constants';
 import { Settings } from '../../../utils/common';
 
-jest.mock('../../../../lib/spench', () => {
+jest.mock('../../../../generated/wasm/spench', () => {
     const bridge = {
         _malloc: jest.fn((size: number) => size / Float32Array.BYTES_PER_ELEMENT),
         _free: jest.fn(),
@@ -19,9 +19,9 @@ jest.mock('../../../../lib/spench', () => {
     };
 
     return () => bridge;
-});
+}, { virtual: true });
 
-jest.mock('../../../../lib/spench.dsp', () => {
+jest.mock('../../../../generated/wasm/spench.dsp', () => {
     const bridge = {
         _malloc: jest.fn((size: number) => size / Float32Array.BYTES_PER_ELEMENT),
         _free: jest.fn(),
@@ -31,7 +31,7 @@ jest.mock('../../../../lib/spench.dsp', () => {
     };
 
     return () => bridge;
-});
+}, { virtual: true });
 
 jest.mock('../../../utils/constants', () => ({
     FEATURE_SWITCH_CACHE_MILLISECONDS: 0, // fast expiry for tests

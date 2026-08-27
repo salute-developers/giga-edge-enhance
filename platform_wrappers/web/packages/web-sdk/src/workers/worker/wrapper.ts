@@ -1,5 +1,5 @@
-import Spench, { type PackedModelReader, type MainModule as SpenchCore } from '../../../lib/spench';
-import SpenchDsp, { type MainModule as SpenchDSPCore } from '../../../lib/spench.dsp';
+import Spench, { type PackedModelReader, type MainModule as SpenchCore } from '../../../generated/wasm/spench';
+import SpenchDsp, { type MainModule as SpenchDSPCore } from '../../../generated/wasm/spench.dsp';
 import {
     FEATURE_SWITCH_CACHE_MILLISECONDS,
     getDefaultAECConfig,

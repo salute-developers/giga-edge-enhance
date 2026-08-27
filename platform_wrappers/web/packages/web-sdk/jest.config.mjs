@@ -6,6 +6,7 @@ export default {
             {
                 tsconfig: '<rootDir>/tsconfig.json',
                 useESM: true,
+                diagnostics: false,
             },
         ],
     },

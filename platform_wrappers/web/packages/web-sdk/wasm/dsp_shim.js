@@ -1,0 +1,1 @@
+var window=typeof window!=='undefined'?window:{};if(!window.performance){var p=(window.performance={});p.now=()=>typeof currentTime!=='undefined'?currentTime*1000:Date.now();}var performance=typeof performance!=='undefined'?performance:window.performance;var self=typeof self!=='undefined'?self:{};var s=self;var l=s.location||(s.location={});if(typeof l.href!=='string'){l.href=''}

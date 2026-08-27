@@ -123,7 +123,7 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
                 test_command = ["ctest", "--test-dir", build_dir, "--output-on-failure"]
             run(test_command, container_stage=stage, environment=environment)
         else:
-            run(["platform_wrappers/wasm/scripts/test.sh", preset],
+            run(["bash", "platform_wrappers/web/packages/web-sdk/wasm/scripts/test.sh", preset],
                 container_stage=stage, environment=environment)
     elif action == "package":
         if preset not in {"native-release-onnx", "native-release-tflite"}:
@@ -163,13 +163,8 @@ def web_workflow(host: bool) -> None:
     stage = None if host else "wasm"
     web_dir = ROOT / "platform_wrappers/web"
     build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-release"
-    artifact_dir = (ROOT / "out" / "build" /
-                    ("wasm-release" if host else "container-clang-llvm-tools/wasm-release") /
-                    "platform_wrappers" / "wasm")
     environment = {} if build_dir is None else {"SPENCH_BUILD_DIR": build_dir}
     run_web_node(["npm", "ci"], container_stage=stage, environment=environment, workdir=web_dir)
-    run_web_node(["npx", "lerna", "bootstrap"], container_stage=stage, environment=environment,
-                 workdir=web_dir)
     configure_command = ["cmake", "--preset", "wasm-release"]
     build_command = ["cmake", "--build", "out/build/wasm-release"]
     if build_dir is not None:
@@ -186,9 +181,6 @@ def web_workflow(host: bool) -> None:
     run(build_command, container_stage=stage, environment=environment)
 
     dsp_build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-dsp-release"
-    dsp_artifact_dir = (ROOT / "out" / "build" /
-                        ("wasm-dsp-release" if host else "container-clang-llvm-tools/wasm-dsp-release") /
-                        "platform_wrappers" / "wasm")
     dsp_environment = {} if dsp_build_dir is None else {"SPENCH_BUILD_DIR": dsp_build_dir}
     dsp_configure_command = ["cmake", "--preset", "wasm-dsp-release"]
     dsp_build_command = ["cmake", "--build", "out/build/wasm-dsp-release"]
@@ -205,20 +197,16 @@ def web_workflow(host: bool) -> None:
     run(dsp_configure_command, container_stage=stage, environment=dsp_environment)
     run(dsp_build_command, container_stage=stage, environment=dsp_environment)
 
-    sdk_dir = web_dir / "packages/web-sdk"
-    bin_dir = sdk_dir / "bin"
-    lib_dir = sdk_dir / "lib"
-    bin_dir.mkdir(exist_ok=True)
-    lib_dir.mkdir(exist_ok=True)
-    for source_dir, module_name in ((artifact_dir, "spench"), (dsp_artifact_dir, "spench.dsp")):
-        for suffix in (".js", ".wasm", ".d.ts"):
-            shutil.copy2(source_dir / f"{module_name}{suffix}", bin_dir / f"{module_name}{suffix}")
-        for suffix in (".js", ".d.ts"):
-            shutil.copy2(source_dir / f"{module_name}{suffix}", lib_dir / f"{module_name}{suffix}")
-
-    run_web_node(["npm", "ci"], container_stage=stage, environment=environment, workdir=sdk_dir)
-    run_web_node(["npm", "test"], container_stage=stage, environment=environment, workdir=sdk_dir)
-    run_web_node(["npm", "run", "build"], container_stage=stage, environment=environment, workdir=sdk_dir)
+    stage_environment = {
+        "SPENCH_WASM_FULL_BUILD_DIR": build_dir or str(ROOT / "out/build/wasm-release"),
+        "SPENCH_WASM_DSP_BUILD_DIR": dsp_build_dir or str(ROOT / "out/build/wasm-dsp-release"),
+    }
+    run_web_node(["npm", "run", "stage:wasm:release"], container_stage=stage,
+                 environment=stage_environment, workdir=web_dir)
+    run_web_node(["npm", "test", "--workspace=@gigaedge/spench-web-sdk"], container_stage=stage,
+                 environment=environment, workdir=web_dir)
+    run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-web-sdk"], container_stage=stage,
+                 environment=environment, workdir=web_dir)
 
 
 def main() -> None:

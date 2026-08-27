@@ -1,5 +1,5 @@
 {
-  "name": "spench-web-sdk",
+  "name": "@gigaedge/spench-web-sdk",
   "version": "3.5.1",
   "author": "GIGA.Audio",
   "description": "Spench Web SDK",
@@ -10,13 +10,12 @@
   "files": [
     "dist",
     "models",
-    "bin",
-    "!lib",
+    "generated/wasm",
     "!**/__spec__/**"
   ],
   "scripts": {
-    "prepare": "npm run build",
-    "prebuild": "npm run clean",
+    "prebuild": "npm-run-all clean verify:wasm",
+    "prepack": "node scripts/stage-wasm.mjs --verify release && npm run build",
     "build": "npm-run-all inject-version -p 'build:*'",
     "build:webpack": "webpack --mode=production",
     "build:tsc": "tsc -p tsconfig.build.json",
@@ -25,6 +24,7 @@
     "watch:tsc": "tsc -w -p tsconfig.build.json",
     "inject-version": "node -p \"'export const LIB_VERSION = \\'' + require('./package.json').version + (process.env.CI ? '' : '-dev') + '\\';'\" > src/utils/version.ts",
     "clean": "rm -rf dist",
+    "verify:wasm": "node scripts/stage-wasm.mjs --verify",
     "test": "jest --ci --runInBand --detectOpenHandles --logHeapUsage",
     "lint:eslint:fix": "eslint --fix",
     "lint:eslint": "eslint"
@@ -54,6 +54,9 @@
     "typescript": "5.5.4",
     "webpack": "5.94.0",
     "webpack-cli": "5.1.4"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "serialize-error": "12.0.0"

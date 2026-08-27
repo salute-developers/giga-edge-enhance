@@ -5,6 +5,7 @@ option(BUILD_SHARED_LIBS "Build all libraries dynamically." OFF)
 option(BUILD_RESAMPLER "Build with libsoxr audio resampling." ON)
 option(BUILD_CLI "Build command-line tools and demos." OFF)
 option(BUILD_DSP "Build the engine-free DSP configuration." OFF)
+option(BUILD_TESTING "Build tests." ON)
 
 set(BUILD_APPLE_ARCH "" CACHE STRING "Apple target architecture: arm, intel, or empty for native.")
 

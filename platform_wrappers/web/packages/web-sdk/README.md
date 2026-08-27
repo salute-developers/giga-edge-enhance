@@ -23,10 +23,10 @@ overhead.
 
 ```bash
 # Yarn
-yarn add spench-web-sdk
+yarn add @gigaedge/spench-web-sdk
 
 # NPM
-npm i spench-web-sdk
+npm i @gigaedge/spench-web-sdk
 ```
 
 > The SDK uses native ES modules. If you target older browsers, bundle with
@@ -35,7 +35,7 @@ npm i spench-web-sdk
 ## Quickstart
 
 ```ts
-import { SpenchSDK, type Features } from 'spench-web-sdk';
+import { SpenchSDK, type Features } from '@gigaedge/spench-web-sdk';
 
 // 1️⃣ Create an AudioContext
 const audioCtx = new AudioContext();
@@ -45,7 +45,7 @@ const sdk = SpenchSDK.create(audioCtx);
 
 // 3️⃣ Define the feature set
 const features: Features = {
-  noiseCancellation: 'lite24k',
+  noiseCancellation: 'full48k',
   normalization: true,
   echoCancellation: false,
 };
@@ -142,7 +142,10 @@ audio processing is lagging.  The event contains the most probable cause
 |----------|------|---------|
 | `normalization` | `boolean` | `false` |
 | `echoCancellation` | `boolean` | `false` |
-| `noiseCancellation` | `boolean \| "lite24k" \| "full24k"` | `false` |
+| `noiseCancellation` | `boolean \| "lite8k" \| "full48k"` | `false` |
+
+The SDK bundles `fast8.spench` as `lite8k` and `quality48.spench` as `full48k`. Supply other model keys through
+`params.models` when using custom model files.
 
 ## Testing
 
@@ -203,10 +206,10 @@ The node will use the supplied ArrayBuffer instead of downloading the default mo
 ## Example — In Details
 
 ```ts
-import { SpenchAudioNode, SpenchError, SpenchSDK } from 'spench-web-sdk';
+import { SpenchAudioNode, SpenchError, SpenchSDK } from '@gigaedge/spench-web-sdk';
 
 // Define the sample rate (SR) for the incoming stream, or leave undefined to use the device's default SR.
-const sampleRate: number | undefined = 24000;
+const sampleRate: number | undefined = 48000;
 
 // The AudioContext may start in a suspended state. Call await ctx.resume() to activate it.
 // Some browsers require a user gesture before audio playback starts. See the MDN page for details.
@@ -215,7 +218,7 @@ const ctx = new AudioContext({ sampleRate });
 
 // Model accuracy depends on input signal normalization; enable it below.
 const features = {
-  noiseCancellation: 'full24k' as const, // or 'lite24k', or 'lite8k' if sample rate is 8kHz and below
+  noiseCancellation: 'full48k' as const, // Use 'lite8k' for 8 kHz input.
   normalization: true,
 } as const;
 
