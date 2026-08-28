@@ -14,6 +14,15 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCKERFILE = ROOT / "Dockerfile"
+WEB_TEST_IMAGE_INPUTS = (
+    ROOT / "platform_wrappers/web/.nvmrc",
+    ROOT / "platform_wrappers/web/package.json",
+    ROOT / "platform_wrappers/web/package-lock.json",
+    ROOT / "platform_wrappers/web/packages/web-sdk/package.json",
+    ROOT / "platform_wrappers/web/services/spench-demo/package.json",
+    ROOT / "platform_wrappers/web/services/spench-demo/mos_install.sh",
+    ROOT / "platform_wrappers/web/services/spench-demo/requirements-mos.txt",
+)
 PRESET_STAGES = {
     "native-debug-onnx": "native",
     "native-release-onnx": "native",
@@ -32,7 +41,8 @@ NATIVE_PRESETS = {
 
 
 def run(command: list[str], *, container_stage: str | None = None,
-        environment: dict[str, str] | None = None, workdir: Path = ROOT) -> None:
+        environment: dict[str, str] | None = None, workdir: Path = ROOT,
+        isolate_web_node_modules: bool = False) -> None:
     if container_stage is None:
         subprocess.run(command, cwd=workdir, check=True)
         return
@@ -43,7 +53,12 @@ def run(command: list[str], *, container_stage: str | None = None,
                       stderr=subprocess.DEVNULL).returncode != 0:
         raise SystemExit("Docker is installed but its daemon is unavailable. Start Docker or use --host.")
 
-    image_hash = hashlib.sha256(DOCKERFILE.read_bytes()).hexdigest()[:12]
+    image_inputs = (DOCKERFILE, *WEB_TEST_IMAGE_INPUTS) if container_stage == "web-test" else (DOCKERFILE,)
+    image_digest = hashlib.sha256()
+    for image_input in image_inputs:
+        image_digest.update(image_input.relative_to(ROOT).as_posix().encode())
+        image_digest.update(image_input.read_bytes())
+    image_hash = image_digest.hexdigest()[:12]
     image = f"spench-dev:{container_stage}-{image_hash}"
     if subprocess.run(["docker", "image", "inspect", image], stdout=subprocess.DEVNULL,
                       stderr=subprocess.DEVNULL).returncode != 0:
@@ -60,6 +75,19 @@ def run(command: list[str], *, container_stage: str | None = None,
         "--volume", f"{ROOT}:/workspace",
         "--workdir", f"/workspace/{workdir.relative_to(ROOT)}",
     ]
+    if isolate_web_node_modules:
+        dependency_hash = hashlib.sha256(
+            (ROOT / "platform_wrappers/web/package-lock.json").read_bytes()
+            + (ROOT / "platform_wrappers/web/.nvmrc").read_bytes()
+        ).hexdigest()[:12]
+        cache_root = ROOT / "out/cache/container-node-modules/linux-amd64" / dependency_hash
+        for cache_name, container_path in (
+            ("web", "/workspace/platform_wrappers/web/node_modules"),
+            ("spench-demo", "/workspace/platform_wrappers/web/services/spench-demo/node_modules"),
+        ):
+            cache_path = cache_root / cache_name
+            cache_path.mkdir(parents=True, exist_ok=True)
+            container_command.extend(("--volume", f"{cache_path}:{container_path}"))
     container_command.extend((
         "--env", "HOME=/workspace/out/cache/container-home",
         "--env", "CPM_SOURCE_CACHE=/workspace/out/cache/cpm",
@@ -96,7 +124,7 @@ def run_web_node(command: list[str], *, container_stage: str | None,
         )
 
     run(["bash", "-lc", nvm_script, "bash", *command], container_stage=container_stage,
-        environment=environment, workdir=workdir)
+        environment=environment, workdir=workdir, isolate_web_node_modules=container_stage is not None)
 
 
 def cmake_workflow(action: str, preset: str, host: bool) -> None:
@@ -159,7 +187,7 @@ def ios_workflow(action: str) -> None:
     run([f"platform_wrappers/ios/scripts/{scripts[action]}"])
 
 
-def web_workflow(host: bool) -> None:
+def web_workflow(action: str, host: bool) -> None:
     stage = None if host else "wasm"
     web_dir = ROOT / "platform_wrappers/web"
     build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-release"
@@ -207,6 +235,10 @@ def web_workflow(host: bool) -> None:
                  environment=environment, workdir=web_dir)
     run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-web-sdk"], container_stage=stage,
                  environment=environment, workdir=web_dir)
+    if action == "test":
+        test_stage = None if host else "web-test"
+        run_web_node(["npm", "run", "test:cy:mos-candidates", "--workspace=spench-demo"], container_stage=test_stage,
+                     environment={"PLAYWRIGHT_WORKERS": "1"}, workdir=web_dir)
 
 
 def main() -> None:
@@ -234,9 +266,9 @@ def main() -> None:
             raise SystemExit("iOS supports build, core, and test.")
         ios_workflow(args.action)
     elif args.target == "web":
-        if args.action != "build":
-            raise SystemExit("The web SDK supports build.")
-        web_workflow(args.host)
+        if args.action not in {"build", "test"}:
+            raise SystemExit("The web SDK supports build and test.")
+        web_workflow(args.action, args.host)
 
 
 if __name__ == "__main__":

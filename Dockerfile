@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
 # Development-only toolchains. Source and build outputs are mounted at runtime.
 FROM ubuntu:24.04 AS base
 
@@ -80,3 +80,44 @@ RUN git clone --depth 1 --branch "${EMSDK_VERSION}" \
 
 ENV EMSDK=/opt/emsdk
 ENV PATH=/opt/emsdk:/opt/emsdk/upstream/emscripten:${PATH}
+
+FROM base AS web-test
+
+ENV MOS_VENV_DIR=/opt/spench-mos-venv
+ENV NISQA_WEIGHTS_HOME=/opt/spench-nisqa-home
+ENV NUMBA_CACHE_DIR=/tmp/numba-cache
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
+ENV PATH=/opt/spench-mos-venv/bin:${PATH}
+
+COPY platform_wrappers/web/.nvmrc /tmp/spench-web/.nvmrc
+COPY platform_wrappers/web/package.json platform_wrappers/web/package-lock.json /tmp/spench-web/
+COPY platform_wrappers/web/packages/web-sdk/package.json /tmp/spench-web/packages/web-sdk/package.json
+COPY platform_wrappers/web/services/spench-demo/package.json /tmp/spench-web/services/spench-demo/package.json
+COPY platform_wrappers/web/services/spench-demo/mos_install.sh \
+    platform_wrappers/web/services/spench-demo/requirements-mos.txt /tmp/mos/
+
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y ffmpeg python3-venv && \
+    rm -rf /var/lib/apt/lists/* && \
+    MOS_VENV_DIR="${MOS_VENV_DIR}" /tmp/mos/mos_install.sh
+
+RUN /bin/bash -c 'source /usr/local/lib/nvm/nvm.sh && \
+        nvm install "$(cat /tmp/spench-web/.nvmrc)" && \
+        cd /tmp/spench-web && npm ci --ignore-scripts && \
+        PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH}" \
+        npx playwright install --with-deps chromium'
+
+RUN HOME="${NISQA_WEIGHTS_HOME}" python3 - <<'PY'
+import torch
+from torchmetrics.functional.audio.nisqa import non_intrusive_speech_quality_assessment
+
+# TorchMetrics downloads the NISQA checkpoint on its first invocation.
+try:
+    non_intrusive_speech_quality_assessment(torch.zeros(1, 160_000), 16_000)
+except RuntimeError:
+    pass
+PY
+
+RUN mkdir -p "${NUMBA_CACHE_DIR}" && \
+    chmod 1777 "${NUMBA_CACHE_DIR}" && \
+    rm -rf /root/.cache /root/.npm /tmp/spench-web/node_modules
