@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import os
 from pathlib import Path
+import platform
 import shutil
 import subprocess
 import sys
@@ -32,19 +33,40 @@ PRESET_STAGES = {
     "wasm-release": "wasm",
     "wasm-dsp-release": "wasm",
 }
+HOST_ONLY_PRESETS = (
+    "macos-x86_64-debug-onnx",
+    "macos-x86_64-release-onnx",
+    "macos-x86_64-release-tflite",
+    "macos-x86_64-asan-onnx",
+    "macos-arm64-debug-onnx",
+    "macos-arm64-release-onnx",
+    "macos-arm64-release-tflite",
+    "macos-arm64-asan-onnx",
+    "windows-x64-debug-onnx",
+    "windows-x64-release-onnx",
+    "windows-x64-release-tflite",
+    "windows-x64-asan-onnx",
+)
+CACHE_INPUTS = (
+    ROOT / "package-lock.cmake",
+    ROOT / "cmake/CPM.cmake",
+    ROOT / "cmake/SpenchDependencies.cmake",
+)
 NATIVE_PRESETS = {
     "native-debug-onnx",
     "native-release-onnx",
     "native-release-tflite",
     "native-asan-onnx",
-}
+} | set(HOST_ONLY_PRESETS)
 
 
 def run(command: list[str], *, container_stage: str | None = None,
         environment: dict[str, str] | None = None, workdir: Path = ROOT,
         isolate_web_node_modules: bool = False) -> None:
     if container_stage is None:
-        subprocess.run(command, cwd=workdir, check=True)
+        process_environment = os.environ.copy()
+        process_environment.update(environment or {})
+        subprocess.run(command, cwd=workdir, check=True, env=process_environment)
         return
 
     if shutil.which("docker") is None:
@@ -110,6 +132,80 @@ def run(command: list[str], *, container_stage: str | None = None,
     subprocess.run(container_command, check=True)
 
 
+def compiler_cache_environment(container: bool) -> dict[str, str]:
+    cache_dir = ROOT / "out/cache/compiler"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    if container:
+        sccache_path = "/workspace/out/cache/compiler/sccache"
+        ccache_path = "/workspace/out/cache/compiler/ccache"
+        source_path = "/workspace"
+    else:
+        sccache_path = str(cache_dir / "sccache")
+        ccache_path = str(cache_dir / "ccache")
+        source_path = str(ROOT)
+    return {
+        "SCCACHE_DIR": sccache_path,
+        "SCCACHE_CACHE_SIZE": "5G",
+        "CCACHE_DIR": ccache_path,
+        "CCACHE_BASEDIR": source_path,
+        "CCACHE_NOHASHDIR": "true",
+        "CCACHE_MAXSIZE": "5G",
+    }
+
+
+def dependency_cache_digest() -> str:
+    digest = hashlib.sha256()
+    inputs = [*CACHE_INPUTS, *sorted((ROOT / "cmake/patches").glob("*.patch"))]
+    for cache_input in inputs:
+        digest.update(cache_input.relative_to(ROOT).as_posix().encode())
+        digest.update(b"\0")
+        digest.update(cache_input.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()[:16]
+
+
+def cache_target(preset: str, host: bool) -> tuple[str, str]:
+    if preset.startswith("macos-x86_64-"):
+        return "macos", "x86_64"
+    if preset.startswith("macos-arm64-"):
+        return "macos", "arm64"
+    if preset.startswith("windows-x64-"):
+        return "windows", "x86_64"
+    if preset.startswith("wasm-"):
+        return "emscripten", "wasm32"
+    if preset == "android":
+        return "android", "multi"
+    if preset == "ios":
+        return "ios", "multi"
+    if not host and preset in PRESET_STAGES:
+        return "linux", "x86_64"
+
+    system = platform.system().lower() or "unknown"
+    machine = platform.machine().lower() or "unknown"
+    architecture_aliases = {
+        "amd64": "x86_64",
+        "aarch64": "arm64",
+    }
+    return system, architecture_aliases.get(machine, machine)
+
+
+def print_cache_keys(preset: str, host: bool) -> None:
+    dependency_digest = dependency_cache_digest()
+    target_system, target_arch = cache_target(preset, host)
+    compiler_prefix = (
+        f"spench-compiler-v1-{target_system}-{target_arch}-{preset}-{dependency_digest}"
+    )
+    print(f"source_cache_path=out/cache/cpm")
+    print(f"source_cache_key=spench-sources-v1-{dependency_digest}")
+    print(f"source_cache_restore_key=spench-sources-v1-")
+    print(f"compiler_cache_path=out/cache/compiler")
+    print(f"compiler_cache_key_prefix={compiler_prefix}")
+    print(
+        "compiler_cache_restore_key="
+        f"spench-compiler-v1-{target_system}-{target_arch}-{preset}-"
+    )
+
+
 def run_web_node(command: list[str], *, container_stage: str | None,
                  environment: dict[str, str], workdir: Path) -> None:
     if container_stage is None:
@@ -128,9 +224,12 @@ def run_web_node(command: list[str], *, container_stage: str | None,
 
 
 def cmake_workflow(action: str, preset: str, host: bool) -> None:
-    stage = None if host else PRESET_STAGES[preset]
-    build_dir = None if host else f"/workspace/out/build/container-clang-llvm-tools/{preset}"
-    environment = {} if build_dir is None else {"SPENCH_BUILD_DIR": build_dir}
+    use_host = host or preset in HOST_ONLY_PRESETS
+    stage = None if use_host else PRESET_STAGES[preset]
+    build_dir = None if use_host else f"/workspace/out/build/container-clang-llvm-tools/{preset}"
+    environment = compiler_cache_environment(stage is not None)
+    if build_dir is not None:
+        environment["SPENCH_BUILD_DIR"] = build_dir
     configure_command = ["cmake", "--preset", preset]
     build_command = ["cmake", "--build", "--preset", preset]
     if build_dir is not None:
@@ -171,9 +270,12 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
 def android_workflow(action: str, host: bool) -> None:
     stage = None if host else "android"
     script = "test-all.sh" if action == "test" else "build.sh"
-    environment = ({} if host else
-                   {"SPENCH_ANDROID_NATIVE_BUILD_DIR": "/workspace/out/build/container-android-native-tests",
-                    "GRADLE_OPTS": "-Dorg.gradle.vfs.watch=false"})
+    environment = compiler_cache_environment(stage is not None)
+    if not host:
+        environment.update({
+            "SPENCH_ANDROID_NATIVE_BUILD_DIR": "/workspace/out/build/container-android-native-tests",
+            "GRADLE_OPTS": "-Dorg.gradle.vfs.watch=false",
+        })
     run([f"platform_wrappers/android/scripts/{script}"], container_stage=stage,
         environment=environment)
 
@@ -184,14 +286,17 @@ def ios_workflow(action: str) -> None:
         "test": "test.sh",
         "core": "build_core.sh",
     }
-    run([f"platform_wrappers/ios/scripts/{scripts[action]}"])
+    run([f"platform_wrappers/ios/scripts/{scripts[action]}"],
+        environment=compiler_cache_environment(False))
 
 
 def web_workflow(action: str, host: bool) -> None:
     stage = None if host else "wasm"
     web_dir = ROOT / "platform_wrappers/web"
     build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-release"
-    environment = {} if build_dir is None else {"SPENCH_BUILD_DIR": build_dir}
+    environment = compiler_cache_environment(stage is not None)
+    if build_dir is not None:
+        environment["SPENCH_BUILD_DIR"] = build_dir
     run_web_node(["npm", "ci"], container_stage=stage, environment=environment, workdir=web_dir)
     configure_command = ["cmake", "--preset", "wasm-release"]
     build_command = ["cmake", "--build", "out/build/wasm-release"]
@@ -209,7 +314,9 @@ def web_workflow(action: str, host: bool) -> None:
     run(build_command, container_stage=stage, environment=environment)
 
     dsp_build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-dsp-release"
-    dsp_environment = {} if dsp_build_dir is None else {"SPENCH_BUILD_DIR": dsp_build_dir}
+    dsp_environment = compiler_cache_environment(stage is not None)
+    if dsp_build_dir is not None:
+        dsp_environment["SPENCH_BUILD_DIR"] = dsp_build_dir
     dsp_configure_command = ["cmake", "--preset", "wasm-dsp-release"]
     dsp_build_command = ["cmake", "--build", "out/build/wasm-dsp-release"]
     if dsp_build_dir is not None:
@@ -243,17 +350,21 @@ def web_workflow(action: str, host: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("build", "test", "package", "core"))
+    parser.add_argument("action", choices=("build", "test", "package", "core", "cache-key"))
     parser.add_argument(
         "target",
-        choices=(*PRESET_STAGES, "android", "ios", "web"),
+        choices=(*PRESET_STAGES, *HOST_ONLY_PRESETS, "android", "ios", "web"),
         help="CMake preset or platform workflow",
     )
     parser.add_argument("--host", action="store_true",
                         help="Use locally installed tools instead of Docker where Docker is the default.")
     args = parser.parse_args()
 
-    if args.target in PRESET_STAGES:
+    if args.action == "cache-key":
+        print_cache_keys(args.target, args.host)
+        return
+
+    if args.target in PRESET_STAGES or args.target in HOST_ONLY_PRESETS:
         if args.action == "core":
             raise SystemExit("The core action is only valid for the iOS workflow.")
         cmake_workflow(args.action, args.target, args.host)

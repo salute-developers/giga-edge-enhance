@@ -9,6 +9,7 @@ RUN apt-get update && \
     apt-get install --no-install-recommends -y \
         build-essential \
         ca-certificates \
+        ccache \
         clang \
         libclang-rt-18-dev \
         cmake \

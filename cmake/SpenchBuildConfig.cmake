@@ -19,6 +19,32 @@ endif()
 
 if(BUILD_WITH_ADDRESS_SANITIZER)
   target_compile_definitions(spench_build_config INTERFACE BUILD_WITH_ADDRESS_SANITIZER)
+
+  if(WIN32)
+    target_compile_options(spench_build_config INTERFACE /fsanitize=address)
+    target_link_options(spench_build_config INTERFACE /fsanitize=address)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT APPLE)
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} -print-resource-dir
+      OUTPUT_VARIABLE clang_resource_dir
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    target_compile_options(spench_build_config INTERFACE
+      -fsanitize=address
+      -fno-omit-frame-pointer
+    )
+    target_link_options(spench_build_config INTERFACE
+      -fsanitize=address
+      -shared-libasan
+      "-Wl,-rpath,${clang_resource_dir}/lib/linux"
+    )
+  else()
+    target_compile_options(spench_build_config INTERFACE
+      -fsanitize=address
+      -fno-omit-frame-pointer
+    )
+    target_link_options(spench_build_config INTERFACE -fsanitize=address)
+  endif()
 endif()
 
 if(BUILD_DSP)

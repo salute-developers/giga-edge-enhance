@@ -26,9 +26,8 @@
       }
     },
     {
-      "name": "native-debug-onnx",
-      "displayName": "Native Debug (ONNX)",
-      "inherits": "native-base",
+      "name": "native-debug-onnx-options",
+      "hidden": true,
       "cacheVariables": {
         "SPENCH_PROFILE": "native",
         "CMAKE_BUILD_TYPE": "Debug",
@@ -39,9 +38,8 @@
       }
     },
     {
-      "name": "native-release-onnx",
-      "displayName": "Native Release (ONNX)",
-      "inherits": "native-base",
+      "name": "native-release-onnx-options",
+      "hidden": true,
       "cacheVariables": {
         "SPENCH_PROFILE": "native",
         "CMAKE_BUILD_TYPE": "Release",
@@ -52,9 +50,8 @@
       }
     },
     {
-      "name": "native-release-tflite",
-      "displayName": "Native Release (TensorFlow Lite)",
-      "inherits": "native-base",
+      "name": "native-release-tflite-options",
+      "hidden": true,
       "cacheVariables": {
         "SPENCH_PROFILE": "native",
         "CMAKE_BUILD_TYPE": "Release",
@@ -65,17 +62,83 @@
       }
     },
     {
-      "name": "native-asan-onnx",
-      "displayName": "Native ASan (ONNX)",
-      "inherits": "native-base",
+      "name": "native-asan-onnx-options",
+      "hidden": true,
+      "inherits": "native-debug-onnx-options",
       "cacheVariables": {
-        "SPENCH_PROFILE": "native",
-        "CMAKE_BUILD_TYPE": "Debug",
-        "BUILD_ONNX_ENGINE": "ON",
-        "BUILD_TFLITE_ENGINE": "OFF",
-        "BUILD_TESTING": "ON",
+        "BUILD_CLI": "OFF",
         "BUILD_WITH_ADDRESS_SANITIZER": "ON"
       }
+    },
+    {
+      "name": "macos-base",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "13.0",
+        "BUILD_SHARED_LIBS": "ON"
+      }
+    },
+    {
+      "name": "macos-x86_64-base",
+      "hidden": true,
+      "inherits": "macos-base",
+      "cacheVariables": {
+        "BUILD_APPLE_ARCH": "intel",
+        "CMAKE_OSX_ARCHITECTURES": "x86_64"
+      }
+    },
+    {
+      "name": "macos-arm64-base",
+      "hidden": true,
+      "inherits": "macos-base",
+      "cacheVariables": {
+        "BUILD_APPLE_ARCH": "arm",
+        "CMAKE_OSX_ARCHITECTURES": "arm64"
+      }
+    },
+    {
+      "name": "windows-x64-base",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": "ON",
+        "CPUINFO_BUILD_UNIT_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "native-debug-onnx",
+      "displayName": "Native Debug (ONNX)",
+      "inherits": ["native-base", "native-debug-onnx-options"]
+    },
+    {
+      "name": "native-release-onnx",
+      "displayName": "Native Release (ONNX)",
+      "inherits": ["native-base", "native-release-onnx-options"]
+    },
+    {
+      "name": "native-release-tflite",
+      "displayName": "Native Release (TensorFlow Lite)",
+      "inherits": ["native-base", "native-release-tflite-options"]
+    },
+    {
+      "name": "native-asan-onnx",
+      "displayName": "Native ASan (ONNX)",
+      "inherits": ["native-base", "native-asan-onnx-options"]
     },
     {
       "name": "native-model-packer",
@@ -90,6 +153,66 @@
         "BUILD_RESAMPLER": "OFF",
         "BUILD_TESTING": "OFF"
       }
+    },
+    {
+      "name": "macos-x86_64-debug-onnx",
+      "displayName": "macOS x86_64 Debug (ONNX)",
+      "inherits": ["macos-x86_64-base", "native-debug-onnx-options"]
+    },
+    {
+      "name": "macos-x86_64-release-onnx",
+      "displayName": "macOS x86_64 Release (ONNX)",
+      "inherits": ["macos-x86_64-base", "native-release-onnx-options"]
+    },
+    {
+      "name": "macos-x86_64-release-tflite",
+      "displayName": "macOS x86_64 Release (TensorFlow Lite)",
+      "inherits": ["macos-x86_64-base", "native-release-tflite-options"]
+    },
+    {
+      "name": "macos-x86_64-asan-onnx",
+      "displayName": "macOS x86_64 ASan (ONNX)",
+      "inherits": ["macos-x86_64-base", "native-asan-onnx-options"]
+    },
+    {
+      "name": "macos-arm64-debug-onnx",
+      "displayName": "macOS arm64 Debug (ONNX)",
+      "inherits": ["macos-arm64-base", "native-debug-onnx-options"]
+    },
+    {
+      "name": "macos-arm64-release-onnx",
+      "displayName": "macOS arm64 Release (ONNX)",
+      "inherits": ["macos-arm64-base", "native-release-onnx-options"]
+    },
+    {
+      "name": "macos-arm64-release-tflite",
+      "displayName": "macOS arm64 Release (TensorFlow Lite)",
+      "inherits": ["macos-arm64-base", "native-release-tflite-options"]
+    },
+    {
+      "name": "macos-arm64-asan-onnx",
+      "displayName": "macOS arm64 ASan (ONNX)",
+      "inherits": ["macos-arm64-base", "native-asan-onnx-options"]
+    },
+    {
+      "name": "windows-x64-debug-onnx",
+      "displayName": "Windows x64 Debug (ONNX)",
+      "inherits": ["windows-x64-base", "native-debug-onnx-options"]
+    },
+    {
+      "name": "windows-x64-release-onnx",
+      "displayName": "Windows x64 Release (ONNX)",
+      "inherits": ["windows-x64-base", "native-release-onnx-options"]
+    },
+    {
+      "name": "windows-x64-release-tflite",
+      "displayName": "Windows x64 Release (TensorFlow Lite)",
+      "inherits": ["windows-x64-base", "native-release-tflite-options"]
+    },
+    {
+      "name": "windows-x64-asan-onnx",
+      "displayName": "Windows x64 ASan (ONNX)",
+      "inherits": ["windows-x64-base", "native-asan-onnx-options"]
     },
     {
       "name": "wasm-release",
@@ -143,6 +266,24 @@
   ],
   "buildPresets": [
     {
+      "name": "macos-build-base",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "windows-build-base",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
       "name": "native-debug-onnx",
       "configurePreset": "native-debug-onnx"
     },
@@ -162,6 +303,70 @@
       "name": "native-model-packer",
       "configurePreset": "native-model-packer",
       "targets": ["model_packer"]
+    },
+    {
+      "name": "macos-x86_64-debug-onnx",
+      "inherits": "macos-build-base",
+      "configurePreset": "macos-x86_64-debug-onnx"
+    },
+    {
+      "name": "macos-x86_64-release-onnx",
+      "inherits": "macos-build-base",
+      "configurePreset": "macos-x86_64-release-onnx"
+    },
+    {
+      "name": "macos-x86_64-release-tflite",
+      "inherits": "macos-build-base",
+      "configurePreset": "macos-x86_64-release-tflite"
+    },
+    {
+      "name": "macos-x86_64-asan-onnx",
+      "inherits": "macos-build-base",
+      "configurePreset": "macos-x86_64-asan-onnx"
+    },
+    {
+      "name": "macos-arm64-debug-onnx",
+      "inherits": "macos-build-base",
+      "configurePreset": "macos-arm64-debug-onnx"
+    },
+    {
+      "name": "macos-arm64-release-onnx",
+      "inherits": "macos-build-base",
+      "configurePreset": "macos-arm64-release-onnx"
+    },
+    {
+      "name": "macos-arm64-release-tflite",
+      "inherits": "macos-build-base",
+      "configurePreset": "macos-arm64-release-tflite"
+    },
+    {
+      "name": "macos-arm64-asan-onnx",
+      "inherits": "macos-build-base",
+      "configurePreset": "macos-arm64-asan-onnx"
+    },
+    {
+      "name": "windows-x64-debug-onnx",
+      "inherits": "windows-build-base",
+      "configurePreset": "windows-x64-debug-onnx",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-x64-release-onnx",
+      "inherits": "windows-build-base",
+      "configurePreset": "windows-x64-release-onnx",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-x64-release-tflite",
+      "inherits": "windows-build-base",
+      "configurePreset": "windows-x64-release-tflite",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-x64-asan-onnx",
+      "inherits": "windows-build-base",
+      "configurePreset": "windows-x64-asan-onnx",
+      "configuration": "Debug"
     },
     {
       "name": "wasm-release",
@@ -188,6 +393,24 @@
   ],
   "testPresets": [
     {
+      "name": "macos-test-base",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "windows-test-base",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
       "name": "native-debug-onnx",
       "configurePreset": "native-debug-onnx",
       "output": {
@@ -211,6 +434,106 @@
     {
       "name": "native-asan-onnx",
       "configurePreset": "native-asan-onnx",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-x86_64-debug-onnx",
+      "inherits": "macos-test-base",
+      "configurePreset": "macos-x86_64-debug-onnx",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-x86_64-release-onnx",
+      "inherits": "macos-test-base",
+      "configurePreset": "macos-x86_64-release-onnx",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-x86_64-release-tflite",
+      "inherits": "macos-test-base",
+      "configurePreset": "macos-x86_64-release-tflite",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-x86_64-asan-onnx",
+      "inherits": "macos-test-base",
+      "configurePreset": "macos-x86_64-asan-onnx",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-arm64-debug-onnx",
+      "inherits": "macos-test-base",
+      "configurePreset": "macos-arm64-debug-onnx",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-arm64-release-onnx",
+      "inherits": "macos-test-base",
+      "configurePreset": "macos-arm64-release-onnx",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-arm64-release-tflite",
+      "inherits": "macos-test-base",
+      "configurePreset": "macos-arm64-release-tflite",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-arm64-asan-onnx",
+      "inherits": "macos-test-base",
+      "configurePreset": "macos-arm64-asan-onnx",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-x64-debug-onnx",
+      "inherits": "windows-test-base",
+      "configurePreset": "windows-x64-debug-onnx",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-x64-release-onnx",
+      "inherits": "windows-test-base",
+      "configurePreset": "windows-x64-release-onnx",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-x64-release-tflite",
+      "inherits": "windows-test-base",
+      "configurePreset": "windows-x64-release-tflite",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-x64-asan-onnx",
+      "inherits": "windows-test-base",
+      "configurePreset": "windows-x64-asan-onnx",
+      "configuration": "Debug",
       "output": {
         "outputOnFailure": true
       }

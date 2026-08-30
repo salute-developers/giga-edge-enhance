@@ -141,15 +141,19 @@ Use `tools/spench` from the repository root for supported builds, tests, and
 packages:
 
 ```shell
-tools/spench <build|test|package|core> <target> [--host]
+tools/spench <build|test|package|core|cache-key> <target> [--host]
 ```
 
-Docker is the default for native, WASM, Android, and web targets. The helper
+Docker is the default for native, WASM, Android, and web targets. The macOS and
+Windows architecture-specific presets always use their host toolchains. The helper
 uses Linux/amd64 images, stores dependency caches in `out/cache/`, and writes
 build directories to `out/build/`. On Apple Silicon, enable Docker Desktop's
 Rosetta option for x86/amd64 emulation. Use `--host` only when the required
 local toolchain is installed. iOS targets always run with the host Xcode
 toolchain. Docker Web builds automatically use `platform_wrappers/web/.nvmrc`.
+
+ASAN presets instrument Spench targets only. Third-party inference dependencies
+such as ONNX Runtime remain uninstrumented.
 
 | Target | Supported actions | Purpose |
 | --- | --- | --- |
@@ -158,6 +162,9 @@ toolchain. Docker Web builds automatically use `platform_wrappers/web/.nvmrc`.
 | `native-release-tflite` | `build`, `test`, `package` | Release TensorFlow Lite build, tests, and packages. |
 | `native-asan-onnx` | `build`, `test` | Clang AddressSanitizer ONNX Runtime validation. |
 | `native-model-packer` | `build` | Standalone packed-model tool without an inference engine. |
+| `macos-x86_64-<variant>` | `build`, `test` | Intel macOS build; variants are `debug-onnx`, `release-onnx`, `release-tflite`, and `asan-onnx`. |
+| `macos-arm64-<variant>` | `build`, `test` | Apple Silicon macOS build with the same variants. |
+| `windows-x64-<variant>` | `build`, `test` | Visual Studio 2022 x64 build with the same variants. |
 | `wasm-release` | `build`, `test` | Standard ONNX Runtime WebAssembly wrapper. |
 | `wasm-dsp-release` | `build`, `test` | Engine-free DSP WebAssembly wrapper and size-budget check. |
 | `android` | `build`, `test` | Android SDK build and test workflow. |
@@ -170,6 +177,9 @@ Common validation commands:
 tools/spench test native-release-onnx
 tools/spench test native-release-tflite
 tools/spench test native-asan-onnx
+tools/spench test macos-arm64-release-tflite
+# On Windows:
+python tools/spench test windows-x64-release-tflite
 tools/spench test wasm-release
 tools/spench test wasm-dsp-release
 tools/spench build web
@@ -178,6 +188,45 @@ tools/spench build web
 Package files are written to `out/artifacts/<preset>/`. The web workflow copies
 generated WASM modules from `out/build/` into the web SDK's ignored `bin/` and
 `lib/` directories before running npm scripts.
+
+### Dependency and compiler caches
+
+The build uses two independent caches:
+
+- `out/cache/cpm` stores downloaded dependency sources. Its key changes when
+  `package-lock.cmake`, CPM, or a dependency patch changes.
+- `out/cache/compiler` stores C and C++ compilation results. CMake automatically
+  uses `sccache`, or falls back to `ccache`, when either executable is available.
+  This applies to Spench and to dependency targets, including ONNX Runtime and
+  TensorFlow Lite. Linking and CMake configuration still run normally.
+
+Docker images include `ccache`. For host builds, install `sccache` and keep the
+`out/cache/` directory between checkouts. Set `SPENCH_COMPILER_CACHE` to
+`SCCACHE`, `CCACHE`, or `OFF` to require a specific mode or disable automatic
+detection. A completely empty local and remote cache still requires one full
+build; subsequent builds reuse content-addressed compiler results.
+
+The repository provides a composite action for future workflows. Invoke it
+after checkout and before `tools/spench`:
+
+```yaml
+- uses: ./.github/actions/setup-spench-cache
+  with:
+    preset: ${{ matrix.preset }}
+```
+
+The action restores CPM sources, restores the per-platform and per-preset local
+compiler cache, and configures sccache's GitHub Actions backend. It uses the
+dependency lock and patches in the key, while the commit SHA forms the unique
+save key. GitHub's restore-prefix behavior supplies the newest compatible warm
+cache to later commits.
+
+To inspect the generated keys locally:
+
+```shell
+tools/spench cache-key macos-arm64-release-onnx
+tools/spench cache-key native-release-tflite
+```
 
 Android requires SDK API 35, CMake 3.22.1, and NDK 29.0.14206865. Instrumented
 Android tests additionally require an attached device or running emulator and
@@ -234,13 +283,15 @@ make -j$(nproc)
 
 ## Configuration restrictions
 
-For MacOS platform, only the following __spench__ configuration is supported:
+For macOS, use the architecture-specific presets. For example:
 
 ```
-cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_TFLITE_ENGINE=ON -DBUILD_CLI=ON ..
-make -j$(nproc)
+tools/spench test macos-arm64-release-tflite
+tools/spench test macos-x86_64-release-onnx
 ```
-Set BUILD_APPLE_ARCH to arm for Apple Silicon (M1/M2), or to intel for Intel-based Mac.
+
+The presets select `arm64` or `x86_64`, a macOS 13.0 deployment target, and a
+shared Spench library. Run an architecture's tests on a matching host or runner.
 
 For iOS device platform, only the following __spench__ configuration is supported:
 
@@ -258,12 +309,12 @@ cmake -DCMAKE_TOOLCHAIN_FILE=/<path_to_ndk>/build/cmake/android.toolchain.cmake 
 make -j$(nproc)
 ```
 
-For Windows platform, __spench__ could be built by the following way:
+For Windows x64, use the Visual Studio 2022 presets from a developer command
+prompt. For example:
 
 ```
-cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_TFLITE_ENGINE=ON \
--DBUILD_CLI=OFF -DCPUINFO_BUILD_UNIT_TESTS=OFF ..
-msbuild spench.sln /property:Configuration=Release /property:Platform=x64 -m -target:ALL_BUILD
+python tools/spench test windows-x64-release-tflite
+python tools/spench test windows-x64-release-onnx
 ```
 
 ## How to use __spench__ ?

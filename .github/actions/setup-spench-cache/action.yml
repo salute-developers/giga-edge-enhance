@@ -1,0 +1,41 @@
+name: Set up Spench build caches
+description: Restore dependency sources and compiler outputs for one Spench preset.
+
+inputs:
+  preset:
+    description: Preset passed to tools/spench.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Compute cache keys
+      id: cache-keys
+      shell: bash
+      run: python tools/spench cache-key "${{ inputs.preset }}" >> "$GITHUB_OUTPUT"
+
+    - name: Restore CPM sources
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.cache-keys.outputs.source_cache_path }}
+        key: ${{ steps.cache-keys.outputs.source_cache_key }}
+        restore-keys: |
+          ${{ steps.cache-keys.outputs.source_cache_restore_key }}
+
+    - name: Restore local compiler cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.cache-keys.outputs.compiler_cache_path }}
+        key: ${{ steps.cache-keys.outputs.compiler_cache_key_prefix }}-${{ github.sha }}
+        restore-keys: |
+          ${{ steps.cache-keys.outputs.compiler_cache_key_prefix }}-
+          ${{ steps.cache-keys.outputs.compiler_cache_restore_key }}
+
+    - name: Set up sccache
+      uses: mozilla-actions/sccache-action@v0.0.11
+      with:
+        version: v0.16.0
+
+    - name: Enable the GitHub Actions sccache backend
+      shell: bash
+      run: echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"

@@ -16,6 +16,7 @@ include(SpenchOptions)
 include(SpenchCompilerSettings)
 include(SpenchPlatform)
 include(SpenchProfile)
+include(SpenchCompilerCache)
 include(SpenchBuildConfig)
 include(SpenchDependencies)
 
