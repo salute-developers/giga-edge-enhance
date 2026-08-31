@@ -10,6 +10,10 @@ android {
     ndkVersion = "29.0.14206865"
 
     defaultConfig {
+        val spenchVersion = System.getenv("SPENCH_ARTIFACT_VERSION")
+            ?: rootProject.file("../../VERSION").readText().trim()
+        versionCode = 1
+        versionName = spenchVersion
         minSdk = 26
 
         externalNativeBuild {

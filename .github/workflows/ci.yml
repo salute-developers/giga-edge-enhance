@@ -1,0 +1,302 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, master]
+  push:
+    branches: [dev, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  toolchains:
+    name: Build toolchain ${{ matrix.stage }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        stage: [native, wasm, android]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.stage }}
+          push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
+          tags: ghcr.io/${{ github.repository }}/toolchain-${{ matrix.stage }}:${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.sha) || github.sha }}
+          cache-from: type=gha,scope=toolchain-${{ matrix.stage }}
+          cache-to: type=gha,mode=max,scope=toolchain-${{ matrix.stage }}
+
+  dependencies:
+    name: Build dependency OCI ${{ matrix.target }}
+    needs: toolchains
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [native, wasm, android]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: ${{ matrix.target }}
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build dependency OCI image
+        run: tools/spench prepare-image ${{ matrix.target }}
+        env:
+          SPENCH_CONTAINER_IMAGE_NATIVE: ghcr.io/${{ github.repository }}/toolchain-native:${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.sha) || github.sha }}
+          SPENCH_CONTAINER_IMAGE_WASM: ghcr.io/${{ github.repository }}/toolchain-wasm:${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.sha) || github.sha }}
+          SPENCH_CONTAINER_IMAGE_ANDROID: ghcr.io/${{ github.repository }}/toolchain-android:${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.sha) || github.sha }}
+      - name: Publish immutable dependency OCI image
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+        shell: bash
+        run: |
+          image="$(docker image ls --format '{{.Repository}}:{{.Tag}}' | grep "^spench-dev:deps-${{ matrix.target }}-" | head -1)"
+          docker tag "$image" "ghcr.io/${GITHUB_REPOSITORY}/dependencies-${{ matrix.target }}:${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.sha) || github.sha }}"
+          docker push "ghcr.io/${GITHUB_REPOSITORY}/dependencies-${{ matrix.target }}:${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.sha) || github.sha }}"
+
+  commits:
+    name: Conventional Commits
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Validate every PR commit
+        if: github.event_name == 'pull_request'
+        uses: wagoid/commitlint-github-action@v6
+
+  style:
+    name: C++ style
+    runs-on: ubuntu-24.04
+    needs: toolchains
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          lfs: true
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: platform_wrappers/web/.nvmrc
+          cache: npm
+          cache-dependency-path: platform_wrappers/web/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install --yes clang-format
+      - run: npm ci
+        working-directory: platform_wrappers/web
+      - name: Check C++ formatting
+        run: git diff --name-only ${{ github.event.pull_request.base.sha || github.event.before }}...HEAD -- 'spench/**/*.c' 'spench/**/*.cc' 'spench/**/*.cpp' 'spench/**/*.h' 'spench/**/*.hpp' | xargs --no-run-if-empty clang-format --dry-run --Werror --style=file
+      - name: Check web formatting and lint
+        run: npm run lint --workspace=@gigaedge/spench-web-sdk && npm run lint --workspace=spench-demo
+        working-directory: platform_wrappers/web
+
+  native:
+    name: Native ${{ matrix.preset }}
+    runs-on: ubuntu-24.04
+    needs: dependencies
+    strategy:
+      fail-fast: false
+      matrix:
+        preset:
+          - native-debug-onnx
+          - native-release-onnx
+          - native-debug-tflite
+          - native-release-tflite
+          - native-release-static-onnx
+          - native-release-static-tflite
+          - native-asan-onnx
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: ${{ matrix.preset }}
+      - uses: ./.github/actions/setup-spench-dependency
+        with:
+          target: native
+          tag: ${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.sha) || github.sha }}
+      - run: tools/spench test ${{ matrix.preset }}
+        env:
+          SPENCH_CONTAINER_IMAGE_NATIVE: ghcr.io/${{ github.repository }}/toolchain-native:${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.sha) || github.sha }}
+
+  wasm:
+    name: WASM ${{ matrix.preset }}
+    runs-on: ubuntu-24.04
+    needs: dependencies
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [wasm-debug, wasm-release, wasm-dsp-debug, wasm-dsp-release]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: ${{ matrix.preset }}
+      - uses: ./.github/actions/setup-spench-dependency
+        with:
+          target: wasm
+          tag: ${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.sha) || github.sha }}
+      - run: tools/spench test ${{ matrix.preset }}
+        env:
+          SPENCH_CONTAINER_IMAGE_WASM: ghcr.io/${{ github.repository }}/toolchain-wasm:${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.sha) || github.sha }}
+
+  web:
+    name: Web SDK and demo
+    runs-on: ubuntu-24.04
+    needs: dependencies
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: wasm-release
+      - uses: ./.github/actions/setup-spench-dependency
+        with:
+          target: wasm
+          tag: ${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.sha) || github.sha }}
+      - run: tools/spench build web
+        env:
+          SPENCH_CONTAINER_IMAGE_WASM: ghcr.io/${{ github.repository }}/toolchain-wasm:${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.sha) || github.sha }}
+      - run: npm run lint --workspace=@gigaedge/spench-web-sdk && npm run lint --workspace=spench-demo
+        working-directory: platform_wrappers/web
+
+  android:
+    name: Android
+    runs-on: ubuntu-24.04
+    needs: dependencies
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android native build prerequisites
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "cmake;3.22.1" "ndk;29.0.14206865"
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: android
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          script: RUN_ANDROID_INSTRUMENTED_TESTS=1 tools/spench test android --host
+
+  macos:
+    name: macOS ${{ matrix.preset }}
+    runs-on: ${{ matrix.runner }}
+    needs: dependencies
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-13
+            preset: macos-x86_64-release-onnx
+          - runner: macos-13
+            preset: macos-x86_64-release-tflite
+          - runner: macos-14
+            preset: macos-arm64-release-onnx
+          - runner: macos-14
+            preset: macos-arm64-release-tflite
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: ${{ matrix.preset }}
+      - run: tools/spench test ${{ matrix.preset }} --host
+
+  windows:
+    name: Windows ${{ matrix.preset }}
+    runs-on: windows-2025
+    needs: dependencies
+    strategy:
+      fail-fast: false
+      matrix:
+        preset:
+          - windows-x64-release-onnx
+          - windows-x64-release-tflite
+          - windows-x64-release-static-tflite
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: ${{ matrix.preset }}
+      - run: python tools/spench test ${{ matrix.preset }} --host
+
+  ios:
+    name: iOS
+    runs-on: macos-14
+    needs: dependencies
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: ios
+      - run: tools/spench test ios --host
+      - run: platform_wrappers/ios/scripts/lint.sh
+
+  required:
+    name: ci-required
+    if: always()
+    needs: [commits, style, native, wasm, web, android, macos, windows, ios]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every job to pass
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          jq --exit-status 'all(.[]; . == "success")' <<< "$RESULTS"

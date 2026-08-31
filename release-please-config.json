@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "simple",
+  "include-component-in-tag": false,
+  "packages": {
+    ".": {
+      "component": "spench",
+      "version-file": "VERSION",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "platform_wrappers/web/packages/web-sdk/package.json",
+          "jsonpath": "$.version"
+        },
+        "platform_wrappers/ios/project.yml"
+      ]
+    }
+  }
+}

@@ -49,4 +49,10 @@ endif()
 
 include(CPack)
 set(CPACK_PACKAGE_NAME spench)
-set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(_spench_default_artifact_version "${PROJECT_VERSION}")
+if(DEFINED ENV{SPENCH_ARTIFACT_VERSION})
+  set(_spench_default_artifact_version "$ENV{SPENCH_ARTIFACT_VERSION}")
+endif()
+set(SPENCH_ARTIFACT_VERSION "${_spench_default_artifact_version}" CACHE STRING
+    "Version used in distributable artifact names; may include a SemVer prerelease suffix.")
+set(CPACK_PACKAGE_VERSION ${SPENCH_ARTIFACT_VERSION})

@@ -1,0 +1,27 @@
+name: Restore Spench dependency bundle
+description: Restore a target-specific engine bundle from GHCR when it is available.
+
+inputs:
+  target:
+    description: Dependency family (native, wasm, or android).
+    required: true
+  tag:
+    description: Immutable OCI tag to restore.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Restore OCI dependency bundle
+      shell: bash
+      env:
+        IMAGE: ghcr.io/${{ github.repository }}/dependencies-${{ inputs.target }}:${{ inputs.tag }}
+      run: |
+        if ! docker pull "$IMAGE"; then
+          echo "No compatible dependency OCI image is available; CMake will build dependencies."
+          exit 0
+        fi
+        container_id="$(docker create "$IMAGE")"
+        trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
+        mkdir -p out/artifacts/dependencies
+        docker cp "$container_id:/dependencies/." out/artifacts/dependencies/

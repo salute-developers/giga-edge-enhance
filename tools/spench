@@ -143,6 +143,16 @@ def ensure_container_image(container_stage: str) -> str:
     if subprocess.run(["docker", "image", "inspect", image], stdout=subprocess.DEVNULL,
                       stderr=subprocess.DEVNULL).returncode == 0:
         return image
+
+    remote_image = os.environ.get(
+        f"SPENCH_CONTAINER_IMAGE_{container_stage.upper().replace('-', '_')}")
+    if remote_image:
+        print(f"Restoring {container_stage} toolchain image: {remote_image}")
+        if subprocess.run(["docker", "pull", remote_image]).returncode == 0:
+            subprocess.run(["docker", "tag", remote_image, image], check=True)
+            return image
+        print("Remote toolchain image is unavailable; building it locally.")
+
     build_command = [
         "docker", "build", "--platform", "linux/amd64", "--target", container_stage,
         "--tag", image,
@@ -861,6 +871,8 @@ def android_workflow(action: str, host: bool) -> None:
     stage = None if host else "android"
     script = "test-all.sh" if action == "test" else "build.sh"
     environment = compiler_cache_environment(stage is not None)
+    if artifact_version := os.environ.get("SPENCH_ARTIFACT_VERSION"):
+        environment["SPENCH_ARTIFACT_VERSION"] = artifact_version
     dependency_root = "/workspace/out/artifacts/dependencies" if not host else str(
         ROOT / "out" / "artifacts" / "dependencies")
     environment["SPENCH_PREBUILT_DEPENDENCIES_ROOT"] = dependency_root

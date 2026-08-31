@@ -11,6 +11,8 @@ RUN apt-get update && \
         ca-certificates \
         ccache \
         clang \
+        clang-tidy \
+        cpplint \
         libclang-rt-18-dev \
         cmake \
         curl \

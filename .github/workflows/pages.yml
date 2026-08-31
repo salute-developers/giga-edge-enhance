@@ -1,0 +1,88 @@
+name: Publish web demo
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev, master]
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: write
+  packages: read
+
+concurrency:
+  group: pages-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-dev:
+    if: github.event_name == 'push' && github.ref_name == 'dev'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: wasm-release
+      - run: tools/spench build web
+        env:
+          SPENCH_CONTAINER_IMAGE_WASM: ghcr.io/${{ github.repository }}/toolchain-wasm:latest
+      - run: npm run build --workspace=spench-demo
+        working-directory: platform_wrappers/web
+        env:
+          SPENCH_DEMO_BASE: /${{ github.event.repository.name }}/
+      - name: Publish root demo
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: platform_wrappers/web/services/spench-demo/build
+          keep_files: true
+
+  deploy-preview:
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: wasm-release
+      - run: tools/spench build web
+        env:
+          SPENCH_CONTAINER_IMAGE_WASM: ghcr.io/${{ github.repository }}/toolchain-wasm:latest
+      - run: npm run build --workspace=spench-demo
+        working-directory: platform_wrappers/web
+        env:
+          SPENCH_DEMO_BASE: /${{ github.event.repository.name }}/pr/${{ github.event.pull_request.number }}/
+      - name: Publish PR preview
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: platform_wrappers/web/services/spench-demo/build
+          destination_dir: pr/${{ github.event.pull_request.number }}
+          keep_files: true
+
+  remove-preview:
+    if: github.event.action == 'closed' && github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+      - name: Remove PR preview
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          git rm -r --ignore-unmatch "pr/${PR_NUMBER}"
+          if ! git diff --cached --quiet; then
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git commit -m "chore(pages): remove PR ${PR_NUMBER} preview"
+            git push
+          fi

@@ -1,0 +1,146 @@
+name: Publish release assets
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  native:
+    name: Linux ${{ matrix.preset }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [native-release-onnx, native-release-tflite]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: ${{ matrix.preset }}
+      - run: tools/spench package ${{ matrix.preset }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.preset }}
+          path: out/artifacts/${{ matrix.preset }}
+
+  android:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: android
+      - run: tools/spench build android
+      - run: tar -C platform_wrappers/android -czf out/artifacts/spench-android-${{ github.ref_name }}.tar.gz --exclude='build' spench-sdk/build/outputs spench-model-full24k/build/outputs spench-model-full48k/build/outputs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: out/artifacts/spench-android-${{ github.ref_name }}.tar.gz
+
+  ios:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: ios
+      - run: tools/spench build ios --host
+      - run: tar -C platform_wrappers/ios/build/xcframework -czf ../../../out/artifacts/spench-ios-${{ github.ref_name }}.tar.gz SpenchAudioKit.xcframework SpenchModelLite8k.bundle SpenchModelQuality48k.bundle
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: out/artifacts/spench-ios-${{ github.ref_name }}.tar.gz
+
+  macos:
+    name: macOS ${{ matrix.preset }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-13
+            preset: macos-x86_64-release-onnx
+          - runner: macos-13
+            preset: macos-x86_64-release-tflite
+          - runner: macos-14
+            preset: macos-arm64-release-onnx
+          - runner: macos-14
+            preset: macos-arm64-release-tflite
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: ${{ matrix.preset }}
+      - run: tools/spench install ${{ matrix.preset }} --host
+      - run: tar -C out/artifacts/install -czf out/artifacts/spench-${{ matrix.preset }}-${{ github.ref_name }}.tar.gz ${{ matrix.preset }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.preset }}
+          path: out/artifacts/spench-${{ matrix.preset }}-${{ github.ref_name }}.tar.gz
+
+  windows:
+    name: Windows ${{ matrix.preset }}
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [windows-x64-release-onnx, windows-x64-release-tflite, windows-x64-release-static-tflite]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: ${{ matrix.preset }}
+      - run: python tools/spench install ${{ matrix.preset }} --host
+      - shell: bash
+        run: tar -C out/artifacts/install -czf out/artifacts/spench-${{ matrix.preset }}-${{ github.ref_name }}.tar.gz ${{ matrix.preset }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.preset }}
+          path: out/artifacts/spench-${{ matrix.preset }}-${{ github.ref_name }}.tar.gz
+
+  web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: wasm-release
+      - run: tools/spench build web
+      - run: npm pack --workspace=@gigaedge/spench-web-sdk --pack-destination ../../out/artifacts
+        working-directory: platform_wrappers/web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-sdk
+          path: out/artifacts/*.tgz
+
+  release:
+    needs: [native, android, ios, macos, windows, web]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Create checksums
+        working-directory: release-assets
+        run: find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" release-assets/* --clobber

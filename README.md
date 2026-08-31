@@ -287,6 +287,38 @@ tools/spench cache-key macos-arm64-release-onnx
 tools/spench cache-key native-release-tflite
 ```
 
+### Continuous integration and releases
+
+Pull requests run the complete platform matrix, including LFS model checkout,
+native engine variants, WASM, Web SDK/demo, Android, iOS, macOS, and Windows.
+Every commit in a pull request must follow Conventional Commits. Local formatting
+is available through `pre-commit install`; CI runs `clang-format` using the
+repository's `.clang-format` file alongside the platform-native linters.
+
+The repository's `VERSION` file is the release version source. Release Please
+opens a version and changelog pull request after releasable commits reach
+`master`; merging that generated pull request creates the corresponding `vX.Y.Z`
+GitHub Release. CI publishes no package registries: release deliverables are
+attached to GitHub Releases, and internal pull-request canaries remain GitHub
+Actions artifacts.
+
+GitHub Actions caches CPM sources and compiler outputs separately. Trusted
+`dev`/`master` runs also publish immutable toolchain and inference-engine OCI
+artifacts to GHCR; later Linux jobs restore matching bundles and fall back to a
+source build if no compatible bundle exists. Configure GitHub Pages to publish
+the `gh-pages` branch. The demo is deployed at the project root from `dev`, and
+internal PR previews are deployed at `pr/<number>/` then removed when the PR
+closes.
+
+Before enabling the workflows, create a fine-grained `RELEASE_PLEASE_TOKEN`
+repository secret with Contents read/write and Pull requests read/write access.
+Using this token (rather than the workflow `GITHUB_TOKEN`) ensures the tag made
+by Release Please starts the release-asset workflow. Enable “Allow GitHub
+Actions to create and approve pull requests” in repository Actions settings,
+set Pages to deploy from the `gh-pages` branch, and require approval for all
+external fork workflow runs without granting fork workflows write tokens or
+secrets.
+
 Android requires SDK API 35, CMake 3.22.1, and NDK 29.0.14206865. Instrumented
 Android tests additionally require an attached device or running emulator and
 `RUN_ANDROID_INSTRUMENTED_TESTS=1`.

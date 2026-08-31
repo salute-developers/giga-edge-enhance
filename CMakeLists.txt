@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.17)
 
-project(spench VERSION 0.10.0 LANGUAGES C CXX)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" SPENCH_VERSION
+     LIMIT_COUNT 1 REGEX "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+if(NOT SPENCH_VERSION)
+  message(FATAL_ERROR "VERSION must contain a SemVer core version (for example 1.0.0).")
+endif()
+
+project(spench VERSION "${SPENCH_VERSION}" LANGUAGES C CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
