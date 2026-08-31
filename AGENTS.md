@@ -135,6 +135,164 @@ blocker. Do not silently substitute a weaker check.
 - Do not manually edit staged/generated WASM artifacts when the staging scripts
   or `tools/spench build web` can produce them.
 
+## Future GitHub CI/CD design
+
+This section is the implementation blueprint for future files under
+`.github/workflows/`. Keep workflow YAML thin: setup belongs in composite
+actions and build behavior belongs in `tools/spench`, so local and CI commands
+remain identical.
+
+### Workflow boundaries
+
+Create separate workflows with narrowly scoped permissions:
+
+- `ci.yml`: `pull_request`, merge queue, and pushes to the protected default
+  branch. It validates source but never publishes.
+- `nightly.yml`: scheduled and manually dispatched exhaustive tests, including
+  slow platform, sanitizer, browser, and device/emulator coverage.
+- `dependencies.yml`: manually dispatched and triggered by dependency recipe
+  changes. It prepares dependency bundles/images; it is not a product release.
+- `release.yml`: manually dispatched or version-tag triggered. It packages,
+  signs, verifies, and publishes only a commit that passed the full required CI
+  gate.
+
+Do not combine pull-request validation and publishing in one workflow. Forked
+pull requests must never receive release secrets or write permissions.
+
+### CI job order
+
+Implement the dependency graph in this order:
+
+```text
+changes + policy
+        |
+        v
+Linux native smoke test
+        |
+        +-------------------+-------------------+------------------+
+        v                   v                   v                  v
+native/engine matrix   WASM + web matrix   Android matrix   macOS/Windows/iOS
+        +-------------------+-------------------+------------------+
+                                |
+                                v
+                     install/package verification
+                                |
+                                v
+                       single required CI gate
+```
+
+1. **Changes and policy.** Classify affected areas (`core`, `build`, `web`,
+   `android`, `ios`, `docs`) and validate repository metadata. Use path
+   classification to avoid expensive unrelated jobs on pull requests, but do
+   not skip the full matrix on the default branch, nightly runs, or releases.
+   Use shallow checkout for lightweight jobs. Jobs that execute tests must
+   fetch Git LFS objects because models and audio fixtures are LFS-managed.
+2. **Linux native smoke test.** Run the cheapest representative end-to-end
+   build first, normally `tools/spench test native-debug-onnx`. Expensive jobs
+   should depend on this job so basic checkout, Docker, CMake, cache, model, and
+   test failures stop the pipeline early.
+3. **Parallel validation matrices.** After smoke succeeds, run independent
+   jobs concurrently with matrix `fail-fast: false` so all platform failures
+   are reported in one run:
+   - Linux native: Debug and Release for ONNX Runtime and TensorFlow Lite, plus
+     `native-asan-onnx` and the supported static-release variants.
+   - WASM: `wasm-debug`, `wasm-release`, `wasm-dsp-debug`, and
+     `wasm-dsp-release`.
+   - Web: `tools/spench build web`; run demo lint and Playwright separately so
+     a placeholder package test cannot satisfy browser coverage.
+   - Android: `tools/spench test android`; keep connected emulator tests in
+     nightly CI until runner reliability and duration are acceptable for pull
+     requests.
+   - macOS: run only presets matching the runner architecture, verify it with
+     `uname -m`, and include the iOS simulator workflow on a compatible Xcode
+     runner.
+   - Windows: invoke the helper as `python tools/spench test <preset>` and test
+     both engines plus the supported static variant.
+4. **Install and package verification.** Run only after the corresponding test
+   job passes. Exercise `tools/spench install <preset>` for distributable CMake
+   installs and `tools/spench package <preset>` for supported release archives.
+   Add a small external consumer project that uses the installed package; a
+   successful archive command alone does not prove consumers can find headers,
+   libraries, transitive dependencies, or CMake package metadata.
+5. **Single required gate.** Add one final job with stable name such as
+   `ci-required`. It must use `if: always()`, inspect every required dependency,
+   and fail when a required job failed, was cancelled, or was unexpectedly
+   skipped. Configure branch protection against this one name so later matrix
+   expansion does not require branch-protection changes.
+
+Documentation-only pull requests may stop after policy/documentation checks.
+Changes to `CMakeLists.txt`, `CMakePresets.json`, `cmake/`, `Dockerfile`,
+`package-lock.cmake`, `tools/spench`, dependency patches, public headers, or
+cross-platform implementation code must select broad coverage.
+
+### Cache and dependency-bundle policy
+
+- Immediately after checkout, call
+  `./.github/actions/setup-spench-cache` once per build job with that job's
+  exact preset. Do not duplicate cache-key logic in workflow YAML.
+- Treat CPM and compiler caches only as accelerators. A cache miss must remain a
+  correct build, and release artifacts must never be published directly from a
+  mutable cache.
+- Build dependency bundles with `tools/spench prepare-deps <target>` and export
+  dependency-only OCI archives with `tools/spench prepare-image <family>`.
+- Publish dependency images only from trusted default-branch or manually
+  approved runs. Address them by immutable digest or dependency-lock-derived
+  tag, validate their `manifest.json`, and fall back to a source build when no
+  compatible bundle exists.
+- Rebuild bundles when `package-lock.cmake`, CPM configuration, dependency
+  patches, relevant CMake recipes, toolchain identity, or bundle format changes.
+- Use concurrency cancellation for superseded pull-request runs. Do not cancel
+  release or dependency-publication workflows halfway through publishing.
+
+### Artifacts and diagnostics
+
+- On failure, upload CTest logs, CMake configure logs, compiler-cache statistics,
+  Playwright reports/traces, Gradle reports, and Xcode result bundles when they
+  exist. Keep failure artifacts for a limited debugging retention period.
+- On success, upload only deliberate products from `out/artifacts/`, together
+  with a manifest and SHA-256 checksums. Never upload the entire workspace,
+  dependency caches, credentials, or `.dvc/config`.
+- Put a compact matrix and cache summary in `GITHUB_STEP_SUMMARY`; job logs
+  remain the detailed source of truth.
+
+### CD and release order
+
+Release from the exact tested tag commit, never by rebuilding an unpinned
+branch. Use a protected GitHub Environment for approvals and secrets. Prefer
+short-lived/OIDC credentials where the destination supports them.
+
+1. Validate the version/tag and confirm the commit passed `ci-required` with
+   the full release matrix.
+2. Build packages independently for Linux, macOS, Windows, Android, iOS, and
+   WASM using the same helper commands as CI.
+3. Verify each install/package with a consumer or smoke test, then generate
+   checksums and provenance/SBOM metadata. Sign and notarize where applicable.
+4. Publish immutable native/platform artifacts and the validated WASM artifacts
+   first.
+5. Stage the exact published WASM outputs into the Web SDK, rerun Web SDK unit,
+   build, and browser tests, and only then publish the npm package. Do not build
+   a different WASM binary during the Web SDK release.
+6. Create or finalize the GitHub Release only after every required publication
+   succeeds. Record all artifact hashes and versions in the release notes.
+
+A rerun must be idempotent: it may verify an already published artifact with
+the same hash, but it must fail rather than overwrite an existing version with
+different bytes.
+
+### Known prerequisites before CI becomes required
+
+- `.pre-commit-config.yaml`, `STYLE.md`, and this file reference
+  `container_internals/check_style.sh`, but `container_internals/` is not
+  present in the current repository. Restore those scripts or update all three
+  references before adding a required style job.
+- `tools/spench test web` currently invokes the undefined npm script
+  `test:cy:mos-candidates`; the demo package currently exposes `pw:test` and
+  `pw:test:mos-candidates`. Align the helper and package scripts before making
+  the browser job required.
+- Decide the authoritative release version source and tag format before
+  implementing `release.yml`; the current `README.md` release section is marked
+  for rewrite.
+
 ## Completion criteria
 
 Before reporting completion:
