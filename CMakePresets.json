@@ -62,12 +62,40 @@
       }
     },
     {
+      "name": "native-debug-tflite-options",
+      "hidden": true,
+      "cacheVariables": {
+        "SPENCH_PROFILE": "native",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_ONNX_ENGINE": "OFF",
+        "BUILD_TFLITE_ENGINE": "ON",
+        "BUILD_TESTING": "ON",
+        "BUILD_CLI": "ON"
+      }
+    },
+    {
       "name": "native-asan-onnx-options",
       "hidden": true,
       "inherits": "native-debug-onnx-options",
       "cacheVariables": {
         "BUILD_CLI": "OFF",
         "BUILD_WITH_ADDRESS_SANITIZER": "ON"
+      }
+    },
+    {
+      "name": "native-release-static-onnx-options",
+      "hidden": true,
+      "inherits": "native-release-onnx-options",
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
+      "name": "native-release-static-tflite-options",
+      "hidden": true,
+      "inherits": "native-release-tflite-options",
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": "OFF"
       }
     },
     {
@@ -136,6 +164,21 @@
       "inherits": ["native-base", "native-release-tflite-options"]
     },
     {
+      "name": "native-release-static-onnx",
+      "displayName": "Native Release Static (ONNX)",
+      "inherits": ["native-base", "native-release-static-onnx-options"]
+    },
+    {
+      "name": "native-release-static-tflite",
+      "displayName": "Native Release Static (TensorFlow Lite)",
+      "inherits": ["native-base", "native-release-static-tflite-options"]
+    },
+    {
+      "name": "native-debug-tflite",
+      "displayName": "Native Debug (TensorFlow Lite)",
+      "inherits": ["native-base", "native-debug-tflite-options"]
+    },
+    {
       "name": "native-asan-onnx",
       "displayName": "Native ASan (ONNX)",
       "inherits": ["native-base", "native-asan-onnx-options"]
@@ -170,6 +213,19 @@
       "inherits": ["macos-x86_64-base", "native-release-tflite-options"]
     },
     {
+      "name": "macos-x86_64-release-static-onnx",
+      "displayName": "macOS x86_64 Release Static (ONNX)",
+      "inherits": ["macos-x86_64-base", "native-release-static-onnx-options"],
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
+      "name": "macos-x86_64-debug-tflite",
+      "displayName": "macOS x86_64 Debug (TensorFlow Lite)",
+      "inherits": ["macos-x86_64-base", "native-debug-tflite-options"]
+    },
+    {
       "name": "macos-x86_64-asan-onnx",
       "displayName": "macOS x86_64 ASan (ONNX)",
       "inherits": ["macos-x86_64-base", "native-asan-onnx-options"]
@@ -188,6 +244,19 @@
       "name": "macos-arm64-release-tflite",
       "displayName": "macOS arm64 Release (TensorFlow Lite)",
       "inherits": ["macos-arm64-base", "native-release-tflite-options"]
+    },
+    {
+      "name": "macos-arm64-release-static-onnx",
+      "displayName": "macOS arm64 Release Static (ONNX)",
+      "inherits": ["macos-arm64-base", "native-release-static-onnx-options"],
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
+      "name": "macos-arm64-debug-tflite",
+      "displayName": "macOS arm64 Debug (TensorFlow Lite)",
+      "inherits": ["macos-arm64-base", "native-debug-tflite-options"]
     },
     {
       "name": "macos-arm64-asan-onnx",
@@ -210,6 +279,19 @@
       "inherits": ["windows-x64-base", "native-release-tflite-options"]
     },
     {
+      "name": "windows-x64-release-static-tflite",
+      "displayName": "Windows x64 Release Static (TensorFlow Lite)",
+      "inherits": ["windows-x64-base", "native-release-static-tflite-options"],
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
+      "name": "windows-x64-debug-tflite",
+      "displayName": "Windows x64 Debug (TensorFlow Lite)",
+      "inherits": ["windows-x64-base", "native-debug-tflite-options"]
+    },
+    {
       "name": "windows-x64-asan-onnx",
       "displayName": "Windows x64 ASan (ONNX)",
       "inherits": ["windows-x64-base", "native-asan-onnx-options"]
@@ -229,12 +311,29 @@
       }
     },
     {
+      "name": "wasm-debug",
+      "displayName": "WebAssembly Debug",
+      "inherits": "wasm-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
       "name": "wasm-dsp-release",
       "displayName": "WebAssembly DSP Release",
       "inherits": "wasm-release",
       "cacheVariables": {
         "BUILD_ONNX_ENGINE": "OFF",
         "BUILD_TFLITE_ENGINE": "OFF",
+        "BUILD_DSP": "ON"
+      }
+    },
+    {
+      "name": "wasm-dsp-debug",
+      "displayName": "WebAssembly DSP Debug",
+      "inherits": "wasm-debug",
+      "cacheVariables": {
+        "BUILD_ONNX_ENGINE": "OFF",
         "BUILD_DSP": "ON"
       }
     },
@@ -256,9 +355,25 @@
       }
     },
     {
+      "name": "ios-device-debug",
+      "displayName": "iOS Device Debug",
+      "inherits": "ios-device-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
       "name": "ios-simulator-release",
       "displayName": "iOS Simulator Release",
       "inherits": "ios-device-release",
+      "cacheVariables": {
+        "PLATFORM": "SIMULATOR64COMBINED"
+      }
+    },
+    {
+      "name": "ios-simulator-debug",
+      "displayName": "iOS Simulator Debug",
+      "inherits": "ios-device-debug",
       "cacheVariables": {
         "PLATFORM": "SIMULATOR64COMBINED"
       }
@@ -296,6 +411,18 @@
       "configurePreset": "native-release-tflite"
     },
     {
+      "name": "native-release-static-onnx",
+      "configurePreset": "native-release-static-onnx"
+    },
+    {
+      "name": "native-release-static-tflite",
+      "configurePreset": "native-release-static-tflite"
+    },
+    {
+      "name": "native-debug-tflite",
+      "configurePreset": "native-debug-tflite"
+    },
+    {
       "name": "native-asan-onnx",
       "configurePreset": "native-asan-onnx"
     },
@@ -320,6 +447,16 @@
       "configurePreset": "macos-x86_64-release-tflite"
     },
     {
+      "name": "macos-x86_64-release-static-onnx",
+      "inherits": "macos-build-base",
+      "configurePreset": "macos-x86_64-release-static-onnx"
+    },
+    {
+      "name": "macos-x86_64-debug-tflite",
+      "inherits": "macos-build-base",
+      "configurePreset": "macos-x86_64-debug-tflite"
+    },
+    {
       "name": "macos-x86_64-asan-onnx",
       "inherits": "macos-build-base",
       "configurePreset": "macos-x86_64-asan-onnx"
@@ -338,6 +475,16 @@
       "name": "macos-arm64-release-tflite",
       "inherits": "macos-build-base",
       "configurePreset": "macos-arm64-release-tflite"
+    },
+    {
+      "name": "macos-arm64-release-static-onnx",
+      "inherits": "macos-build-base",
+      "configurePreset": "macos-arm64-release-static-onnx"
+    },
+    {
+      "name": "macos-arm64-debug-tflite",
+      "inherits": "macos-build-base",
+      "configurePreset": "macos-arm64-debug-tflite"
     },
     {
       "name": "macos-arm64-asan-onnx",
@@ -363,6 +510,18 @@
       "configuration": "Release"
     },
     {
+      "name": "windows-x64-release-static-tflite",
+      "inherits": "windows-build-base",
+      "configurePreset": "windows-x64-release-static-tflite",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-x64-debug-tflite",
+      "inherits": "windows-build-base",
+      "configurePreset": "windows-x64-debug-tflite",
+      "configuration": "Debug"
+    },
+    {
       "name": "windows-x64-asan-onnx",
       "inherits": "windows-build-base",
       "configurePreset": "windows-x64-asan-onnx",
@@ -374,8 +533,18 @@
       "targets": ["spench_wasm"]
     },
     {
+      "name": "wasm-debug",
+      "configurePreset": "wasm-debug",
+      "targets": ["spench_wasm"]
+    },
+    {
       "name": "wasm-dsp-release",
       "configurePreset": "wasm-dsp-release",
+      "targets": ["spench_wasm"]
+    },
+    {
+      "name": "wasm-dsp-debug",
+      "configurePreset": "wasm-dsp-debug",
       "targets": ["spench_wasm"]
     },
     {
@@ -385,9 +554,21 @@
       "targets": ["spench"]
     },
     {
+      "name": "ios-device-debug",
+      "configurePreset": "ios-device-debug",
+      "configuration": "Debug",
+      "targets": ["spench"]
+    },
+    {
       "name": "ios-simulator-release",
       "configurePreset": "ios-simulator-release",
       "configuration": "Release",
+      "targets": ["spench"]
+    },
+    {
+      "name": "ios-simulator-debug",
+      "configurePreset": "ios-simulator-debug",
+      "configuration": "Debug",
       "targets": ["spench"]
     }
   ],
@@ -432,6 +613,27 @@
       }
     },
     {
+      "name": "native-release-static-onnx",
+      "configurePreset": "native-release-static-onnx",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "native-release-static-tflite",
+      "configurePreset": "native-release-static-tflite",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "native-debug-tflite",
+      "configurePreset": "native-debug-tflite",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
       "name": "native-asan-onnx",
       "configurePreset": "native-asan-onnx",
       "output": {
@@ -458,6 +660,22 @@
       "name": "macos-x86_64-release-tflite",
       "inherits": "macos-test-base",
       "configurePreset": "macos-x86_64-release-tflite",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-x86_64-release-static-onnx",
+      "inherits": "macos-test-base",
+      "configurePreset": "macos-x86_64-release-static-onnx",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-x86_64-debug-tflite",
+      "inherits": "macos-test-base",
+      "configurePreset": "macos-x86_64-debug-tflite",
       "output": {
         "outputOnFailure": true
       }
@@ -495,6 +713,22 @@
       }
     },
     {
+      "name": "macos-arm64-release-static-onnx",
+      "inherits": "macos-test-base",
+      "configurePreset": "macos-arm64-release-static-onnx",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-arm64-debug-tflite",
+      "inherits": "macos-test-base",
+      "configurePreset": "macos-arm64-debug-tflite",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
       "name": "macos-arm64-asan-onnx",
       "inherits": "macos-test-base",
       "configurePreset": "macos-arm64-asan-onnx",
@@ -525,6 +759,24 @@
       "inherits": "windows-test-base",
       "configurePreset": "windows-x64-release-tflite",
       "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-x64-release-static-tflite",
+      "inherits": "windows-test-base",
+      "configurePreset": "windows-x64-release-static-tflite",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-x64-debug-tflite",
+      "inherits": "windows-test-base",
+      "configurePreset": "windows-x64-debug-tflite",
+      "configuration": "Debug",
       "output": {
         "outputOnFailure": true
       }

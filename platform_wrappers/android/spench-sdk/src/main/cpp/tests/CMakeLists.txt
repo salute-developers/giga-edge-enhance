@@ -12,6 +12,10 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build all libraries dynamically." FORCE)
 set(BUILD_CLI OFF CACHE BOOL "Build command-line tools and demos." FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "Build tests." FORCE)
 set(BUILD_RESAMPLER ON CACHE BOOL "Build with libsoxr audio resampling." FORCE)
+if(DEFINED ENV{SPENCH_PREBUILT_DEPENDENCIES_ROOT})
+  set(SPENCH_PREBUILT_DEPENDENCIES_ROOT "$ENV{SPENCH_PREBUILT_DEPENDENCIES_ROOT}"
+    CACHE PATH "Root containing target-specific prebuilt dependency bundles." FORCE)
+endif()
 
 add_subdirectory("${SPENCH_ROOT_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/spench-core")
 

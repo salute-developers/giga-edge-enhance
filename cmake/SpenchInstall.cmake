@@ -1,4 +1,4 @@
-if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
   return()
 endif()
 

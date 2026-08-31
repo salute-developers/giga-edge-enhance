@@ -29,7 +29,7 @@ RUN mkdir -p /usr/local/lib/nvm && \
         "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh" | \
         NVM_DIR=/usr/local/lib/nvm PROFILE=/dev/null bash'
 
-FROM base AS native
+FROM base AS native-base
 
 ARG EIGEN_REVISION=e7248b26a1ed53fa030c5c459f7ea095dfd276ac
 
@@ -40,7 +40,9 @@ RUN git init /opt/eigen && \
     git -C /opt/eigen fetch --depth 1 origin "${EIGEN_REVISION}" && \
     git -C /opt/eigen checkout --detach FETCH_HEAD
 
-FROM base AS android
+FROM native-base AS native
+
+FROM base AS android-base
 
 ARG ANDROID_COMMAND_LINE_TOOLS=11076708
 ARG ANDROID_NDK_VERSION=29.0.14206865
@@ -67,7 +69,9 @@ RUN yes | sdkmanager --licenses && \
         "cmake;${ANDROID_CMAKE_VERSION}" \
         "ndk;${ANDROID_NDK_VERSION}"
 
-FROM native AS wasm
+FROM android-base AS android
+
+FROM native-base AS wasm-base
 
 ARG EMSDK_VERSION=3.1.64
 
@@ -81,6 +85,45 @@ RUN git clone --depth 1 --branch "${EMSDK_VERSION}" \
 
 ENV EMSDK=/opt/emsdk
 ENV PATH=/opt/emsdk:/opt/emsdk/upstream/emscripten:${PATH}
+
+FROM wasm-base AS wasm
+
+# OCI artifact stages. They intentionally contain dependency bundles only,
+# allowing GHCR to store them separately from runnable toolchain images.
+FROM scratch AS deps-native
+LABEL org.gigaedge.spench.kind="dependency-bundle" \
+      org.gigaedge.spench.target="linux-x86_64"
+COPY --from=spench_deps /linux/x86_64 /dependencies/linux/x86_64
+
+FROM scratch AS deps-wasm
+LABEL org.gigaedge.spench.kind="dependency-bundle" \
+      org.gigaedge.spench.target="emscripten-wasm32"
+COPY --from=spench_deps /emscripten/wasm32 /dependencies/emscripten/wasm32
+
+FROM scratch AS deps-android
+LABEL org.gigaedge.spench.kind="dependency-bundle" \
+      org.gigaedge.spench.target="android"
+COPY --from=spench_deps /android /dependencies/android
+
+FROM scratch AS deps-ios
+LABEL org.gigaedge.spench.kind="dependency-bundle" \
+      org.gigaedge.spench.target="ios"
+COPY --from=spench_deps /ios /dependencies/ios
+
+FROM scratch AS deps-macos-x86_64
+LABEL org.gigaedge.spench.kind="dependency-bundle" \
+      org.gigaedge.spench.target="macos-x86_64"
+COPY --from=spench_deps /macos/x86_64 /dependencies/macos/x86_64
+
+FROM scratch AS deps-macos-arm64
+LABEL org.gigaedge.spench.kind="dependency-bundle" \
+      org.gigaedge.spench.target="macos-arm64"
+COPY --from=spench_deps /macos/arm64 /dependencies/macos/arm64
+
+FROM scratch AS deps-windows-x64
+LABEL org.gigaedge.spench.kind="dependency-bundle" \
+      org.gigaedge.spench.target="windows-x86_64"
+COPY --from=spench_deps /windows/x86_64 /dependencies/windows/x86_64
 
 FROM base AS web-test
 

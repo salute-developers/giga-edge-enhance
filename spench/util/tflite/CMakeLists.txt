@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.17.3)
 
-CPMGetPackage(tflite)
+if(NOT TARGET tensorflow-lite AND NOT TARGET tensorflow-lite::tensorflow-lite)
+  CPMGetPackage(tflite)
+endif()
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT SPENCH_USING_PREBUILT_TFLITE)
     # TensorFlow Lite 2.13's spectrogram source omits the uint32_t declaration.
     target_compile_options(tensorflow-lite PRIVATE -include cstdint)
 endif()
@@ -28,10 +30,15 @@ target_compile_options(util__tf_lite
           PRIVATE -O3)
 endif()
 
-target_link_libraries(util__tf_lite
-    PUBLIC
-        tensorflow-lite
-        yaml-cpp
-)
+if(TARGET tensorflow-lite::tensorflow-lite)
+  target_link_libraries(util__tf_lite PUBLIC tensorflow-lite::tensorflow-lite yaml-cpp)
+else()
+  target_link_libraries(util__tf_lite PUBLIC tensorflow-lite yaml-cpp)
+endif()
+
+if(SPENCH_USING_PREBUILT_TFLITE)
+  target_link_directories(util__tf_lite PUBLIC
+    "${SPENCH_RESOLVED_PREBUILT_TFLITE_ROOT}/lib")
+endif()
 
 add_library(util::tf_lite ALIAS util__tf_lite)

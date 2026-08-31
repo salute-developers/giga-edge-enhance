@@ -45,9 +45,9 @@ if(NOT (CMAKE_SYSTEM_NAME MATCHES "Android" OR WIN32))
 endif()
 
 if (BUILD_TFLITE_ENGINE)
-  target_link_libraries(spench_tests PRIVATE tensorflow-lite util__tf_lite)
+  target_link_libraries(spench_tests PRIVATE util__tf_lite)
 elseif (BUILD_ONNX_ENGINE)
-  target_link_libraries(spench_tests PRIVATE onnxruntime util__onnx)
+  target_link_libraries(spench_tests PRIVATE util__onnx)
 
   if (NOT APPLE)
     target_link_libraries(spench_tests PRIVATE gomp)

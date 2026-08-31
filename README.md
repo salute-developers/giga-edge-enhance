@@ -141,7 +141,7 @@ Use `tools/spench` from the repository root for supported builds, tests, and
 packages:
 
 ```shell
-tools/spench <build|test|package|core|cache-key> <target> [--host]
+tools/spench <build|test|package|install|core|cache-key|prepare-deps|prepare-image> <target> [--host]
 ```
 
 Docker is the default for native, WASM, Android, and web targets. The macOS and
@@ -159,14 +159,16 @@ such as ONNX Runtime remain uninstrumented.
 | --- | --- | --- |
 | `native-debug-onnx` | `build`, `test` | Debug ONNX Runtime build and tests. |
 | `native-release-onnx` | `build`, `test`, `package` | Release ONNX Runtime build, tests, and packages. |
+| `native-debug-tflite` | `build`, `test` | Debug TensorFlow Lite build and tests. |
 | `native-release-tflite` | `build`, `test`, `package` | Release TensorFlow Lite build, tests, and packages. |
+| `native-release-static-<engine>` | `build`, `test`, `install` | Explicit static release build for ONNX Runtime or TensorFlow Lite. |
 | `native-asan-onnx` | `build`, `test` | Clang AddressSanitizer ONNX Runtime validation. |
 | `native-model-packer` | `build` | Standalone packed-model tool without an inference engine. |
-| `macos-x86_64-<variant>` | `build`, `test` | Intel macOS build; variants are `debug-onnx`, `release-onnx`, `release-tflite`, and `asan-onnx`. |
-| `macos-arm64-<variant>` | `build`, `test` | Apple Silicon macOS build with the same variants. |
-| `windows-x64-<variant>` | `build`, `test` | Visual Studio 2022 x64 build with the same variants. |
-| `wasm-release` | `build`, `test` | Standard ONNX Runtime WebAssembly wrapper. |
-| `wasm-dsp-release` | `build`, `test` | Engine-free DSP WebAssembly wrapper and size-budget check. |
+| `macos-x86_64-<variant>` | `build`, `test`, `install` | Intel macOS build; includes `release-static-onnx`. |
+| `macos-arm64-<variant>` | `build`, `test`, `install` | Apple Silicon macOS build; includes `release-static-onnx`. |
+| `windows-x64-<variant>` | `build`, `test`, `install` | Visual Studio 2022 x64 build; includes `release-static-tflite`. |
+| `wasm-<variant>` | `build`, `test` | ONNX Runtime WebAssembly variants: `debug` and `release`. |
+| `wasm-dsp-<variant>` | `build`, `test` | Engine-free DSP WebAssembly variants: `debug` and `release`. |
 | `android` | `build`, `test` | Android SDK build and test workflow. |
 | `ios` | `build`, `test`, `core` | iOS XCFramework, test, and C++ core workflows. |
 | `web` | `build` | Builds both WASM wrappers, then installs, tests, and bundles the web SDK. |
@@ -185,7 +187,10 @@ tools/spench test wasm-dsp-release
 tools/spench build web
 ```
 
-Package files are written to `out/artifacts/<preset>/`. The web workflow copies
+Package files are written to `out/artifacts/<preset>/`. `tools/spench install <preset>`
+writes the CMake install tree to `out/artifacts/install/<preset>/`; for WASM presets,
+that includes the generated `.js`, `.wasm`, and `.d.ts` files in `bin/`. It is separate
+from `build` so normal development builds do not copy files. The web workflow copies
 generated WASM modules from `out/build/` into the web SDK's ignored `bin/` and
 `lib/` directories before running npm scripts.
 
@@ -205,6 +210,60 @@ Docker images include `ccache`. For host builds, install `sccache` and keep the
 `SCCACHE`, `CCACHE`, or `OFF` to require a specific mode or disable automatic
 detection. A completely empty local and remote cache still requires one full
 build; subsequent builds reuse content-addressed compiler results.
+After every helper-driven CMake build, the helper prints the active compiler
+cache's counters so the `Cache hits`/`Cache misses` lines can be captured in a
+local log or CI summary.
+
+### Prebuilt inference-engine bundles
+
+The helper can export the expensive, low-churn inference engines as immutable,
+target-specific bundles. Normal `build` and `test` actions never prepare a
+bundle: when a matching local bundle is present they pass it to CMake, otherwise
+CMake downloads and builds the engine through CPM as before. This makes a fresh
+checkout correct without any prebuild step, while CI can restore a bundle before
+the build to avoid compiling ONNX Runtime or TensorFlow Lite.
+
+```shell
+# One host target or all target variants for a platform workflow.
+tools/spench prepare-deps macos-arm64-release-onnx
+tools/spench prepare-deps macos    # x86_64 and arm64, both engines/configurations
+tools/spench prepare-deps windows  # x86_64, both engines/configurations
+tools/spench prepare-deps android
+tools/spench prepare-deps ios
+tools/spench prepare-deps web
+
+# Export dependency-only OCI images for later GHCR upload. Toolchain images do
+# not contain prebuilt engines.
+tools/spench prepare-image native
+tools/spench prepare-image wasm
+tools/spench prepare-image android
+tools/spench prepare-image ios
+tools/spench prepare-image macos
+tools/spench prepare-image windows
+```
+
+Bundles are written under `out/artifacts/dependencies/`. Each contains a
+`manifest.json` describing its engine, target, build type, dependency-lock
+digest, and producing toolchain. A sibling `.tar.gz` and `.sha256` file make it
+ready for publication. `prepare-image` writes Docker image archives and
+checksums under `out/artifacts/images/`.
+
+The matrix includes Linux x86_64 ONNX Runtime/TensorFlow Lite Debug and Release,
+plus explicit static Release bundles for both engines; Android TensorFlow Lite
+Debug and Release for `arm64-v8a`, `armeabi-v7a`, `x86_64`, and `x86`; wasm32
+ONNX Runtime Debug and Release; iOS device/simulator ONNX Runtime Debug and
+Release; macOS x86_64/arm64 Debug and Release engine bundles plus static ONNX
+Release; and Windows x86_64 Debug/Release bundles plus static TensorFlow Lite
+Release. ASAN reuses the matching non-instrumented Debug ONNX Runtime bundle.
+
+Bundle files live below `out/artifacts/dependencies/`; their manifest names the
+engine, architecture, configuration, linkage, recipe digest, compiler, and CMake
+version. `prepare-image` packages exactly one target family into a dependency-only
+OCI image and writes `docker save` archives plus checksums below
+`out/artifacts/images/`. A CI restore step extracts a pulled image's
+`/dependencies` directory into `out/artifacts/dependencies/`; `tools/spench`
+then finds the matching manifest automatically. No dependency bundle is copied
+into the `native`, `wasm`, or `android` toolchain image.
 
 The repository provides a composite action for future workflows. Invoke it
 after checkout and before `tools/spench`:

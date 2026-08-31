@@ -6,6 +6,15 @@ option(BUILD_RESAMPLER "Build with libsoxr audio resampling." ON)
 option(BUILD_CLI "Build command-line tools and demos." OFF)
 option(BUILD_DSP "Build the engine-free DSP configuration." OFF)
 option(BUILD_TESTING "Build tests." ON)
+set(SPENCH_PREBUILT_ORT_ROOT "" CACHE PATH
+  "Install prefix containing a compatible prebuilt ONNX Runtime bundle.")
+set(SPENCH_PREBUILT_TFLITE_ROOT "" CACHE PATH
+  "Install prefix containing a compatible prebuilt TensorFlow Lite bundle.")
+set(SPENCH_PREBUILT_DEPENDENCIES_ROOT "" CACHE PATH
+  "Root containing target-specific prebuilt dependency bundles.")
+set(SPENCH_ENGINE_BUNDLE_LINKAGE "" CACHE STRING
+  "Linkage used while explicitly preparing an inference-engine bundle (shared or static).")
+set_property(CACHE SPENCH_ENGINE_BUNDLE_LINKAGE PROPERTY STRINGS "" shared static)
 
 set(BUILD_APPLE_ARCH "" CACHE STRING "Apple target architecture: arm, intel, or empty for native.")
 

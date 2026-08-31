@@ -31,7 +31,16 @@ core_is_current() {
 
 build_target() {
   local preset="$1"
-  cmake --preset "$preset"
+  local prebuilt_root=""
+  case "$preset" in
+    ios-device-*) prebuilt_root="${SPENCH_PREBUILT_ORT_DEVICE_ROOT:-}" ;;
+    ios-simulator-*) prebuilt_root="${SPENCH_PREBUILT_ORT_SIMULATOR_ROOT:-}" ;;
+  esac
+  if [[ -n "$prebuilt_root" ]]; then
+    cmake --preset "$preset" "-DSPENCH_PREBUILT_ORT_ROOT=$prebuilt_root"
+  else
+    cmake --preset "$preset"
+  fi
   cmake --build --preset "$preset"
 }
 

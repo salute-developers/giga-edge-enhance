@@ -19,6 +19,17 @@ target_include_directories(spench_wasm PRIVATE
 
 target_link_libraries(spench_wasm PRIVATE spench)
 
+# Emscripten's executable target produces a JavaScript loader plus companion
+# WebAssembly and TypeScript declaration files.  Install all three so
+# `tools/spench install wasm-*` is a deployable web artifact, not only the
+# core C++ static library installed by SpenchInstall.cmake.
+install(FILES
+        "$<TARGET_FILE_DIR:spench_wasm>/${MODULE_NAME}.js"
+        "$<TARGET_FILE_DIR:spench_wasm>/${MODULE_NAME}.wasm"
+        "$<TARGET_FILE_DIR:spench_wasm>/${MODULE_NAME}.d.ts"
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
 if(BUILD_DSP)
     set(spench_wasm_common_compile_and_link_options
         -O3

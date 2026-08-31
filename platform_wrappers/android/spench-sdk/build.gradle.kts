@@ -17,6 +17,9 @@ android {
                 cppFlags += listOf("-std=c++20")
                 abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
                 targets += listOf("spench-sdk")
+                System.getenv("SPENCH_PREBUILT_DEPENDENCIES_ROOT")?.let {
+                    arguments += "-DSPENCH_PREBUILT_DEPENDENCIES_ROOT=$it"
+                }
             }
         }
 

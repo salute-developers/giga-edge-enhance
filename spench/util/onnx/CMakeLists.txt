@@ -25,8 +25,8 @@ if (EMSCRIPTEN)
 else()
   if (TARGET onnxruntime::onnxruntime)
     target_link_libraries(util__onnx
-    PUBLIC onnxruntime::onnxruntime
-  )
+      PUBLIC onnxruntime::onnxruntime
+    )
   else()
     target_link_libraries(util__onnx
       PUBLIC onnxruntime
@@ -40,7 +40,13 @@ else()
   set(onnxruntime_target onnxruntime)
 endif()
 
-if (TARGET ${onnxruntime_target})
+if(SPENCH_PREBUILT_ORT_ROOT)
+  target_include_directories(util__onnx PUBLIC "${SPENCH_PREBUILT_ORT_ROOT}/include")
+  # CMake may reduce the imported dylib/archive to -lonnxruntime when this
+  # static library is consumed by another target.  Keep its bundle directory
+  # on the consumer link line in that case.
+  target_link_directories(util__onnx PUBLIC "${SPENCH_PREBUILT_ORT_ROOT}/lib")
+elseif (TARGET ${onnxruntime_target})
   get_target_property(onnxruntime_cmake_dir ${onnxruntime_target} SOURCE_DIR)
   target_include_directories(util__onnx PUBLIC "${onnxruntime_cmake_dir}/../include")
 endif()

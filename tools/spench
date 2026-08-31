@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
+import json
 import os
 from pathlib import Path
 import platform
@@ -27,37 +29,131 @@ WEB_TEST_IMAGE_INPUTS = (
 PRESET_STAGES = {
     "native-debug-onnx": "native",
     "native-release-onnx": "native",
+    "native-debug-tflite": "native",
     "native-release-tflite": "native",
+    "native-release-static-onnx": "native",
+    "native-release-static-tflite": "native",
     "native-asan-onnx": "native",
     "native-model-packer": "native",
     "wasm-release": "wasm",
+    "wasm-debug": "wasm",
     "wasm-dsp-release": "wasm",
+    "wasm-dsp-debug": "wasm",
 }
 HOST_ONLY_PRESETS = (
     "macos-x86_64-debug-onnx",
     "macos-x86_64-release-onnx",
     "macos-x86_64-release-tflite",
+    "macos-x86_64-debug-tflite",
     "macos-x86_64-asan-onnx",
+    "macos-x86_64-release-static-onnx",
     "macos-arm64-debug-onnx",
     "macos-arm64-release-onnx",
     "macos-arm64-release-tflite",
+    "macos-arm64-debug-tflite",
     "macos-arm64-asan-onnx",
+    "macos-arm64-release-static-onnx",
     "windows-x64-debug-onnx",
     "windows-x64-release-onnx",
     "windows-x64-release-tflite",
+    "windows-x64-debug-tflite",
     "windows-x64-asan-onnx",
+    "windows-x64-release-static-tflite",
+    "ios-device-release",
+    "ios-device-debug",
+    "ios-simulator-release",
+    "ios-simulator-debug",
 )
 CACHE_INPUTS = (
     ROOT / "package-lock.cmake",
     ROOT / "cmake/CPM.cmake",
     ROOT / "cmake/SpenchDependencies.cmake",
 )
+DEPENDENCY_BUNDLE_FORMAT = 2
+# Keep bundle invalidation tied to the CMake recipes that build a particular
+# engine. The command-line helper deliberately is not an input: unrelated
+# commands in this large script must not make every ORT/TFLite bundle stale.
+# Bump DEPENDENCY_BUNDLE_FORMAT when changing the export/package procedure.
+ENGINE_BUNDLE_COMMON_INPUTS = (
+    ROOT / "CMakeLists.txt",
+    ROOT / "cmake/SpenchOptions.cmake",
+    ROOT / "cmake/SpenchPlatform.cmake",
+    ROOT / "spench/contrib/CMakeLists.txt",
+)
+ENGINE_BUNDLE_INPUTS = {
+    "onnx": ENGINE_BUNDLE_COMMON_INPUTS + (ROOT / "spench/util/onnx/CMakeLists.txt",),
+    "tflite": ENGINE_BUNDLE_COMMON_INPUTS + (ROOT / "spench/util/tflite/CMakeLists.txt",),
+}
+ANDROID_ABIS = ("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+ANDROID_NDK_VERSION = "29.0.14206865"
 NATIVE_PRESETS = {
     "native-debug-onnx",
     "native-release-onnx",
+    "native-debug-tflite",
     "native-release-tflite",
+    "native-release-static-onnx",
+    "native-release-static-tflite",
     "native-asan-onnx",
 } | set(HOST_ONLY_PRESETS)
+
+
+def container_image_name(container_stage: str) -> str:
+    """Return the immutable local image name for a toolchain or dependency stage."""
+    image_inputs = (DOCKERFILE, *WEB_TEST_IMAGE_INPUTS) if container_stage == "web-test" else (DOCKERFILE,)
+    image_digest = hashlib.sha256()
+    for image_input in image_inputs:
+        image_digest.update(image_input.relative_to(ROOT).as_posix().encode())
+        image_digest.update(image_input.read_bytes())
+    dependency_root = ROOT / "out" / "artifacts" / "dependencies"
+    dependency_stage_system = {
+        "deps-native": "linux",
+        "deps-wasm": "emscripten",
+        "deps-android": "android",
+        "deps-ios": "ios",
+        "deps-macos-x86_64": "macos",
+        "deps-macos-arm64": "macos",
+        "deps-windows-x64": "windows",
+    }
+    if container_stage in dependency_stage_system:
+        stage_system = dependency_stage_system[container_stage]
+        for manifest in sorted(dependency_root.rglob("manifest.json")):
+            relative_parts = manifest.relative_to(dependency_root).parts
+            if relative_parts[0] != stage_system:
+                continue
+            if container_stage == "deps-macos-x86_64" and relative_parts[1] != "x86_64":
+                continue
+            if container_stage == "deps-macos-arm64" and relative_parts[1] != "arm64":
+                continue
+            if container_stage == "deps-windows-x64" and relative_parts[1] != "x86_64":
+                continue
+            image_digest.update(manifest.relative_to(ROOT).as_posix().encode())
+            image_digest.update(manifest.read_bytes())
+    return f"spench-dev:{container_stage}-{image_digest.hexdigest()[:12]}"
+
+
+def ensure_container_image(container_stage: str) -> str:
+    """Build a stage only when its Dockerfile inputs or dependency bundles changed."""
+    if shutil.which("docker") is None:
+        raise SystemExit("Docker is required for this target. Use --host for a local toolchain.")
+    if subprocess.run(["docker", "info"], stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL).returncode != 0:
+        raise SystemExit("Docker is installed but its daemon is unavailable. Start Docker or use --host.")
+
+    image = container_image_name(container_stage)
+    if subprocess.run(["docker", "image", "inspect", image], stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL).returncode == 0:
+        return image
+    build_command = [
+        "docker", "build", "--platform", "linux/amd64", "--target", container_stage,
+        "--tag", image,
+    ]
+    if container_stage.startswith("deps-"):
+        dependency_root = ROOT / "out" / "artifacts" / "dependencies"
+        dependency_root.mkdir(parents=True, exist_ok=True)
+        build_command.extend(("--build-context", f"spench_deps={dependency_root}"))
+    build_command.append(str(ROOT))
+    subprocess.run(build_command, check=True)
+    return image
 
 
 def run(command: list[str], *, container_stage: str | None = None,
@@ -69,25 +165,7 @@ def run(command: list[str], *, container_stage: str | None = None,
         subprocess.run(command, cwd=workdir, check=True, env=process_environment)
         return
 
-    if shutil.which("docker") is None:
-        raise SystemExit("Docker is required for this target. Use --host for a local toolchain.")
-    if subprocess.run(["docker", "info"], stdout=subprocess.DEVNULL,
-                      stderr=subprocess.DEVNULL).returncode != 0:
-        raise SystemExit("Docker is installed but its daemon is unavailable. Start Docker or use --host.")
-
-    image_inputs = (DOCKERFILE, *WEB_TEST_IMAGE_INPUTS) if container_stage == "web-test" else (DOCKERFILE,)
-    image_digest = hashlib.sha256()
-    for image_input in image_inputs:
-        image_digest.update(image_input.relative_to(ROOT).as_posix().encode())
-        image_digest.update(image_input.read_bytes())
-    image_hash = image_digest.hexdigest()[:12]
-    image = f"spench-dev:{container_stage}-{image_hash}"
-    if subprocess.run(["docker", "image", "inspect", image], stdout=subprocess.DEVNULL,
-                      stderr=subprocess.DEVNULL).returncode != 0:
-        subprocess.run([
-            "docker", "build", "--platform", "linux/amd64", "--target", container_stage,
-            "--tag", image, str(ROOT),
-        ], check=True)
+    image = ensure_container_image(container_stage)
 
     cache_home = ROOT / "out" / "cache" / "container-home"
     cache_home.mkdir(parents=True, exist_ok=True)
@@ -153,6 +231,24 @@ def compiler_cache_environment(container: bool) -> dict[str, str]:
     }
 
 
+def print_compiler_cache_stats(container_stage: str | None,
+                               environment: dict[str, str]) -> None:
+    """Show the cache counters after a build without making cache availability fatal."""
+    command = ["ccache", "--show-stats"] if container_stage is not None else None
+    if command is None:
+        if shutil.which("sccache"):
+            command = ["sccache", "--show-stats"]
+        elif shutil.which("ccache"):
+            command = ["ccache", "--show-stats"]
+    if command is None:
+        return
+    print("Compiler cache statistics:")
+    try:
+        run(command, container_stage=container_stage, environment=environment)
+    except subprocess.CalledProcessError:
+        print("Compiler cache statistics are unavailable for this build.")
+
+
 def dependency_cache_digest() -> str:
     digest = hashlib.sha256()
     inputs = [*CACHE_INPUTS, *sorted((ROOT / "cmake/patches").glob("*.patch"))]
@@ -160,6 +256,26 @@ def dependency_cache_digest() -> str:
         digest.update(cache_input.relative_to(ROOT).as_posix().encode())
         digest.update(b"\0")
         digest.update(cache_input.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()[:16]
+
+
+def dependency_bundle_digest(engine: str) -> str:
+    """Return the identity of an engine's binary bundle recipe."""
+    try:
+        bundle_inputs = ENGINE_BUNDLE_INPUTS[engine]
+    except KeyError as error:
+        raise ValueError(f"Unsupported dependency bundle engine: {engine}") from error
+
+    digest = hashlib.sha256()
+    digest.update(f"format={DEPENDENCY_BUNDLE_FORMAT}".encode())
+    digest.update(b"\0")
+    digest.update(dependency_cache_digest().encode())
+    digest.update(b"\0")
+    for bundle_input in bundle_inputs:
+        digest.update(bundle_input.relative_to(ROOT).as_posix().encode())
+        digest.update(b"\0")
+        digest.update(bundle_input.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()[:16]
 
@@ -173,6 +289,10 @@ def cache_target(preset: str, host: bool) -> tuple[str, str]:
         return "windows", "x86_64"
     if preset.startswith("wasm-"):
         return "emscripten", "wasm32"
+    if preset.startswith("ios-device-"):
+        return "ios", "arm64"
+    if preset.startswith("ios-simulator-"):
+        return "ios", "arm64-x86_64"
     if preset == "android":
         return "android", "multi"
     if preset == "ios":
@@ -206,6 +326,457 @@ def print_cache_keys(preset: str, host: bool) -> None:
     )
 
 
+def engine_requirement(preset: str) -> tuple[str, str] | None:
+    """Return the engine and dependency build type required by a preset."""
+    if preset in {"native-model-packer", "wasm-dsp-release", "wasm-dsp-debug"}:
+        return None
+    if "tflite" in preset:
+        return "tflite", "Debug" if "debug" in preset else "Release"
+    if "onnx" in preset or preset.startswith(("wasm-", "ios-")):
+        return "onnx", "Debug" if "debug" in preset or "asan" in preset else "Release"
+    return None
+
+
+def bundle_linkage(preset: str) -> str:
+    return "static" if "-static-" in preset else "shared"
+
+
+def artifact_preset(preset: str) -> str:
+    """ASAN consumes the matching non-instrumented Debug engine bundle."""
+    return preset.replace("asan", "debug")
+
+
+def dependency_artifact_root(preset: str, host: bool) -> Path | None:
+    requirement = engine_requirement(preset)
+    if requirement is None:
+        return None
+    engine, build_type = requirement
+    target_system, target_arch = cache_target(preset, host)
+    identity = f"v{DEPENDENCY_BUNDLE_FORMAT}-{dependency_bundle_digest(engine)}"
+    return (ROOT / "out" / "artifacts" / "dependencies" / target_system /
+            target_arch / engine / build_type.lower() / bundle_linkage(preset) / identity)
+
+
+def executable_version(command: str) -> str:
+    executable = shutil.which(command)
+    if executable is None:
+        return "not-found"
+    result = subprocess.run([executable, "--version"], text=True, capture_output=True,
+                            check=False)
+    return result.stdout.splitlines()[0] if result.stdout else executable
+
+
+def dependency_manifest(preset: str, host: bool, prefix: Path) -> dict[str, object]:
+    engine, build_type = engine_requirement(preset) or ("none", "None")
+    target_system, target_arch = cache_target(preset, host)
+    return {
+        "format": DEPENDENCY_BUNDLE_FORMAT,
+        "engine": engine,
+        "build_type": build_type,
+        "linkage": bundle_linkage(preset),
+        "preset": artifact_preset(preset),
+        "target_system": target_system,
+        "target_architecture": target_arch,
+        "dependency_digest": dependency_bundle_digest(engine),
+        "cmake": executable_version("cmake"),
+        "compiler": executable_version("clang++" if target_system != "windows" else "cl"),
+        "prefix": str(prefix.relative_to(ROOT)),
+    }
+
+
+def copy_onnx_headers(prefix: Path) -> None:
+    source_roots = sorted((ROOT / "out" / "cache" / "cpm" / "onnxruntime").glob("*/include"))
+    if not source_roots:
+        raise SystemExit("ONNX Runtime source headers were not found in out/cache/cpm after CPM preparation.")
+    destination = prefix / "include" / "onnxruntime"
+    shutil.copytree(source_roots[-1] / "onnxruntime", destination, dirs_exist_ok=True)
+
+
+def copy_tflite_headers(prefix: Path, build_dir: Path | None = None) -> None:
+    """Copy TFLite's public headers and its header-only public dependencies."""
+    source_roots = sorted((ROOT / "out" / "cache" / "cpm" / "tflite").glob("*/tensorflow"))
+    if not source_roots:
+        raise SystemExit("TensorFlow Lite headers were not found in out/cache/cpm after CPM preparation.")
+    shutil.copytree(source_roots[-1], prefix / "include" / "tensorflow", dirs_exist_ok=True)
+    if build_dir is None:
+        return
+
+    header_dependencies = {
+        "flatbuffers": ("flatbuffers.h", 0),
+        "absl": ("config.h", 1),
+    }
+    for directory, (header, parents) in header_dependencies.items():
+        candidates = sorted(build_dir.rglob(f"{directory}/**/{header}"))
+        if not candidates:
+            raise SystemExit(
+                f"TensorFlow Lite preparation did not produce public {directory} headers below {build_dir}.")
+        source = candidates[0]
+        for _ in range(parents):
+            source = source.parent
+        source = source.parent
+        shutil.copytree(source, prefix / "include" / directory, dirs_exist_ok=True)
+
+
+def copy_static_archives(prefix: Path, build_dir: Path) -> list[Path]:
+    """Copy archives without merging them, so duplicate object names remain distinct."""
+    archive_root = prefix / "lib" / "archives"
+    archives = sorted({archive for pattern in ("*.a", "*.lib") for archive in build_dir.rglob(pattern)
+                       if "spench" not in archive.parts})
+    if not archives:
+        raise SystemExit(f"No static archives were produced below {build_dir}.")
+
+    copied = []
+    for archive in archives:
+        # Keeping the build-relative path avoids collisions such as the many
+        # independently-built det.cc.o members found in ONNX Runtime archives.
+        destination = archive_root / archive.relative_to(build_dir)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(archive, destination)
+        copied.append(destination)
+    return copied
+
+
+def copy_engine_library(prefix: Path, engine: str, build_dir: Path) -> Path:
+    """Copy a shared engine library and all loader aliases."""
+    library_dir = prefix / "lib"
+    library_dir.mkdir(parents=True, exist_ok=True)
+    stem = "onnxruntime" if engine == "onnx" else "tensorflow-lite"
+    candidates = sorted({
+        *build_dir.rglob(f"lib{stem}*.dylib"),
+        *build_dir.rglob(f"lib{stem}*.so"),
+        *build_dir.rglob(f"lib{stem}*.so.*"),
+        *build_dir.rglob(f"{stem}*.dll"),
+    })
+    if not candidates:
+        raise SystemExit(f"No shared {engine} library was produced below {build_dir}.")
+    # Preserve the loader aliases as regular files.  CMake can emit either
+    # -l<name> or the library SONAME for a transitive static consumer.
+    for source in candidates:
+        shutil.copy2(source, library_dir / source.name)
+    return library_dir / candidates[0].name
+
+
+def write_engine_package_config(prefix: Path, engine: str, library: Path | None, linkage: str,
+                                target_name: str | None = None,
+                                static_archives: list[Path] | None = None) -> None:
+    """Write a relocatable config independent of upstream engine dependencies."""
+    package = "onnxruntime" if engine == "onnx" else "tensorflow-lite"
+    target = target_name or ("onnxruntime::onnxruntime" if engine == "onnx"
+                             else "tensorflow-lite::tensorflow-lite")
+    config_dir = prefix / "lib" / "cmake" / package
+    config_dir.mkdir(parents=True, exist_ok=True)
+    prefix_variable = "_spench_ort_prefix" if engine == "onnx" else "_spench_tflite_prefix"
+    if linkage == "static":
+        if not static_archives:
+            raise ValueError("Static engine package configuration requires copied archives.")
+        archive_paths = [archive.relative_to(prefix).as_posix() for archive in static_archives]
+        archive_entries = "\n".join(
+            f"  \"${{{prefix_variable}}}/{archive}\"" for archive in archive_paths)
+        # GNU ld needs a rescan group for ONNX Runtime's cyclic static archives.
+        # Apple and MSVC linkers resolve the regular archive list themselves.
+        config = (
+            "include(CMakeFindDependencyMacro)\n"
+            f"get_filename_component({prefix_variable} \"${{CMAKE_CURRENT_LIST_DIR}}/../../..\" ABSOLUTE)\n"
+            "find_dependency(Threads)\n"
+            f"set(_spench_engine_archives\n{archive_entries}\n)\n"
+            "if(CMAKE_SYSTEM_NAME STREQUAL \"Linux\")\n"
+            "  string(JOIN \",\" _spench_engine_archive_group ${_spench_engine_archives})\n"
+            "  set(_spench_engine_link_libraries \"$<LINK_GROUP:RESCAN,${_spench_engine_archive_group}>\")\n"
+            "else()\n"
+            "  set(_spench_engine_link_libraries \"${_spench_engine_archives}\")\n"
+            "endif()\n"
+            f"if(NOT TARGET {target})\n"
+            f"  add_library({target} INTERFACE IMPORTED GLOBAL)\n"
+            f"  set_target_properties({target} PROPERTIES\n"
+            f"    INTERFACE_INCLUDE_DIRECTORIES \"${{{prefix_variable}}}/include\"\n"
+            "    INTERFACE_LINK_LIBRARIES \"${_spench_engine_link_libraries};Threads::Threads;${CMAKE_DL_LIBS};m\"\n"
+            "  )\n"
+            "endif()\n")
+    else:
+        if library is None:
+            raise ValueError("Shared engine package configuration requires its shared library.")
+        config = (
+            "include(CMakeFindDependencyMacro)\n"
+            f"get_filename_component({prefix_variable} \"${{CMAKE_CURRENT_LIST_DIR}}/../../..\" ABSOLUTE)\n"
+            f"if(NOT TARGET {target})\n"
+            f"  add_library({target} UNKNOWN IMPORTED GLOBAL)\n"
+            f"  set_target_properties({target} PROPERTIES\n"
+            f"    IMPORTED_LOCATION \"${{{prefix_variable}}}/lib/{library.name}\"\n"
+            f"    INTERFACE_INCLUDE_DIRECTORIES \"${{{prefix_variable}}}/include\"\n"
+            "  )\n"
+            "endif()\n")
+    (config_dir / f"{package}Config.cmake").write_text(config)
+
+
+@contextlib.contextmanager
+def artifact_lock(artifact_root: Path):
+    """Prevent two invocations from configuring the same nested engine sources."""
+    lock_path = artifact_root.with_name(f"{artifact_root.name}.lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        descriptor = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError as error:
+        raise SystemExit(
+            f"Dependency preparation is already running for {artifact_root.relative_to(ROOT)}. "
+            f"Wait for it to finish before retrying.") from error
+    try:
+        os.write(descriptor, f"pid={os.getpid()}\n".encode())
+        yield
+    finally:
+        os.close(descriptor)
+        lock_path.unlink(missing_ok=True)
+
+
+def write_dependency_bundle(artifact_root: Path, manifest: dict[str, object]) -> None:
+    artifact_root.mkdir(parents=True, exist_ok=True)
+    (artifact_root / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    archive = Path(shutil.make_archive(str(artifact_root), "gztar", root_dir=artifact_root))
+    archive_digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+    archive.with_suffix(archive.suffix + ".sha256").write_text(
+        f"{archive_digest}  {archive.name}\n")
+
+
+def write_tflite_package_config(prefix: Path) -> None:
+    """Replace TFLite's non-relocatable dependency config with a bundle config."""
+    candidates = sorted({
+        *prefix.glob("lib/libtensorflow-lite*.a"),
+        *prefix.glob("lib/libtensorflow-lite*.dylib"),
+        *prefix.glob("lib/libtensorflow-lite*.so"),
+        *prefix.glob("lib/libtensorflow-lite*.so.*"),
+        *prefix.glob("lib/tensorflow-lite*.lib"),
+    })
+    if len(candidates) != 1:
+        raise SystemExit(
+            f"Expected exactly one installed TensorFlow Lite library under {prefix / 'lib'}, "
+            f"found {len(candidates)}.")
+    library_name = candidates[0].name
+    config_dir = prefix / "lib" / "cmake" / "tensorflow-lite"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    (config_dir / "tensorflow-liteConfig.cmake").write_text(
+        "get_filename_component(_spench_tflite_prefix \"${CMAKE_CURRENT_LIST_DIR}/../../..\" ABSOLUTE)\n"
+        "if(NOT TARGET tensorflow-lite::tensorflow-lite)\n"
+        "  add_library(tensorflow-lite::tensorflow-lite UNKNOWN IMPORTED)\n"
+        "  set_target_properties(tensorflow-lite::tensorflow-lite PROPERTIES\n"
+        f"    IMPORTED_LOCATION \"${{_spench_tflite_prefix}}/lib/{library_name}\"\n"
+        "    INTERFACE_INCLUDE_DIRECTORIES \"${_spench_tflite_prefix}/include\")\n"
+        "endif()\n")
+
+
+def write_wasm_onnx_package_config(prefix: Path, build_dir: Path) -> None:
+    """Export ORT's manually bundled Emscripten archive as an imported target."""
+    candidates = sorted(build_dir.rglob("libonnxruntime_webassembly.a"))
+    if len(candidates) != 1:
+        raise SystemExit(
+            f"Expected exactly one WebAssembly ONNX Runtime archive below {build_dir}, "
+            f"found {len(candidates)}.")
+    library_dir = prefix / "lib"
+    library_dir.mkdir(parents=True, exist_ok=True)
+    library_name = candidates[0].name
+    shutil.copy2(candidates[0], library_dir / library_name)
+    config_dir = library_dir / "cmake" / "onnxruntime"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    (config_dir / "onnxruntimeConfig.cmake").write_text(
+        "get_filename_component(_spench_ort_prefix \"${CMAKE_CURRENT_LIST_DIR}/../../..\" ABSOLUTE)\n"
+        "if(NOT TARGET onnxruntime_webassembly)\n"
+        "  add_library(onnxruntime_webassembly STATIC IMPORTED GLOBAL)\n"
+        "  set_target_properties(onnxruntime_webassembly PROPERTIES\n"
+        f"    IMPORTED_LOCATION \"${{_spench_ort_prefix}}/lib/{library_name}\"\n"
+        "    INTERFACE_INCLUDE_DIRECTORIES \"${_spench_ort_prefix}/include\")\n"
+        "endif()\n")
+
+
+def prepare_dependency(preset: str, host: bool) -> Path | None:
+    """Build the normal CMake graph's selected engine target and export a bundle."""
+    requirement = engine_requirement(preset)
+    artifact_root = dependency_artifact_root(preset, host)
+    if requirement is None or artifact_root is None:
+        return None
+    engine, build_type = requirement
+    prefix = artifact_root / "prefix"
+    manifest_path = artifact_root / "manifest.json"
+    expected = dependency_manifest(preset, host, prefix)
+    if manifest_path.is_file() and prefix.is_dir():
+        try:
+            if json.loads(manifest_path.read_text()) == expected:
+                print(f"Reusing prebuilt {engine} dependency bundle: {artifact_root.relative_to(ROOT)}")
+                return prefix
+        except json.JSONDecodeError:
+            pass
+
+    with artifact_lock(artifact_root):
+        if manifest_path.is_file() and prefix.is_dir():
+            try:
+                if json.loads(manifest_path.read_text()) == expected:
+                    print(f"Reusing prebuilt {engine} dependency bundle: {artifact_root.relative_to(ROOT)}")
+                    return prefix
+            except json.JSONDecodeError:
+                pass
+
+        use_host = host or preset in HOST_ONLY_PRESETS
+        stage = None if use_host else PRESET_STAGES[preset]
+        container = stage is not None
+        preparation_stage = f"{stage}-base" if stage in {"native", "wasm", "android"} else stage
+        environment = compiler_cache_environment(container)
+        target_system, target_arch = cache_target(preset, host)
+        linkage = bundle_linkage(preset)
+        build_dir_host = (ROOT / "out" / "build" / "prebuilt" / target_system / target_arch /
+                          engine / build_type.lower() / linkage)
+        build_dir = (f"/workspace/{build_dir_host.relative_to(ROOT)}" if container else str(build_dir_host))
+        configure_command = [
+            "cmake", "--preset", artifact_preset(preset), "-B", build_dir,
+            f"-DSPENCH_ENGINE_BUNDLE_LINKAGE={linkage}",
+        ]
+        if container and stage in {"native", "wasm"}:
+            configure_command.extend(("-Donnxruntime_USE_PREINSTALLED_EIGEN=ON",
+                                      "-Deigen_SOURCE_PATH=/opt/eigen",
+                                      "-DCMAKE_AR=/usr/bin/llvm-ar",
+                                      "-DCMAKE_RANLIB=/usr/bin/llvm-ranlib"))
+        print(f"Preparing {engine} {build_type} dependency bundle for {target_system}/{target_arch}.")
+        run(configure_command, container_stage=preparation_stage, environment=environment)
+        static_onnx_targets = [
+            "onnxruntime_common", "onnxruntime_flatbuffers", "onnxruntime_framework",
+            "onnxruntime_graph", "onnxruntime_lora", "onnxruntime_mlas",
+            "onnxruntime_optimizer", "onnxruntime_providers", "onnxruntime_session",
+            "onnxruntime_util", "re2", "nsync", "nsync_cpp", "cpuinfo", "cpuinfo_internals",
+        ]
+        targets = (["tensorflow-lite"] if engine == "tflite" else
+                   ["libonnxruntime_webassembly.a"] if preset.startswith("wasm-") else
+                   static_onnx_targets if linkage == "static" else ["onnxruntime"])
+        build_command = ["cmake", "--build", build_dir, "--target", *targets, "--parallel"]
+        if target_system == "windows":
+            build_command.extend(("--config", build_type))
+        run(build_command,
+            container_stage=preparation_stage, environment=environment)
+        if preset.startswith("wasm-") and engine == "onnx":
+            write_wasm_onnx_package_config(prefix, build_dir_host)
+        else:
+            if linkage == "static":
+                archives = copy_static_archives(prefix, build_dir_host)
+                write_engine_package_config(prefix, engine, None, linkage,
+                                            static_archives=archives)
+            else:
+                library = copy_engine_library(prefix, engine, build_dir_host)
+                write_engine_package_config(prefix, engine, library, linkage)
+        if engine == "onnx":
+            copy_onnx_headers(prefix)
+        else:
+            copy_tflite_headers(prefix, build_dir_host)
+
+        write_dependency_bundle(artifact_root, expected)
+        print(f"Prepared dependency bundle: {artifact_root.relative_to(ROOT)}")
+        return prefix
+
+
+def find_prebuilt_dependency(preset: str, host: bool) -> Path | None:
+    """Return a local compatible bundle, or leave the build to CPM."""
+    artifact_root = dependency_artifact_root(preset, host)
+    if artifact_root is None:
+        return None
+    prefix = artifact_root / "prefix"
+    manifest_path = artifact_root / "manifest.json"
+    if not manifest_path.is_file() or not prefix.is_dir():
+        return None
+    try:
+        if json.loads(manifest_path.read_text()) == dependency_manifest(preset, host, prefix):
+            print(f"Using prebuilt dependency bundle: {artifact_root.relative_to(ROOT)}")
+            return prefix
+    except json.JSONDecodeError:
+        pass
+    print(f"Ignoring incompatible dependency bundle: {artifact_root.relative_to(ROOT)}")
+    return None
+
+
+def prebuilt_cmake_arguments(preset: str, host: bool, prefix: Path | None,
+                             container: bool) -> list[str]:
+    if prefix is None:
+        return []
+    requirement = engine_requirement(preset)
+    if requirement is None:
+        return []
+    root = str(prefix)
+    if container:
+        root = f"/workspace/{prefix.relative_to(ROOT)}"
+    variable = "SPENCH_PREBUILT_ORT_ROOT" if requirement[0] == "onnx" else "SPENCH_PREBUILT_TFLITE_ROOT"
+    return [f"-D{variable}={root}"]
+
+
+def prepare_android_tflite(abi: str, build_type: str, host: bool) -> Path:
+    """Export one Android ABI/configuration TFLite bundle without Gradle."""
+    identity = f"v{DEPENDENCY_BUNDLE_FORMAT}-{dependency_bundle_digest('tflite')}"
+    artifact_root = (ROOT / "out" / "artifacts" / "dependencies" / "android" / abi /
+                     "tflite" / build_type.lower() / "shared" / identity)
+    prefix = artifact_root / "prefix"
+    manifest_path = artifact_root / "manifest.json"
+    expected: dict[str, object] = {
+        "format": DEPENDENCY_BUNDLE_FORMAT,
+        "engine": "tflite",
+        "build_type": build_type,
+        "linkage": "shared",
+        "preset": "android-tflite",
+        "target_system": "android",
+        "target_architecture": abi,
+        "dependency_digest": dependency_bundle_digest("tflite"),
+        "cmake": executable_version("cmake"),
+        "compiler": f"Android NDK {ANDROID_NDK_VERSION}",
+        "prefix": str(prefix.relative_to(ROOT)),
+    }
+    if manifest_path.is_file() and prefix.is_dir():
+        try:
+            if json.loads(manifest_path.read_text()) == expected:
+                print(f"Reusing prebuilt tflite dependency bundle: {artifact_root.relative_to(ROOT)}")
+                return prefix
+        except json.JSONDecodeError:
+            pass
+
+    if host:
+        android_ndk = os.environ.get("ANDROID_NDK_HOME")
+        if not android_ndk:
+            raise SystemExit("ANDROID_NDK_HOME is required for --host Android dependency preparation.")
+        source_dir = str(ROOT)
+        build_dir = str(ROOT / "out" / "build" / "prebuilt" / "android" / abi / "tflite" / build_type.lower())
+        stage = None
+    else:
+        android_ndk = f"/opt/android-sdk/ndk/{ANDROID_NDK_VERSION}"
+        source_dir = "/workspace"
+        build_dir = f"/workspace/out/build/prebuilt/android/{abi}/tflite/{build_type.lower()}"
+        stage = "android-base"
+    environment = compiler_cache_environment(stage is not None)
+    with artifact_lock(artifact_root):
+        if manifest_path.is_file() and prefix.is_dir():
+            try:
+                if json.loads(manifest_path.read_text()) == expected:
+                    print(f"Reusing prebuilt tflite dependency bundle: {artifact_root.relative_to(ROOT)}")
+                    return prefix
+            except json.JSONDecodeError:
+                pass
+        print(f"Preparing tflite {build_type} dependency bundle for android/{abi}.")
+        configure_command = [
+            "cmake", "-S", source_dir, "-B", build_dir,
+            f"-DCMAKE_TOOLCHAIN_FILE={android_ndk}/build/cmake/android.toolchain.cmake",
+            f"-DANDROID_ABI={abi}",
+            "-DANDROID_PLATFORM=android-26",
+            f"-DCMAKE_BUILD_TYPE={build_type}",
+            "-DSPENCH_PROFILE=android-tflite",
+            "-DBUILD_TFLITE_ENGINE=ON",
+            "-DBUILD_ONNX_ENGINE=OFF",
+            "-DBUILD_SHARED_LIBS=OFF",
+            "-DBUILD_CLI=OFF",
+            "-DBUILD_TESTING=OFF",
+            "-DSPENCH_ENGINE_BUNDLE_LINKAGE=shared",
+        ]
+        run(configure_command, container_stage=stage, environment=environment)
+        run(["cmake", "--build", build_dir, "--target", "tensorflow-lite", "--parallel"],
+            container_stage=stage, environment=environment)
+        library = copy_engine_library(prefix, "tflite",
+                                      ROOT / "out" / "build" / "prebuilt" / "android" / abi / "tflite" / build_type.lower())
+        write_engine_package_config(prefix, "tflite", library, "shared")
+        copy_tflite_headers(prefix, ROOT / "out" / "build" / "prebuilt" / "android" / abi /
+                            "tflite" / build_type.lower())
+        write_dependency_bundle(artifact_root, expected)
+        print(f"Prepared dependency bundle: {artifact_root.relative_to(ROOT)}")
+        return prefix
+
+
 def run_web_node(command: list[str], *, container_stage: str | None,
                  environment: dict[str, str], workdir: Path) -> None:
     if container_stage is None:
@@ -226,12 +797,15 @@ def run_web_node(command: list[str], *, container_stage: str | None,
 def cmake_workflow(action: str, preset: str, host: bool) -> None:
     use_host = host or preset in HOST_ONLY_PRESETS
     stage = None if use_host else PRESET_STAGES[preset]
+    prebuilt_prefix = find_prebuilt_dependency(preset, host)
     build_dir = None if use_host else f"/workspace/out/build/container-clang-llvm-tools/{preset}"
     environment = compiler_cache_environment(stage is not None)
     if build_dir is not None:
         environment["SPENCH_BUILD_DIR"] = build_dir
     configure_command = ["cmake", "--preset", preset]
     build_command = ["cmake", "--build", "--preset", preset]
+    configure_command.extend(prebuilt_cmake_arguments(
+        preset, host, prebuilt_prefix, stage is not None))
     if build_dir is not None:
         configure_command.extend(("-B", build_dir))
         if stage in {"native", "wasm"} and preset != "native-model-packer":
@@ -243,6 +817,7 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
 
     run(configure_command, container_stage=stage, environment=environment)
     run(build_command, container_stage=stage, environment=environment)
+    print_compiler_cache_stats(stage, environment)
     if action == "test":
         if preset in NATIVE_PRESETS:
             test_command = ["ctest", "--preset", preset]
@@ -265,12 +840,30 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
                 "-B", package_output_dir,
             ]
         run(package_command, container_stage=stage, environment=environment)
+    elif action == "install":
+        install_dir = ROOT / "out" / "artifacts" / "install" / preset
+        install_dir.mkdir(parents=True, exist_ok=True)
+        configured_build_dir = (ROOT / "out" / "build" / preset) if stage is None else Path(build_dir)
+        install_output = str(install_dir) if stage is None else f"/workspace/{install_dir.relative_to(ROOT)}"
+        install_command = ["cmake", "--install", str(configured_build_dir), "--prefix", install_output]
+        if preset.startswith(("windows-", "ios-")):
+            install_command.extend(("--config", "Debug" if "debug" in preset or "asan" in preset else "Release"))
+        run(install_command, container_stage=stage, environment=environment)
+        manifest = {
+            "format": 1,
+            "preset": preset,
+            "dependency_bundle": str(prebuilt_prefix.relative_to(ROOT)) if prebuilt_prefix else None,
+        }
+        (install_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
 def android_workflow(action: str, host: bool) -> None:
     stage = None if host else "android"
     script = "test-all.sh" if action == "test" else "build.sh"
     environment = compiler_cache_environment(stage is not None)
+    dependency_root = "/workspace/out/artifacts/dependencies" if not host else str(
+        ROOT / "out" / "artifacts" / "dependencies")
+    environment["SPENCH_PREBUILT_DEPENDENCIES_ROOT"] = dependency_root
     if not host:
         environment.update({
             "SPENCH_ANDROID_NATIVE_BUILD_DIR": "/workspace/out/build/container-android-native-tests",
@@ -286,19 +879,29 @@ def ios_workflow(action: str) -> None:
         "test": "test.sh",
         "core": "build_core.sh",
     }
-    run([f"platform_wrappers/ios/scripts/{scripts[action]}"],
-        environment=compiler_cache_environment(False))
+    device_root = find_prebuilt_dependency("ios-device-release", True)
+    simulator_root = find_prebuilt_dependency("ios-simulator-release", True)
+    environment = compiler_cache_environment(False)
+    if device_root and simulator_root:
+        environment.update({
+            "SPENCH_PREBUILT_ORT_DEVICE_ROOT": str(device_root),
+            "SPENCH_PREBUILT_ORT_SIMULATOR_ROOT": str(simulator_root),
+        })
+    run([f"platform_wrappers/ios/scripts/{scripts[action]}"], environment=environment)
 
 
 def web_workflow(action: str, host: bool) -> None:
     stage = None if host else "wasm"
     web_dir = ROOT / "platform_wrappers/web"
+    prebuilt_prefix = find_prebuilt_dependency("wasm-release", host)
     build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-release"
     environment = compiler_cache_environment(stage is not None)
     if build_dir is not None:
         environment["SPENCH_BUILD_DIR"] = build_dir
     run_web_node(["npm", "ci"], container_stage=stage, environment=environment, workdir=web_dir)
     configure_command = ["cmake", "--preset", "wasm-release"]
+    configure_command.extend(prebuilt_cmake_arguments(
+        "wasm-release", host, prebuilt_prefix, stage is not None))
     build_command = ["cmake", "--build", "out/build/wasm-release"]
     if build_dir is not None:
         configure_command.extend((
@@ -348,12 +951,86 @@ def web_workflow(action: str, host: bool) -> None:
                      environment={"PLAYWRIGHT_WORKERS": "1"}, workdir=web_dir)
 
 
+def prepare_platform_dependencies(target: str, host: bool) -> None:
+    if target == "macos":
+        for preset in (
+                "macos-x86_64-debug-onnx", "macos-x86_64-release-onnx",
+                "macos-x86_64-release-static-onnx",
+                "macos-x86_64-debug-tflite", "macos-x86_64-release-tflite",
+                "macos-arm64-debug-onnx", "macos-arm64-release-onnx",
+                "macos-arm64-release-static-onnx",
+                "macos-arm64-debug-tflite", "macos-arm64-release-tflite"):
+            prepare_dependency(preset, True)
+        return
+    if target == "windows":
+        for preset in ("windows-x64-debug-onnx", "windows-x64-release-onnx",
+                       "windows-x64-debug-tflite", "windows-x64-release-tflite",
+                       "windows-x64-release-static-tflite"):
+            prepare_dependency(preset, True)
+        return
+    if target == "ios":
+        for preset in ("ios-device-debug", "ios-device-release",
+                       "ios-simulator-debug", "ios-simulator-release"):
+            prepare_dependency(preset, True)
+        return
+    if target == "web":
+        for preset in ("wasm-debug", "wasm-release"):
+            prepare_dependency(preset, host)
+        return
+    if target == "android":
+        for abi in ANDROID_ABIS:
+            for build_type in ("Debug", "Release"):
+                prepare_android_tflite(abi, build_type, host)
+        return
+    prepare_dependency(target, host)
+
+
+def prepare_image(target: str) -> None:
+    """Prepare dependency bundles, package them in OCI images, and export archives."""
+    if target == "native":
+        for preset in ("native-debug-onnx", "native-release-onnx",
+                       "native-release-static-onnx", "native-debug-tflite",
+                       "native-release-tflite", "native-release-static-tflite"):
+            prepare_dependency(preset, False)
+        stages = ("deps-native",)
+    elif target == "wasm":
+        for preset in ("wasm-debug", "wasm-release"):
+            prepare_dependency(preset, False)
+        stages = ("deps-wasm",)
+    elif target == "android":
+        prepare_platform_dependencies("android", False)
+        stages = ("deps-android",)
+    elif target == "ios":
+        prepare_platform_dependencies("ios", True)
+        stages = ("deps-ios",)
+    elif target == "macos":
+        prepare_platform_dependencies("macos", True)
+        stages = ("deps-macos-x86_64", "deps-macos-arm64")
+    elif target == "windows":
+        prepare_platform_dependencies("windows", True)
+        stages = ("deps-windows-x64",)
+    else:
+        raise SystemExit("prepare-image supports native, wasm, android, ios, macos, or windows.")
+
+    image_directory = ROOT / "out" / "artifacts" / "images"
+    image_directory.mkdir(parents=True, exist_ok=True)
+    for stage in stages:
+        image = ensure_container_image(stage)
+        archive = image_directory / f"{image.replace(':', '-').replace('/', '-')}.tar"
+        subprocess.run(["docker", "save", "--output", str(archive), image], check=True)
+        checksum = hashlib.sha256(archive.read_bytes()).hexdigest()
+        archive.with_suffix(archive.suffix + ".sha256").write_text(f"{checksum}  {archive.name}\n")
+        print(f"Prepared dependency image artifact: {archive.relative_to(ROOT)}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("build", "test", "package", "core", "cache-key"))
+    parser.add_argument("action", choices=(
+        "build", "test", "package", "install", "core", "cache-key", "prepare-deps", "prepare-image"))
     parser.add_argument(
         "target",
-        choices=(*PRESET_STAGES, *HOST_ONLY_PRESETS, "android", "ios", "web"),
+        choices=(*PRESET_STAGES, *HOST_ONLY_PRESETS, "android", "ios", "web", "macos", "windows",
+                 "native", "wasm", "web-test"),
         help="CMake preset or platform workflow",
     )
     parser.add_argument("--host", action="store_true",
@@ -362,6 +1039,14 @@ def main() -> None:
 
     if args.action == "cache-key":
         print_cache_keys(args.target, args.host)
+        return
+    if args.action == "prepare-deps":
+        if args.target in {"native", "wasm", "web-test"}:
+            raise SystemExit("prepare-deps expects a preset or platform workflow, not a Docker stage.")
+        prepare_platform_dependencies(args.target, args.host)
+        return
+    if args.action == "prepare-image":
+        prepare_image(args.target)
         return
 
     if args.target in PRESET_STAGES or args.target in HOST_ONLY_PRESETS:
@@ -380,6 +1065,8 @@ def main() -> None:
         if args.action not in {"build", "test"}:
             raise SystemExit("The web SDK supports build and test.")
         web_workflow(args.action, args.host)
+    else:
+        raise SystemExit(f"{args.target} is only valid with prepare-deps or prepare-image.")
 
 
 if __name__ == "__main__":
