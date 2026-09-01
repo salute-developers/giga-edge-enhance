@@ -15,7 +15,7 @@ The SDK also exposes a tiny telemetry API for measuring performance, a pluggable
 logger and an optional “shared‑memory” transport that reduces message‑passing
 overhead.
 
-> ⚡ **Tip** – The demo app in `services/spench-demo` shows how to wire the
+> ⚡ **Tip** – The workbench in `apps/spench-site` shows how to wire the
 > node into a media graph, measure performance and even run a live demo using the
 > browser microphone.
 
@@ -163,17 +163,17 @@ The tests use Jest and run in both the browser and Node
 
 Run integration tests with:
 
-`cd services/spench-demo && npm start`
+`cd apps/spench-site && npm start`
 
 ```bash
 # From the repo root
-cd services/spench-demo
+cd apps/spench-site
 npm start & npm run pw:open
 ```
 
 ## Demo App
 
-The folder `services/spench-demo` is a small React application that demonstrates
+The folder `apps/spench-site` contains a React workbench that demonstrates
 all SDK capabilities:
 
 1. **Feature toggles** – noise cancellation, normalization and echo cancellation.
@@ -185,7 +185,7 @@ all SDK capabilities:
 5. **Multiple normalizer nodes test** – stress‑tests the SDK by creating
    and destroying 10 000 nodes.
 
-> **Running the demo** – `cd services/spench-demo && npm start`
+> **Running the workbench** – `cd apps/spench-site && npm start`
 
 ## Example – Custom Models
 

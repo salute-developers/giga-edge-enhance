@@ -22,9 +22,9 @@ WEB_TEST_IMAGE_INPUTS = (
     ROOT / "platform_wrappers/web/package.json",
     ROOT / "platform_wrappers/web/package-lock.json",
     ROOT / "platform_wrappers/web/packages/web-sdk/package.json",
-    ROOT / "platform_wrappers/web/services/spench-demo/package.json",
-    ROOT / "platform_wrappers/web/services/spench-demo/mos_install.sh",
-    ROOT / "platform_wrappers/web/services/spench-demo/requirements-mos.txt",
+    ROOT / "platform_wrappers/web/apps/spench-site/package.json",
+    ROOT / "platform_wrappers/web/apps/spench-site/mos_install.sh",
+    ROOT / "platform_wrappers/web/apps/spench-site/requirements-mos.txt",
 )
 PRESET_STAGES = {
     "native-debug-onnx": "native",
@@ -193,7 +193,7 @@ def run(command: list[str], *, container_stage: str | None = None,
         cache_root = ROOT / "out/cache/container-node-modules/linux-amd64" / dependency_hash
         for cache_name, container_path in (
             ("web", "/workspace/platform_wrappers/web/node_modules"),
-            ("spench-demo", "/workspace/platform_wrappers/web/services/spench-demo/node_modules"),
+            ("spench-site", "/workspace/platform_wrappers/web/apps/spench-site/node_modules"),
         ):
             cache_path = cache_root / cache_name
             cache_path.mkdir(parents=True, exist_ok=True)
@@ -958,11 +958,11 @@ def web_workflow(action: str, host: bool) -> None:
     run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-web-sdk"], container_stage=stage,
                  environment=environment, workdir=web_dir)
     if action == "build":
-        run_web_node(["npm", "run", "build", "--workspace=spench-demo"], container_stage=stage,
+        run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-site"], container_stage=stage,
                      environment=environment, workdir=web_dir)
     if action == "test":
         test_stage = None if host else "web-test"
-        run_web_node(["npm", "run", "pw:test:mos-candidates", "--workspace=spench-demo"], container_stage=test_stage,
+        run_web_node(["npm", "run", "pw:test:mos-candidates", "--workspace=@gigaedge/spench-site"], container_stage=test_stage,
                      environment={"PLAYWRIGHT_WORKERS": "1"}, workdir=web_dir)
 
 

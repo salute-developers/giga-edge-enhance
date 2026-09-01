@@ -113,7 +113,7 @@ jobs:
       - name: Check C++ formatting
         run: git diff --name-only ${{ github.event.pull_request.base.sha || github.event.before }}...HEAD -- 'spench/**/*.c' 'spench/**/*.cc' 'spench/**/*.cpp' 'spench/**/*.h' 'spench/**/*.hpp' | xargs --no-run-if-empty clang-format --dry-run --Werror --style=file
       - name: Check web formatting and lint
-        run: npm run lint --workspace=@gigaedge/spench-web-sdk && npm run lint --workspace=spench-demo
+        run: npm run lint --workspace=@gigaedge/spench-web-sdk && npm run lint --workspace=@gigaedge/spench-site
         working-directory: platform_wrappers/web
 
   native:
@@ -202,7 +202,7 @@ jobs:
       - run: tools/spench build web
         env:
           SPENCH_CONTAINER_IMAGE_WASM: ghcr.io/${{ github.repository }}/toolchain-wasm:${{ github.event_name == 'pull_request' && format('pr-{0}-{1}', github.event.pull_request.number, github.sha) || github.sha }}
-      - run: npm run lint --workspace=@gigaedge/spench-web-sdk && npm run lint --workspace=spench-demo
+      - run: npm run lint --workspace=@gigaedge/spench-web-sdk && npm run lint --workspace=@gigaedge/spench-site
         working-directory: platform_wrappers/web
 
   android:

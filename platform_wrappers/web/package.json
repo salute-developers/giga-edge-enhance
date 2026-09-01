@@ -3,7 +3,7 @@
   "private": true,
   "workspaces": [
     "packages/*",
-    "services/*"
+    "apps/*"
   ],
   "scripts": {
     "stage:wasm:release": "node packages/web-sdk/scripts/stage-wasm.mjs release",

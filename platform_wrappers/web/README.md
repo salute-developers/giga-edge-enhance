@@ -4,7 +4,7 @@ This npm workspace contains the distributable Web SDK and the combined documenta
 
 ```text
 packages/web-sdk/          Web Audio and WebAssembly SDK
-services/spench-demo/      Docusaurus documentation and interactive demo
+apps/spench-site/          Docusaurus documentation and interactive workbench
 ```
 
 ## Requirements
@@ -41,7 +41,7 @@ cd platform_wrappers/web
 npm run stage:wasm:release
 npm run test:web-sdk
 npm run build:web-sdk
-npm run build --workspace=spench-demo
+npm run build --workspace=@gigaedge/spench-site
 ```
 
 Generated WebAssembly assets live under `packages/web-sdk/generated/wasm/` and are not committed.
@@ -51,11 +51,11 @@ Generated WebAssembly assets live under `packages/web-sdk/generated/wasm/` and a
 
 ```bash
 cd platform_wrappers/web
-npm start --workspace=spench-demo
+npm start --workspace=@gigaedge/spench-site
 ```
 
 The demo imports the workspace SDK during development and packs the SDK before a production build.
-See [`services/spench-demo/README.md`](services/spench-demo/README.md) for testing and GitHub Pages
+See [`apps/spench-site/README.md`](apps/spench-site/README.md) for testing and GitHub Pages
 details.
 
 ## Git LFS

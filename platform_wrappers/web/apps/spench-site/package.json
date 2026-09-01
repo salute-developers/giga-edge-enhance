@@ -1,0 +1,50 @@
+{
+  "name": "@gigaedge/spench-site",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "start": "npm-run-all -p 'watch:*'",
+    "watch:sdk": "npm run start --workspace=@gigaedge/spench-web-sdk",
+    "prewatch:app": "node scripts/stage-docs.mjs",
+    "watch:app": "docusaurus start --port 5173",
+    "prebuild": "./prebuild.sh && node scripts/stage-docs.mjs",
+    "build": "tsc --noEmit && docusaurus build",
+    "test": "npm run pw:test",
+    "pw:open": "npx playwright test --ui",
+    "pw:test": "playwright test",
+    "pw:test:mos-candidates": "MOS_WRITE_CANDIDATES=1 npm run pw:test",
+    "lint": "eslint .",
+    "preview": "docusaurus serve --port 5173",
+    "serve:test": "node scripts/serve-static.mjs"
+  },
+  "dependencies": {
+    "@docusaurus/core": "3.10.2",
+    "@docusaurus/preset-classic": "3.10.2",
+    "@gigaedge/spench-web-sdk": "file:../../packages/web-sdk",
+    "@mdx-js/react": "^3.1.1",
+    "clsx": "^2.1.1",
+    "coi-serviceworker": "0.1.7",
+    "jstat": "^1.9.6",
+    "prism-react-renderer": "^2.4.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@docusaurus/module-type-aliases": "3.10.2",
+    "@docusaurus/tsconfig": "3.10.2",
+    "@docusaurus/types": "3.10.2",
+    "@eslint/js": "^9.25.0",
+    "@playwright/test": "^1.54.2",
+    "@types/node": "^24.2.0",
+    "@types/react": "^19.2",
+    "@types/react-dom": "^19.2",
+    "eslint": "^9.25.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "~5.8.3",
+    "typescript-eslint": "^8.30.1",
+    "webpack": "5.110.2"
+  }
+}

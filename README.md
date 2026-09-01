@@ -139,7 +139,7 @@ For local demo development:
 ```bash
 cd platform_wrappers/web
 npm ci
-npm start --workspace=spench-demo
+npm start --workspace=@gigaedge/spench-site
 ```
 
 The static site installs a same-origin COI service worker so GitHub Pages can expose the isolated
@@ -148,16 +148,16 @@ control; unsupported environments fall back to MessageChannel.
 
 ## Documentation
 
-The documentation website is built by the `spench-demo` workspace. Its staging script collects all
+The documentation website is built by the `@gigaedge/spench-site` workspace. Its staging script collects all
 user-facing repository Markdown while excluding generated, vendored, cached, and internal agent
 files. Platform READMEs and iOS DocC articles remain canonical in their existing locations.
 
 ```bash
 cd platform_wrappers/web
-npm run build --workspace=spench-demo
+npm run build --workspace=@gigaedge/spench-site
 ```
 
-The static output is written to `platform_wrappers/web/services/spench-demo/build/` and is suitable
+The static output is written to `platform_wrappers/web/apps/spench-site/build/` and is suitable
 for GitHub Pages.
 
 ## Development

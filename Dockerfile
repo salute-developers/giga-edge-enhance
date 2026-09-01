@@ -138,9 +138,9 @@ ENV PATH=/opt/spench-mos-venv/bin:${PATH}
 COPY platform_wrappers/web/.nvmrc /tmp/spench-web/.nvmrc
 COPY platform_wrappers/web/package.json platform_wrappers/web/package-lock.json /tmp/spench-web/
 COPY platform_wrappers/web/packages/web-sdk/package.json /tmp/spench-web/packages/web-sdk/package.json
-COPY platform_wrappers/web/services/spench-demo/package.json /tmp/spench-web/services/spench-demo/package.json
-COPY platform_wrappers/web/services/spench-demo/mos_install.sh \
-    platform_wrappers/web/services/spench-demo/requirements-mos.txt /tmp/mos/
+COPY platform_wrappers/web/apps/spench-site/package.json /tmp/spench-web/apps/spench-site/package.json
+COPY platform_wrappers/web/apps/spench-site/mos_install.sh \
+    platform_wrappers/web/apps/spench-site/requirements-mos.txt /tmp/mos/
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y ffmpeg python3-venv && \

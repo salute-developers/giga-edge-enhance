@@ -29,16 +29,16 @@ jobs:
       - run: tools/spench build web
         env:
           SPENCH_CONTAINER_IMAGE_WASM: ghcr.io/${{ github.repository }}/toolchain-wasm:latest
-      - run: npm run build --workspace=spench-demo
+      - run: npm run build --workspace=@gigaedge/spench-site
         working-directory: platform_wrappers/web
         env:
-          SPENCH_DEMO_BASE: /${{ github.event.repository.name }}/
+          SPENCH_SITE_BASE: /${{ github.event.repository.name }}/
       - name: Publish documentation and demo
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: platform_wrappers/web/services/spench-demo/build
+          publish_dir: platform_wrappers/web/apps/spench-site/build
           keep_files: true
 
   deploy-preview:
@@ -54,16 +54,16 @@ jobs:
       - run: tools/spench build web
         env:
           SPENCH_CONTAINER_IMAGE_WASM: ghcr.io/${{ github.repository }}/toolchain-wasm:latest
-      - run: npm run build --workspace=spench-demo
+      - run: npm run build --workspace=@gigaedge/spench-site
         working-directory: platform_wrappers/web
         env:
-          SPENCH_DEMO_BASE: /${{ github.event.repository.name }}/pr/${{ github.event.pull_request.number }}/
+          SPENCH_SITE_BASE: /${{ github.event.repository.name }}/pr/${{ github.event.pull_request.number }}/
       - name: Publish PR preview
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: platform_wrappers/web/services/spench-demo/build
+          publish_dir: platform_wrappers/web/apps/spench-site/build
           destination_dir: pr/${{ github.event.pull_request.number }}
           keep_files: true
 

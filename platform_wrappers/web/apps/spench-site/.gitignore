@@ -1,0 +1,27 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+web-sdk.tgz
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+cypress
+downloads
+downloads_shared
+tests/mos/lims
+.generated-docs/
+static/coi-serviceworker.min.js
+.docusaurus/

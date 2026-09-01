@@ -37,19 +37,19 @@ sd_cache/
 .nyc_output/
 __reports/
 /coverage
-services/**/appium-tests/screenshot
-services/**/appium-tests/results
-services/**/appium-tests/report
+apps/**/appium-tests/screenshot
+apps/**/appium-tests/results
+apps/**/appium-tests/report
 
 
 # cypress
-services/**/coverage
-services/**/cypress/reports
-services/**/cypress/results/
-services/**/cypress/screenshots/
-services/**/cypress/videos/
-services/**/cypress/screenshots/
-services/**/cypress/snapshots/**/__diff_output__/
+apps/**/coverage
+apps/**/cypress/reports
+apps/**/cypress/results/
+apps/**/cypress/screenshots/
+apps/**/cypress/videos/
+apps/**/cypress/screenshots/
+apps/**/cypress/snapshots/**/__diff_output__/
 
 packages/**/cypress/reports
 packages/**/cypress/results/
@@ -61,4 +61,3 @@ packages/**/cypress/snapshots/**/__diff_output__/
 .cache
 
 okd/generated/
-
