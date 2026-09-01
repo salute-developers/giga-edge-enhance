@@ -285,10 +285,6 @@ different bytes.
   `container_internals/check_style.sh`, but `container_internals/` is not
   present in the current repository. Restore those scripts or update all three
   references before adding a required style job.
-- `tools/spench test web` currently invokes the undefined npm script
-  `test:cy:mos-candidates`; the demo package currently exposes `pw:test` and
-  `pw:test:mos-candidates`. Align the helper and package scripts before making
-  the browser job required.
 - Decide the authoritative release version source and tag format before
   implementing `release.yml`; the current `README.md` release section is marked
   for rewrite.

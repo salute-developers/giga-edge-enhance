@@ -957,9 +957,12 @@ def web_workflow(action: str, host: bool) -> None:
                  environment=environment, workdir=web_dir)
     run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-web-sdk"], container_stage=stage,
                  environment=environment, workdir=web_dir)
+    if action == "build":
+        run_web_node(["npm", "run", "build", "--workspace=spench-demo"], container_stage=stage,
+                     environment=environment, workdir=web_dir)
     if action == "test":
         test_stage = None if host else "web-test"
-        run_web_node(["npm", "run", "test:cy:mos-candidates", "--workspace=spench-demo"], container_stage=test_stage,
+        run_web_node(["npm", "run", "pw:test:mos-candidates", "--workspace=spench-demo"], container_stage=test_stage,
                      environment={"PLAYWRIGHT_WORKERS": "1"}, workdir=web_dir)
 
 

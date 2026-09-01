@@ -1,57 +1,72 @@
-# Spench web
+# Spench Web SDK workspace
 
-## Getting started
+This npm workspace contains the distributable Web SDK and the combined documentation/demo website.
 
-* Install NVM <https://github.com/nvm-sh/nvm#installing-and-updating>
-* `nvm use`
+```text
+packages/web-sdk/          Web Audio and WebAssembly SDK
+services/spench-demo/      Docusaurus documentation and interactive demo
+```
 
-`tools/spench build web` installs and uses the version in `.nvmrc` automatically
-inside Docker. With `--host`, it uses NVM when available and otherwise leaves
-the host Node.js version unchanged.
-* From this directory, run `npm ci`.
+## Requirements
 
-## Build the SDK
+Use the Node.js version declared in `.nvmrc`:
 
-`tools/spench build web` builds both release WASM modules, stages their validated
-assets, runs SDK tests, and builds the SDK package.
+```bash
+cd platform_wrappers/web
+nvm use
+npm ci
+```
 
-To run the stages separately:
+The Docker-backed `tools/spench build web` workflow selects this version automatically. A host build
+uses NVM when available and otherwise leaves the active host Node.js version unchanged.
+
+## Build the Web SDK
+
+From the repository root:
+
+```bash
+tools/spench build web
+```
+
+This builds the full and DSP-only release WebAssembly variants, validates and stages their outputs,
+runs Web SDK unit tests, and builds the package and static website.
+
+To run individual stages:
 
 ```bash
 tools/spench build wasm-release
 tools/spench build wasm-dsp-release
+
 cd platform_wrappers/web
 npm run stage:wasm:release
+npm run test:web-sdk
 npm run build:web-sdk
+npm run build --workspace=spench-demo
 ```
 
-The staged assets are generated under `packages/web-sdk/generated/wasm/` and
-are not committed. `npm pack` requires a validated release manifest.
+Generated WebAssembly assets live under `packages/web-sdk/generated/wasm/` and are not committed.
+`npm pack` validates the release manifest before packaging.
 
-## Настройка Git LFS
-
-В репозитории включен [Git LFS](https://git-lfs.github.com)
-
-Для того чтобы установить расширение себе, необходимо выполнить команды:
+## Develop the documentation and demo
 
 ```bash
-brew install git-lfs
+cd platform_wrappers/web
+npm start --workspace=spench-demo
+```
+
+The demo imports the workspace SDK during development and packs the SDK before a production build.
+See [`services/spench-demo/README.md`](services/spench-demo/README.md) for testing and GitHub Pages
+details.
+
+## Git LFS
+
+Install Git LFS once, then restore the repository's managed binary fixtures:
+
+```bash
 git lfs install
-```
-
-После этого вам станут доступны команды `git lfs`, чтобы заменить ссылки файлами введите:
-
-```bash
 git lfs checkout
 ```
 
-## Корректное добавление в LFS файлов по маске
-
-Перейдите в директорию со своим сервисом и выполните команду:
-
-```bash
-git lfs track 'cypress/**/*.png'
-git lfs track 'cypress/**/*.jpg'
-```
-
-Обязательно указывайте маску пути в одинарных кавычках. После выполнения команды git-lfs обновит пути в `.gitattributes` и заменит бинарные файлы на поинтеры. Все это необходимо зафиксировать коммитом.
+When adding new binary test fixtures, update `.gitattributes` with `git lfs track` and commit both the
+attributes change and the resulting LFS pointer. Never commit downloaded model binaries outside the
+repository's established model workflow.

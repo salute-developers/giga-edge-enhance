@@ -1,4 +1,4 @@
-name: Publish web demo
+name: Publish documentation and web demo
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
         working-directory: platform_wrappers/web
         env:
           SPENCH_DEMO_BASE: /${{ github.event.repository.name }}/
-      - name: Publish root demo
+      - name: Publish documentation and demo
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
