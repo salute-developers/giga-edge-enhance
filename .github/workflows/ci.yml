@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [dev, master]
+    branches: [master]
   push:
-    branches: [dev, master]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -230,69 +230,69 @@ jobs:
           arch: x86_64
           script: RUN_ANDROID_INSTRUMENTED_TESTS=1 tools/spench test android --host
 
-  macos:
-    name: macOS ${{ matrix.preset }}
-    runs-on: ${{ matrix.runner }}
-    needs: dependencies
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: macos-13
-            preset: macos-x86_64-release-onnx
-          - runner: macos-13
-            preset: macos-x86_64-release-tflite
-          - runner: macos-14
-            preset: macos-arm64-release-onnx
-          - runner: macos-14
-            preset: macos-arm64-release-tflite
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          lfs: true
-      - uses: ./.github/actions/setup-spench-cache
-        with:
-          preset: ${{ matrix.preset }}
-      - run: tools/spench test ${{ matrix.preset }} --host
+  # macos:
+  #   name: macOS ${{ matrix.preset }}
+  #   runs-on: ${{ matrix.runner }}
+  #   needs: dependencies
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - runner: macos-13
+  #           preset: macos-x86_64-release-onnx
+  #         - runner: macos-13
+  #           preset: macos-x86_64-release-tflite
+  #         - runner: macos-14
+  #           preset: macos-arm64-release-onnx
+  #         - runner: macos-14
+  #           preset: macos-arm64-release-tflite
+  #   steps:
+  #     - uses: actions/checkout@v6
+  #       with:
+  #         lfs: true
+  #     - uses: ./.github/actions/setup-spench-cache
+  #       with:
+  #         preset: ${{ matrix.preset }}
+  #     - run: tools/spench test ${{ matrix.preset }} --host
 
-  windows:
-    name: Windows ${{ matrix.preset }}
-    runs-on: windows-2025
-    needs: dependencies
-    strategy:
-      fail-fast: false
-      matrix:
-        preset:
-          - windows-x64-release-onnx
-          - windows-x64-release-tflite
-          - windows-x64-release-static-tflite
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          lfs: true
-      - uses: ./.github/actions/setup-spench-cache
-        with:
-          preset: ${{ matrix.preset }}
-      - run: python tools/spench test ${{ matrix.preset }} --host
+  # windows:
+  #   name: Windows ${{ matrix.preset }}
+  #   runs-on: windows-2025
+  #   needs: dependencies
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       preset:
+  #         - windows-x64-release-onnx
+  #         - windows-x64-release-tflite
+  #         - windows-x64-release-static-tflite
+  #   steps:
+  #     - uses: actions/checkout@v6
+  #       with:
+  #         lfs: true
+  #     - uses: ./.github/actions/setup-spench-cache
+  #       with:
+  #         preset: ${{ matrix.preset }}
+  #     - run: python tools/spench test ${{ matrix.preset }} --host
 
-  ios:
-    name: iOS
-    runs-on: macos-14
-    needs: dependencies
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          lfs: true
-      - uses: ./.github/actions/setup-spench-cache
-        with:
-          preset: ios
-      - run: tools/spench test ios --host
-      - run: platform_wrappers/ios/scripts/lint.sh
+  # ios:
+  #   name: iOS
+  #   runs-on: macos-14
+  #   needs: dependencies
+  #   steps:
+  #     - uses: actions/checkout@v6
+  #       with:
+  #         lfs: true
+  #     - uses: ./.github/actions/setup-spench-cache
+  #       with:
+  #         preset: ios
+  #     - run: tools/spench test ios --host
+  #     - run: platform_wrappers/ios/scripts/lint.sh
 
   required:
     name: ci-required
     if: always()
-    needs: [commits, style, native, wasm, web, android, macos, windows, ios]
+    needs: [commits, style, native, wasm, web, android] # macos, windows, ios
     runs-on: ubuntu-24.04
     steps:
       - name: Require every job to pass

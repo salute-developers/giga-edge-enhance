@@ -2,7 +2,7 @@ name: Publish PR canary artifacts
 
 on:
   pull_request:
-    branches: [dev, master]
+    branches: [master]
     types: [opened, synchronize, reopened]
 
 permissions:
@@ -62,51 +62,51 @@ jobs:
           path: platform_wrappers/android/**/build/outputs/**
           retention-days: 14
 
-  ios:
-    needs: version
-    runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          lfs: true
-      - run: tools/spench build ios --host
-      - run: tar -C platform_wrappers/ios/build/xcframework -czf spench-ios-${{ needs.version.outputs.value }}.tar.gz SpenchAudioKit.xcframework SpenchModelLite8k.bundle SpenchModelQuality48k.bundle
-      - uses: actions/upload-artifact@v4
-        with:
-          name: spench-ios-${{ needs.version.outputs.value }}
-          path: spench-ios-${{ needs.version.outputs.value }}.tar.gz
-          retention-days: 14
+  # ios:
+  #   needs: version
+  #   runs-on: macos-14
+  #   steps:
+  #     - uses: actions/checkout@v6
+  #       with:
+  #         lfs: true
+  #     - run: tools/spench build ios --host
+  #     - run: tar -C platform_wrappers/ios/build/xcframework -czf spench-ios-${{ needs.version.outputs.value }}.tar.gz SpenchAudioKit.xcframework SpenchModelLite8k.bundle SpenchModelQuality48k.bundle
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: spench-ios-${{ needs.version.outputs.value }}
+  #         path: spench-ios-${{ needs.version.outputs.value }}.tar.gz
+  #         retention-days: 14
 
-  macos:
-    needs: version
-    runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          lfs: true
-      - run: tools/spench install macos-arm64-release-onnx --host
-      - run: tar -C out/artifacts/install -czf spench-macos-${{ needs.version.outputs.value }}.tar.gz macos-arm64-release-onnx
-      - uses: actions/upload-artifact@v4
-        with:
-          name: spench-macos-${{ needs.version.outputs.value }}
-          path: spench-macos-${{ needs.version.outputs.value }}.tar.gz
-          retention-days: 14
+  # macos:
+  #   needs: version
+  #   runs-on: macos-14
+  #   steps:
+  #     - uses: actions/checkout@v6
+  #       with:
+  #         lfs: true
+  #     - run: tools/spench install macos-arm64-release-onnx --host
+  #     - run: tar -C out/artifacts/install -czf spench-macos-${{ needs.version.outputs.value }}.tar.gz macos-arm64-release-onnx
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: spench-macos-${{ needs.version.outputs.value }}
+  #         path: spench-macos-${{ needs.version.outputs.value }}.tar.gz
+  #         retention-days: 14
 
-  windows:
-    needs: version
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          lfs: true
-      - run: python tools/spench install windows-x64-release-tflite --host
-      - shell: bash
-        run: tar -C out/artifacts/install -czf spench-windows-${{ needs.version.outputs.value }}.tar.gz windows-x64-release-tflite
-      - uses: actions/upload-artifact@v4
-        with:
-          name: spench-windows-${{ needs.version.outputs.value }}
-          path: spench-windows-${{ needs.version.outputs.value }}.tar.gz
-          retention-days: 14
+  # windows:
+  #   needs: version
+  #   runs-on: windows-2022
+  #   steps:
+  #     - uses: actions/checkout@v6
+  #       with:
+  #         lfs: true
+  #     - run: python tools/spench install windows-x64-release-tflite --host
+  #     - shell: bash
+  #       run: tar -C out/artifacts/install -czf spench-windows-${{ needs.version.outputs.value }}.tar.gz windows-x64-release-tflite
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: spench-windows-${{ needs.version.outputs.value }}
+  #         path: spench-windows-${{ needs.version.outputs.value }}.tar.gz
+  #         retention-days: 14
 
   web:
     needs: version
