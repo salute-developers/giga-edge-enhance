@@ -11,6 +11,7 @@ on:
         options:
           - native-debug
           - native-sanitizer
+          - static-release
           - web-debug
           - android-emulator
 
@@ -54,6 +55,42 @@ jobs:
         run: tools/spench build native-asan-onnx
       - name: Test Native ASAN
         run: tools/spench test native-asan-onnx
+
+  linux-static-release:
+    name: Build and test Linux static Release (${{ matrix.engine }})
+    if: inputs.suite == 'static-release'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [onnx, tflite]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: native-release-static-${{ matrix.engine }}
+      - name: Build Linux static Release
+        run: tools/spench build native-release-static-${{ matrix.engine }}
+      - name: Test Linux static Release
+        run: tools/spench test native-release-static-${{ matrix.engine }}
+
+  windows-static-release:
+    name: Build and test Windows static Release (TFLite)
+    if: inputs.suite == 'static-release'
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: windows-x64-release-static-tflite
+      - name: Build Windows static Release
+        run: python tools/spench build windows-x64-release-static-tflite --host
+      - name: Test Windows static Release
+        run: python tools/spench test windows-x64-release-static-tflite --host
 
   web-debug:
     name: Build and test Web Debug internals

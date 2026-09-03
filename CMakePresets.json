@@ -12,8 +12,7 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "cacheVariables": {
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CPM_SOURCE_CACHE": "${sourceDir}/out/cache/cpm"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {

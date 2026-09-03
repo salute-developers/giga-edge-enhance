@@ -88,8 +88,6 @@ RUN git clone --depth 1 --branch "${EMSDK_VERSION}" \
 ENV EMSDK=/opt/emsdk
 ENV PATH=/opt/emsdk:/opt/emsdk/upstream/emscripten:${PATH}
 
-FROM wasm-base AS wasm
-
 # OCI artifact stages. They intentionally contain dependency bundles only,
 # allowing GHCR to store them separately from runnable toolchain images.
 FROM scratch AS deps-native
@@ -127,7 +125,7 @@ LABEL org.gigaedge.spench.kind="dependency-bundle" \
       org.gigaedge.spench.target="windows-x86_64"
 COPY --from=spench_deps /windows/x86_64 /dependencies/windows/x86_64
 
-FROM base AS web-test
+FROM wasm-base AS web
 
 ENV MOS_VENV_DIR=/opt/spench-mos-venv
 ENV NISQA_WEIGHTS_HOME=/opt/spench-nisqa-home

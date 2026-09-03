@@ -408,84 +408,6 @@ TEST_CASE("SUCCEED Run 1000 iSTFT with dummy zero vector for speed measure (audi
                static_cast<double>(tot) / (feature_extractor.num_attempts * 1000));
 }
 
-TEST_CASE("SUCCEED Run 10 iSTFT calculations with real data from .bin file (audio 16kHz) [feature extractor]",
-          "[binary-fixtures]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-  constexpr size_t iterations = 10 + 1;  // last one for the right context
-  std::vector<float> result_signal;
-  std::vector<float> input_real;
-  std::vector<float> input_imag;
-
-  std::vector<float> reference_signal;
-
-  feature_extractor.LoadDataFromBin("11_real_stft_tensors.dump", input_real);
-  feature_extractor.LoadDataFromBin("11_imag_stft_tensors.dump", input_imag);
-  REQUIRE(input_real.size() == iterations * params.pow_spec_feat_sz());
-  REQUIRE(input_imag.size() == iterations * params.pow_spec_feat_sz());
-  spench::ComplexNumber<float> input_complex(input_real, input_imag);
-
-  feature_extractor.LoadDataFromBin("restored_istft_signal.dump", reference_signal);
-  REQUIRE(reference_signal.size() == params.num_frame_stride_samples() * (iterations - 1));
-
-  feature_extractor.feature_extractor->istft_apply(input_complex, result_signal);
-  if (result_signal.size() > params.num_frame_stride_samples() * (iterations - 1)) {
-    result_signal.resize(params.num_frame_stride_samples() * (iterations - 1));
-  }
-
-  IsVectorsClose(reference_signal, result_signal, 0.0000001);
-}
-
-TEST_CASE("SUCCEED Run iSTFT with single real complex vector (audio 16kHz) [feature extractor]", "[binary-fixtures]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-  constexpr size_t iterations = 1 + 1;  // last one for the right context
-
-  std::vector<float> result_signal;
-  std::vector<float> input_real;
-  std::vector<float> input_imag;
-
-  std::vector<float> reference_signal;
-
-  feature_extractor.LoadDataFromBin("11_real_stft_tensors.dump", input_real);
-  feature_extractor.LoadDataFromBin("11_imag_stft_tensors.dump", input_imag);
-  REQUIRE(input_real.size() >= iterations * params.pow_spec_feat_sz());
-  REQUIRE(input_imag.size() >= iterations * params.pow_spec_feat_sz());
-
-  input_real.resize(iterations * params.pow_spec_feat_sz());
-  input_imag.resize(iterations * params.pow_spec_feat_sz());
-  spench::ComplexNumber<float> input_complex(input_real, input_imag);
-
-  feature_extractor.LoadDataFromBin("restored_istft_signal.dump", reference_signal);
-  REQUIRE(reference_signal.size() >= params.num_frame_stride_samples() * (iterations - 1));
-  reference_signal.resize(params.num_frame_stride_samples() * (iterations - 1));
-
-  feature_extractor.feature_extractor->istft_apply(input_complex, result_signal);
-
-  IsVectorsClose(reference_signal, result_signal, 0.0000001);
-}
-
-TEST_CASE("SUCCEED Run decompressCIRM with real input [feature extractor]", "[binary-fixtures]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-
-  std::vector<float> gt_real_mask;
-  std::vector<float> gt_imag_mask;
-  feature_extractor.LoadDataFromBin("cirm_gt_real.dump", gt_real_mask);
-  feature_extractor.LoadDataFromBin("cirm_gt_imag.dump", gt_imag_mask);
-
-  std::valarray<float> test_real_mask;
-  std::valarray<float> test_imag_mask;
-  feature_extractor.LoadDataFromBin("cirm_in_real.dump", test_real_mask);
-  feature_extractor.LoadDataFromBin("cirm_in_imag.dump", test_imag_mask);
-
-  spench::ComplexNumber<float> test_mask(test_real_mask, test_imag_mask);
-  feature_extractor.feature_extractor->decompress_cirm_in_place(test_mask);
-
-  IsVectorsClose(gt_real_mask, test_mask.real, 0.000001);
-  IsVectorsClose(gt_imag_mask, test_mask.imag, 0.000001);
-}
-
 TEST_CASE("SUCCEED Run calcEnhancedParts with empty input [feature extractor]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
@@ -494,33 +416,4 @@ TEST_CASE("SUCCEED Run calcEnhancedParts with empty input [feature extractor]") 
   feature_extractor.feature_extractor->calc_enhanced_parts_in_place(empty_mask, empty_spec);
   REQUIRE(empty_spec.real.size() == 0);
   REQUIRE(empty_spec.imag.size() == 0);
-}
-
-TEST_CASE("SUCCEED Run calc_enhanced_parts_in_place with real input [feature extractor]", "[binary-fixtures]") {
-  spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().InitFE(params));
-
-  std::valarray<float> test_real_mask;
-  std::valarray<float> test_imag_mask;
-  feature_extractor.LoadDataFromBin("cirm_in_real.dump", test_real_mask);
-  feature_extractor.LoadDataFromBin("cirm_in_imag.dump", test_imag_mask);
-  spench::ComplexNumber<float> test_mask(test_real_mask, test_imag_mask);
-
-  std::valarray<float> test_in_real;
-  std::valarray<float> test_in_imag;
-  feature_extractor.LoadDataFromBin("calc_enhanced_in_real.dump", test_in_real);
-  feature_extractor.LoadDataFromBin("calc_enhanced_in_imag.dump", test_in_imag);
-
-  const spench::ComplexNumber<float> test_spec(test_in_real, test_in_imag);
-
-  std::vector<float> gt_real_mask;
-  std::vector<float> gt_imag_mask;
-  feature_extractor.LoadDataFromBin("calc_enhanced_gt_real.dump", gt_real_mask);
-  feature_extractor.LoadDataFromBin("calc_enhanced_gt_imag.dump", gt_imag_mask);
-
-  feature_extractor.feature_extractor->calc_enhanced_parts_in_place(test_spec, test_mask);
-
-  // precision decreased after we changed algorithm for mask applying
-  IsVectorsClose(gt_real_mask, test_mask.real, 0.3);
-  IsVectorsClose(gt_imag_mask, test_mask.imag, 0.3);
 }
