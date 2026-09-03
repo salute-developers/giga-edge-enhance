@@ -1,0 +1,99 @@
+name: Manual exhaustive validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Validation suite to run
+        required: true
+        default: native-debug
+        type: choice
+        options:
+          - native-debug
+          - native-sanitizer
+          - web-debug
+          - android-emulator
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  native-debug:
+    name: Build and test Native Debug (${{ matrix.engine }})
+    if: inputs.suite == 'native-debug'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [onnx, tflite]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: native-debug-${{ matrix.engine }}
+      - name: Build Native Debug
+        run: tools/spench build native-debug-${{ matrix.engine }}
+      - name: Test Native Debug
+        run: tools/spench test native-debug-${{ matrix.engine }}
+
+  native-sanitizer:
+    name: Build and test Native ASAN
+    if: inputs.suite == 'native-sanitizer'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: native-asan-onnx
+      - name: Build Native ASAN
+        run: tools/spench build native-asan-onnx
+      - name: Test Native ASAN
+        run: tools/spench test native-asan-onnx
+
+  web-debug:
+    name: Build and test Web Debug internals
+    if: inputs.suite == 'web-debug'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-spench-cache
+        with:
+          preset: wasm-debug
+      - name: Build full WebAssembly Debug module
+        run: tools/spench build wasm-debug
+      - name: Test full WebAssembly Debug module
+        run: tools/spench test wasm-debug
+      - name: Build DSP WebAssembly Debug module
+        run: tools/spench build wasm-dsp-debug
+      - name: Test DSP WebAssembly Debug module
+        run: tools/spench test wasm-dsp-debug
+
+  android-emulator:
+    name: Build and test Android Debug on emulator
+    if: inputs.suite == 'android-emulator'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Build Android Debug test targets
+        working-directory: platform_wrappers/android
+        run: ./gradlew :spench-sdk:assembleDebug :demo-app:assembleDebug
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          script: platform_wrappers/android/scripts/test-sdk.sh

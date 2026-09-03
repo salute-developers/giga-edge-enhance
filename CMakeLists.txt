@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.17)
 
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" SPENCH_VERSION
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/SPENCH_VERSION" SPENCH_VERSION
      LIMIT_COUNT 1 REGEX "^[0-9]+\\.[0-9]+\\.[0-9]+$")
 if(NOT SPENCH_VERSION)
-  message(FATAL_ERROR "VERSION must contain a SemVer core version (for example 1.0.0).")
+  message(FATAL_ERROR "SPENCH_VERSION must contain a SemVer core version (for example 1.0.0).")
 endif()
 
 project(spench VERSION "${SPENCH_VERSION}" LANGUAGES C CXX)

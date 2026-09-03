@@ -1,0 +1,95 @@
+name: Build and test Spench CMake target
+description: Restore one dependency bundle, then build and test one existing CMake preset.
+
+inputs:
+  preset:
+    required: true
+    description: CMake preset accepted by tools/spench.
+  toolchain-identity:
+    required: true
+    description: Immutable toolchain identity used by the dependency bundle.
+  toolchain-image:
+    required: false
+    default: ''
+    description: Runnable container image for Docker-based presets.
+  token:
+    required: true
+    description: GitHub token with packages:read.
+  host:
+    required: false
+    default: 'false'
+    description: Build with the host toolchain.
+  package:
+    required: false
+    default: 'false'
+    description: Package the existing build after tests pass.
+
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/setup-spench-cache
+      with:
+        preset: ${{ inputs.preset }}
+
+    - uses: ./.github/actions/setup-spench-dependency
+      with:
+        target: ${{ inputs.preset }}
+        toolchain-identity: ${{ inputs.toolchain-identity }}
+        token: ${{ inputs.token }}
+        host: ${{ inputs.host }}
+
+    - name: Build ${{ inputs.preset }}
+      shell: bash
+      env:
+        PRESET: ${{ inputs.preset }}
+        HOST_BUILD: ${{ inputs.host }}
+        SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        SPENCH_CONTAINER_IMAGE_WASM: ${{ inputs.toolchain-image }}
+      run: |
+        python_command=python3
+        if [[ "${RUNNER_OS}" == "Windows" ]]; then
+          python_command=python
+        fi
+        host_argument=()
+        if [[ "$HOST_BUILD" == "true" ]]; then
+          host_argument=(--host)
+        fi
+        $python_command tools/spench build "$PRESET" "${host_argument[@]}"
+
+    - name: Test ${{ inputs.preset }}
+      shell: bash
+      env:
+        PRESET: ${{ inputs.preset }}
+        HOST_BUILD: ${{ inputs.host }}
+        SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        SPENCH_CONTAINER_IMAGE_WASM: ${{ inputs.toolchain-image }}
+      run: |
+        python_command=python3
+        if [[ "${RUNNER_OS}" == "Windows" ]]; then
+          python_command=python
+        fi
+        host_argument=()
+        if [[ "$HOST_BUILD" == "true" ]]; then
+          host_argument=(--host)
+        fi
+        $python_command tools/spench test "$PRESET" "${host_argument[@]}"
+
+    - name: Package ${{ inputs.preset }}
+      if: inputs.package == 'true'
+      shell: bash
+      env:
+        PRESET: ${{ inputs.preset }}
+        HOST_BUILD: ${{ inputs.host }}
+        SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+      run: |
+        python_command=python3
+        if [[ "${RUNNER_OS}" == "Windows" ]]; then
+          python_command=python
+        fi
+        host_argument=()
+        if [[ "$HOST_BUILD" == "true" ]]; then
+          host_argument=(--host)
+        fi
+        $python_command tools/spench package "$PRESET" "${host_argument[@]}"

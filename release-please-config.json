@@ -5,7 +5,7 @@
   "packages": {
     ".": {
       "component": "spench",
-      "version-file": "VERSION",
+      "version-file": "SPENCH_VERSION",
       "extra-files": [
         {
           "type": "json",

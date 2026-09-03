@@ -363,7 +363,8 @@ TEST_CASE("FAIL Run cpu onnx runner with null pointer context and zeroed hidden 
   CHECK_THROWS_WITH(data.spench_model_runner->infer(&denoise_task), "Task data or context are not initialized!");
 }
 
-TEST_CASE("SUCCEED Run quality onnx model with real data and check first two iterations (audio 48 kHz) [onnx runner]") {
+TEST_CASE("SUCCEED Run quality onnx model with real data and check first two iterations (audio 48 kHz) [onnx runner]",
+          "[binary-fixtures]") {
   auto data = std::move(TestOnnxRunner().InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
 
   std::vector<float> gt_fb_hidden_step1;

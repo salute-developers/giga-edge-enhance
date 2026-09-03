@@ -60,28 +60,34 @@ tools/spench <build|test|package|install|core|cache-key|prepare-deps|prepare-ima
 ```
 
 Docker is the default where supported. Use `--host` only when the matching local toolchain is already
-installed. iOS always uses the host Xcode toolchain.
+installed. iOS always uses the host Xcode toolchain. Commands are deliberately composable: `build`
+creates outputs, while `test`, `package`, and `install` consume an existing build without rebuilding it.
 
 Common validation commands:
 
 ```bash
 # Fast native development check
+tools/spench build native-debug-onnx
 tools/spench test native-debug-onnx
 
 # Release engine coverage
+tools/spench build native-release-onnx
 tools/spench test native-release-onnx
+tools/spench build native-release-tflite
 tools/spench test native-release-tflite
 
 # Memory-safety coverage
+tools/spench build native-asan-onnx
 tools/spench test native-asan-onnx
 
-# WebAssembly and Web SDK
-tools/spench test wasm-release
-tools/spench test wasm-dsp-release
+# Web SDK, including its full and DSP WebAssembly modules
 tools/spench build web
+tools/spench test web
 
 # Platform wrappers
+tools/spench build android
 tools/spench test android
+tools/spench build ios
 tools/spench test ios
 ```
 
@@ -173,12 +179,12 @@ for GitHub Pages.
 For C and C++ style validation:
 
 ```bash
-./container_internals/check_style.sh
+git-clang-format --diff HEAD --extensions c,cc,cpp,h,hpp -- spench
 ```
 
 ## Releases
 
-`VERSION` is the release version source. Release Please manages version and changelog updates, while
+`SPENCH_VERSION` is the release version source. Release Please manages version and changelog updates, while
 GitHub Actions builds and attaches validated platform artifacts. A rerun may verify an existing
 artifact with the same hash but must not overwrite a published version with different bytes.
 

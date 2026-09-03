@@ -23,7 +23,12 @@ jobs:
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: ${{ matrix.preset }}
-      - run: tools/spench package ${{ matrix.preset }}
+      - name: Build ${{ matrix.preset }}
+        run: tools/spench build ${{ matrix.preset }}
+      - name: Test ${{ matrix.preset }}
+        run: tools/spench test ${{ matrix.preset }}
+      - name: Package ${{ matrix.preset }}
+        run: tools/spench package ${{ matrix.preset }}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.preset }}
@@ -38,7 +43,10 @@ jobs:
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: android
-      - run: tools/spench build android
+      - name: Build Android Release
+        run: tools/spench build android
+      - name: Test Android Release
+        run: tools/spench test android
       - run: tar -C platform_wrappers/android -czf out/artifacts/spench-android-${{ github.ref_name }}.tar.gz --exclude='build' spench-sdk/build/outputs spench-model-full24k/build/outputs spench-model-full48k/build/outputs
       - uses: actions/upload-artifact@v4
         with:
@@ -121,7 +129,10 @@ jobs:
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: wasm-release
-      - run: tools/spench build web
+      - name: Build Web
+        run: tools/spench build web
+      - name: Test Web
+        run: tools/spench test web
       - run: npm pack --workspace=@gigaedge/spench-web-sdk --pack-destination ../../out/artifacts
         working-directory: platform_wrappers/web
       - uses: actions/upload-artifact@v4

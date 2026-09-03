@@ -76,10 +76,10 @@ Requires JDK 17, Android SDK API 35, and (to build the native library) NDK 29.0.
 
 Helper scripts:
 
-- `scripts/build.sh` — clean assemble of the SDK, model modules, and demo app.
-- `scripts/test-sdk.sh` — host-native C++ tests, SDK JVM unit tests, and SDK instrumented tests.
+- `scripts/build.sh` — Release assemble of the SDK, model modules, and demo app.
+- `scripts/test-sdk.sh` — SDK JVM unit tests and SDK instrumented tests for an already-built Debug variant.
 - `scripts/test-demo-ui.sh` — demo app connected instrumentation/UI tests.
-- `scripts/test-all.sh` — host-native C++ tests, library/app builds, and all Android tests.
+- `scripts/test-all.sh` — Release JVM tests and optional connected Android tests for an already-built variant.
 
 ## Known limitations
 

@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 "$ROOT_DIR/gradlew" \
     -p "$ROOT_DIR" \
-    :spench-sdk:assemble \
-    :spench-model-full24k:assemble \
-    :spench-model-full48k:assemble \
-    :demo-app:assemble
+    :spench-sdk:assembleRelease \
+    :spench-model-full24k:assembleRelease \
+    :spench-model-full48k:assembleRelease \
+    :demo-app:assembleRelease

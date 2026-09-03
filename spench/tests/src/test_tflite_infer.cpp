@@ -79,7 +79,8 @@ TEST_CASE("FAIL Read config with corrupted model [tflite runner]") {
                     "Model reading error. There is problem with checkpoint file.");
 }
 
-TEST_CASE("SUCCEED Run quality tflite model with real data and check first two iterations (48 kHz) [tflite runner]") {
+TEST_CASE("SUCCEED Run quality tflite model with real data and check first two iterations (48 kHz) [tflite runner]",
+          "[binary-fixtures]") {
   auto data = std::move(TestTfliteRunner().InitRunner("default_configuration_best_quality_tflite_48khz.yaml"));
 
   std::vector<float> gt_fb_hidden_step1;

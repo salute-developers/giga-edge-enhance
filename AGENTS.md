@@ -17,7 +17,6 @@ added later, follow the more specific instructions for files in that subtree.
   `platform_wrappers/web/`: platform SDKs, demos, and platform-specific tests.
 - `tools/spench`: canonical entry point for supported builds, tests, and
   packages. Prefer it to ad hoc CMake, Docker, Gradle, or npm command chains.
-- `container_internals/`: style checks and container-side build helpers.
 - `README.md`: setup, supported configurations, model retrieval, and user-facing
   examples.
 - `STYLE.md`: authoritative C++ naming, formatting, API-stability, and lint
@@ -49,28 +48,39 @@ already installed. iOS workflows use the host Xcode toolchain.
 
 ```bash
 # Fast native development validation
+tools/spench build native-debug-onnx
 tools/spench test native-debug-onnx
 
 # Release engine coverage
+tools/spench build native-release-onnx
 tools/spench test native-release-onnx
+tools/spench build native-release-tflite
 tools/spench test native-release-tflite
 
 # Memory-safety validation
+tools/spench build native-asan-onnx
 tools/spench test native-asan-onnx
 
 # WebAssembly wrappers
+tools/spench build wasm-release
 tools/spench test wasm-release
+tools/spench build wasm-dsp-release
 tools/spench test wasm-dsp-release
 
 # Full web SDK build, unit tests, and bundle
 tools/spench build web
+tools/spench test web
 
 # Platform wrappers
+tools/spench build android
 tools/spench test android
+tools/spench build ios
 tools/spench test ios
 
 # Release packages
+tools/spench build native-release-onnx
 tools/spench package native-release-onnx
+tools/spench build native-release-tflite
 tools/spench package native-release-tflite
 ```
 
@@ -80,13 +90,13 @@ crosses engines, platforms, ABI boundaries, or memory ownership.
 
 ## Validation matrix
 
-- C or C++ implementation change: run `tools/spench test native-debug-onnx`.
+- C or C++ implementation change: build, then test `native-debug-onnx`.
 - Inference-engine-neutral code or configuration: also run the relevant ONNX
   and TFLite release tests.
-- Allocation, lifetime, threading, buffer, or ownership change: also run
-  `tools/spench test native-asan-onnx`.
-- WASM C++ or glue change: run the matching `wasm-release` test. Also run
-  `wasm-dsp-release` when DSP-only behavior can be affected.
+- Allocation, lifetime, threading, buffer, or ownership change: also build and
+  test `native-asan-onnx`.
+- WASM C++ or glue change: build and test the matching `wasm-release` target.
+  Also build and test `wasm-dsp-release` when DSP-only behavior can be affected.
 - Web SDK TypeScript-only change: from `platform_wrappers/web`, run
   `npm test --workspace=@gigaedge/spench-web-sdk` and the relevant build or
   lint script. Run `tools/spench build web` when generated WASM, staging,
@@ -112,17 +122,14 @@ blocker. Do not silently substitute a weaker check.
   Changes under `spench/include/spench/` require explicit compatibility review.
 - Keep tests close to the affected behavior under `spench/tests/`. Add a
   regression test when fixing a reproducible bug.
-- Run style validation for C/C++ changes:
+- Check changed C/C++ lines against `.clang-format`:
 
   ```bash
-  ./container_internals/check_style.sh
+  git-clang-format --diff HEAD --extensions c,cc,cpp,h,hpp -- spench
   ```
 
-  Host-only naming checks require `clang-tidy` and `compile_commands.json`:
-
-  ```bash
-  ./container_internals/check_style.sh -m
-  ```
+  The required CI lint uses the same changed-line check. Broader legacy style
+  cleanup should be done independently rather than mixed into feature changes.
 
 ## Web rules
 
@@ -135,95 +142,53 @@ blocker. Do not silently substitute a weaker check.
 - Do not manually edit staged/generated WASM artifacts when the staging scripts
   or `tools/spench build web` can produce them.
 
-## Future GitHub CI/CD design
+## GitHub CI/CD design
 
-This section is the implementation blueprint for future files under
-`.github/workflows/`. Keep workflow YAML thin: setup belongs in composite
-actions and build behavior belongs in `tools/spench`, so local and CI commands
-remain identical.
+Keep workflow YAML thin: setup belongs in composite actions and build behavior
+belongs in `tools/spench`, so local and CI commands remain identical.
 
 ### Workflow boundaries
 
-Create separate workflows with narrowly scoped permissions:
+Workflows have event-specific responsibilities and narrowly scoped permissions:
 
-- `ci.yml`: `pull_request`, merge queue, and pushes to the protected default
-  branch. It validates source but never publishes.
-- `nightly.yml`: scheduled and manually dispatched exhaustive tests, including
-  slow platform, sanitizer, browser, and device/emulator coverage.
-- `dependencies.yml`: manually dispatched and triggered by dependency recipe
-  changes. It prepares dependency bundles/images; it is not a product release.
-- `release.yml`: manually dispatched or version-tag triggered. It packages,
-  signs, verifies, and publishes only a commit that passed the full required CI
-  gate.
+- `ci.yml`: pull requests and pushes to the protected default branch. It uses
+  Release configurations only, uploads tested job artifacts, and never deploys.
+- `manual-validation.yml`: manually dispatched Debug, ASAN, Web Debug, and
+  Android emulator coverage. There is no scheduled nightly workflow.
+- `pages.yml` and `preview.yml`: publish only a successful Web artifact produced
+  by CI. `preview-cleanup.yml` handles only a closed pull request.
+- `release-assets.yml` and `release-please.yml`: release-only packaging and
+  publication. They never run as pull-request checks.
 
 Do not combine pull-request validation and publishing in one workflow. Forked
 pull requests must never receive release secrets or write permissions.
 
 ### CI job order
 
-Implement the dependency graph in this order:
+For each concrete target, implement this graph:
 
 ```text
-changes + policy
-        |
-        v
-Linux native smoke test
-        |
-        +-------------------+-------------------+------------------+
-        v                   v                   v                  v
-native/engine matrix   WASM + web matrix   Android matrix   macOS/Windows/iOS
-        +-------------------+-------------------+------------------+
-                                |
-                                v
-                     install/package verification
-                                |
-                                v
-                       single required CI gate
+Build toolchain -> Build concrete dependency OCI -> Build target -> Test target
 ```
 
-1. **Changes and policy.** Classify affected areas (`core`, `build`, `web`,
-   `android`, `ios`, `docs`) and validate repository metadata. Use path
-   classification to avoid expensive unrelated jobs on pull requests, but do
-   not skip the full matrix on the default branch, nightly runs, or releases.
-   Use shallow checkout for lightweight jobs. Jobs that execute tests must
-   fetch Git LFS objects because models and audio fixtures are LFS-managed.
-2. **Linux native smoke test.** Run the cheapest representative end-to-end
-   build first, normally `tools/spench test native-debug-onnx`. Expensive jobs
-   should depend on this job so basic checkout, Docker, CMake, cache, model, and
-   test failures stop the pipeline early.
-3. **Parallel validation matrices.** After smoke succeeds, run independent
-   jobs concurrently with matrix `fail-fast: false` so all platform failures
-   are reported in one run:
-   - Linux native: Debug and Release for ONNX Runtime and TensorFlow Lite, plus
-     `native-asan-onnx` and the supported static-release variants.
-   - WASM: `wasm-debug`, `wasm-release`, `wasm-dsp-debug`, and
-     `wasm-dsp-release`.
-   - Web: `tools/spench build web`; run demo lint and Playwright separately so
-     a placeholder package test cannot satisfy browser coverage.
-   - Android: `tools/spench test android`; keep connected emulator tests in
-     nightly CI until runner reliability and duration are acceptable for pull
-     requests.
-   - macOS: run only presets matching the runner architecture, verify it with
-     `uname -m`, and include the iOS simulator workflow on a compatible Xcode
-     runner.
-   - Windows: invoke the helper as `python tools/spench test <preset>` and test
-     both engines plus the supported static variant.
-4. **Install and package verification.** Run only after the corresponding test
-   job passes. Exercise `tools/spench install <preset>` for distributable CMake
-   installs and `tools/spench package <preset>` for supported release archives.
-   Add a small external consumer project that uses the installed package; a
-   successful archive command alone does not prove consumers can find headers,
-   libraries, transitive dependencies, or CMake package metadata.
-5. **Single required gate.** Add one final job with stable name such as
-   `ci-required`. It must use `if: always()`, inspect every required dependency,
-   and fail when a required job failed, was cancelled, or was unexpectedly
-   skipped. Configure branch protection against this one name so later matrix
-   expansion does not require branch-protection changes.
+Dependency jobs run in parallel. As soon as one exact dependency finishes, its
+target may start; do not put unrelated dependencies behind a matrix-wide
+barrier. Web and Android additionally wait for the native ONNX Release smoke
+target. Build and test remain separate named steps in one job so large build
+trees do not have to be uploaded and downloaded between runners.
 
-Documentation-only pull requests may stop after policy/documentation checks.
-Changes to `CMakeLists.txt`, `CMakePresets.json`, `cmake/`, `Dockerfile`,
-`package-lock.cmake`, `tools/spench`, dependency patches, public headers, or
-cross-platform implementation code must select broad coverage.
+- Linux validates ONNX Runtime and TensorFlow Lite shared/static Release targets.
+- Web owns both full and DSP-only WASM builds. Web SDK unit tests and Playwright
+  browser tests run with the dedicated `web-test` image against the local
+  COOP/COEP static server.
+- Android restores one TFLite dependency per ABI and runs Release unit/native
+  tests. Connected emulator tests are manual.
+- macOS validates each runner architecture with both engines. Windows validates
+  both engines and the supported static target. iOS restores both device and
+  simulator dependencies before producing and testing the XCFramework.
+- Lint is split by domain: C/C++, Web, Android, iOS, and workflow YAML.
+- `ci-required` uses `if: always()` and fails on failed, cancelled, or
+  unexpectedly skipped required jobs. Branch protection targets this stable name.
 
 ### Cache and dependency-bundle policy
 
@@ -233,16 +198,19 @@ cross-platform implementation code must select broad coverage.
 - Treat CPM and compiler caches only as accelerators. A cache miss must remain a
   correct build, and release artifacts must never be published directly from a
   mutable cache.
-- Build dependency bundles with `tools/spench prepare-deps <target>` and export
-  dependency-only OCI archives with `tools/spench prepare-image <family>`.
-- Publish dependency images only from trusted default-branch or manually
-  approved runs. Address them by immutable digest or dependency-lock-derived
-  tag, validate their `manifest.json`, and fall back to a source build when no
-  compatible bundle exists.
+- Build one dependency bundle with `tools/spench prepare-deps <concrete-target>`.
+  Package it as a checksummed tar archive and push it to GHCR as an OCI artifact
+  with ORAS. Do not wrap dependency files in a runnable Docker image.
+- Tag toolchain images by Dockerfile/toolchain content, never by commit SHA.
+  Address dependency OCI artifacts by engine recipe, target OS/architecture,
+  configuration, linkage, bundle format, and immutable toolchain identity.
+- Reuse matching OCI artifacts across pull requests and default-branch builds.
+  Validate the checksum and `manifest.json` fields before exposing a restored
+  prefix to CMake.
 - Rebuild bundles when `package-lock.cmake`, CPM configuration, dependency
   patches, relevant CMake recipes, toolchain identity, or bundle format changes.
 - Use concurrency cancellation for superseded pull-request runs. Do not cancel
-  release or dependency-publication workflows halfway through publishing.
+  a release halfway through publication.
 
 ### Artifacts and diagnostics
 
@@ -279,15 +247,9 @@ A rerun must be idempotent: it may verify an already published artifact with
 the same hash, but it must fail rather than overwrite an existing version with
 different bytes.
 
-### Known prerequisites before CI becomes required
-
-- `.pre-commit-config.yaml`, `STYLE.md`, and this file reference
-  `container_internals/check_style.sh`, but `container_internals/` is not
-  present in the current repository. Restore those scripts or update all three
-  references before adding a required style job.
-- Decide the authoritative release version source and tag format before
-  implementing `release.yml`; the current `README.md` release section is marked
-  for rewrite.
+`SPENCH_VERSION` is the authoritative release version source. Its name must not
+be shortened to `VERSION`: on case-insensitive filesystems that filename shadows
+libc++'s standard `<version>` header when the source root is an include path.
 
 ## Completion criteria
 

@@ -56,7 +56,17 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/spench/contrib/Catch2/contrib/")
 include(Catch)
-catch_discover_tests(spench_tests)
+
+# The sanitized public repository intentionally excludes private reference dumps.
+# Keep those regression tests available to environments that restore the fixtures,
+# while making the ordinary public checkout testable without private data.
+file(GLOB _spench_binary_fixtures "${CMAKE_SOURCE_DIR}/spench/tests/data/binary/*.dump")
+if(_spench_binary_fixtures)
+  catch_discover_tests(spench_tests)
+else()
+  message(STATUS "Binary reference fixtures not found; excluding [binary-fixtures] tests")
+  catch_discover_tests(spench_tests TEST_SPEC "~[binary-fixtures]")
+endif()
 
 if (BUILD_SHARED_LIBS AND WIN32)
 add_custom_command(TARGET spench_tests POST_BUILD

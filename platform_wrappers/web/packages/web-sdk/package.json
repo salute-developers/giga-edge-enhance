@@ -26,6 +26,7 @@
     "clean": "rm -rf dist",
     "verify:wasm": "node scripts/stage-wasm.mjs --verify",
     "test": "jest --ci --runInBand --detectOpenHandles --logHeapUsage",
+    "lint": "eslint .",
     "lint:eslint:fix": "eslint --fix",
     "lint:eslint": "eslint"
   },

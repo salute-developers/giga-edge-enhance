@@ -11,9 +11,13 @@ platform-specific guide from the documentation overview.
 Repository contributors should run supported builds through `tools/spench` from the repository root:
 
 ```bash
+tools/spench build native-debug-onnx
 tools/spench test native-debug-onnx
 tools/spench build web
+tools/spench test web
+tools/spench build android
 tools/spench test android
+tools/spench build ios
 tools/spench test ios
 ```
 

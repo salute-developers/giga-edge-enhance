@@ -408,7 +408,8 @@ TEST_CASE("SUCCEED Run 1000 iSTFT with dummy zero vector for speed measure (audi
                static_cast<double>(tot) / (feature_extractor.num_attempts * 1000));
 }
 
-TEST_CASE("SUCCEED Run 10 iSTFT calculations with real data from .bin file (audio 16kHz) [feature extractor]") {
+TEST_CASE("SUCCEED Run 10 iSTFT calculations with real data from .bin file (audio 16kHz) [feature extractor]",
+          "[binary-fixtures]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   constexpr size_t iterations = 10 + 1;  // last one for the right context
@@ -435,7 +436,7 @@ TEST_CASE("SUCCEED Run 10 iSTFT calculations with real data from .bin file (audi
   IsVectorsClose(reference_signal, result_signal, 0.0000001);
 }
 
-TEST_CASE("SUCCEED Run iSTFT with single real complex vector (audio 16kHz) [feature extractor]") {
+TEST_CASE("SUCCEED Run iSTFT with single real complex vector (audio 16kHz) [feature extractor]", "[binary-fixtures]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   constexpr size_t iterations = 1 + 1;  // last one for the right context
@@ -464,7 +465,7 @@ TEST_CASE("SUCCEED Run iSTFT with single real complex vector (audio 16kHz) [feat
   IsVectorsClose(reference_signal, result_signal, 0.0000001);
 }
 
-TEST_CASE("SUCCEED Run decompressCIRM with real input [feature extractor]") {
+TEST_CASE("SUCCEED Run decompressCIRM with real input [feature extractor]", "[binary-fixtures]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
 
@@ -495,7 +496,7 @@ TEST_CASE("SUCCEED Run calcEnhancedParts with empty input [feature extractor]") 
   REQUIRE(empty_spec.imag.size() == 0);
 }
 
-TEST_CASE("SUCCEED Run calc_enhanced_parts_in_place with real input [feature extractor]") {
+TEST_CASE("SUCCEED Run calc_enhanced_parts_in_place with real input [feature extractor]", "[binary-fixtures]") {
   spench::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
 

@@ -12,7 +12,12 @@ runs:
     - name: Compute cache keys
       id: cache-keys
       shell: bash
-      run: python tools/spench cache-key "${{ inputs.preset }}" >> "$GITHUB_OUTPUT"
+      run: |
+        python_command=python3
+        if [[ "${RUNNER_OS}" == "Windows" ]]; then
+          python_command=python
+        fi
+        $python_command tools/spench cache-key "${{ inputs.preset }}" >> "$GITHUB_OUTPUT"
 
     - name: Restore CPM sources
       uses: actions/cache/restore@v4

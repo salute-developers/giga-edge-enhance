@@ -1,27 +1,55 @@
 name: Restore Spench dependency bundle
-description: Restore a target-specific engine bundle from GHCR when it is available.
+description: Restore one concrete engine bundle from GHCR with ORAS.
 
 inputs:
   target:
-    description: Dependency family (native, wasm, or android).
+    description: Concrete tools/spench dependency target.
     required: true
-  tag:
-    description: Immutable OCI tag to restore.
+  toolchain-identity:
+    description: Immutable digest of the toolchain that produced the bundle.
     required: true
+  token:
+    description: GitHub token with packages:read.
+    required: true
+  host:
+    description: Whether this is a host-only target.
+    required: false
+    default: 'false'
 
 runs:
   using: composite
   steps:
-    - name: Restore OCI dependency bundle
+    - uses: oras-project/setup-oras@v2
+
+    - name: Log in to GHCR
       shell: bash
       env:
-        IMAGE: ghcr.io/${{ github.repository }}/dependencies-${{ inputs.target }}:${{ inputs.tag }}
+        GHCR_TOKEN: ${{ inputs.token }}
+      run: echo "$GHCR_TOKEN" | oras login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+    - name: Restore dependency OCI artifact
+      shell: bash
+      env:
+        SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        TARGET: ${{ inputs.target }}
+        HOST_BUILD: ${{ inputs.host }}
       run: |
-        if ! docker pull "$IMAGE"; then
-          echo "No compatible dependency OCI image is available; CMake will build dependencies."
-          exit 0
+        python_command=python3
+        if [[ "${RUNNER_OS}" == "Windows" ]]; then
+          python_command=python
         fi
-        container_id="$(docker create "$IMAGE")"
-        trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
-        mkdir -p out/artifacts/dependencies
-        docker cp "$container_id:/dependencies/." out/artifacts/dependencies/
+        host_argument=()
+        if [[ "$HOST_BUILD" == "true" ]]; then
+          host_argument=(--host)
+        fi
+        tag="$($python_command tools/spench dependency-key "$TARGET" "${host_argument[@]}")"
+        reference="ghcr.io/${GITHUB_REPOSITORY}/dependencies:${tag}"
+        download_dir="${RUNNER_TEMP}/spench-dependency-${tag}"
+        mkdir -p "$download_dir"
+        oras pull "$reference" --output "$download_dir"
+        archive="$(find "$download_dir" -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+        if [[ -z "$archive" ]]; then
+          echo "error: $reference did not contain a dependency archive" >&2
+          exit 1
+        fi
+        $python_command tools/spench restore-deps "$TARGET" "$archive" "${host_argument[@]}"

@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$ROOT_DIR/build/xcframework"
 BUNDLE_BUILD_DIR="$BUILD_DIR/bundle-products"
+TEST_BUILD_DIR="$BUILD_DIR/test-derived-data"
 PROJECT="$ROOT_DIR/SpenchSDK.xcodeproj"
 SCHEME="SpenchAudioKit"
 
@@ -18,6 +19,7 @@ xcodebuild archive \
   -scheme "$SCHEME" \
   -destination "generic/platform=iOS" \
   -archivePath "$BUILD_DIR/ios" \
+  -configuration Release \
   SKIP_INSTALL=NO \
   CODE_SIGNING_ALLOWED=NO \
   BUILD_LIBRARY_FOR_DISTRIBUTION=YES
@@ -27,6 +29,7 @@ xcodebuild archive \
   -scheme "$SCHEME" \
   -destination "generic/platform=iOS Simulator" \
   -archivePath "$BUILD_DIR/simulator" \
+  -configuration Release \
   SKIP_INSTALL=NO \
   CODE_SIGNING_ALLOWED=NO \
   BUILD_LIBRARY_FOR_DISTRIBUTION=YES
@@ -54,5 +57,15 @@ xcodebuild build \
 
 cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/SpenchModelLite8k.bundle" "$BUILD_DIR"
 cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/SpenchModelQuality48k.bundle" "$BUILD_DIR"
+
+for test_scheme in SpenchAudioKit AudioDemoApp; do
+  xcodebuild build-for-testing \
+    -project "$PROJECT" \
+    -scheme "$test_scheme" \
+    -configuration Release \
+    -destination "generic/platform=iOS Simulator" \
+    -derivedDataPath "$TEST_BUILD_DIR" \
+    CODE_SIGNING_ALLOWED=NO
+done
 
 echo "Built XCFramework at $BUILD_DIR/SpenchAudioKit.xcframework"
