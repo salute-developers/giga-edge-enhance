@@ -2,14 +2,6 @@ cmake_minimum_required(VERSION 3.17.3)
 
 project( CONTRIB )
 
-if(SPENCH_ENGINE_BUNDLE_LINKAGE STREQUAL "shared" AND BUILD_TFLITE_ENGINE)
-  # A shared TFLite engine absorbs its upstream static implementation
-  # libraries, making the exported bundle independent of their CMake packages.
-  set(BUILD_SHARED_LIBS ON)
-else()
-  set(BUILD_SHARED_LIBS OFF)
-endif()
-
 function(spench_find_android_prebuilt_tflite output_variable)
   if(NOT SPENCH_PREBUILT_DEPENDENCIES_ROOT)
     set(${output_variable} "" PARENT_SCOPE)
@@ -70,7 +62,23 @@ if (BUILD_TFLITE_ENGINE)
       "TensorFlow Lite is provided by a prebuilt dependency bundle." FORCE)
     set(SPENCH_RESOLVED_PREBUILT_TFLITE_ROOT "" CACHE INTERNAL
       "Resolved TensorFlow Lite prebuilt dependency bundle root." FORCE)
+    # Keep TFLite's implementation dependencies static. The patched upstream
+    # target selects its own linkage from SPENCH_ENGINE_BUNDLE_LINKAGE, so a
+    # shared tensorflow-lite contains these PIC objects without exporting a
+    # large graph of private CMake targets.
+    set(_spench_build_shared_libs "${BUILD_SHARED_LIBS}")
+    set(_spench_position_independent_code "${CMAKE_POSITION_INDEPENDENT_CODE}")
+    if(SPENCH_ENGINE_BUNDLE_LINKAGE STREQUAL "shared" OR
+       (NOT SPENCH_ENGINE_BUNDLE_LINKAGE AND BUILD_SHARED_LIBS))
+      set(SPENCH_TFLITE_LIBRARY_TYPE SHARED)
+    else()
+      set(SPENCH_TFLITE_LIBRARY_TYPE STATIC)
+    endif()
+    set(BUILD_SHARED_LIBS OFF)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     CPMGetPackage(tflite)
+    set(BUILD_SHARED_LIBS "${_spench_build_shared_libs}")
+    set(CMAKE_POSITION_INDEPENDENT_CODE "${_spench_position_independent_code}")
     if(ANDROID)
       # XNNPACK calls Android logging APIs directly. When TFLite is collected
       # into a shared dependency bundle, propagate liblog to the XNNPACK

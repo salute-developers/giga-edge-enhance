@@ -33,15 +33,6 @@ RUN mkdir -p /usr/local/lib/nvm && \
 
 FROM base AS native-base
 
-ARG EIGEN_REVISION=e7248b26a1ed53fa030c5c459f7ea095dfd276ac
-
-# ONNX Runtime requires this revision; GitLab's generated ZIP no longer matches
-# the historical checksum recorded by ONNX Runtime.
-RUN git init /opt/eigen && \
-    git -C /opt/eigen remote add origin https://gitlab.com/libeigen/eigen.git && \
-    git -C /opt/eigen fetch --depth 1 origin "${EIGEN_REVISION}" && \
-    git -C /opt/eigen checkout --detach FETCH_HEAD
-
 FROM native-base AS native
 
 FROM base AS android-base

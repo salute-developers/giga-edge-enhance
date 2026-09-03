@@ -521,7 +521,7 @@ def copy_static_archives(prefix: Path, build_dir: Path) -> list[Path]:
 
 
 def copy_engine_library(prefix: Path, engine: str, build_dir: Path) -> Path:
-    """Copy a shared engine library and all loader aliases."""
+    """Copy a shared engine library, loader aliases, and Windows import library."""
     library_dir = prefix / "lib"
     library_dir.mkdir(parents=True, exist_ok=True)
     stem = "onnxruntime" if engine == "onnx" else "tensorflow-lite"
@@ -537,6 +537,12 @@ def copy_engine_library(prefix: Path, engine: str, build_dir: Path) -> Path:
     # -l<name> or the library SONAME for a transitive static consumer.
     for source in candidates:
         shutil.copy2(source, library_dir / source.name)
+    if any(candidate.suffix == ".dll" for candidate in candidates):
+        import_libraries = sorted(build_dir.rglob(f"{stem}*.lib"))
+        if not import_libraries:
+            raise SystemExit(f"No import library was produced for shared {engine} below {build_dir}.")
+        for source in import_libraries:
+            shutil.copy2(source, library_dir / source.name)
     return library_dir / candidates[0].name
 
 
@@ -579,13 +585,18 @@ def write_engine_package_config(prefix: Path, engine: str, library: Path | None,
     else:
         if library is None:
             raise ValueError("Shared engine package configuration requires its shared library.")
+        import_library = prefix / "lib" / f"{library.stem}.lib"
+        imported_implib = (
+            f"    IMPORTED_IMPLIB \"${{{prefix_variable}}}/lib/{import_library.name}\"\n"
+            if library.suffix == ".dll" and import_library.is_file() else "")
         config = (
             "include(CMakeFindDependencyMacro)\n"
             f"get_filename_component({prefix_variable} \"${{CMAKE_CURRENT_LIST_DIR}}/../../..\" ABSOLUTE)\n"
             f"if(NOT TARGET {target})\n"
-            f"  add_library({target} UNKNOWN IMPORTED GLOBAL)\n"
+            f"  add_library({target} SHARED IMPORTED GLOBAL)\n"
             f"  set_target_properties({target} PROPERTIES\n"
             f"    IMPORTED_LOCATION \"${{{prefix_variable}}}/lib/{library.name}\"\n"
+            f"{imported_implib}"
             f"    INTERFACE_INCLUDE_DIRECTORIES \"${{{prefix_variable}}}/include\"\n"
             "  )\n"
             "endif()\n")
@@ -773,9 +784,7 @@ def prepare_dependency(preset: str, host: bool) -> Path | None:
             f"-DSPENCH_ENGINE_BUNDLE_LINKAGE={linkage}",
         ]
         if container and stage in {"native", "web"}:
-            configure_command.extend(("-Donnxruntime_USE_PREINSTALLED_EIGEN=ON",
-                                      "-Deigen_SOURCE_PATH=/opt/eigen",
-                                      "-DCMAKE_AR=/usr/bin/llvm-ar",
+            configure_command.extend(("-DCMAKE_AR=/usr/bin/llvm-ar",
                                       "-DCMAKE_RANLIB=/usr/bin/llvm-ranlib"))
         print(f"Preparing {engine} {build_type} dependency bundle for {target_system}/{target_arch}.")
         run(configure_command, container_stage=preparation_stage, environment=environment)
@@ -910,7 +919,7 @@ def prepare_android_tflite(abi: str, build_type: str, host: bool) -> Path:
             "-DSPENCH_ENGINE_BUNDLE_LINKAGE=shared",
         ]
         run(configure_command, container_stage=stage, environment=environment)
-        run(["cmake", "--build", build_dir, "--target", "tensorflow-lite", "--parallel"],
+        run(["cmake", "--build", build_dir, "--target", "tensorflow-lite", "--parallel", "2"],
             container_stage=stage, environment=environment)
         library = copy_engine_library(prefix, "tflite",
                                       ROOT / "out" / "build" / "prebuilt" / "android" / abi / "tflite" / build_type.lower())
@@ -923,7 +932,8 @@ def prepare_android_tflite(abi: str, build_type: str, host: bool) -> Path:
 
 
 def run_web_node(command: list[str], *, container_stage: str | None,
-                 environment: dict[str, str], workdir: Path) -> None:
+                 environment: dict[str, str], workdir: Path,
+                 isolate_node_modules: bool = True) -> None:
     if container_stage is None:
         if not (Path.home() / ".nvm" / "nvm.sh").is_file():
             run(command, workdir=workdir)
@@ -936,7 +946,8 @@ def run_web_node(command: list[str], *, container_stage: str | None,
         )
 
     run(["bash", "-lc", nvm_script, "bash", *command], container_stage=container_stage,
-        environment=environment, workdir=workdir, isolate_web_node_modules=container_stage is not None)
+        environment=environment, workdir=workdir,
+        isolate_web_node_modules=container_stage is not None and isolate_node_modules)
 
 
 def cmake_workflow(action: str, preset: str, host: bool) -> None:
@@ -959,9 +970,7 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
             configure_command.extend(("-B", build_dir))
             build_command = ["cmake", "--build", build_dir]
         if stage in {"native", "web"} and preset != "native-model-packer":
-            configure_command.extend(("-Donnxruntime_USE_PREINSTALLED_EIGEN=ON",
-                                      "-Deigen_SOURCE_PATH=/opt/eigen",
-                                      "-DCMAKE_AR=/usr/bin/llvm-ar",
+            configure_command.extend(("-DCMAKE_AR=/usr/bin/llvm-ar",
                                       "-DCMAKE_RANLIB=/usr/bin/llvm-ranlib"))
         run(configure_command, container_stage=stage, environment=environment)
         run(build_command, container_stage=stage, environment=environment)
@@ -988,10 +997,10 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
         package_dir = ROOT / "out" / "artifacts" / preset
         package_dir.mkdir(parents=True, exist_ok=True)
         package_output_dir = str(package_dir) if stage is None else f"/workspace/out/artifacts/{preset}"
-        package_command = ["cpack", "--preset", preset, "-B", package_output_dir]
+        package_command = ["cpack", "--preset", preset, "-G", "TGZ", "-B", package_output_dir]
         if not use_host:
             package_command = [
-                "cpack", "--config", f"{build_dir}/CPackConfig.cmake",
+                "cpack", "--config", f"{build_dir}/CPackConfig.cmake", "-G", "TGZ",
                 "-B", package_output_dir,
             ]
         run(package_command, container_stage=stage, environment=environment)
@@ -1023,7 +1032,10 @@ def android_workflow(action: str, host: bool) -> None:
     environment["SPENCH_PREBUILT_DEPENDENCIES_ROOT"] = dependency_root
     if not host:
         environment.update({
-            "GRADLE_OPTS": "-Dorg.gradle.vfs.watch=false",
+            "GRADLE_OPTS": (
+                "-Dorg.gradle.vfs.watch=false -Dorg.gradle.workers.max=2 "
+                "-Dorg.gradle.jvmargs=-Xmx3g"
+            ),
         })
     run([f"platform_wrappers/android/scripts/{script}"], container_stage=stage,
         environment=environment)
@@ -1080,24 +1092,19 @@ def web_workflow(action: str, host: bool) -> None:
         return
 
     if action == "playwright":
-        packages = sorted((ROOT / "out/artifacts/web").glob("*.tgz"))
-        if not packages:
-            raise SystemExit("Packed Web SDK is missing. Run 'tools/spench package web' first.")
+        installed_sdk = web_dir / "node_modules/@gigaedge/spench-web-sdk/package.json"
+        if not installed_sdk.is_file():
+            raise SystemExit(
+                "The packed Web SDK is not installed. Install the downloaded package into "
+                "@gigaedge/spench-site before running Playwright.")
         stage = None if host else "web"
-        package_path = (str(packages[-1]) if host else
-                        f"/workspace/{packages[-1].relative_to(ROOT)}")
-        run_web_node(["npm", "ci"], container_stage=stage,
-                     environment=environment, workdir=web_dir)
-        run_web_node([
-            "npm", "install", "--no-save", "--package-lock=false",
-            "--workspace=@gigaedge/spench-site", package_path,
-        ], container_stage=stage, environment=environment, workdir=web_dir)
         run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-site"],
                      container_stage=stage, environment={"SPENCH_SITE_BASE": "/"},
-                     workdir=web_dir)
+                     workdir=web_dir, isolate_node_modules=False)
         run_web_node(["npm", "run", "pw:test", "--workspace=@gigaedge/spench-site"],
                      container_stage=stage,
-                     environment={"PLAYWRIGHT_WORKERS": "1"}, workdir=web_dir)
+                     environment={"PLAYWRIGHT_WORKERS": "1"}, workdir=web_dir,
+                     isolate_node_modules=False)
         return
 
     stage = None if host else "web"
@@ -1113,8 +1120,6 @@ def web_workflow(action: str, host: bool) -> None:
     if build_dir is not None:
         configure_command.extend((
             "-B", build_dir,
-            "-Donnxruntime_USE_PREINSTALLED_EIGEN=ON",
-            "-Deigen_SOURCE_PATH=/opt/eigen",
             "-DCMAKE_AR=/usr/bin/llvm-ar",
             "-DCMAKE_RANLIB=/usr/bin/llvm-ranlib",
         ))
@@ -1132,8 +1137,6 @@ def web_workflow(action: str, host: bool) -> None:
     if dsp_build_dir is not None:
         dsp_configure_command.extend((
             "-B", dsp_build_dir,
-            "-Donnxruntime_USE_PREINSTALLED_EIGEN=ON",
-            "-Deigen_SOURCE_PATH=/opt/eigen",
             "-DCMAKE_AR=/usr/bin/llvm-ar",
             "-DCMAKE_RANLIB=/usr/bin/llvm-ranlib",
         ))

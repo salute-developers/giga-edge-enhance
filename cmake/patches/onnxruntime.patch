@@ -11,3 +11,18 @@ index 3262c4da75..c792254ad5 100644
    for (auto i = node->OutputEdgesBegin(); i != node->OutputEdgesEnd(); ++i) {
      if (i->GetNode().OpType() == op) {
        identical_children_map[IdentityBuilder(graph, i->GetNode())].push_back(i->GetNode().Index());
+diff --git a/cmake/deps.txt b/cmake/deps.txt
+index db5027d3d7..492d91bcee 100644
+--- a/cmake/deps.txt
++++ b/cmake/deps.txt
+@@ -25 +25 @@
+-eigen;https://gitlab.com/libeigen/eigen/-/archive/e7248b26a1ed53fa030c5c459f7ea095dfd276ac/eigen-e7248b26a1ed53fa030c5c459f7ea095dfd276ac.zip;be8be39fdbc6e60e94fa7870b280707069b5b81a
++eigen;https://gitlab.com/libeigen/eigen/-/archive/e7248b26a1ed53fa030c5c459f7ea095dfd276ac/eigen-e7248b26a1ed53fa030c5c459f7ea095dfd276ac.zip;32b145f525a8308d7ab1c09388b2e288312d8eba
+diff --git a/cmake/CMakeLists.txt b/cmake/CMakeLists.txt
+index 397265a498..274939c395 100644
+--- a/cmake/CMakeLists.txt
++++ b/cmake/CMakeLists.txt
+@@ -1834,2 +1834,2 @@ if (onnxruntime_EXTERNAL_CUSTOM_OP_SCHEMAS)
+-if(TARGET onnxruntime)
++if(TARGET onnxruntime AND NOT SPENCH_ENGINE_BUNDLE_LINKAGE)
+ # Install

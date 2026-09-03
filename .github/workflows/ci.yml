@@ -367,7 +367,7 @@ jobs:
         env:
           SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
           SPENCH_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
-          SPENCH_SITE_BASE: ${{ github.event_name == 'pull_request' && format('/pr/{0}/', github.event.number) || '/' }}
+          SPENCH_SITE_BASE: ${{ github.event_name == 'pull_request' && format('/spench/pr/{0}/', github.event.number) || '/spench/' }}
         run: tools/spench build web
       - name: Test Web SDK unit
         env:
@@ -409,6 +409,20 @@ jobs:
         with:
           name: spench-web-sdk-${{ github.sha }}
           path: out/artifacts/web
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: platform_wrappers/web/.nvmrc
+          cache: npm
+          cache-dependency-path: platform_wrappers/web/package-lock.json
+      - name: Install Web test dependencies
+        working-directory: platform_wrappers/web
+        run: npm ci
+      - name: Install built Web SDK package
+        working-directory: platform_wrappers/web
+        run: |
+          package="$(find ../../out/artifacts/web -maxdepth 1 -name '*.tgz' -print -quit)"
+          test -n "$package"
+          npm install --no-save --package-lock=false --workspace=@gigaedge/spench-site "$package"
       - name: Test Web Playwright
         env:
           SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
@@ -453,6 +467,7 @@ jobs:
     name: Build Android ${{ matrix.abi }} Release dependency OCI
     needs: toolchain-android
     runs-on: ubuntu-24.04
+    timeout-minutes: 90
     permissions:
       contents: read
       packages: write
@@ -478,6 +493,11 @@ jobs:
           toolchain-identity: ${{ needs.toolchain-android.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-android.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Report Android dependency failure resources
+        if: failure()
+        run: |
+          free -h
+          df -h .
 
   android:
     name: Build and test Android Release
@@ -531,37 +551,8 @@ jobs:
           path: platform_wrappers/android/**/build/outputs/**
           retention-days: 14
 
-  host-macos-arm64:
-    name: Resolve macOS arm64 toolchain
-    runs-on: macos-15
-    outputs:
-      identity: ${{ steps.identity.outputs.value }}
-    steps:
-      - id: identity
-        run: echo "value=macos-15-arm64-$(xcodebuild -version | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
-
-  host-macos-intel:
-    name: Resolve macOS x86_64 toolchain
-    runs-on: macos-15-intel
-    outputs:
-      identity: ${{ steps.identity.outputs.value }}
-    steps:
-      - id: identity
-        run: echo "value=macos-15-intel-$(xcodebuild -version | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
-
-  host-windows:
-    name: Resolve Windows x86_64 toolchain
-    runs-on: windows-2022
-    outputs:
-      identity: ${{ steps.identity.outputs.value }}
-    steps:
-      - id: identity
-        shell: bash
-        run: echo "value=windows-2022-msvc" >> "$GITHUB_OUTPUT"
-
   deps-macos-arm64-onnx:
     name: Build macOS arm64 ONNX Release dependency OCI
-    needs: host-macos-arm64
     runs-on: macos-15
     permissions:
       contents: read
@@ -570,19 +561,20 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: macos-arm64-release-onnx
       - uses: ./.github/actions/build-spench-dependency
         with:
           target: macos-arm64-release-onnx
-          toolchain-identity: ${{ needs.host-macos-arm64.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
   deps-macos-arm64-tflite:
     name: Build macOS arm64 TFLite Release dependency OCI
-    needs: host-macos-arm64
     runs-on: macos-15
     permissions:
       contents: read
@@ -591,49 +583,54 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: macos-arm64-release-tflite
       - uses: ./.github/actions/build-spench-dependency
         with:
           target: macos-arm64-release-tflite
-          toolchain-identity: ${{ needs.host-macos-arm64.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
   macos-arm64-onnx:
     name: Build and test macOS arm64 Release (ONNX)
-    needs: [host-macos-arm64, deps-macos-arm64-onnx]
+    needs: deps-macos-arm64-onnx
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: macos-arm64-release-onnx
-          toolchain-identity: ${{ needs.host-macos-arm64.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
   macos-arm64-tflite:
     name: Build and test macOS arm64 Release (TFLite)
-    needs: [host-macos-arm64, deps-macos-arm64-tflite]
+    needs: deps-macos-arm64-tflite
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: macos-arm64-release-tflite
-          toolchain-identity: ${{ needs.host-macos-arm64.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
   deps-macos-intel-onnx:
     name: Build macOS x86_64 ONNX Release dependency OCI
-    needs: host-macos-intel
     runs-on: macos-15-intel
     permissions:
       contents: read
@@ -642,19 +639,20 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: macos-x86_64-release-onnx
       - uses: ./.github/actions/build-spench-dependency
         with:
           target: macos-x86_64-release-onnx
-          toolchain-identity: ${{ needs.host-macos-intel.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
   deps-macos-intel-tflite:
     name: Build macOS x86_64 TFLite Release dependency OCI
-    needs: host-macos-intel
     runs-on: macos-15-intel
     permissions:
       contents: read
@@ -663,49 +661,54 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: macos-x86_64-release-tflite
       - uses: ./.github/actions/build-spench-dependency
         with:
           target: macos-x86_64-release-tflite
-          toolchain-identity: ${{ needs.host-macos-intel.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
   macos-intel-onnx:
     name: Build and test macOS x86_64 Release (ONNX)
-    needs: [host-macos-intel, deps-macos-intel-onnx]
+    needs: deps-macos-intel-onnx
     runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: macos-x86_64-release-onnx
-          toolchain-identity: ${{ needs.host-macos-intel.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
   macos-intel-tflite:
     name: Build and test macOS x86_64 Release (TFLite)
-    needs: [host-macos-intel, deps-macos-intel-tflite]
+    needs: deps-macos-intel-tflite
     runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: macos-x86_64-release-tflite
-          toolchain-identity: ${{ needs.host-macos-intel.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
   deps-windows-onnx:
     name: Build Windows x86_64 ONNX Release dependency OCI
-    needs: host-windows
     runs-on: windows-2022
     permissions:
       contents: read
@@ -714,19 +717,20 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: windows-x64-release-onnx
       - uses: ./.github/actions/build-spench-dependency
         with:
           target: windows-x64-release-onnx
-          toolchain-identity: ${{ needs.host-windows.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
   deps-windows-tflite:
     name: Build Windows x86_64 TFLite Release dependency OCI
-    needs: host-windows
     runs-on: windows-2022
     permissions:
       contents: read
@@ -735,49 +739,54 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: windows-x64-release-tflite
       - uses: ./.github/actions/build-spench-dependency
         with:
           target: windows-x64-release-tflite
-          toolchain-identity: ${{ needs.host-windows.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
   windows-onnx:
     name: Build and test Windows x86_64 Release (ONNX)
-    needs: [host-windows, deps-windows-onnx]
+    needs: deps-windows-onnx
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: windows-x64-release-onnx
-          toolchain-identity: ${{ needs.host-windows.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
   windows-tflite:
     name: Build and test Windows x86_64 Release (TFLite)
-    needs: [host-windows, deps-windows-tflite]
+    needs: deps-windows-tflite
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: windows-x64-release-tflite
-          toolchain-identity: ${{ needs.host-windows.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
   deps-ios:
     name: Build iOS ${{ matrix.slice }} Release dependency OCI
-    needs: host-macos-arm64
     runs-on: macos-15
     permissions:
       contents: read
@@ -790,46 +799,50 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: ios-${{ matrix.slice }}-release
       - uses: ./.github/actions/build-spench-dependency
         with:
           target: ios-${{ matrix.slice }}-release
-          toolchain-identity: ${{ needs.host-macos-arm64.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
   ios:
     name: Build and test iOS Release
-    needs: [host-macos-arm64, deps-ios]
+    needs: deps-ios
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - id: toolchain
+        uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: ios-simulator-release
       - uses: ./.github/actions/setup-spench-dependency
         with:
           target: ios-device-release
-          toolchain-identity: ${{ needs.host-macos-arm64.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
       - uses: ./.github/actions/setup-spench-dependency
         with:
           target: ios-simulator-release
-          toolchain-identity: ${{ needs.host-macos-arm64.outputs.identity }}
+          toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
       - name: Build iOS Release
         env:
-          SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.host-macos-arm64.outputs.identity }}
+          SPENCH_TOOLCHAIN_IDENTITY: ${{ steps.toolchain.outputs.identity }}
         run: tools/spench build ios --host
       - name: Test iOS Release
         env:
-          SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.host-macos-arm64.outputs.identity }}
+          SPENCH_TOOLCHAIN_IDENTITY: ${{ steps.toolchain.outputs.identity }}
         run: tools/spench test ios --host
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v4
