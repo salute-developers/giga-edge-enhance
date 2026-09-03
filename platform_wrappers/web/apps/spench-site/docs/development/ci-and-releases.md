@@ -4,17 +4,18 @@ title: CI and releases
 
 # CI and releases
 
-Pull-request CI validates affected source areas without publishing. Release workflows package and
-publish only trusted revisions that passed the required platform gates.
+Pull-request CI validates every required source area. Same-repository pull requests also publish the
+already-built Web site as a temporary GitHub Pages preview; release workflows publish only trusted
+revisions that passed the required platform gates.
 
 ## CI principles
 
-- Run the Linux native smoke test before expensive matrices.
 - Treat full and DSP WebAssembly compilation as internal stages of the Web target.
-- Let each platform target start as soon as its exact engine dependency bundle is available.
+- Build each toolchain before its dependency OCI, then start each platform target as soon as its exact
+  dependency bundle is available.
 - Treat dependency and compiler caches as accelerators, never release sources.
 - Upload focused failure diagnostics rather than entire workspaces.
-- Use one stable required-gate job so matrix expansion does not change branch protection.
+- Keep static Release, sanitizer, Debug, and emulator coverage in the manual validation workflow.
 - Do not expose write tokens or release secrets to forked pull requests.
 
 ## Release order
@@ -28,6 +29,7 @@ rather than overwrite an existing version with different content.
 
 ## GitHub Pages
 
-The documentation/demo workflows publish the Web artifact that already passed CI. Production and
-same-repository previews use separate event-specific workflows, so unrelated skipped jobs do not
-appear in pull requests.
+The default-branch Pages workflow publishes the Web artifact under `/spench/`. Pull-request CI
+publishes the artifact immediately after the Web build and unit tests under `/spench/pr/<number>/`;
+Playwright remains an independent check and does not delay the preview. The preview-cleanup workflow
+removes that directory when the pull request closes.

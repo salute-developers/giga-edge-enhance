@@ -23,14 +23,6 @@ install(
   FILES_MATCHING PATTERN "*.h"
 )
 
-if(TARGET spench_tests)
-  install(
-    TARGETS spench_tests
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    COMPONENT spench_tools
-  )
-endif()
-
 if(TARGET spench_demo)
   install(
     TARGETS spench_demo demo_cpp demo_c demo_dsp

@@ -24,3 +24,22 @@ index 4379febbe3..d9c2f6d398 100644
                           TfLiteTypeGetName(type));
        return kTfLiteError;
    }
+diff --git a/tensorflow/lite/CMakeLists.txt b/tensorflow/lite/CMakeLists.txt
+index 3b3e516b64..ae76640232 100644
+--- a/tensorflow/lite/CMakeLists.txt
++++ b/tensorflow/lite/CMakeLists.txt
+@@ -557,7 +557,7 @@ set(_ALL_TFLITE_SRCS
+   ${TFLITE_SOURCE_DIR}/schema/schema_utils.cc
+   ${TFLITE_SOURCE_DIR}/schema/schema_generated.h
+ )
+-add_library(tensorflow-lite
++add_library(tensorflow-lite ${SPENCH_TFLITE_LIBRARY_TYPE}
+   ${_ALL_TFLITE_SRCS}
+ )
+ set(_ALL_TFLITE_HDRS ${_ALL_TFLITE_SRCS})
+@@ -588,3 +588,4 @@ target_link_libraries(tensorflow-lite
+-if (NOT BUILD_SHARED_LIBS)
++get_target_property(_TFLITE_LIBRARY_TYPE tensorflow-lite TYPE)
++if (_TFLITE_LIBRARY_TYPE STREQUAL "STATIC_LIBRARY")
+   list(APPEND TFLITE_TARGET_PUBLIC_OPTIONS "-DTFL_STATIC_LIBRARY_BUILD")
+ endif()
