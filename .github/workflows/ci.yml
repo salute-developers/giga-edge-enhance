@@ -66,13 +66,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: metadata
         name: Resolve Web toolchain image
-        run: echo "image=ghcr.io/${GITHUB_REPOSITORY}/toolchain-web:$(tools/spench image-key wasm)" >> "$GITHUB_OUTPUT"
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY}/toolchain-web:$(tools/spench image-key web)" >> "$GITHUB_OUTPUT"
       - id: build
         name: Build Web toolchain
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: wasm
+          target: web
           push: true
           tags: ${{ steps.metadata.outputs.image }}
           cache-from: type=gha,scope=toolchain-web
@@ -108,37 +108,6 @@ jobs:
           tags: ${{ steps.metadata.outputs.image }}
           cache-from: type=gha,scope=toolchain-android
           cache-to: type=gha,mode=max,scope=toolchain-android
-
-  toolchain-web-test:
-    name: Build Web test image
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      packages: write
-    outputs:
-      image: ${{ steps.metadata.outputs.image }}
-      identity: ${{ steps.build.outputs.digest }}
-    steps:
-      - uses: actions/checkout@v6
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - id: metadata
-        name: Resolve Web test image
-        run: echo "image=ghcr.io/${GITHUB_REPOSITORY}/web-test:$(tools/spench image-key web-test)" >> "$GITHUB_OUTPUT"
-      - id: build
-        name: Build Web test image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: web-test
-          push: true
-          tags: ${{ steps.metadata.outputs.image }}
-          cache-from: type=gha,scope=toolchain-web-test
-          cache-to: type=gha,mode=max,scope=toolchain-web-test
 
   commits:
     name: Check conventional commits
@@ -209,6 +178,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -227,6 +198,8 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v6
+      - name: Install SwiftLint
+        run: brew install swiftlint
       - run: platform_wrappers/ios/scripts/lint.sh
 
   workflow-lint:
@@ -246,6 +219,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -270,6 +245,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -281,54 +258,6 @@ jobs:
       - uses: ./.github/actions/build-spench-dependency
         with:
           target: native-release-tflite
-          toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
-          toolchain-image: ${{ needs.toolchain-native.outputs.image }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  deps-native-static-onnx:
-    name: Build Native static ONNX Release dependency OCI
-    needs: toolchain-native
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v6
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/setup-spench-cache
-        with:
-          preset: native-release-static-onnx
-      - uses: ./.github/actions/build-spench-dependency
-        with:
-          target: native-release-static-onnx
-          toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
-          toolchain-image: ${{ needs.toolchain-native.outputs.image }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  deps-native-static-tflite:
-    name: Build Native static TFLite Release dependency OCI
-    needs: toolchain-native
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v6
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/setup-spench-cache
-        with:
-          preset: native-release-static-tflite
-      - uses: ./.github/actions/build-spench-dependency
-        with:
-          target: native-release-static-tflite
           toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-native.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -387,48 +316,8 @@ jobs:
           path: out/artifacts/native-release-tflite
           retention-days: 14
 
-  native-static-onnx:
-    name: Build and test Native static Release (ONNX)
-    needs: [toolchain-native, deps-native-static-onnx]
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          lfs: true
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/build-test-cmake
-        with:
-          preset: native-release-static-onnx
-          toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
-          toolchain-image: ${{ needs.toolchain-native.outputs.image }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  native-static-tflite:
-    name: Build and test Native static Release (TFLite)
-    needs: [toolchain-native, deps-native-static-tflite]
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          lfs: true
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/build-test-cmake
-        with:
-          preset: native-release-static-tflite
-          toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
-          toolchain-image: ${{ needs.toolchain-native.outputs.image }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  deps-web:
-    name: Build Web ONNX Release dependency OCI
+  deps-wasm:
+    name: Build WASM ONNX Release dependency OCI
     needs: toolchain-web
     runs-on: ubuntu-24.04
     permissions:
@@ -436,6 +325,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -452,8 +343,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   web:
-    name: Build and test Web
-    needs: [toolchain-web, toolchain-web-test, deps-web, native-onnx]
+    name: Build Web and test unit
+    needs: [toolchain-web, deps-wasm]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -475,13 +366,54 @@ jobs:
       - name: Build Web
         env:
           SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
-          SPENCH_CONTAINER_IMAGE_WASM: ${{ needs.toolchain-web.outputs.image }}
+          SPENCH_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
+          SPENCH_SITE_BASE: ${{ github.event_name == 'pull_request' && format('/pr/{0}/', github.event.number) || '/' }}
         run: tools/spench build web
-      - name: Test Web SDK and Playwright
+      - name: Test Web SDK unit
         env:
           SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
-          SPENCH_CONTAINER_IMAGE_WEB_TEST: ${{ needs.toolchain-web-test.outputs.image }}
+          SPENCH_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
         run: tools/spench test web
+      - name: Package Web SDK
+        env:
+          SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
+          SPENCH_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
+        run: tools/spench package web
+      - name: Upload Web SDK package
+        uses: actions/upload-artifact@v4
+        with:
+          name: spench-web-sdk-${{ github.sha }}
+          path: out/artifacts/web/*.tgz
+          retention-days: 14
+      - name: Upload Web site
+        uses: actions/upload-artifact@v4
+        with:
+          name: spench-web-site-${{ github.sha }}
+          path: platform_wrappers/web/apps/spench-site/build
+          retention-days: 14
+
+  web-playwright:
+    name: Test Web Playwright
+    needs: [toolchain-web, web]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v5
+        with:
+          name: spench-web-sdk-${{ github.sha }}
+          path: out/artifacts/web
+      - name: Test Web Playwright
+        env:
+          SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
+          SPENCH_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
+        run: tools/spench test web-playwright
       - name: Upload Playwright diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
@@ -492,15 +424,30 @@ jobs:
             platform_wrappers/web/apps/spench-site/test-results
           if-no-files-found: ignore
           retention-days: 7
-      - name: Upload Web artifacts
-        uses: actions/upload-artifact@v4
+
+  preview:
+    name: Publish PR web preview
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: web
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: pages-preview-${{ github.event.number }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/download-artifact@v5
         with:
-          name: spench-web-${{ github.sha }}
-          path: |
-            platform_wrappers/web/packages/web-sdk/dist
-            platform_wrappers/web/packages/web-sdk/generated/wasm
-            platform_wrappers/web/apps/spench-site/build
-          retention-days: 14
+          name: spench-web-site-${{ github.sha }}
+          path: web-preview
+      - name: Publish PR preview
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: web-preview
+          destination_dir: pr/${{ github.event.number }}
+          keep_files: true
 
   deps-android:
     name: Build Android ${{ matrix.abi }} Release dependency OCI
@@ -515,6 +462,8 @@ jobs:
         abi: [arm64-v8a, armeabi-v7a, x86_64, x86]
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -532,7 +481,7 @@ jobs:
 
   android:
     name: Build and test Android Release
-    needs: [toolchain-android, deps-android, native-onnx]
+    needs: [toolchain-android, deps-android]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -619,6 +568,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: macos-arm64-release-onnx
@@ -638,6 +589,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: macos-arm64-release-tflite
@@ -687,6 +640,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: macos-x86_64-release-onnx
@@ -706,6 +661,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: macos-x86_64-release-tflite
@@ -755,6 +712,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: windows-x64-release-onnx
@@ -774,31 +733,14 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: windows-x64-release-tflite
       - uses: ./.github/actions/build-spench-dependency
         with:
           target: windows-x64-release-tflite
-          toolchain-identity: ${{ needs.host-windows.outputs.identity }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          host: 'true'
-
-  deps-windows-static-tflite:
-    name: Build Windows x86_64 static TFLite Release dependency OCI
-    needs: host-windows
-    runs-on: windows-2022
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-spench-cache
-        with:
-          preset: windows-x64-release-static-tflite
-      - uses: ./.github/actions/build-spench-dependency
-        with:
-          target: windows-x64-release-static-tflite
           toolchain-identity: ${{ needs.host-windows.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
@@ -833,21 +775,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           host: 'true'
 
-  windows-static-tflite:
-    name: Build and test Windows x86_64 static Release (TFLite)
-    needs: [host-windows, deps-windows-static-tflite]
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          lfs: true
-      - uses: ./.github/actions/build-test-cmake
-        with:
-          preset: windows-x64-release-static-tflite
-          toolchain-identity: ${{ needs.host-windows.outputs.identity }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          host: 'true'
-
   deps-ios:
     name: Build iOS ${{ matrix.slice }} Release dependency OCI
     needs: host-macos-arm64
@@ -861,6 +788,8 @@ jobs:
         slice: [device, simulator]
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: ./.github/actions/setup-spench-cache
         with:
           preset: ios-${{ matrix.slice }}-release
@@ -908,34 +837,3 @@ jobs:
           name: spench-ios-${{ github.sha }}
           path: platform_wrappers/ios/build/xcframework
           retention-days: 14
-
-  required:
-    name: ci-required
-    if: always()
-    needs:
-      - commits
-      - cpp-style
-      - web-lint
-      - android-lint
-      - ios-lint
-      - workflow-lint
-      - native-onnx
-      - native-tflite
-      - native-static-onnx
-      - native-static-tflite
-      - web
-      - android
-      - macos-arm64-onnx
-      - macos-arm64-tflite
-      - macos-intel-onnx
-      - macos-intel-tflite
-      - windows-onnx
-      - windows-tflite
-      - windows-static-tflite
-      - ios
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Require every validation job to pass
-        env:
-          RESULTS: ${{ toJSON(needs.*.result) }}
-        run: jq --exit-status 'all(.[]; . == "success")' <<< "$RESULTS"

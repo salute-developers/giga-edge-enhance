@@ -45,7 +45,7 @@ runs:
         HOST_BUILD: ${{ inputs.host }}
         SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
         SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
-        SPENCH_CONTAINER_IMAGE_WASM: ${{ inputs.toolchain-image }}
+        SPENCH_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
       run: |
         python_command=python3
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
@@ -64,7 +64,7 @@ runs:
         HOST_BUILD: ${{ inputs.host }}
         SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
         SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
-        SPENCH_CONTAINER_IMAGE_WASM: ${{ inputs.toolchain-image }}
+        SPENCH_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
       run: |
         python_command=python3
         if [[ "${RUNNER_OS}" == "Windows" ]]; then

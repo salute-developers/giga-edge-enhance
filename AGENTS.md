@@ -153,10 +153,11 @@ Workflows have event-specific responsibilities and narrowly scoped permissions:
 
 - `ci.yml`: pull requests and pushes to the protected default branch. It uses
   Release configurations only, uploads tested job artifacts, and never deploys.
-- `manual-validation.yml`: manually dispatched Debug, ASAN, Web Debug, and
-  Android emulator coverage. There is no scheduled nightly workflow.
-- `pages.yml` and `preview.yml`: publish only a successful Web artifact produced
-  by CI. `preview-cleanup.yml` handles only a closed pull request.
+- `manual-validation.yml`: manually dispatched Debug, ASAN, static Release,
+  Web Debug, and Android emulator coverage. There is no scheduled nightly workflow.
+- `ci.yml` publishes same-repository pull-request previews immediately after the
+  Web build and unit tests. `pages.yml` publishes the default-branch artifact,
+  while `preview-cleanup.yml` handles only a closed pull request.
 - `release-assets.yml` and `release-please.yml`: release-only packaging and
   publication. They never run as pull-request checks.
 
@@ -168,27 +169,26 @@ pull requests must never receive release secrets or write permissions.
 For each concrete target, implement this graph:
 
 ```text
-Build toolchain -> Build concrete dependency OCI -> Build target -> Test target
+Build toolchain -> Build concrete dependency OCI -> Build and test target
 ```
 
 Dependency jobs run in parallel. As soon as one exact dependency finishes, its
 target may start; do not put unrelated dependencies behind a matrix-wide
-barrier. Web and Android additionally wait for the native ONNX Release smoke
-target. Build and test remain separate named steps in one job so large build
-trees do not have to be uploaded and downloaded between runners.
+barrier. Native, Web, and Android do not depend on each other. Build and test
+remain separate named steps in one job so large build trees do not have to be
+uploaded and downloaded between runners.
 
-- Linux validates ONNX Runtime and TensorFlow Lite shared/static Release targets.
+- Linux validates ONNX Runtime and TensorFlow Lite shared Release targets;
+  static Release coverage is manually dispatched.
 - Web owns both full and DSP-only WASM builds. Web SDK unit tests and Playwright
-  browser tests run with the dedicated `web-test` image against the local
-  COOP/COEP static server.
+  browser tests use the combined Web toolchain image. Playwright consumes the
+  packed SDK from the Web build job and runs against the local COOP/COEP server.
 - Android restores one TFLite dependency per ABI and runs Release unit/native
   tests. Connected emulator tests are manual.
 - macOS validates each runner architecture with both engines. Windows validates
-  both engines and the supported static target. iOS restores both device and
+  both shared-engine targets. iOS restores both device and
   simulator dependencies before producing and testing the XCFramework.
 - Lint is split by domain: C/C++, Web, Android, iOS, and workflow YAML.
-- `ci-required` uses `if: always()` and fails on failed, cancelled, or
-  unexpectedly skipped required jobs. Branch protection targets this stable name.
 
 ### Cache and dependency-bundle policy
 
@@ -229,8 +229,8 @@ Release from the exact tested tag commit, never by rebuilding an unpinned
 branch. Use a protected GitHub Environment for approvals and secrets. Prefer
 short-lived/OIDC credentials where the destination supports them.
 
-1. Validate the version/tag and confirm the commit passed `ci-required` with
-   the full release matrix.
+1. Validate the version/tag and confirm the commit passed every required check
+   configured in branch protection.
 2. Build packages independently for Linux, macOS, Windows, Android, iOS, and
    WASM using the same helper commands as CI.
 3. Verify each install/package with a consumer or smoke test, then generate

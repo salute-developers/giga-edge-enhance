@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.22.1)
 project(spench_native_tests LANGUAGES CXX)
 
 set(SPENCH_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../..")
-if(NOT DEFINED CPM_SOURCE_CACHE)
-  set(CPM_SOURCE_CACHE "${SPENCH_ROOT_DIR}/out/cache/cpm" CACHE PATH "CPM source cache")
-endif()
 
 set(BUILD_TFLITE_ENGINE ON CACHE BOOL "Build with tflite inference engine." FORCE)
 set(BUILD_ONNX_ENGINE OFF CACHE BOOL "Build with onnx inference engine." FORCE)

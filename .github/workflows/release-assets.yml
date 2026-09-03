@@ -133,12 +133,14 @@ jobs:
         run: tools/spench build web
       - name: Test Web
         run: tools/spench test web
-      - run: npm pack --workspace=@gigaedge/spench-web-sdk --pack-destination ../../out/artifacts
-        working-directory: platform_wrappers/web
+      - name: Package Web SDK
+        run: tools/spench package web
+      - name: Test Web Playwright
+        run: tools/spench test web-playwright
       - uses: actions/upload-artifact@v4
         with:
           name: web-sdk
-          path: out/artifacts/*.tgz
+          path: out/artifacts/web/*.tgz
 
   release:
     needs: [native, android, web] # , ios, macos, windows

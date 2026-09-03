@@ -83,6 +83,8 @@ tools/spench test native-asan-onnx
 # Web SDK, including its full and DSP WebAssembly modules
 tools/spench build web
 tools/spench test web
+tools/spench package web
+tools/spench test web-playwright
 
 # Platform wrappers
 tools/spench build android

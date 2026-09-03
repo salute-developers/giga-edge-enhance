@@ -42,7 +42,7 @@ runs:
       env:
         SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
         SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
-        SPENCH_CONTAINER_IMAGE_WASM: ${{ inputs.toolchain-image }}
+        SPENCH_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
         SPENCH_CONTAINER_IMAGE_ANDROID: ${{ inputs.toolchain-image }}
         TARGET: ${{ inputs.target }}
         HOST_BUILD: ${{ inputs.host }}
@@ -71,7 +71,7 @@ runs:
       env:
         SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
         SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
-        SPENCH_CONTAINER_IMAGE_WASM: ${{ inputs.toolchain-image }}
+        SPENCH_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
         SPENCH_CONTAINER_IMAGE_ANDROID: ${{ inputs.toolchain-image }}
         TARGET: ${{ inputs.target }}
         HOST_BUILD: ${{ inputs.host }}

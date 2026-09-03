@@ -10,7 +10,6 @@ set(BUILD_CLI OFF CACHE BOOL "Build command-line tools and demos." FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "Build tests." FORCE)
 set(BUILD_RESAMPLER ON CACHE BOOL "Build with libsoxr audio resampling." FORCE)
 set(SPENCH_PROFILE android-tflite CACHE STRING "Supported product profile" FORCE)
-set(CPM_SOURCE_CACHE "${SPENCH_ROOT_DIR}/out/cache/cpm" CACHE PATH "CPM source cache" FORCE)
 add_subdirectory("${SPENCH_ROOT_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/spench-core")
 
 add_library(

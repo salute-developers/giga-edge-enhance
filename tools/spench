@@ -37,10 +37,10 @@ PRESET_STAGES = {
     "native-release-static-tflite": "native",
     "native-asan-onnx": "native",
     "native-model-packer": "native",
-    "wasm-release": "wasm",
-    "wasm-debug": "wasm",
-    "wasm-dsp-release": "wasm",
-    "wasm-dsp-debug": "wasm",
+    "wasm-release": "web",
+    "wasm-debug": "web",
+    "wasm-dsp-release": "web",
+    "wasm-dsp-debug": "web",
 }
 HOST_ONLY_PRESETS = (
     "macos-x86_64-debug-onnx",
@@ -110,7 +110,7 @@ NATIVE_PRESETS = {
 
 def container_image_digest(container_stage: str) -> str:
     """Return the content-derived identity for a toolchain image recipe."""
-    image_inputs = (DOCKERFILE, *WEB_TEST_IMAGE_INPUTS) if container_stage == "web-test" else (DOCKERFILE,)
+    image_inputs = (DOCKERFILE, *WEB_TEST_IMAGE_INPUTS) if container_stage == "web" else (DOCKERFILE,)
     image_digest = hashlib.sha256()
     for image_input in image_inputs:
         image_digest.update(image_input.relative_to(ROOT).as_posix().encode())
@@ -216,7 +216,6 @@ def run(command: list[str], *, container_stage: str | None = None,
             container_command.extend(("--volume", f"{cache_path}:{container_path}"))
     container_command.extend((
         "--env", "HOME=/workspace/out/cache/container-home",
-        "--env", "CPM_SOURCE_CACHE=/workspace/out/cache/cpm",
         "--env", "GRADLE_USER_HOME=/workspace/out/cache/gradle",
         "--env", "npm_config_cache=/workspace/out/cache/npm",
         "--env", "GIT_CONFIG_COUNT=1",
@@ -242,12 +241,10 @@ def compiler_cache_environment(container: bool) -> dict[str, str]:
     if container:
         sccache_path = "/workspace/out/cache/compiler/sccache"
         ccache_path = "/workspace/out/cache/compiler/ccache"
-        cpm_source_cache = "/workspace/out/cache/cpm"
         source_path = "/workspace"
     else:
         sccache_path = str(cache_dir / "sccache")
         ccache_path = str(cache_dir / "ccache")
-        cpm_source_cache = str(ROOT / "out/cache/cpm")
         source_path = str(ROOT)
     return {
         "SCCACHE_DIR": sccache_path,
@@ -256,7 +253,6 @@ def compiler_cache_environment(container: bool) -> dict[str, str]:
         "CCACHE_BASEDIR": source_path,
         "CCACHE_NOHASHDIR": "true",
         "CCACHE_MAXSIZE": "5G",
-        "CPM_SOURCE_CACHE": cpm_source_cache,
     }
 
 
@@ -482,9 +478,6 @@ def copy_tflite_headers(prefix: Path, build_dir: Path | None = None) -> None:
     if build_dir is not None:
         source_roots.extend((build_dir / "_deps").glob("tflite-src/tensorflow"))
     source_roots.extend((ROOT / "out" / "cache" / "cpm" / "tflite").glob("*/tensorflow"))
-    # Accept the historical CPM default so an existing local build can still
-    # be exported; new invocations explicitly use out/cache/cpm.
-    source_roots.extend((ROOT / ".cpm" / "tflite").glob("*/tensorflow"))
     source_roots = sorted(set(source_roots))
     if not source_roots:
         raise SystemExit("TensorFlow Lite headers were not found after CPM preparation.")
@@ -768,7 +761,7 @@ def prepare_dependency(preset: str, host: bool) -> Path | None:
         use_host = host or preset in HOST_ONLY_PRESETS
         stage = None if use_host else PRESET_STAGES[preset]
         container = stage is not None
-        preparation_stage = f"{stage}-base" if stage in {"native", "wasm", "android"} else stage
+        preparation_stage = f"{stage}-base" if stage in {"native", "android"} else stage
         environment = compiler_cache_environment(container)
         target_system, target_arch = cache_target(preset, host)
         linkage = bundle_linkage(preset)
@@ -779,7 +772,7 @@ def prepare_dependency(preset: str, host: bool) -> Path | None:
             "cmake", "--preset", artifact_preset(preset), "-B", build_dir,
             f"-DSPENCH_ENGINE_BUNDLE_LINKAGE={linkage}",
         ]
-        if container and stage in {"native", "wasm"}:
+        if container and stage in {"native", "web"}:
             configure_command.extend(("-Donnxruntime_USE_PREINSTALLED_EIGEN=ON",
                                       "-Deigen_SOURCE_PATH=/opt/eigen",
                                       "-DCMAKE_AR=/usr/bin/llvm-ar",
@@ -965,7 +958,7 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
         if not use_host:
             configure_command.extend(("-B", build_dir))
             build_command = ["cmake", "--build", build_dir]
-        if stage in {"native", "wasm"} and preset != "native-model-packer":
+        if stage in {"native", "web"} and preset != "native-model-packer":
             configure_command.extend(("-Donnxruntime_USE_PREINSTALLED_EIGEN=ON",
                                       "-Deigen_SOURCE_PATH=/opt/eigen",
                                       "-DCMAKE_AR=/usr/bin/llvm-ar",
@@ -1056,35 +1049,58 @@ def ios_workflow(action: str) -> None:
 def web_workflow(action: str, host: bool) -> None:
     web_dir = ROOT / "platform_wrappers/web"
     environment = compiler_cache_environment(not host)
+    if site_base := os.environ.get("SPENCH_SITE_BASE"):
+        environment["SPENCH_SITE_BASE"] = site_base
 
     if action == "test":
         required_outputs = (
-            ROOT / "out/build/wasm-release",
-            ROOT / "out/build/wasm-dsp-release",
             web_dir / "packages/web-sdk/dist",
-            web_dir / "apps/spench-site/build",
-        ) if host else (
-            ROOT / "out/build/container-clang-llvm-tools/wasm-release",
-            ROOT / "out/build/container-clang-llvm-tools/wasm-dsp-release",
-            web_dir / "packages/web-sdk/dist",
-            web_dir / "apps/spench-site/build",
+            web_dir / "packages/web-sdk/generated/wasm",
         )
         missing = [path.relative_to(ROOT) for path in required_outputs if not path.exists()]
         if missing:
             raise SystemExit(
                 "Web build output is missing: " + ", ".join(map(str, missing)) +
                 ". Run 'tools/spench build web' first.")
-        test_stage = None if host else "web-test"
+        test_stage = None if host else "web"
         run_web_node(["npm", "ci"], container_stage=test_stage,
                      environment=environment, workdir=web_dir)
         run_web_node(["npm", "test", "--workspace=@gigaedge/spench-web-sdk"],
                      container_stage=test_stage, environment=environment, workdir=web_dir)
+        return
+
+    if action == "package":
+        package_dir = ROOT / "out/artifacts/web"
+        package_dir.mkdir(parents=True, exist_ok=True)
+        stage = None if host else "web"
+        run_web_node([
+            "npm", "pack", "--workspace=@gigaedge/spench-web-sdk",
+            "--pack-destination", "../../out/artifacts/web",
+        ], container_stage=stage, environment=environment, workdir=web_dir)
+        return
+
+    if action == "playwright":
+        packages = sorted((ROOT / "out/artifacts/web").glob("*.tgz"))
+        if not packages:
+            raise SystemExit("Packed Web SDK is missing. Run 'tools/spench package web' first.")
+        stage = None if host else "web"
+        package_path = (str(packages[-1]) if host else
+                        f"/workspace/{packages[-1].relative_to(ROOT)}")
+        run_web_node(["npm", "ci"], container_stage=stage,
+                     environment=environment, workdir=web_dir)
+        run_web_node([
+            "npm", "install", "--no-save", "--package-lock=false",
+            "--workspace=@gigaedge/spench-site", package_path,
+        ], container_stage=stage, environment=environment, workdir=web_dir)
+        run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-site"],
+                     container_stage=stage, environment={"SPENCH_SITE_BASE": "/"},
+                     workdir=web_dir)
         run_web_node(["npm", "run", "pw:test", "--workspace=@gigaedge/spench-site"],
-                     container_stage=test_stage,
+                     container_stage=stage,
                      environment={"PLAYWRIGHT_WORKERS": "1"}, workdir=web_dir)
         return
 
-    stage = None if host else "wasm"
+    stage = None if host else "web"
     prebuilt_prefix = find_prebuilt_dependency("wasm-release", host)
     build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-release"
     if build_dir is not None:
@@ -1221,7 +1237,7 @@ def main() -> None:
     parser.add_argument(
         "target",
         choices=(*PRESET_STAGES, *HOST_ONLY_PRESETS, *ANDROID_DEPENDENCY_TARGETS,
-                 "android", "ios", "web", "macos", "windows", "native", "wasm", "web-test"),
+                 "android", "ios", "web", "web-playwright", "macos", "windows", "native", "wasm"),
         help="CMake preset or platform workflow",
     )
     parser.add_argument("artifact", nargs="?", help="Archive path used by restore-deps.")
@@ -1230,8 +1246,8 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.action == "image-key":
-        if args.target not in {"native", "wasm", "android", "web-test"}:
-            raise SystemExit("image-key expects native, wasm, android, or web-test.")
+        if args.target not in {"native", "web", "android"}:
+            raise SystemExit("image-key expects native, web, or android.")
         print(container_image_digest(args.target))
         return
     if args.action == "dependency-key":
@@ -1253,7 +1269,7 @@ def main() -> None:
         print_cache_keys(args.target, args.host)
         return
     if args.action == "prepare-deps":
-        if args.target in {"native", "wasm", "web-test"}:
+        if args.target in {"native", "wasm", "web"}:
             raise SystemExit("prepare-deps expects a preset or platform workflow, not a Docker stage.")
         prepare_platform_dependencies(args.target, args.host)
         return
@@ -1274,9 +1290,13 @@ def main() -> None:
             raise SystemExit("iOS supports build, core, and test.")
         ios_workflow(args.action)
     elif args.target == "web":
-        if args.action not in {"build", "test"}:
-            raise SystemExit("The web SDK supports build and test.")
+        if args.action not in {"build", "test", "package"}:
+            raise SystemExit("The web SDK supports build, test, and package.")
         web_workflow(args.action, args.host)
+    elif args.target == "web-playwright":
+        if args.action != "test":
+            raise SystemExit("The Web Playwright target supports test only.")
+        web_workflow("playwright", args.host)
     else:
         raise SystemExit(f"{args.target} is only valid with prepare-deps or prepare-image.")
 
