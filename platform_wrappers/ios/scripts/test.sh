@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT="$ROOT_DIR/SpenchSDK.xcodeproj"
+TEST_BUILD_DIR="$ROOT_DIR/build/xcframework/test-derived-data"
 DEVICE_NAME="${TEST_DEVICE_NAME:-iPhone 17}"
 SPENCH_RETRIES="${SPENCH_TEST_RETRIES:-2}"
 APP_RETRIES="${APP_TEST_RETRIES:-3}"
@@ -10,6 +11,8 @@ ERASE_SIMULATOR="${ERASE_SIMULATOR:-1}"
 
 COMMON_XCODEBUILD_ARGS=(
   -project "$PROJECT"
+  -configuration Release
+  -derivedDataPath "$TEST_BUILD_DIR"
   -parallel-testing-enabled NO
   -maximum-concurrent-test-simulator-destinations 1
 )
@@ -74,7 +77,7 @@ run_tests_with_retry() {
       "${COMMON_XCODEBUILD_ARGS[@]}" \
       -scheme "$scheme" \
       -destination "$destination" \
-      test 2>&1 | tee "$log_file"
+      test-without-building 2>&1 | tee "$log_file"
     local status=${PIPESTATUS[0]}
     set -e
 
@@ -95,8 +98,10 @@ run_tests_with_retry() {
   done
 }
 
-"$ROOT_DIR/scripts/build_core.sh"
-"$ROOT_DIR/scripts/generate_project.sh"
+if [[ ! -d "$PROJECT" ]] || ! find "$TEST_BUILD_DIR" -name '*.xctestrun' -print -quit | grep -q .; then
+  echo "error: iOS test products are missing; run tools/spench build ios first" >&2
+  exit 1
+fi
 
 DESTINATION=""
 prepare_simulator

@@ -80,11 +80,12 @@ export default defineConfig({
         // },
     ],
 
-    // Build through prebuild.sh so browser tests consume the packed SDK.
+    // CI builds explicitly before testing. Keeping the server test-only makes
+    // failures attributable to either the Build or Test step.
     webServer: process.env.PUBLIC_INDEX_URL
         ? undefined
         : {
-              command: 'npm run build && npm run serve:test',
+              command: 'npm run serve:test',
               url: localBaseUrl,
               reuseExistingServer: !process.env.CI,
           },

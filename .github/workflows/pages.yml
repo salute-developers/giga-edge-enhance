@@ -1,88 +1,34 @@
 name: Publish documentation and web demo
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [master]
-  pull_request:
-    branches: [master]
-    types: [opened, synchronize, reopened, closed]
 
 permissions:
+  actions: read
   contents: write
-  packages: read
 
 concurrency:
-  group: pages-${{ github.event.pull_request.number || github.ref }}
+  group: pages-master
   cancel-in-progress: true
 
 jobs:
-  deploy-master:
-    if: github.event_name == 'push' && github.ref_name == 'master'
+  publish:
+    name: Publish documentation and web demo
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v5
         with:
-          lfs: true
-      - uses: ./.github/actions/setup-spench-cache
-        with:
-          preset: wasm-release
-      - run: tools/spench build web
-        env:
-          SPENCH_CONTAINER_IMAGE_WASM: ghcr.io/${{ github.repository }}/toolchain-wasm:latest
-      - run: npm run build --workspace=@gigaedge/spench-site
-        working-directory: platform_wrappers/web
-        env:
-          SPENCH_SITE_BASE: /${{ github.event.repository.name }}/
-      - name: Publish documentation and demo
-        uses: peaceiris/actions-gh-pages@v4
+          name: spench-web-${{ github.event.workflow_run.head_sha }}
+          path: web-artifact
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: platform_wrappers/web/apps/spench-site/build
+          publish_dir: web-artifact/apps/spench-site/build
           keep_files: true
-
-  deploy-preview:
-    if: github.event.action != 'closed' && github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          lfs: true
-      - uses: ./.github/actions/setup-spench-cache
-        with:
-          preset: wasm-release
-      - run: tools/spench build web
-        env:
-          SPENCH_CONTAINER_IMAGE_WASM: ghcr.io/${{ github.repository }}/toolchain-wasm:latest
-      - run: npm run build --workspace=@gigaedge/spench-site
-        working-directory: platform_wrappers/web
-        env:
-          SPENCH_SITE_BASE: /${{ github.event.repository.name }}/pr/${{ github.event.pull_request.number }}/
-      - name: Publish PR preview
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: platform_wrappers/web/apps/spench-site/build
-          destination_dir: pr/${{ github.event.pull_request.number }}
-          keep_files: true
-
-  remove-preview:
-    if: github.event.action == 'closed' && github.event.pull_request.head.repo.fork == false
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: gh-pages
-          fetch-depth: 0
-      - name: Remove PR preview
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          git rm -r --ignore-unmatch "pr/${PR_NUMBER}"
-          if ! git diff --cached --quiet; then
-            git config user.name github-actions[bot]
-            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            git commit -m "chore(pages): remove PR ${PR_NUMBER} preview"
-            git push
-          fi

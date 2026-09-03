@@ -1,11 +1,13 @@
 #pragma once
 
-#include <vector>
-#include <fstream>
-#include <string>
-#include <algorithm>
-#include <valarray>
 #include <dsplib.h>
+
+#include <algorithm>
+#include <fstream>
+#include <stdexcept>
+#include <string>
+#include <valarray>
+#include <vector>
 
 #pragma pack(push, 1)
 struct WavHeader {
@@ -133,9 +135,15 @@ template <typename InputType>
 void LoadBin(const char* path, uint32_t step_size_samples,
              std::vector<std::vector<InputType>>& output) {
   std::ifstream ifs(path, std::ios::binary);
+  if (!ifs) {
+    throw std::runtime_error(std::string("Cannot open binary test fixture: ") + path);
+  }
 
   ifs.seekg(0, std::ios::end);
   std::streampos fsize = ifs.tellg();
+  if (fsize < 0) {
+    throw std::runtime_error(std::string("Cannot determine binary test fixture size: ") + path);
+  }
   ifs.seekg(0, std::ios::beg);
 
   int16_t loops = fsize / (step_size_samples * sizeof(InputType));
@@ -150,9 +158,15 @@ void LoadBin(const char* path, uint32_t step_size_samples,
 template <typename InputType>
 void LoadBin(const char* path, std::vector<InputType>& output) {
   std::ifstream ifs(path, std::ios::binary);
+  if (!ifs) {
+    throw std::runtime_error(std::string("Cannot open binary test fixture: ") + path);
+  }
 
   ifs.seekg(0, std::ios::end);
   std::streampos fsize = ifs.tellg();
+  if (fsize < 0) {
+    throw std::runtime_error(std::string("Cannot determine binary test fixture size: ") + path);
+  }
   ifs.seekg(0, ifs.beg);
 
   output.resize(fsize / sizeof(InputType));
@@ -163,9 +177,15 @@ void LoadBin(const char* path, std::vector<InputType>& output) {
 template <typename InputType>
 void LoadBin(const char* path, std::valarray<InputType>& output) {
   std::ifstream ifs(path, std::ios::binary);
+  if (!ifs) {
+    throw std::runtime_error(std::string("Cannot open binary test fixture: ") + path);
+  }
 
   ifs.seekg(0, std::ios::end);
   std::streampos fsize = ifs.tellg();
+  if (fsize < 0) {
+    throw std::runtime_error(std::string("Cannot determine binary test fixture size: ") + path);
+  }
   ifs.seekg(0, ifs.beg);
 
   output.resize(fsize / sizeof(InputType));

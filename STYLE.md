@@ -10,7 +10,8 @@ Spench uses **clang-format** with `BasedOnStyle: Google` (see `.clang-format`) f
 | Constants (`constexpr`, `const` at namespace scope) | `k` + `PascalCase` | **`snake_case`**, no `k` prefix |
 | Types, members, parameters | (same) | `PascalCase` types; `snake_case_` class members; `snake_case` elsewhere |
 
-Formatting is enforced tree-wide. Naming is enforced on paths listed in `container_internals/style_naming_enforced.txt` (see [Enforcement](#enforcement)).
+CI enforces formatting on changed C and C++ lines. The repository still contains legacy formatting,
+so tree-wide cleanup belongs in a dedicated change rather than feature pull requests.
 
 ## Naming rules
 
@@ -50,7 +51,7 @@ Do **not** use the `k` prefix for constants.
 
 Use fixed-width integers (`int32_t`, `uint32_t`, and optionally `int16_t` / `uint16_t` from `<cstdint>`) instead of plain `int` / `unsigned` in Spench code. Exceptions: C API signatures you cannot change (e.g. Speex), and third-party callback types that require `int`. Mark a one-off exception with `// spench-allow-int` on that line.
 
-`clang-tidy` `google-runtime-int` and cpplint `runtime/int` only flag `short` / `long` / `long long`, not plain `int`. Spench uses `container_internals/check_fixed_width_int.sh` for the `int` / `unsigned` rule on the same paths as naming checks.
+`clang-tidy` `google-runtime-int` and cpplint `runtime/int` only flag `short` / `long` / `long long`, not plain `int`. Review plain `int` and `unsigned` uses against this rule when touching legacy code.
 
 Public data members on classes are discouraged; prefer accessors.
 
@@ -77,47 +78,31 @@ Headers under `spench/include/spench/` that define **`SPENCH_API`** types (e.g. 
 ## Out of scope
 
 - `spench/contrib/**`, `spench/submodules/**`, `build_*/**` — third-party code; do not reformat or rename.
-- C demos excluded from cpplint: `spench/demo/2-c_denoiser_api_demo.c`, `spench/demo/utils_c.c` (see `container_internals/check_style.sh`).
+- Generated build output and vendored source are not style targets.
 
 ## Enforcement
 
 | Tool | Role |
 |------|------|
-| `clang-format` | Layout (whole tree, via editor / CI) |
-| `cpplint` | Google-ish lint (`check_style.sh`) |
-| `clang-tidy` `readability-identifier-naming` | Naming on **enforced paths only** |
+| `clang-format` | Layout on changed lines via editor and CI |
+| `clang-tidy` `readability-identifier-naming` | Optional focused naming review |
 
 ### Configuration
 
-- `.clang-tidy` — naming check options (Spench deltas above)
-- `container_internals/style_naming_enforced.txt` — paths where naming is checked (one path per line; directories or individual files)
-- `container_internals/run_clang_tidy_naming.sh` — naming checks on `.cpp`, `.cc`, `.h`, and `.hpp` under enforced paths
+- `.clang-format` — required layout rules.
+- `.clang-tidy` — naming options for focused manual review.
 
 ### Running checks
 
-Default (CI / container): cpplint only.
+Check the C and C++ lines changed relative to the current commit:
 
 ```bash
-./container_internals/check_style.sh
+git-clang-format --diff HEAD --extensions c,cc,cpp,h,hpp -- spench
 ```
 
-Manual mode on the host: cpplint, clang-tidy naming, and fixed-width integer scan.
-
-```bash
-./container_internals/check_style.sh -m
-```
-
-Fixed-width integers only (fast, no `clang-tidy` required):
-
-```bash
-./container_internals/check_fixed_width_int.sh
-```
-
-Naming checks require `clang-tidy` and `compile_commands.json` (`CMAKE_EXPORT_COMPILE_COMMANDS=ON`). Set `SPENCH_BUILD_DIR` if needed (e.g. `build_onnx_pocketfft`).
-
-If the project was built in Docker (paths under `/spench/...`), `run_clang_tidy_naming.sh` rewrites those paths to your checkout root when you run checks on the host. CI (`check_style.sh` without `-m`) runs **cpplint** and **fixed-width int** checks. **clang-tidy** naming runs only with `check_style.sh -m` (install `clang-tools-extra` locally, or use an image that provides `clang-tidy`).
-
-To enforce naming in a new directory, add its path to `style_naming_enforced.txt` and run `check_style.sh -m`.
+Naming checks require `clang-tidy` and `compile_commands.json`
+(`CMAKE_EXPORT_COMPILE_COMMANDS=ON`). Run them only for the affected target and
+review the result against the API-compatibility exceptions above.
 
 ## Quick reference
 

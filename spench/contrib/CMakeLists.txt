@@ -21,8 +21,13 @@ function(spench_find_android_prebuilt_tflite output_variable)
     set(_spench_android_abi "${ANDROID_ABI}")
   endif()
   string(TOLOWER "${CMAKE_BUILD_TYPE}" _spench_build_type)
+  # Android Gradle Plugin configures release native code as RelWithDebInfo.
+  # It consumes the ABI-compatible Release engine bundle built by CI.
+  if(_spench_build_type STREQUAL "relwithdebinfo")
+    set(_spench_build_type "release")
+  endif()
   file(GLOB _spench_candidates LIST_DIRECTORIES true
-    "${SPENCH_PREBUILT_DEPENDENCIES_ROOT}/android/${_spench_android_abi}/tflite/${_spench_build_type}/shared/v1-*/prefix")
+    "${SPENCH_PREBUILT_DEPENDENCIES_ROOT}/android/${_spench_android_abi}/tflite/${_spench_build_type}/shared/v*-*/prefix")
   list(LENGTH _spench_candidates _spench_candidate_count)
   if(NOT _spench_candidate_count EQUAL 1)
     message(WARNING
@@ -66,6 +71,18 @@ if (BUILD_TFLITE_ENGINE)
     set(SPENCH_RESOLVED_PREBUILT_TFLITE_ROOT "" CACHE INTERNAL
       "Resolved TensorFlow Lite prebuilt dependency bundle root." FORCE)
     CPMGetPackage(tflite)
+    if(ANDROID)
+      # XNNPACK calls Android logging APIs directly. When TFLite is collected
+      # into a shared dependency bundle, propagate liblog to the XNNPACK
+      # shared target instead of relying on the final application link.
+      find_library(_spench_android_log_library log REQUIRED)
+      foreach(_spench_xnnpack_target XNNPACK xnnpack)
+        if(TARGET ${_spench_xnnpack_target})
+          target_link_libraries(${_spench_xnnpack_target}
+            PRIVATE "${_spench_android_log_library}")
+        endif()
+      endforeach()
+    endif()
   endif()
 elseif (BUILD_ONNX_ENGINE)
   if(SPENCH_PREBUILT_ORT_ROOT AND EXISTS "${SPENCH_PREBUILT_ORT_ROOT}/lib/cmake/onnxruntime/onnxruntimeConfig.cmake")
