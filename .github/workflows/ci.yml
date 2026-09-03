@@ -602,13 +602,13 @@ jobs:
 
   host-windows:
     name: Resolve Windows x86_64 toolchain
-    runs-on: windows-2025
+    runs-on: windows-2022
     outputs:
       identity: ${{ steps.identity.outputs.value }}
     steps:
       - id: identity
         shell: bash
-        run: echo "value=windows-2025-msvc" >> "$GITHUB_OUTPUT"
+        run: echo "value=windows-2022-msvc" >> "$GITHUB_OUTPUT"
 
   deps-macos-arm64-onnx:
     name: Build macOS arm64 ONNX Release dependency OCI
@@ -749,7 +749,7 @@ jobs:
   deps-windows-onnx:
     name: Build Windows x86_64 ONNX Release dependency OCI
     needs: host-windows
-    runs-on: windows-2025
+    runs-on: windows-2022
     permissions:
       contents: read
       packages: write
@@ -768,7 +768,7 @@ jobs:
   deps-windows-tflite:
     name: Build Windows x86_64 TFLite Release dependency OCI
     needs: host-windows
-    runs-on: windows-2025
+    runs-on: windows-2022
     permissions:
       contents: read
       packages: write
@@ -787,7 +787,7 @@ jobs:
   deps-windows-static-tflite:
     name: Build Windows x86_64 static TFLite Release dependency OCI
     needs: host-windows
-    runs-on: windows-2025
+    runs-on: windows-2022
     permissions:
       contents: read
       packages: write
@@ -806,7 +806,7 @@ jobs:
   windows-onnx:
     name: Build and test Windows x86_64 Release (ONNX)
     needs: [host-windows, deps-windows-onnx]
-    runs-on: windows-2025
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v6
         with:
@@ -821,7 +821,7 @@ jobs:
   windows-tflite:
     name: Build and test Windows x86_64 Release (TFLite)
     needs: [host-windows, deps-windows-tflite]
-    runs-on: windows-2025
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v6
         with:
@@ -836,7 +836,7 @@ jobs:
   windows-static-tflite:
     name: Build and test Windows x86_64 static Release (TFLite)
     needs: [host-windows, deps-windows-static-tflite]
-    runs-on: windows-2025
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v6
         with:

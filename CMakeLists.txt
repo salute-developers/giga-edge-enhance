@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.17)
 
+# CMake 4 no longer accepts dependency projects that declare compatibility
+# below 3.5 unless the policy floor is explicit. Several pinned third-party
+# projects still carry those old declarations.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/SPENCH_VERSION" SPENCH_VERSION
      LIMIT_COUNT 1 REGEX "^[0-9]+\\.[0-9]+\\.[0-9]+$")
 if(NOT SPENCH_VERSION)
