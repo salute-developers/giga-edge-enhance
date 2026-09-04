@@ -24,7 +24,7 @@ jobs:
       packages: write
     outputs:
       image: ${{ steps.metadata.outputs.image }}
-      identity: ${{ steps.build.outputs.digest }}
+      identity: ${{ steps.metadata.outputs.identity }}
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3
@@ -35,7 +35,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: metadata
         name: Resolve native toolchain image
-        run: echo "image=ghcr.io/${GITHUB_REPOSITORY}/toolchain-native:$(tools/spench image-key native)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY}/toolchain:native-$(tools/spench image-key native)" >> "$GITHUB_OUTPUT"
+          echo "identity=$(tools/spench recipe-key native)" >> "$GITHUB_OUTPUT"
       - id: build
         name: Build native toolchain
         uses: docker/build-push-action@v6
@@ -43,6 +45,9 @@ jobs:
           context: .
           target: native
           push: true
+          # Skip buildx attestations so a single-platform image manifest is
+          # published; the pinned recipe key is our reproducible identity.
+          provenance: false
           tags: ${{ steps.metadata.outputs.image }}
           cache-from: type=gha,scope=toolchain-native
           cache-to: type=gha,mode=max,scope=toolchain-native
@@ -55,7 +60,7 @@ jobs:
       packages: write
     outputs:
       image: ${{ steps.metadata.outputs.image }}
-      identity: ${{ steps.build.outputs.digest }}
+      identity: ${{ steps.metadata.outputs.identity }}
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3
@@ -66,7 +71,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: metadata
         name: Resolve Web toolchain image
-        run: echo "image=ghcr.io/${GITHUB_REPOSITORY}/toolchain-web:$(tools/spench image-key web)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY}/toolchain:web-$(tools/spench image-key web)" >> "$GITHUB_OUTPUT"
+          echo "identity=$(tools/spench recipe-key web)" >> "$GITHUB_OUTPUT"
       - id: build
         name: Build Web toolchain
         uses: docker/build-push-action@v6
@@ -74,6 +81,9 @@ jobs:
           context: .
           target: web
           push: true
+          # Skip buildx attestations so a single-platform image manifest is
+          # published; the pinned recipe key is our reproducible identity.
+          provenance: false
           tags: ${{ steps.metadata.outputs.image }}
           cache-from: type=gha,scope=toolchain-web
           cache-to: type=gha,mode=max,scope=toolchain-web
@@ -86,7 +96,7 @@ jobs:
       packages: write
     outputs:
       image: ${{ steps.metadata.outputs.image }}
-      identity: ${{ steps.build.outputs.digest }}
+      identity: ${{ steps.metadata.outputs.identity }}
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3
@@ -97,7 +107,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: metadata
         name: Resolve Android toolchain image
-        run: echo "image=ghcr.io/${GITHUB_REPOSITORY}/toolchain-android:$(tools/spench image-key android)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY}/toolchain:android-$(tools/spench image-key android)" >> "$GITHUB_OUTPUT"
+          echo "identity=$(tools/spench recipe-key android)" >> "$GITHUB_OUTPUT"
       - id: build
         name: Build Android toolchain
         uses: docker/build-push-action@v6
@@ -105,6 +117,9 @@ jobs:
           context: .
           target: android
           push: true
+          # Skip buildx attestations so a single-platform image manifest is
+          # published; the pinned recipe key is our reproducible identity.
+          provenance: false
           tags: ${{ steps.metadata.outputs.image }}
           cache-from: type=gha,scope=toolchain-android
           cache-to: type=gha,mode=max,scope=toolchain-android

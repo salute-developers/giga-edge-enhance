@@ -19,12 +19,13 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCKERFILE = ROOT / "Dockerfile"
-WEB_TEST_IMAGE_INPUTS = (
+WEB_PACKAGE_LOCK = ROOT / "platform_wrappers/web/package-lock.json"
+# Only files whose contents are actually baked into the Web toolchain image may
+# key its tag; anything else churns the image needlessly. The Web stage installs
+# a pinned Node (.nvmrc), the MOS virtualenv (mos_install.sh + its requirements),
+# and the Playwright Chromium build (version resolved from package-lock.json).
+WEB_IMAGE_INPUTS = (
     ROOT / "platform_wrappers/web/.nvmrc",
-    ROOT / "platform_wrappers/web/package.json",
-    ROOT / "platform_wrappers/web/package-lock.json",
-    ROOT / "platform_wrappers/web/packages/web-sdk/package.json",
-    ROOT / "platform_wrappers/web/apps/spench-site/package.json",
     ROOT / "platform_wrappers/web/apps/spench-site/mos_install.sh",
     ROOT / "platform_wrappers/web/apps/spench-site/requirements-mos.txt",
 )
@@ -72,25 +73,17 @@ CACHE_INPUTS = (
     ROOT / "cmake/SpenchDependencies.cmake",
 )
 DEPENDENCY_BUNDLE_FORMAT = 3
-# Keep bundle invalidation tied to the CMake recipes that build a particular
-# engine. The command-line helper deliberately is not an input: unrelated
-# commands in this large script must not make every ORT/TFLite bundle stale.
+# A compiled engine bundle is defined by four things and nothing else:
+#   1. the export/package procedure version (DEPENDENCY_BUNDLE_FORMAT),
+#   2. the toolchain that produced it (SPENCH_TOOLCHAIN_IDENTITY),
+#   3. the engine's pinned upstream tag, and
+#   4. the Spench patch applied on top of that tag.
 # Bump DEPENDENCY_BUNDLE_FORMAT when changing the export/package procedure.
-ENGINE_BUNDLE_COMMON_INPUTS = (
-    ROOT / "CMakeLists.txt",
-    ROOT / "cmake/SpenchOptions.cmake",
-    ROOT / "cmake/SpenchPlatform.cmake",
-    ROOT / "spench/contrib/CMakeLists.txt",
-)
-ENGINE_BUNDLE_INPUTS = {
-    "onnx": ENGINE_BUNDLE_COMMON_INPUTS + (
-        ROOT / "spench/util/onnx/CMakeLists.txt",
-        ROOT / "cmake/patches/onnxruntime.patch",
-    ),
-    "tflite": ENGINE_BUNDLE_COMMON_INPUTS + (
-        ROOT / "spench/util/tflite/CMakeLists.txt",
-        ROOT / "cmake/patches/tflite.patch",
-    ),
+# CPMDeclarePackage name and patch file for each engine key used across Spench.
+ENGINE_PACKAGE = {"onnx": "onnxruntime", "tflite": "tflite"}
+ENGINE_PATCH = {
+    "onnx": ROOT / "cmake/patches/onnxruntime.patch",
+    "tflite": ROOT / "cmake/patches/tflite.patch",
 }
 ANDROID_ABIS = ("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
 ANDROID_DEPENDENCY_TARGETS = {
@@ -108,13 +101,42 @@ NATIVE_PRESETS = {
 } | set(HOST_ONLY_PRESETS)
 
 
+def recipe_key() -> str:
+    """Return the stable toolchain-compiler identity shared by every image stage.
+
+    All native, Web, and Android stages compile with the same multi-stage
+    Dockerfile, so its content hash is the identity that a compiled dependency
+    bundle depends on. Unlike the buildx image digest, it is reproducible across
+    runs, branches, and pull requests, so restored dependency OCI artifacts stay
+    valid as long as the Dockerfile is unchanged.
+    """
+    return hashlib.sha256(DOCKERFILE.read_bytes()).hexdigest()[:16]
+
+
+def playwright_version() -> str:
+    """Resolve the Playwright version baked into the Web image from the lockfile."""
+    lock = json.loads(WEB_PACKAGE_LOCK.read_text())
+    entry = lock.get("packages", {}).get("node_modules/playwright", {})
+    version = entry.get("version")
+    if not version:
+        raise SystemExit("Could not resolve the Playwright version from package-lock.json.")
+    return version
+
+
 def container_image_digest(container_stage: str) -> str:
-    """Return the content-derived identity for a toolchain image recipe."""
-    image_inputs = (DOCKERFILE, *WEB_TEST_IMAGE_INPUTS) if container_stage == "web" else (DOCKERFILE,)
+    """Return the content-derived tag for a toolchain or dependency image stage."""
     image_digest = hashlib.sha256()
-    for image_input in image_inputs:
-        image_digest.update(image_input.relative_to(ROOT).as_posix().encode())
-        image_digest.update(image_input.read_bytes())
+    image_digest.update(DOCKERFILE.relative_to(ROOT).as_posix().encode())
+    image_digest.update(DOCKERFILE.read_bytes())
+    if container_stage == "web":
+        # The Web image additionally bakes Node, the MOS venv, and a pinned
+        # Playwright Chromium; fold exactly those inputs so the tag tracks real
+        # image containment rather than unrelated Web SDK source changes.
+        for image_input in WEB_IMAGE_INPUTS:
+            image_digest.update(image_input.relative_to(ROOT).as_posix().encode())
+            image_digest.update(image_input.read_bytes())
+        image_digest.update(b"playwright=")
+        image_digest.update(playwright_version().encode())
     dependency_root = ROOT / "out" / "artifacts" / "dependencies"
     dependency_stage_system = {
         "deps-native": "linux",
@@ -285,37 +307,51 @@ def dependency_cache_digest() -> str:
     return digest.hexdigest()[:16]
 
 
-def dependency_bundle_digest(engine: str) -> str:
-    """Return the identity of an engine's binary bundle recipe."""
+def engine_git_tag(engine: str) -> str:
+    """Return the pinned upstream tag for an engine from package-lock.cmake."""
     try:
-        bundle_inputs = ENGINE_BUNDLE_INPUTS[engine]
+        package = ENGINE_PACKAGE[engine]
     except KeyError as error:
         raise ValueError(f"Unsupported dependency bundle engine: {engine}") from error
-
-    digest = hashlib.sha256()
-    digest.update(f"format={DEPENDENCY_BUNDLE_FORMAT}".encode())
-    digest.update(b"\0")
-    # Hash only the selected engine declaration. Changes to unrelated packages
-    # must not invalidate an expensive ORT or TFLite binary bundle.
     lock_text = (ROOT / "package-lock.cmake").read_text()
     declaration = re.search(
-        rf"CPMDeclarePackage\({re.escape(engine if engine != 'onnx' else 'onnxruntime')}\s+.*?\n\)",
+        rf"CPMDeclarePackage\({re.escape(package)}\s.*?\n\)",
         lock_text,
         flags=re.DOTALL,
     )
     if declaration is None:
         raise SystemExit(f"Could not find the {engine} declaration in package-lock.cmake.")
-    digest.update(declaration.group(0).encode())
+    tag = re.search(r'GIT_TAG\s+"?([^"\s]+)"?', declaration.group(0))
+    if tag is None:
+        raise SystemExit(f"Could not find GIT_TAG for {engine} in package-lock.cmake.")
+    return tag.group(1)
+
+
+def dependency_bundle_digest(engine: str) -> str:
+    """Return the identity of an engine's compiled binary bundle.
+
+    The digest intentionally excludes CMake recipe file contents. An ORT or
+    TFLite bundle is defined only by the export/package procedure version, the
+    toolchain that compiled it, the engine's pinned upstream tag, and the Spench
+    patch applied on top. Keying on those four inputs—rather than every touched
+    CMake file—keeps these expensive bundles cached across unrelated edits while
+    still rebuilding whenever the compiler, version, or patch actually changes.
+    """
+    if engine not in ENGINE_PATCH:
+        raise ValueError(f"Unsupported dependency bundle engine: {engine}")
+    digest = hashlib.sha256()
+    digest.update(f"format={DEPENDENCY_BUNDLE_FORMAT}".encode())
     digest.update(b"\0")
-    for bundle_input in bundle_inputs:
-        digest.update(bundle_input.relative_to(ROOT).as_posix().encode())
-        digest.update(b"\0")
-        digest.update(bundle_input.read_bytes())
-        digest.update(b"\0")
     # Compiled engine bundles are tied to the toolchain that produced them.
-    # CI passes the immutable OCI digest; local builds use an explicit host
-    # identity so their artifacts cannot be mistaken for CI products.
+    # CI passes the immutable toolchain recipe identity; local builds use an
+    # explicit host marker so their artifacts cannot be mistaken for CI products.
     digest.update(os.environ.get("SPENCH_TOOLCHAIN_IDENTITY", "local-host").encode())
+    digest.update(b"\0")
+    digest.update(engine.encode())
+    digest.update(b"\0")
+    digest.update(engine_git_tag(engine).encode())
+    digest.update(b"\0")
+    digest.update(hashlib.sha256(ENGINE_PATCH[engine].read_bytes()).hexdigest().encode())
     digest.update(b"\0")
     return digest.hexdigest()[:16]
 
@@ -327,13 +363,14 @@ def dependency_tag(preset: str, host: bool) -> str:
         raise SystemExit(f"{preset} does not use a prebuilt engine dependency.")
     engine, build_type = requirement
     target_system, target_arch = cache_target(preset, host)
+    # <engine>-<platform>-<arch>-<build>-<linkage>-<digest>. The bundle format
+    # is already folded into the digest, so it needs no separate tag segment.
     parts = (
         engine,
         target_system,
         target_arch,
         build_type.lower(),
         bundle_linkage(preset),
-        f"v{DEPENDENCY_BUNDLE_FORMAT}",
         dependency_bundle_digest(engine),
     )
     return "-".join(parts).replace("_", "-").lower()
@@ -1236,7 +1273,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=(
         "build", "test", "package", "install", "core", "cache-key", "prepare-deps",
-        "prepare-image", "image-key", "dependency-key", "dependency-archive", "restore-deps"))
+        "prepare-image", "image-key", "recipe-key", "dependency-key", "dependency-archive",
+        "restore-deps"))
     parser.add_argument(
         "target",
         choices=(*PRESET_STAGES, *HOST_ONLY_PRESETS, *ANDROID_DEPENDENCY_TARGETS,
@@ -1252,6 +1290,11 @@ def main() -> None:
         if args.target not in {"native", "web", "android"}:
             raise SystemExit("image-key expects native, web, or android.")
         print(container_image_digest(args.target))
+        return
+    if args.action == "recipe-key":
+        # The compiler toolchain identity is Dockerfile-content-derived and shared
+        # by every container stage; the target only documents the caller's intent.
+        print(recipe_key())
         return
     if args.action == "dependency-key":
         print(dependency_tag(args.target, args.host))
