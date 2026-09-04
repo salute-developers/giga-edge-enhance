@@ -1,5 +1,31 @@
+diff --git a/cmake/CMakeLists.txt b/cmake/CMakeLists.txt
+index d90a2a3..9a2f6cc 100644
+--- a/cmake/CMakeLists.txt
++++ b/cmake/CMakeLists.txt
+@@ -1831,7 +1831,7 @@ if (onnxruntime_ENABLE_EXTERNAL_CUSTOM_OP_SCHEMAS)
+   )
+ endif()
+ 
+-if(TARGET onnxruntime)
++if(TARGET onnxruntime AND NOT SPENCH_ENGINE_BUNDLE_LINKAGE)
+ # Install
+   include(GNUInstallDirs)
+   include(CMakePackageConfigHelpers)
+diff --git a/cmake/deps.txt b/cmake/deps.txt
+index 9219f16..b4abf84 100644
+--- a/cmake/deps.txt
++++ b/cmake/deps.txt
+@@ -22,7 +22,7 @@ dlpack;https://github.com/dmlc/dlpack/archive/refs/tags/v0.6.zip;4d565dd2e5b3132
+ # it contains changes on top of 3.4.0 which are required to fix build issues.
+ # Until the 3.4.1 release this is the best option we have.
+ # Issue link: https://gitlab.com/libeigen/eigen/-/issues/2744
+-eigen;https://gitlab.com/libeigen/eigen/-/archive/e7248b26a1ed53fa030c5c459f7ea095dfd276ac/eigen-e7248b26a1ed53fa030c5c459f7ea095dfd276ac.zip;be8be39fdbc6e60e94fa7870b280707069b5b81a
++eigen;https://gitlab.com/libeigen/eigen/-/archive/e7248b26a1ed53fa030c5c459f7ea095dfd276ac/eigen-e7248b26a1ed53fa030c5c459f7ea095dfd276ac.zip;32b145f525a8308d7ab1c09388b2e288312d8eba
+ flatbuffers;https://github.com/google/flatbuffers/archive/refs/tags/v23.5.26.zip;59422c3b5e573dd192fead2834d25951f1c1670c
+ fp16;https://github.com/Maratyszcza/FP16/archive/0a92994d729ff76a58f692d3028ca1b64b145d91.zip;b985f6985a05a1c03ff1bb71190f66d8f98a1494
+ fxdiv;https://github.com/Maratyszcza/FXdiv/archive/63058eff77e11aa15bf531df5dd34395ec3017c8.zip;a5658f4036402dbca7cebee32be57fb8149811e1
 diff --git a/onnxruntime/core/optimizer/identical_children_consolidation.cc b/onnxruntime/core/optimizer/identical_children_consolidation.cc
-index 3262c4da75..c792254ad5 100644
+index 350da96..86e12cf 100644
 --- a/onnxruntime/core/optimizer/identical_children_consolidation.cc
 +++ b/onnxruntime/core/optimizer/identical_children_consolidation.cc
 @@ -45,7 +45,7 @@ std::vector<std::vector<NodeIndex>> IdenticalChildrenConsolidation::DivideIdenti
@@ -11,18 +37,3 @@ index 3262c4da75..c792254ad5 100644
    for (auto i = node->OutputEdgesBegin(); i != node->OutputEdgesEnd(); ++i) {
      if (i->GetNode().OpType() == op) {
        identical_children_map[IdentityBuilder(graph, i->GetNode())].push_back(i->GetNode().Index());
-diff --git a/cmake/deps.txt b/cmake/deps.txt
-index db5027d3d7..492d91bcee 100644
---- a/cmake/deps.txt
-+++ b/cmake/deps.txt
-@@ -25 +25 @@
--eigen;https://gitlab.com/libeigen/eigen/-/archive/e7248b26a1ed53fa030c5c459f7ea095dfd276ac/eigen-e7248b26a1ed53fa030c5c459f7ea095dfd276ac.zip;be8be39fdbc6e60e94fa7870b280707069b5b81a
-+eigen;https://gitlab.com/libeigen/eigen/-/archive/e7248b26a1ed53fa030c5c459f7ea095dfd276ac/eigen-e7248b26a1ed53fa030c5c459f7ea095dfd276ac.zip;32b145f525a8308d7ab1c09388b2e288312d8eba
-diff --git a/cmake/CMakeLists.txt b/cmake/CMakeLists.txt
-index 397265a498..274939c395 100644
---- a/cmake/CMakeLists.txt
-+++ b/cmake/CMakeLists.txt
-@@ -1834,2 +1834,2 @@ if (onnxruntime_EXTERNAL_CUSTOM_OP_SCHEMAS)
--if(TARGET onnxruntime)
-+if(TARGET onnxruntime AND NOT SPENCH_ENGINE_BUNDLE_LINKAGE)
- # Install
