@@ -13,6 +13,25 @@ runs:
       with:
         cmake-version: 3.31.x
 
+    - if: runner.os == 'macOS'
+      shell: bash
+      run: brew install ccache
+
+    # onnxruntime and TensorFlow vendor very deeply nested source trees. Combined
+    # with the CI build root they exceed the legacy 260-character MAX_PATH limit,
+    # which breaks both the FetchContent git clone ("Filename too long") and the
+    # MSBuild custom-build steps that generate onnxruntime kernel sources. Enable
+    # long paths for Git and the OS so long-path-aware tooling (Git, CMake, Ninja,
+    # MSBuild) can create these files.
+    - if: runner.os == 'Windows'
+      name: Enable Windows long paths
+      shell: pwsh
+      run: |
+        git config --system core.longpaths true
+        New-ItemProperty `
+          -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' `
+          -Name 'LongPathsEnabled' -Value 1 -PropertyType DWORD -Force | Out-Null
+
     - id: macos
       if: runner.os == 'macOS'
       shell: bash
