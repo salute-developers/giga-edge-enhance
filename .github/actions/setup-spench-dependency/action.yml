@@ -21,11 +21,20 @@ runs:
   steps:
     - uses: oras-project/setup-oras@v2
 
+    # Keep registry credentials in this job's temp directory rather than the
+    # account-wide Docker config. A self-hosted macOS runner inherits
+    # credsStore=osxkeychain from Docker Desktop, and storing a credential in
+    # the login keychain from a session that cannot prompt fails with "User
+    # interaction is not allowed". Scoped per step so plain docker commands
+    # keep using the config that docker/login-action wrote.
     - name: Log in to GHCR
       shell: bash
       env:
         GHCR_TOKEN: ${{ inputs.token }}
-      run: echo "$GHCR_TOKEN" | oras login ghcr.io --username "${{ github.actor }}" --password-stdin
+        DOCKER_CONFIG: ${{ runner.temp }}/spench-oras
+      run: |
+        mkdir -p "${DOCKER_CONFIG//\\//}"
+        echo "$GHCR_TOKEN" | oras login ghcr.io --username "${{ github.actor }}" --password-stdin
 
     - name: Restore dependency OCI artifact
       shell: bash
@@ -33,6 +42,7 @@ runs:
         SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
         TARGET: ${{ inputs.target }}
         HOST_BUILD: ${{ inputs.host }}
+        DOCKER_CONFIG: ${{ runner.temp }}/spench-oras
       run: |
         python_command=python3
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
