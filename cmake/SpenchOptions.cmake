@@ -31,6 +31,14 @@ elseif(BUILD_ONNX_ENGINE)
   unset(flatbuffers_DIR CACHE)
 endif()
 
+# ONNX Runtime and TensorFlow Lite declare most of their dependencies with
+# FIND_PACKAGE_ARGS, so FetchContent prefers a host package over the pinned
+# revision. A Homebrew abseil matching ONNX Runtime's requested 20240722 is
+# enough to put /opt/homebrew/include ahead of the vendored protobuf headers
+# and break the build. Engine dependencies must come from the pinned sources.
+set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER CACHE STRING
+    "Never satisfy FetchContent dependencies from host packages" FORCE)
+
 # Preserve whether the spench target itself is shared. CPM deps and contrib/
 # reset BUILD_SHARED_LIBS in the cache for third-party static linking.
 set(_spench_build_shared ${BUILD_SHARED_LIBS})
