@@ -120,7 +120,16 @@ elseif (BUILD_ONNX_ENGINE)
       set(onnxruntime_BUILD_SHARED_LIB ON)
     endif()
 
+    # Keep ONNX Runtime's own dependencies static. onnxruntime_BUILD_SHARED_LIB
+    # already selects the engine linkage, and the bundle ships only the engine
+    # library, so onnx and onnx_proto have to end up inside it. A shared
+    # onnx_proto also fails to link on Windows: the generated protobuf
+    # `*_default_instance_` symbols are data, which CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS
+    # cannot export.
+    set(_spench_build_shared_libs "${BUILD_SHARED_LIBS}")
+    set(BUILD_SHARED_LIBS OFF)
     CPMGetPackage(onnxruntime)
+    set(BUILD_SHARED_LIBS "${_spench_build_shared_libs}")
   endif()
 endif()
 
