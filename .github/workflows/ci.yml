@@ -18,7 +18,7 @@ concurrency:
 jobs:
   toolchain-native:
     name: Build native toolchain image
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     permissions:
       contents: read
       packages: write
@@ -54,7 +54,7 @@ jobs:
 
   toolchain-web:
     name: Build Web toolchain image
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     permissions:
       contents: read
       packages: write
@@ -90,7 +90,7 @@ jobs:
 
   toolchain-android:
     name: Build Android toolchain image
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     permissions:
       contents: read
       packages: write
@@ -127,7 +127,7 @@ jobs:
   commits:
     name: Check conventional commits
     needs: toolchain-native
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     permissions:
       contents: read
       pull-requests: read
@@ -142,7 +142,7 @@ jobs:
   cpp-style:
     name: Lint C and C++
     needs: toolchain-native
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -170,7 +170,7 @@ jobs:
   web-lint:
     name: Lint Web SDK and documentation
     needs: toolchain-web
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -190,7 +190,7 @@ jobs:
   android-lint:
     name: Lint Android
     needs: toolchain-android
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -210,7 +210,7 @@ jobs:
   ios-lint:
     name: Lint iOS
     needs: toolchain-native
-    runs-on: macos-15
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     steps:
       - uses: actions/checkout@v6
       - name: Install SwiftLint
@@ -220,7 +220,7 @@ jobs:
   workflow-lint:
     name: Check GitHub workflows
     needs: toolchain-native
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     steps:
       - uses: actions/checkout@v6
       - uses: raven-actions/actionlint@v2
@@ -228,7 +228,7 @@ jobs:
   deps-native-onnx:
     name: Build Native ONNX Release dependency OCI
     needs: toolchain-native
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     permissions:
       contents: read
       packages: write
@@ -254,7 +254,7 @@ jobs:
   deps-native-tflite:
     name: Build Native TFLite Release dependency OCI
     needs: toolchain-native
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     permissions:
       contents: read
       packages: write
@@ -280,7 +280,7 @@ jobs:
   native-onnx:
     name: Build and test Native Release (ONNX)
     needs: [toolchain-native, deps-native-onnx]
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -307,7 +307,7 @@ jobs:
   native-tflite:
     name: Build and test Native Release (TFLite)
     needs: [toolchain-native, deps-native-tflite]
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -334,7 +334,7 @@ jobs:
   deps-wasm:
     name: Build WASM ONNX Release dependency OCI
     needs: toolchain-web
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     permissions:
       contents: read
       packages: write
@@ -360,7 +360,7 @@ jobs:
   web:
     name: Build Web and test unit
     needs: [toolchain-web, deps-wasm]
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -410,7 +410,7 @@ jobs:
   web-playwright:
     name: Test Web Playwright
     needs: [toolchain-web, web]
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -458,7 +458,7 @@ jobs:
     name: Publish PR web preview
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     needs: web
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     permissions:
       contents: write
     concurrency:
@@ -481,7 +481,7 @@ jobs:
   deps-android:
     name: Build Android ${{ matrix.abi }} Release dependency OCI
     needs: toolchain-android
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     timeout-minutes: 90
     permissions:
       contents: read
@@ -517,7 +517,7 @@ jobs:
   android:
     name: Build and test Android Release
     needs: [toolchain-android, deps-android]
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -568,7 +568,7 @@ jobs:
 
   deps-macos-arm64-onnx:
     name: Build macOS arm64 ONNX Release dependency OCI
-    runs-on: macos-15
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     permissions:
       contents: read
       packages: write
@@ -590,7 +590,7 @@ jobs:
 
   deps-macos-arm64-tflite:
     name: Build macOS arm64 TFLite Release dependency OCI
-    runs-on: macos-15
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     permissions:
       contents: read
       packages: write
@@ -613,7 +613,7 @@ jobs:
   macos-arm64-onnx:
     name: Build and test macOS arm64 Release (ONNX)
     needs: deps-macos-arm64-onnx
-    runs-on: macos-15
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -630,7 +630,7 @@ jobs:
   macos-arm64-tflite:
     name: Build and test macOS arm64 Release (TFLite)
     needs: deps-macos-arm64-tflite
-    runs-on: macos-15
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -646,7 +646,7 @@ jobs:
 
   deps-macos-intel-onnx:
     name: Build macOS x86_64 ONNX Release dependency OCI
-    runs-on: macos-15-intel
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
     permissions:
       contents: read
       packages: write
@@ -668,7 +668,7 @@ jobs:
 
   deps-macos-intel-tflite:
     name: Build macOS x86_64 TFLite Release dependency OCI
-    runs-on: macos-15-intel
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
     permissions:
       contents: read
       packages: write
@@ -691,7 +691,7 @@ jobs:
   macos-intel-onnx:
     name: Build and test macOS x86_64 Release (ONNX)
     needs: deps-macos-intel-onnx
-    runs-on: macos-15-intel
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -708,7 +708,7 @@ jobs:
   macos-intel-tflite:
     name: Build and test macOS x86_64 Release (TFLite)
     needs: deps-macos-intel-tflite
-    runs-on: macos-15-intel
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -724,7 +724,7 @@ jobs:
 
   deps-windows-onnx:
     name: Build Windows x86_64 ONNX Release dependency OCI
-    runs-on: windows-2022
+    runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
     permissions:
       contents: read
       packages: write
@@ -746,7 +746,7 @@ jobs:
 
   deps-windows-tflite:
     name: Build Windows x86_64 TFLite Release dependency OCI
-    runs-on: windows-2022
+    runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
     permissions:
       contents: read
       packages: write
@@ -769,7 +769,7 @@ jobs:
   windows-onnx:
     name: Build and test Windows x86_64 Release (ONNX)
     needs: deps-windows-onnx
-    runs-on: windows-2022
+    runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -786,7 +786,7 @@ jobs:
   windows-tflite:
     name: Build and test Windows x86_64 Release (TFLite)
     needs: deps-windows-tflite
-    runs-on: windows-2022
+    runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -802,7 +802,7 @@ jobs:
 
   deps-ios:
     name: Build iOS ${{ matrix.slice }} Release dependency OCI
-    runs-on: macos-15
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     permissions:
       contents: read
       packages: write
@@ -829,7 +829,7 @@ jobs:
   ios:
     name: Build and test iOS Release
     needs: deps-ios
-    runs-on: macos-15
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     steps:
       - uses: actions/checkout@v6
         with:
