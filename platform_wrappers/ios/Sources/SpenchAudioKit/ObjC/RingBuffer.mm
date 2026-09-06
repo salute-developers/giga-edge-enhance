@@ -22,7 +22,7 @@ uint32_t NextPowerOfTwo(uint32_t value) {
     return value + 1;
 }
 
-} // namespace
+}  // namespace
 
 @interface RingBuffer () {
     std::vector<float> _storage;
@@ -63,7 +63,7 @@ uint32_t NextPowerOfTwo(uint32_t value) {
     return _capacity - self.availableToRead;
 }
 
-- (uint32_t)push:(const float *)input count:(uint32_t)count {
+- (uint32_t)push:(const float*)input count:(uint32_t)count {
     if (count == 0 || input == nullptr) {
         return 0;
     }
@@ -87,7 +87,7 @@ uint32_t NextPowerOfTwo(uint32_t value) {
     return writeCount;
 }
 
-- (uint32_t)pop:(float *)output count:(uint32_t)count {
+- (uint32_t)pop:(float*)output count:(uint32_t)count {
     if (count == 0 || output == nullptr) {
         return 0;
     }

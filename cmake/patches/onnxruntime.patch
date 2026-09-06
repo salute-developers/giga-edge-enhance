@@ -1,5 +1,5 @@
 diff --git a/cmake/CMakeLists.txt b/cmake/CMakeLists.txt
-index d90a2a3..9a2f6cc 100644
+index d90a2a3550..9a2f6cc11e 100644
 --- a/cmake/CMakeLists.txt
 +++ b/cmake/CMakeLists.txt
 @@ -1831,7 +1831,7 @@ if (onnxruntime_ENABLE_EXTERNAL_CUSTOM_OP_SCHEMAS)
@@ -12,7 +12,7 @@ index d90a2a3..9a2f6cc 100644
    include(GNUInstallDirs)
    include(CMakePackageConfigHelpers)
 diff --git a/cmake/deps.txt b/cmake/deps.txt
-index 9219f16..b4abf84 100644
+index 9219f16be0..b4abf84dab 100644
 --- a/cmake/deps.txt
 +++ b/cmake/deps.txt
 @@ -22,7 +22,7 @@ dlpack;https://github.com/dmlc/dlpack/archive/refs/tags/v0.6.zip;4d565dd2e5b3132
@@ -24,8 +24,39 @@ index 9219f16..b4abf84 100644
  flatbuffers;https://github.com/google/flatbuffers/archive/refs/tags/v23.5.26.zip;59422c3b5e573dd192fead2834d25951f1c1670c
  fp16;https://github.com/Maratyszcza/FP16/archive/0a92994d729ff76a58f692d3028ca1b64b145d91.zip;b985f6985a05a1c03ff1bb71190f66d8f98a1494
  fxdiv;https://github.com/Maratyszcza/FXdiv/archive/63058eff77e11aa15bf531df5dd34395ec3017c8.zip;a5658f4036402dbca7cebee32be57fb8149811e1
+diff --git a/include/onnxruntime/core/platform/ort_mutex.h b/include/onnxruntime/core/platform/ort_mutex.h
+index e24665f514..11a5467ed7 100644
+--- a/include/onnxruntime/core/platform/ort_mutex.h
++++ b/include/onnxruntime/core/platform/ort_mutex.h
+@@ -4,6 +4,7 @@
+ #pragma once
+ #ifdef _WIN32
+ #include <Windows.h>
++#include <chrono>
+ #include <mutex>
+ namespace onnxruntime {
+ // Q: Why OrtMutex is better than std::mutex
+diff --git a/onnxruntime/core/mlas/lib/sqnbitgemm_kernel_avx2_int8_blklen32.h b/onnxruntime/core/mlas/lib/sqnbitgemm_kernel_avx2_int8_blklen32.h
+index af6f52090a..a4c1743cba 100644
+--- a/onnxruntime/core/mlas/lib/sqnbitgemm_kernel_avx2_int8_blklen32.h
++++ b/onnxruntime/core/mlas/lib/sqnbitgemm_kernel_avx2_int8_blklen32.h
+@@ -951,7 +951,14 @@ MlasQ4Int8TileGemmKernelBlkLen32Avx2(
+ 
+             if constexpr (NCols4 == 8) {
+                 __m128 acc_0 = FoldAccumulators(acc[0], acc[1], acc[2], acc[3]);
++#ifdef __clang__
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Warray-bounds"
++#endif
+                 __m128 acc_1 = FoldAccumulators(acc[4], acc[5], acc[6], acc[7]);
++#ifdef __clang__
++#pragma clang diagnostic pop
++#endif
+                 if (BiasPtr != nullptr) {
+                     acc_0 = _mm_add_ps(acc_0, _mm_loadu_ps(BiasPtr));
+                     acc_1 = _mm_add_ps(acc_1, _mm_loadu_ps(BiasPtr + 4));
 diff --git a/onnxruntime/core/optimizer/identical_children_consolidation.cc b/onnxruntime/core/optimizer/identical_children_consolidation.cc
-index 350da96..86e12cf 100644
+index 350da9605a..86e12cf340 100644
 --- a/onnxruntime/core/optimizer/identical_children_consolidation.cc
 +++ b/onnxruntime/core/optimizer/identical_children_consolidation.cc
 @@ -45,7 +45,7 @@ std::vector<std::vector<NodeIndex>> IdenticalChildrenConsolidation::DivideIdenti

@@ -10,6 +10,7 @@ run_swiftlint() {
     exit 1
   fi
 
+  swiftlint version
   swiftlint --config "$ROOT_DIR/.swiftlint.yml"
 }
 
@@ -29,6 +30,8 @@ run_clang_format() {
   if [[ -z "$files" ]]; then
     return 0
   fi
+
+  clang-format --version
 
   case "$cmd" in
     check)

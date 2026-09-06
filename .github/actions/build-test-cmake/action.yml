@@ -76,6 +76,33 @@ runs:
         fi
         $python_command tools/spench test "$PRESET" "${host_argument[@]}"
 
+    - name: Install ${{ inputs.preset }}
+      shell: bash
+      env:
+        PRESET: ${{ inputs.preset }}
+        HOST_BUILD: ${{ inputs.host }}
+        SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        SPENCH_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
+      run: |
+        python_command=python3
+        if [[ "${RUNNER_OS}" == "Windows" ]]; then
+          python_command=python
+        fi
+        host_argument=()
+        if [[ "$HOST_BUILD" == "true" ]]; then
+          host_argument=(--host)
+        fi
+        $python_command tools/spench install "$PRESET" "${host_argument[@]}"
+
+    - name: Upload installed ${{ inputs.preset }} SDK
+      uses: actions/upload-artifact@v4
+      with:
+        name: spench-install-${{ inputs.preset }}-${{ github.sha }}
+        path: out/artifacts/install/${{ inputs.preset }}
+        if-no-files-found: error
+        retention-days: 14
+
     - name: Package ${{ inputs.preset }}
       if: inputs.package == 'true'
       shell: bash
@@ -93,3 +120,12 @@ runs:
           host_argument=(--host)
         fi
         $python_command tools/spench package "$PRESET" "${host_argument[@]}"
+
+    - name: Upload packaged ${{ inputs.preset }} SDK
+      if: inputs.package == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: spench-package-${{ inputs.preset }}-${{ github.sha }}
+        path: out/artifacts/${{ inputs.preset }}
+        if-no-files-found: error
+        retention-days: 14

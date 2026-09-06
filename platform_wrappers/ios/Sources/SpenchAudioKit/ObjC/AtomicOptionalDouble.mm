@@ -58,7 +58,7 @@ double DecodeDouble(uint64_t bits) {
     _storage.store(EncodeDouble(value), std::memory_order_release);
 }
 
-- (NSNumber *)loadValue {
+- (NSNumber*)loadValue {
     const uint64_t bits = _storage.load(std::memory_order_acquire);
     if (bits == EncodeNil()) {
         return nil;

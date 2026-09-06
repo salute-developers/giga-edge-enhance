@@ -30,6 +30,10 @@ if(APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
   endif()
 elseif(WIN32)
   message(STATUS "Platform: Windows")
+  # VS 2022 17.14 deprecates std::float_denorm_style while Eigen 3.4 still
+  # declares it. ONNX Runtime builds with warnings-as-errors, so use the STL's
+  # documented compatibility switch until the pinned Eigen is upgraded.
+  add_compile_definitions(_SILENCE_CXX23_DENORM_DEPRECATION_WARNING)
   set(_spench_msvc_disabled_warnings
     "/wd4820 /wd5264 /wd4514 /wd4127 /wd4710 /wd5045 /wd4706 /wd4668 /wd4210 /wd4061 /wd5026 /wd5027 /wd4623 /wd4625 /wd4626 /wd5250 /wd4100 /wd5262 /wd4324 /wd4868"
   )

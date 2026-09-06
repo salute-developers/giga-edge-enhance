@@ -8,7 +8,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)storeNil;
 - (void)storeValue:(double)value;
-- (nullable NSNumber *)loadValue;
+- (nullable NSNumber*)loadValue;
 
 @end
 

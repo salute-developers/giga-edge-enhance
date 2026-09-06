@@ -8,7 +8,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 extern NSErrorDomain const SpenchErrorDomain;
 
-typedef NS_ERROR_ENUM(SpenchErrorDomain, SpenchErrorCode) {
+typedef NS_ERROR_ENUM(SpenchErrorDomain, SpenchErrorCode){
     SpenchErrorCodeInvalidArgument = 1,
     SpenchErrorCodeOutOfRange = 2,
     SpenchErrorCodeUnknown = 999,
@@ -18,9 +18,7 @@ typedef NS_ERROR_ENUM(SpenchErrorDomain, SpenchErrorCode) {
 
 - (instancetype)init NS_UNAVAILABLE;
 
-- (uint32_t)processInput:(const float *)input
-                  output:(float *)output
-              frameCount:(uint32_t)frameCount;
+- (uint32_t)processInput:(const float*)input output:(float*)output frameCount:(uint32_t)frameCount;
 
 - (void)resetContext;
 
@@ -28,9 +26,9 @@ typedef NS_ERROR_ENUM(SpenchErrorDomain, SpenchErrorCode) {
 
 @interface AudioProcessPipelineElement : PipelineElement
 
-- (nullable instancetype)initWithYAMLConfig:(NSString *)yamlConfig
-                                  sampleRate:(float)sampleRate
-                                       error:(NSError **)error NS_DESIGNATED_INITIALIZER;
+- (nullable instancetype)initWithYAMLConfig:(NSString*)yamlConfig
+                                 sampleRate:(float)sampleRate
+                                      error:(NSError**)error NS_DESIGNATED_INITIALIZER;
 
 - (float)sampleRate;
 
@@ -38,13 +36,13 @@ typedef NS_ERROR_ENUM(SpenchErrorDomain, SpenchErrorCode) {
 
 @interface DenoisePipelineElement : PipelineElement
 
-- (nullable instancetype)initWithModelPath:(NSString *)modelPath
-                                  sampleRate:(float)sampleRate
-                                        error:(NSError **)error NS_DESIGNATED_INITIALIZER;
+- (nullable instancetype)initWithModelPath:(NSString*)modelPath
+                                sampleRate:(float)sampleRate
+                                     error:(NSError**)error NS_DESIGNATED_INITIALIZER;
 
 - (float)sampleRate;
 
-@property (nonatomic, readonly, nullable) NSString *lastProcessingError;
+@property(nonatomic, readonly, nullable) NSString* lastProcessingError;
 
 @end
 
