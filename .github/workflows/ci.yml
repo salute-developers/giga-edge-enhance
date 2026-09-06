@@ -195,6 +195,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -213,8 +214,8 @@ jobs:
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     steps:
       - uses: actions/checkout@v6
-      - name: Install SwiftLint
-        run: brew install swiftlint
+      - name: Install iOS lint tools
+        run: brew install swiftlint clang-format
       - run: platform_wrappers/ios/scripts/lint.sh
 
   workflow-lint:
@@ -224,6 +225,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: raven-actions/actionlint@v2
+        with:
+          # This repository has no inline Python workflow scripts. Avoid making
+          # the self-hosted runner install the unused Pyflakes/pipx toolchain.
+          pyflakes: false
 
   deps-native-onnx:
     name: Build Native ONNX Release dependency OCI
@@ -236,6 +241,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -262,6 +268,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -285,6 +292,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -297,12 +305,6 @@ jobs:
           toolchain-image: ${{ needs.toolchain-native.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
           package: 'true'
-      - name: Upload Native ONNX Release artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: spench-native-release-onnx-${{ github.sha }}
-          path: out/artifacts/native-release-onnx
-          retention-days: 14
 
   native-tflite:
     name: Build and test Native Release (TFLite)
@@ -312,6 +314,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -324,12 +327,6 @@ jobs:
           toolchain-image: ${{ needs.toolchain-native.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
           package: 'true'
-      - name: Upload Native TFLite Release artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: spench-native-release-tflite-${{ github.sha }}
-          path: out/artifacts/native-release-tflite
-          retention-days: 14
 
   deps-wasm:
     name: Build WASM ONNX Release dependency OCI
@@ -342,6 +339,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -365,6 +363,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -399,12 +398,14 @@ jobs:
         with:
           name: spench-web-sdk-${{ github.sha }}
           path: out/artifacts/web/*.tgz
+          if-no-files-found: error
           retention-days: 14
       - name: Upload Web site
         uses: actions/upload-artifact@v4
         with:
           name: spench-web-site-${{ github.sha }}
           path: platform_wrappers/web/apps/spench-site/build
+          if-no-files-found: error
           retention-days: 14
 
   web-playwright:
@@ -415,6 +416,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -494,6 +496,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -522,6 +525,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -564,6 +568,7 @@ jobs:
         with:
           name: spench-android-${{ github.sha }}
           path: platform_wrappers/android/**/build/outputs/**
+          if-no-files-found: error
           retention-days: 14
 
   deps-macos-arm64-onnx:
@@ -576,6 +581,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
@@ -598,6 +604,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
@@ -618,6 +625,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/build-test-cmake
@@ -635,6 +643,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/build-test-cmake
@@ -654,6 +663,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
@@ -676,6 +686,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
@@ -696,6 +707,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/build-test-cmake
@@ -713,6 +725,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/build-test-cmake
@@ -732,6 +745,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
@@ -754,6 +768,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
@@ -774,6 +789,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/build-test-cmake
@@ -791,6 +807,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/build-test-cmake
@@ -814,6 +831,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
@@ -834,6 +852,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           lfs: true
+      - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
       - uses: ./.github/actions/setup-spench-cache
@@ -864,4 +883,5 @@ jobs:
         with:
           name: spench-ios-${{ github.sha }}
           path: platform_wrappers/ios/build/xcframework
+          if-no-files-found: error
           retention-days: 14

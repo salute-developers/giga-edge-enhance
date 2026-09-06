@@ -2,6 +2,27 @@ cmake_minimum_required(VERSION 3.17.3)
 
 project( CONTRIB )
 
+function(spench_define_dependency_bundle_target)
+  set(options)
+  set(one_value_args)
+  set(multi_value_args REQUIRED OPTIONAL)
+  cmake_parse_arguments(SPENCH_BUNDLE
+    "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
+
+  add_custom_target(spench_dependency_bundle)
+  foreach(_spench_target IN LISTS SPENCH_BUNDLE_REQUIRED SPENCH_BUNDLE_OPTIONAL)
+    if(NOT TARGET ${_spench_target})
+      if(_spench_target IN_LIST SPENCH_BUNDLE_REQUIRED)
+        message(FATAL_ERROR
+          "Required dependency bundle target '${_spench_target}' does not exist.")
+      endif()
+      continue()
+    endif()
+
+    add_dependencies(spench_dependency_bundle ${_spench_target})
+  endforeach()
+endfunction()
+
 function(spench_find_android_prebuilt_tflite output_variable)
   if(NOT SPENCH_PREBUILT_DEPENDENCIES_ROOT)
     set(${output_variable} "" PARENT_SCOPE)
@@ -79,6 +100,9 @@ if (BUILD_TFLITE_ENGINE)
     CPMGetPackage(tflite)
     set(BUILD_SHARED_LIBS "${_spench_build_shared_libs}")
     set(CMAKE_POSITION_INDEPENDENT_CODE "${_spench_position_independent_code}")
+    if(SPENCH_PREPARE_DEPENDENCY_BUNDLE)
+      spench_define_dependency_bundle_target(REQUIRED tensorflow-lite)
+    endif()
     if(ANDROID)
       # XNNPACK calls Android logging APIs directly. When TFLite is collected
       # into a shared dependency bundle, propagate liblog to the XNNPACK
@@ -130,6 +154,31 @@ elseif (BUILD_ONNX_ENGINE)
     set(BUILD_SHARED_LIBS OFF)
     CPMGetPackage(onnxruntime)
     set(BUILD_SHARED_LIBS "${_spench_build_shared_libs}")
+    if(SPENCH_PREPARE_DEPENDENCY_BUNDLE AND NOT EMSCRIPTEN)
+      if(SPENCH_ENGINE_BUNDLE_LINKAGE STREQUAL "static")
+        spench_define_dependency_bundle_target(
+          REQUIRED
+            onnxruntime_common
+            onnxruntime_flatbuffers
+            onnxruntime_framework
+            onnxruntime_graph
+            onnxruntime_lora
+            onnxruntime_mlas
+            onnxruntime_optimizer
+            onnxruntime_providers
+            onnxruntime_session
+            onnxruntime_util
+            re2
+            nsync
+            nsync_cpp
+          OPTIONAL
+            cpuinfo
+            cpuinfo_internals
+        )
+      else()
+        spench_define_dependency_bundle_target(REQUIRED onnxruntime)
+      endif()
+    endif()
   endif()
 endif()
 

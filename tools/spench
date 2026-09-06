@@ -72,12 +72,22 @@ CACHE_INPUTS = (
     ROOT / "cmake/CPM.cmake",
     ROOT / "cmake/SpenchDependencies.cmake",
 )
-DEPENDENCY_BUNDLE_FORMAT = 3
-# A compiled engine bundle is defined by four things and nothing else:
+DEPENDENCY_RECIPE_INPUTS = (
+    ROOT / "CMakePresets.json",
+    ROOT / "package-lock.cmake",
+    ROOT / "cmake/CPM.cmake",
+    ROOT / "cmake/SpenchDependencies.cmake",
+    ROOT / "cmake/SpenchOptions.cmake",
+    ROOT / "cmake/SpenchPlatform.cmake",
+    ROOT / "platform_wrappers/ios/cmake/ios.toolchain.cmake",
+    ROOT / "spench/contrib/CMakeLists.txt",
+)
+DEPENDENCY_BUNDLE_FORMAT = 4
+# A compiled engine bundle is defined by:
 #   1. the export/package procedure version (DEPENDENCY_BUNDLE_FORMAT),
 #   2. the toolchain that produced it (SPENCH_TOOLCHAIN_IDENTITY),
 #   3. the engine's pinned upstream tag, and
-#   4. the Spench patch applied on top of that tag.
+#   4. the patch and CMake recipes that determine the compiled dependency graph.
 # Bump DEPENDENCY_BUNDLE_FORMAT when changing the export/package procedure.
 # CPMDeclarePackage name and patch file for each engine key used across Spench.
 ENGINE_PACKAGE = {"onnx": "onnxruntime", "tflite": "tflite"}
@@ -330,12 +340,8 @@ def engine_git_tag(engine: str) -> str:
 def dependency_bundle_digest(engine: str) -> str:
     """Return the identity of an engine's compiled binary bundle.
 
-    The digest intentionally excludes CMake recipe file contents. An ORT or
-    TFLite bundle is defined only by the export/package procedure version, the
-    toolchain that compiled it, the engine's pinned upstream tag, and the Spench
-    patch applied on top. Keying on those four inputs—rather than every touched
-    CMake file—keeps these expensive bundles cached across unrelated edits while
-    still rebuilding whenever the compiler, version, or patch actually changes.
+    Only dependency-facing recipes are included so expensive bundles survive
+    unrelated application edits while still rebuilding when their graph changes.
     """
     if engine not in ENGINE_PATCH:
         raise ValueError(f"Unsupported dependency bundle engine: {engine}")
@@ -353,6 +359,11 @@ def dependency_bundle_digest(engine: str) -> str:
     digest.update(b"\0")
     digest.update(hashlib.sha256(ENGINE_PATCH[engine].read_bytes()).hexdigest().encode())
     digest.update(b"\0")
+    for recipe in DEPENDENCY_RECIPE_INPUTS:
+        digest.update(recipe.relative_to(ROOT).as_posix().encode())
+        digest.update(b"\0")
+        digest.update(recipe.read_bytes())
+        digest.update(b"\0")
     return digest.hexdigest()[:16]
 
 
@@ -541,8 +552,11 @@ def copy_tflite_headers(prefix: Path, build_dir: Path | None = None) -> None:
 def copy_static_archives(prefix: Path, build_dir: Path) -> list[Path]:
     """Copy archives without merging them, so duplicate object names remain distinct."""
     archive_root = prefix / "lib" / "archives"
-    archives = sorted({archive for pattern in ("*.a", "*.lib") for archive in build_dir.rglob(pattern)
-                       if "spench" not in archive.parts})
+    # The build root is dedicated to dependency preparation, so every produced
+    # archive belongs to the bundle. Filtering absolute path components is wrong:
+    # GitHub's checkout path itself contains a directory named "spench".
+    archives = sorted({archive for pattern in ("*.a", "*.lib")
+                       for archive in build_dir.rglob(pattern)})
     if not archives:
         raise SystemExit(f"No static archives were produced below {build_dir}.")
 
@@ -665,6 +679,16 @@ def file_sha256(path: Path) -> str:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def write_artifact_checksums(artifact_root: Path) -> None:
+    """Write deterministic SHA-256 entries for every deliberate artifact file."""
+    checksum_path = artifact_root / "checksums.sha256"
+    files = sorted(path for path in artifact_root.rglob("*")
+                   if path.is_file() and path != checksum_path)
+    checksum_path.write_text("".join(
+        f"{file_sha256(path)}  {path.relative_to(artifact_root).as_posix()}\n"
+        for path in files))
 
 
 def write_dependency_bundle(artifact_root: Path, manifest: dict[str, object]) -> None:
@@ -819,24 +843,19 @@ def prepare_dependency(preset: str, host: bool) -> Path | None:
         configure_command = [
             "cmake", "--preset", artifact_preset(preset), "-B", build_dir,
             f"-DSPENCH_ENGINE_BUNDLE_LINKAGE={linkage}",
+            "-DSPENCH_PREPARE_DEPENDENCY_BUNDLE=ON",
         ]
         if container and stage in {"native", "web"}:
             configure_command.extend(("-DCMAKE_AR=/usr/bin/llvm-ar",
                                       "-DCMAKE_RANLIB=/usr/bin/llvm-ranlib"))
         print(f"Preparing {engine} {build_type} dependency bundle for {target_system}/{target_arch}.")
         run(configure_command, container_stage=preparation_stage, environment=environment)
-        static_onnx_targets = [
-            "onnxruntime_common", "onnxruntime_flatbuffers", "onnxruntime_framework",
-            "onnxruntime_graph", "onnxruntime_lora", "onnxruntime_mlas",
-            "onnxruntime_optimizer", "onnxruntime_providers", "onnxruntime_session",
-            "onnxruntime_util", "re2", "nsync", "nsync_cpp", "cpuinfo", "cpuinfo_internals",
-        ]
-        targets = (["tensorflow-lite"] if engine == "tflite" else
-                   ["libonnxruntime_webassembly.a"] if preset.startswith("wasm-") else
-                   static_onnx_targets if linkage == "static" else ["onnxruntime"])
+        targets = (["libonnxruntime_webassembly.a"]
+                   if preset.startswith("wasm-") else ["spench_dependency_bundle"])
         build_command = ["cmake", "--build", build_dir, "--target", *targets, "--parallel"]
-        if target_system == "windows":
-            build_command.extend(("--config", build_type))
+        # CMake accepts --config for single-config generators and requires it for
+        # Xcode/MSBuild. Passing it universally keeps Release bundle jobs honest.
+        build_command.extend(("--config", build_type))
         run(build_command,
             container_stage=preparation_stage, environment=environment)
         if preset.startswith("wasm-") and engine == "onnx":
@@ -1043,7 +1062,15 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
         run(package_command, container_stage=stage, environment=environment)
     elif action == "install":
         install_dir = ROOT / "out" / "artifacts" / "install" / preset
+        if install_dir.exists():
+            shutil.rmtree(install_dir)
         install_dir.mkdir(parents=True, exist_ok=True)
+        prebuilt_prefix = find_prebuilt_dependency(preset, host)
+        if prebuilt_prefix is not None:
+            # The engine is an implementation dependency, but shared bundles
+            # still need its runtime library. Merge the validated dependency
+            # prefix so the uploaded install tree is self-contained.
+            shutil.copytree(prebuilt_prefix, install_dir, dirs_exist_ok=True)
         configured_build_dir = build_dir_host if stage is None else Path(build_dir)
         install_output = str(install_dir) if stage is None else f"/workspace/{install_dir.relative_to(ROOT)}"
         install_command = ["cmake", "--install", str(configured_build_dir), "--prefix", install_output]
@@ -1053,9 +1080,12 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
         manifest = {
             "format": 1,
             "preset": preset,
-            "dependency_bundle": None,
+            "dependency_bundle": (dependency_tag(preset, host)
+                                  if prebuilt_prefix is not None else None),
         }
-        (install_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        (install_dir / "manifest.json").write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+        write_artifact_checksums(install_dir)
 
 
 def android_workflow(action: str, host: bool) -> None:

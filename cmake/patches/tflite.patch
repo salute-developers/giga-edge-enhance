@@ -1,34 +1,21 @@
-diff --git a/tensorflow/lite/kernels/elementwise.cc b/tensorflow/lite/kernels/elementwise.cc
-index 4379febbe3..d9c2f6d398 100644
---- a/tensorflow/lite/kernels/elementwise.cc
-+++ b/tensorflow/lite/kernels/elementwise.cc
-@@ -240,19 +240,19 @@ TfLiteStatus AbsEval(TfLiteContext* context, TfLiteNode* node) {
- TfLiteStatus AbsEval(TfLiteContext* context, TfLiteNode* node) {
-   const TfLiteTensor* input = GetInput(context, node, 0);
-   const TfLiteType type = input->type;
-   switch (type) {
-     case kTfLiteFloat32:
--      return EvalImpl<float>(context, node, std::abs<float>, type);
-+      return EvalImpl<float>(context, node, [](float value) { return std::abs(value); }, type);
-     case kTfLiteInt8:
-       return AbsEvalQuantized<int8_t>(context, node, type);
-     case kTfLiteInt16:
-       return input->quantization.type == kTfLiteNoQuantization
-                  ? AbsInt16EvalImpl(context, node, type)
-                  : AbsEvalQuantized<int16_t>(context, node, type);
-     case kTfLiteInt32:
--      return EvalImpl<int32_t>(context, node, std::abs<int32_t>, type);
-+      return EvalImpl<int32_t>(context, node, [](int32_t value) { return std::abs(value); }, type);
-     default:
-       TF_LITE_KERNEL_LOG(context, "Current data type %s is not supported.",
-                          TfLiteTypeGetName(type));
-       return kTfLiteError;
-   }
 diff --git a/tensorflow/lite/CMakeLists.txt b/tensorflow/lite/CMakeLists.txt
-index 3b3e516b64..ae76640232 100644
+index 0476170e075..2e2144aabfd 100644
 --- a/tensorflow/lite/CMakeLists.txt
 +++ b/tensorflow/lite/CMakeLists.txt
-@@ -557,7 +557,7 @@ set(_ALL_TFLITE_SRCS
+@@ -224,6 +224,12 @@ if(CMAKE_SYSTEM_NAME MATCHES "Android")
+ endif()
+ # Build a list of source files to compile into the TF Lite library.
+ populate_tflite_source_vars("." TFLITE_SRCS)
++if(CMAKE_SYSTEM_NAME MATCHES "Windows" AND
++   (BUILD_SHARED_LIBS OR SPENCH_TFLITE_LIBRARY_TYPE STREQUAL "SHARED"))
++  # MSVC has no weak symbols, so compiling both implementations produces a
++  # duplicate DumpArenaInfo definition in a shared tensorflow-lite target.
++  list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*simple_memory_arena_debug_dump\\.cc$")
++endif()
+ 
+ # This particular file is excluded because the more explicit approach to enable
+ # XNNPACK delegate is preferred to the weak-symbol one.
+@@ -557,7 +563,7 @@ set(_ALL_TFLITE_SRCS
    ${TFLITE_SOURCE_DIR}/schema/schema_utils.cc
    ${TFLITE_SOURCE_DIR}/schema/schema_generated.h
  )
@@ -37,9 +24,35 @@ index 3b3e516b64..ae76640232 100644
    ${_ALL_TFLITE_SRCS}
  )
  set(_ALL_TFLITE_HDRS ${_ALL_TFLITE_SRCS})
-@@ -588,3 +588,4 @@ target_link_libraries(tensorflow-lite
+@@ -585,7 +591,8 @@ target_link_libraries(tensorflow-lite
+     ${TFLITE_TARGET_DEPENDENCIES}
+ )
+ 
 -if (NOT BUILD_SHARED_LIBS)
 +get_target_property(_TFLITE_LIBRARY_TYPE tensorflow-lite TYPE)
 +if (_TFLITE_LIBRARY_TYPE STREQUAL "STATIC_LIBRARY")
    list(APPEND TFLITE_TARGET_PUBLIC_OPTIONS "-DTFL_STATIC_LIBRARY_BUILD")
  endif()
+ 
+diff --git a/tensorflow/lite/kernels/elementwise.cc b/tensorflow/lite/kernels/elementwise.cc
+index 4379febbe36..d9c2f6d398c 100644
+--- a/tensorflow/lite/kernels/elementwise.cc
++++ b/tensorflow/lite/kernels/elementwise.cc
+@@ -242,7 +242,7 @@ TfLiteStatus AbsEval(TfLiteContext* context, TfLiteNode* node) {
+   const TfLiteType type = input->type;
+   switch (type) {
+     case kTfLiteFloat32:
+-      return EvalImpl<float>(context, node, std::abs<float>, type);
++      return EvalImpl<float>(context, node, [](float value) { return std::abs(value); }, type);
+     case kTfLiteInt8:
+       return AbsEvalQuantized<int8_t>(context, node, type);
+     case kTfLiteInt16:
+@@ -250,7 +250,7 @@ TfLiteStatus AbsEval(TfLiteContext* context, TfLiteNode* node) {
+                  ? AbsInt16EvalImpl(context, node, type)
+                  : AbsEvalQuantized<int16_t>(context, node, type);
+     case kTfLiteInt32:
+-      return EvalImpl<int32_t>(context, node, std::abs<int32_t>, type);
++      return EvalImpl<int32_t>(context, node, [](int32_t value) { return std::abs(value); }, type);
+     default:
+       TF_LITE_KERNEL_LOG(context, "Current data type %s is not supported.",
+                          TfLiteTypeGetName(type));

@@ -21,12 +21,12 @@ namespace spench_ios {
 constexpr size_t kInitialScratchCapacity = 1024;
 
 class PipelineElementCore {
- protected:
+   protected:
     uint32_t sampleRate_ = 0;
     std::vector<float> input_;
     std::vector<float> output_;
 
- public:
+   public:
     explicit PipelineElementCore(uint32_t sampleRate) noexcept : sampleRate_(sampleRate) {
         input_.reserve(kInitialScratchCapacity);
         output_.reserve(kInitialScratchCapacity);
@@ -48,18 +48,16 @@ class PipelineElementCore {
 };
 
 class AudioProcessPipelineElementCore final : public PipelineElementCore {
- private:
+   private:
     spench::SpenchAudioProcess processor_;
 
- public:
+   public:
     AudioProcessPipelineElementCore(const std::string& yamlConfig, uint32_t sampleRate)
         : PipelineElementCore(sampleRate), processor_(yamlConfig) {
         processor_.AddLC().AddNG().AddLim();
     }
 
-    uint32_t process(const float* __restrict src,
-                     float* __restrict dst,
-                     uint32_t frameCount) noexcept final {
+    uint32_t process(const float* __restrict src, float* __restrict dst, uint32_t frameCount) noexcept final {
         input_.assign(src, src + frameCount);
         output_.resize(frameCount);
         processor_.ProcessChunk(input_, output_);
@@ -75,15 +73,14 @@ class AudioProcessPipelineElementCore final : public PipelineElementCore {
 };
 
 class DenoisePipelineElementCore final : public PipelineElementCore {
- private:
+   private:
     spench::SpenchDenoise denoiser_;
     spench::SpenchContext<float>* context_ = nullptr;
     std::string lastProcessingError_;
 
- public:
+   public:
     DenoisePipelineElementCore(const std::string& modelPath, uint32_t sampleRate)
-        : PipelineElementCore(sampleRate),
-          denoiser_(std::make_shared<spench::PackedModelReader>(modelPath)) {
+        : PipelineElementCore(sampleRate), denoiser_(std::make_shared<spench::PackedModelReader>(modelPath)) {
         context_ = denoiser_.CreateContext(sampleRate_, sampleRate_);
     }
 
@@ -93,9 +90,7 @@ class DenoisePipelineElementCore final : public PipelineElementCore {
         }
     }
 
-    uint32_t process(const float* __restrict src,
-                     float* __restrict dst,
-                     uint32_t frameCount) noexcept final {
+    uint32_t process(const float* __restrict src, float* __restrict dst, uint32_t frameCount) noexcept final {
         input_.assign(src, src + frameCount);
         lastProcessingError_.clear();
 
@@ -140,14 +135,14 @@ NSError* SpenchErrorFromException(const std::exception& exception) {
         code = SpenchErrorCodeOutOfRange;
     }
 
-    NSDictionary* userInfo = @{NSLocalizedDescriptionKey: [NSString stringWithUTF8String:exception.what()]};
+    NSDictionary* userInfo = @{NSLocalizedDescriptionKey : [NSString stringWithUTF8String:exception.what()]};
     return [NSError errorWithDomain:SpenchErrorDomain code:code userInfo:userInfo];
 }
 
 }  // namespace spench_ios
 
 @interface PipelineElement () {
-@protected
+   @protected
     std::unique_ptr<spench_ios::PipelineElementCore> _core;
 }
 
@@ -186,13 +181,13 @@ NSError* SpenchErrorFromException(const std::exception& exception) {
 @implementation AudioProcessPipelineElement
 
 - (nullable instancetype)initWithYAMLConfig:(NSString*)yamlConfig
-                                  sampleRate:(float)sampleRate
-                                       error:(NSError* _Nullable __autoreleasing*)error {
+                                 sampleRate:(float)sampleRate
+                                      error:(NSError* _Nullable __autoreleasing*)error {
     try {
         spench_ios::ValidateSampleRate(sampleRate);
         std::string yaml([yamlConfig UTF8String]);
-        auto core = std::make_unique<spench_ios::AudioProcessPipelineElementCore>(yaml,
-                                                                                  static_cast<uint32_t>(std::lround(sampleRate)));
+        auto core = std::make_unique<spench_ios::AudioProcessPipelineElementCore>(
+            yaml, static_cast<uint32_t>(std::lround(sampleRate)));
         return [super initWithCore:std::move(core)];
     } catch (const std::exception& exception) {
         if (error != nil) {
@@ -206,7 +201,7 @@ NSError* SpenchErrorFromException(const std::exception& exception) {
     return _core == nullptr ? 0.0F : static_cast<float>(_core->sampleRate());
 }
 
-- (nullable NSString *)lastProcessingError {
+- (nullable NSString*)lastProcessingError {
     const auto* core = dynamic_cast<const spench_ios::DenoisePipelineElementCore*>(_core.get());
     if (core == nullptr || core->lastProcessingError().empty()) {
         return nil;
@@ -219,16 +214,16 @@ NSError* SpenchErrorFromException(const std::exception& exception) {
 @implementation DenoisePipelineElement
 
 - (nullable instancetype)initWithModelPath:(NSString*)modelPath
-                                  sampleRate:(float)sampleRate
-                                        error:(NSError* _Nullable __autoreleasing*)error {
+                                sampleRate:(float)sampleRate
+                                     error:(NSError* _Nullable __autoreleasing*)error {
     try {
         spench_ios::ValidateSampleRate(sampleRate);
         if (modelPath.length == 0) {
             throw std::invalid_argument("modelPath must not be empty");
         }
 
-        auto core = std::make_unique<spench_ios::DenoisePipelineElementCore>(std::string(modelPath.UTF8String),
-                                                                             static_cast<uint32_t>(std::lround(sampleRate)));
+        auto core = std::make_unique<spench_ios::DenoisePipelineElementCore>(
+            std::string(modelPath.UTF8String), static_cast<uint32_t>(std::lround(sampleRate)));
         return [super initWithCore:std::move(core)];
     } catch (const std::exception& exception) {
         if (error != nil) {

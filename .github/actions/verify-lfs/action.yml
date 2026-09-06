@@ -1,0 +1,49 @@
+name: Verify Git LFS checkout
+description: Fail early when actions/checkout leaves LFS pointer files in the worktree.
+
+runs:
+  using: composite
+  steps:
+    - name: Verify Git LFS files are materialized
+      shell: bash
+      run: |
+        python_command=python3
+        if [[ "${RUNNER_OS}" == "Windows" ]]; then
+          python_command=python
+        fi
+        "$python_command" - <<'PY'
+        import json
+        from pathlib import Path
+        import subprocess
+
+        pointer_header = b"version https://git-lfs.github.com/spec/v1"
+        result = subprocess.run(
+            ["git", "lfs", "ls-files", "--json"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        files = [Path(entry["name"]) for entry in json.loads(result.stdout)["files"]]
+        pointers = []
+        missing = []
+        for path in files:
+            if not path.is_file():
+                missing.append(path.as_posix())
+                continue
+            with path.open("rb") as source:
+                if source.readline().rstrip(b"\r\n") == pointer_header:
+                    pointers.append(path.as_posix())
+
+        if missing or pointers:
+            details = []
+            if missing:
+                details.append("missing: " + ", ".join(missing))
+            if pointers:
+                details.append("still LFS pointers: " + ", ".join(pointers))
+            raise SystemExit(
+                "Git LFS checkout is incomplete (" + "; ".join(details) + "). "
+                "Repair the runner's smudge filter and remove its stale repository workspace."
+            )
+
+        print(f"Verified {len(files)} materialized Git LFS files.")
+        PY
