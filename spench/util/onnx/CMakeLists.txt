@@ -8,7 +8,8 @@ add_library(util__onnx STATIC
 
 spench_apply_build_config(util__onnx)
 
-set_property(TARGET util__onnx PROPERTY CXX_STANDARD 14)
+set_property(TARGET util__onnx PROPERTY CXX_STANDARD 17)
+set_property(TARGET util__onnx PROPERTY CXX_STANDARD_REQUIRED ON)
 if (NOT WIN32)
 target_compile_options(util__onnx
           PRIVATE -Wall
