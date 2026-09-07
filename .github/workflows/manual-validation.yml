@@ -125,7 +125,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
       - name: Build Android Debug test targets
         working-directory: platform_wrappers/android
         run: ./gradlew :spench-sdk:assembleDebug :demo-app:assembleDebug

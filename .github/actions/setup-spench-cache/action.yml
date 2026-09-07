@@ -20,7 +20,7 @@ runs:
         $python_command tools/spench cache-key "${{ inputs.preset }}" >> "$GITHUB_OUTPUT"
 
     - name: Restore CPM sources
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v6
       if: github.event_name == 'pull_request'
       with:
         path: ${{ steps.cache-keys.outputs.source_cache_path }}
@@ -29,7 +29,7 @@ runs:
           ${{ steps.cache-keys.outputs.source_cache_restore_key }}
 
     - name: Restore local compiler cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v6
       if: github.event_name == 'pull_request'
       with:
         path: ${{ steps.cache-keys.outputs.compiler_cache_path }}
@@ -40,14 +40,14 @@ runs:
 
     - name: Restore and save CPM sources from trusted branches
       if: github.event_name != 'pull_request'
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ steps.cache-keys.outputs.source_cache_path }}
         key: ${{ steps.cache-keys.outputs.source_cache_key }}
 
     - name: Restore and save compiler cache from trusted branches
       if: github.event_name != 'pull_request'
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ steps.cache-keys.outputs.compiler_cache_path }}
         key: ${{ steps.cache-keys.outputs.compiler_cache_key_prefix }}-${{ github.sha }}
