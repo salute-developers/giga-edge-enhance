@@ -18,6 +18,7 @@ concurrency:
 jobs:
   toolchain-native:
     name: Build native toolchain image
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     permissions:
       contents: read
@@ -54,6 +55,7 @@ jobs:
 
   toolchain-web:
     name: Build Web toolchain image
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     permissions:
       contents: read
@@ -90,6 +92,7 @@ jobs:
 
   toolchain-android:
     name: Build Android toolchain image
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     permissions:
       contents: read
@@ -157,9 +160,10 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           IMAGE: ${{ needs.toolchain-native.outputs.image }}
         run: |
-          docker run --rm --env BASE_SHA --volume "$PWD:/workspace" --workdir /workspace "$IMAGE" \
+          docker run --rm --user "$(id -u):$(id -g)" --env BASE_SHA \
+            --env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=safe.directory --env GIT_CONFIG_VALUE_0=/workspace \
+            --volume "$PWD:/workspace" --workdir /workspace "$IMAGE" \
             bash -lc '
-              git config --global --add safe.directory /workspace
               format_diff="$(git-clang-format --diff "$BASE_SHA" HEAD --extensions c,cc,cpp,h,hpp -- spench platform_wrappers)"
               printf "%s\n" "$format_diff"
               if grep -q "^diff --git " <<< "$format_diff"; then
@@ -205,7 +209,11 @@ jobs:
         env:
           IMAGE: ${{ needs.toolchain-android.outputs.image }}
         run: |
-          docker run --rm --volume "$PWD:/workspace" --workdir /workspace "$IMAGE" \
+          mkdir -p out/cache/container-home out/cache/gradle
+          docker run --rm --user "$(id -u):$(id -g)" \
+            --env HOME=/workspace/out/cache/container-home \
+            --env GRADLE_USER_HOME=/workspace/out/cache/gradle \
+            --volume "$PWD:/workspace" --workdir /workspace "$IMAGE" \
             bash -lc 'platform_wrappers/android/gradlew -p platform_wrappers/android detekt'
 
   ios-lint:
@@ -256,6 +264,7 @@ jobs:
           toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-native.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   deps-native-tflite:
     name: Build Native TFLite Release dependency OCI
@@ -283,6 +292,7 @@ jobs:
           toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-native.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   native-onnx:
     name: Build and test Native Release (ONNX)
@@ -354,6 +364,7 @@ jobs:
           toolchain-identity: ${{ needs.toolchain-web.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-web.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   web:
     name: Build Web and test unit
@@ -511,6 +522,7 @@ jobs:
           toolchain-identity: ${{ needs.toolchain-android.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-android.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
       - name: Report Android dependency failure resources
         if: failure()
         run: |
@@ -573,6 +585,7 @@ jobs:
 
   deps-macos-arm64-onnx:
     name: Build macOS arm64 ONNX Release dependency OCI
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     permissions:
       contents: read
@@ -592,10 +605,12 @@ jobs:
           target: macos-arm64-release-onnx
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
           host: 'true'
 
   deps-macos-arm64-tflite:
     name: Build macOS arm64 TFLite Release dependency OCI
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     permissions:
       contents: read
@@ -615,6 +630,7 @@ jobs:
           target: macos-arm64-release-tflite
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
           host: 'true'
 
   macos-arm64-onnx:
@@ -655,6 +671,7 @@ jobs:
 
   deps-macos-intel-onnx:
     name: Build macOS x86_64 ONNX Release dependency OCI
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
     permissions:
       contents: read
@@ -674,10 +691,12 @@ jobs:
           target: macos-x86_64-release-onnx
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
           host: 'true'
 
   deps-macos-intel-tflite:
     name: Build macOS x86_64 TFLite Release dependency OCI
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
     permissions:
       contents: read
@@ -697,6 +716,7 @@ jobs:
           target: macos-x86_64-release-tflite
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
           host: 'true'
 
   macos-intel-onnx:
@@ -737,6 +757,7 @@ jobs:
 
   deps-windows-onnx:
     name: Build Windows x86_64 ONNX Release dependency OCI
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
     permissions:
       contents: read
@@ -756,10 +777,12 @@ jobs:
           target: windows-x64-release-onnx
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
           host: 'true'
 
   deps-windows-tflite:
     name: Build Windows x86_64 TFLite Release dependency OCI
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
     permissions:
       contents: read
@@ -779,6 +802,7 @@ jobs:
           target: windows-x64-release-tflite
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
           host: 'true'
 
   windows-onnx:
@@ -819,6 +843,7 @@ jobs:
 
   deps-ios:
     name: Build iOS ${{ matrix.slice }} Release dependency OCI
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     permissions:
       contents: read
@@ -842,6 +867,7 @@ jobs:
           target: ios-${{ matrix.slice }}-release
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
           host: 'true'
 
   ios:

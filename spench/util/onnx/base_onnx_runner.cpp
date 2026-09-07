@@ -1,5 +1,7 @@
 #include "spench/util/onnx/base_onnx_runner.h"
 
+#include <filesystem>
+
 namespace util {
 namespace onnx {
 
@@ -30,6 +32,8 @@ BaseOnnxRunner::~BaseOnnxRunner() {
 void BaseOnnxRunner::init_model(const std::shared_ptr<spench::NetworkConfig> config,
                                 const uint32_t num_threads,
                                bool gpu) {
+  // ONNX Runtime uses wchar_t paths on Windows and char paths elsewhere.
+  const std::filesystem::path model_path = std::filesystem::u8path(config->model_path());
   if (!gpu) {
     std::lock_guard<std::mutex> lock(get_cpu_session_mutex());
     const auto& session_options = get_ort_session_options_cpu(num_threads, false);
@@ -43,9 +47,7 @@ void BaseOnnxRunner::init_model(const std::shared_ptr<spench::NetworkConfig> con
                                                          model_data.size(),
                                                          session_options);
         } else {
-          session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(),
-                                                          config->model_path().c_str(),
-                                                          session_options);
+          session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(), model_path.c_str(), session_options);
         }
       }
     } catch (const std::exception& ex) {
@@ -59,9 +61,7 @@ void BaseOnnxRunner::init_model(const std::shared_ptr<spench::NetworkConfig> con
     const auto& session_options = get_ort_session_options_gpu(num_threads, false);
     try {
       if (session_ptr_ == nullptr) {
-        session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(),
-                                                        config->model_path().c_str(),
-                                                        session_options);
+        session_ptr_ = std::make_unique<Ort::Session>(util::onnx::get_ort_env(), model_path.c_str(), session_options);
       }
     } catch (...) {
       throw OnnxValidationException("Model reading error. File does not exist!");
