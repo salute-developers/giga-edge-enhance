@@ -21,14 +21,18 @@ set(DEMO_DSP_SRC_CPP
     utils.cpp
     )
 
-add_executable(demo_cpp ${DEMO_SRC_CPP})
-add_executable(demo_c ${DEMO_SRC_C})
-add_executable(demo_dsp ${DEMO_DSP_SRC_CPP})
+if(NOT WIN32)
+  # These legacy examples use POSIX getopt and Unix file APIs. The supported
+  # `spench` CLI below is the cross-platform command-line application.
+  add_executable(demo_cpp ${DEMO_SRC_CPP})
+  add_executable(demo_c ${DEMO_SRC_C})
+  add_executable(demo_dsp ${DEMO_DSP_SRC_CPP})
 
-foreach(_demo_target demo_cpp demo_c demo_dsp)
-  spench_apply_build_config(${_demo_target})
-  target_include_directories(${_demo_target} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/..")
-endforeach()
+  foreach(_demo_target demo_cpp demo_c demo_dsp)
+    spench_apply_build_config(${_demo_target})
+    target_include_directories(${_demo_target} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/..")
+  endforeach()
+endif()
 
 if(BUILD_RESAMPLER)
   list(APPEND DEMO_LIBS soxr)
@@ -38,18 +42,20 @@ if (BUILD_TFLITE_ENGINE)
   list(APPEND DEMO_LIBS util__tf_lite)
 elseif (BUILD_ONNX_ENGINE)
   list(APPEND DEMO_LIBS util__onnx)
-  if (NOT APPLE)
+  if (UNIX AND NOT APPLE)
     list(APPEND DEMO_LIBS gomp)
   endif()
 endif()
 
-target_link_libraries(demo_cpp PRIVATE ${DEMO_LIBS})
-target_link_libraries(demo_c PRIVATE ${DEMO_LIBS})
-target_link_libraries(demo_dsp PRIVATE ${DEMO_LIBS})
+if(NOT WIN32)
+  target_link_libraries(demo_cpp PRIVATE ${DEMO_LIBS})
+  target_link_libraries(demo_c PRIVATE ${DEMO_LIBS})
+  target_link_libraries(demo_dsp PRIVATE ${DEMO_LIBS})
 
-add_custom_command(TARGET demo_cpp PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/spench/tests/data/ ${CMAKE_CURRENT_BINARY_DIR}/data)
+  add_custom_command(TARGET demo_cpp PRE_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_directory
+      ${CMAKE_SOURCE_DIR}/spench/tests/data/ ${CMAKE_CURRENT_BINARY_DIR}/data)
+endif()
 
 # new demo app
 

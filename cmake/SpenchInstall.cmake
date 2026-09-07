@@ -24,8 +24,14 @@ install(
 )
 
 if(TARGET spench_demo)
+  set(_spench_cli_install_targets spench_demo)
+  foreach(_spench_legacy_demo demo_cpp demo_c demo_dsp)
+    if(TARGET ${_spench_legacy_demo})
+      list(APPEND _spench_cli_install_targets ${_spench_legacy_demo})
+    endif()
+  endforeach()
   install(
-    TARGETS spench_demo demo_cpp demo_c demo_dsp
+    TARGETS ${_spench_cli_install_targets}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     COMPONENT spench_demo
   )

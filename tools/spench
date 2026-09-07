@@ -82,7 +82,7 @@ DEPENDENCY_RECIPE_INPUTS = (
     ROOT / "platform_wrappers/ios/cmake/ios.toolchain.cmake",
     ROOT / "spench/contrib/CMakeLists.txt",
 )
-DEPENDENCY_BUNDLE_FORMAT = 4
+DEPENDENCY_BUNDLE_FORMAT = 5
 # A compiled engine bundle is defined by:
 #   1. the export/package procedure version (DEPENDENCY_BUNDLE_FORMAT),
 #   2. the toolchain that produced it (SPENCH_TOOLCHAIN_IDENTITY),
@@ -520,6 +520,22 @@ def copy_onnx_headers(prefix: Path) -> None:
     shutil.copytree(source_roots[-1] / "onnxruntime", destination, dirs_exist_ok=True)
 
 
+def copy_header_tree(source: Path, destination: Path) -> None:
+    """Copy compiler-consumed headers without packaging dependency sources."""
+    header_suffixes = {".h", ".hh", ".hpp", ".inc"}
+    copied = 0
+    for path in source.rglob("*"):
+        if not path.is_file() or path.suffix not in header_suffixes:
+            continue
+        output = destination / path.relative_to(source)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, output)
+        copied += 1
+    if copied == 0:
+        raise SystemExit(f"No public headers were found below {source}.")
+    print(f"Copied {copied} public headers from {source}.")
+
+
 def copy_tflite_headers(prefix: Path, build_dir: Path | None = None) -> None:
     """Copy TFLite's public headers and its header-only public dependencies."""
     source_roots = []
@@ -529,7 +545,7 @@ def copy_tflite_headers(prefix: Path, build_dir: Path | None = None) -> None:
     source_roots = sorted(set(source_roots))
     if not source_roots:
         raise SystemExit("TensorFlow Lite headers were not found after CPM preparation.")
-    shutil.copytree(source_roots[-1], prefix / "include" / "tensorflow", dirs_exist_ok=True)
+    copy_header_tree(source_roots[-1] / "lite", prefix / "include" / "tensorflow" / "lite")
     if build_dir is None:
         return
 
@@ -546,7 +562,7 @@ def copy_tflite_headers(prefix: Path, build_dir: Path | None = None) -> None:
         for _ in range(parents):
             source = source.parent
         source = source.parent
-        shutil.copytree(source, prefix / "include" / directory, dirs_exist_ok=True)
+        copy_header_tree(source, prefix / "include" / directory)
 
 
 def copy_static_archives(prefix: Path, build_dir: Path) -> list[Path]:
