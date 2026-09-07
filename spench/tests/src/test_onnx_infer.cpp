@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <catch.hpp>
+#include <filesystem>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -61,7 +62,7 @@ struct TestOnnx {
   }
 
   TestOnnx& init_model(const std::string& model_name) {
-    std::string full_model_path = data_root + "models/" + model_name;
+    const auto full_model_path = std::filesystem::u8path(data_root + "models/" + model_name);
 
     denoiser = std::unique_ptr<Ort::Session>(new Ort::Session(session_env, full_model_path.c_str(), session_options));
     return *this;

@@ -7,5 +7,4 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
     -p "$ROOT_DIR" \
     :spench-sdk:assembleRelease \
     :spench-model-full24k:assembleRelease \
-    :spench-model-full48k:assembleRelease \
-    :demo-app:assembleRelease
+    :spench-model-full48k:assembleRelease

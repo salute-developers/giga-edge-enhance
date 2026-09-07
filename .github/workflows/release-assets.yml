@@ -29,7 +29,7 @@ jobs:
         run: tools/spench test ${{ matrix.preset }}
       - name: Package ${{ matrix.preset }}
         run: tools/spench package ${{ matrix.preset }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.preset }}
           path: out/artifacts/${{ matrix.preset }}
@@ -47,8 +47,14 @@ jobs:
         run: tools/spench build android
       - name: Test Android Release
         run: tools/spench test android
-      - run: tar -C platform_wrappers/android -czf out/artifacts/spench-android-${{ github.ref_name }}.tar.gz --exclude='build' spench-sdk/build/outputs spench-model-full24k/build/outputs spench-model-full48k/build/outputs
-      - uses: actions/upload-artifact@v4
+      - name: Package Android AARs
+        run: |
+          mkdir -p out/artifacts
+          tar -czf out/artifacts/spench-android-${{ github.ref_name }}.tar.gz \
+            platform_wrappers/android/spench-sdk/build/outputs/aar/*-release.aar \
+            platform_wrappers/android/spench-model-full24k/build/outputs/aar/*-release.aar \
+            platform_wrappers/android/spench-model-full48k/build/outputs/aar/*-release.aar
+      - uses: actions/upload-artifact@v7
         with:
           name: android
           path: out/artifacts/spench-android-${{ github.ref_name }}.tar.gz
@@ -64,7 +70,7 @@ jobs:
   #         preset: ios
   #     - run: tools/spench build ios --host
   #     - run: tar -C platform_wrappers/ios/build/xcframework -czf ../../../out/artifacts/spench-ios-${{ github.ref_name }}.tar.gz SpenchAudioKit.xcframework SpenchModelLite8k.bundle SpenchModelQuality48k.bundle
-  #     - uses: actions/upload-artifact@v4
+  #     - uses: actions/upload-artifact@v7
   #       with:
   #         name: ios
   #         path: out/artifacts/spench-ios-${{ github.ref_name }}.tar.gz
@@ -93,7 +99,7 @@ jobs:
   #         preset: ${{ matrix.preset }}
   #     - run: tools/spench install ${{ matrix.preset }} --host
   #     - run: tar -C out/artifacts/install -czf out/artifacts/spench-${{ matrix.preset }}-${{ github.ref_name }}.tar.gz ${{ matrix.preset }}
-  #     - uses: actions/upload-artifact@v4
+  #     - uses: actions/upload-artifact@v7
   #       with:
   #         name: ${{ matrix.preset }}
   #         path: out/artifacts/spench-${{ matrix.preset }}-${{ github.ref_name }}.tar.gz
@@ -115,7 +121,7 @@ jobs:
   #     - run: python tools/spench install ${{ matrix.preset }} --host
   #     - shell: bash
   #       run: tar -C out/artifacts/install -czf out/artifacts/spench-${{ matrix.preset }}-${{ github.ref_name }}.tar.gz ${{ matrix.preset }}
-  #     - uses: actions/upload-artifact@v4
+  #     - uses: actions/upload-artifact@v7
   #       with:
   #         name: ${{ matrix.preset }}
   #         path: out/artifacts/spench-${{ matrix.preset }}-${{ github.ref_name }}.tar.gz
@@ -135,9 +141,16 @@ jobs:
         run: tools/spench test web
       - name: Package Web SDK
         run: tools/spench package web
+      - name: Install built Web SDK package
+        working-directory: platform_wrappers/web
+        run: |
+          package="$(find "$GITHUB_WORKSPACE/out/artifacts/web" -maxdepth 1 -name '*.tgz' -print -quit)"
+          test -n "$package"
+          npm install --no-save --package-lock=false --workspaces=false --prefix apps/spench-site "$package"
+          test -f apps/spench-site/node_modules/@gigaedge/spench-web-sdk/dist/index.d.ts
       - name: Test Web Playwright
         run: tools/spench test web-playwright
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: web-sdk
           path: out/artifacts/web/*.tgz
@@ -146,7 +159,7 @@ jobs:
     needs: [native, android, web] # , ios, macos, windows
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: release-assets
           merge-multiple: true

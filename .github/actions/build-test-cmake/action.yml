@@ -96,7 +96,7 @@ runs:
         $python_command tools/spench install "$PRESET" "${host_argument[@]}"
 
     - name: Upload installed ${{ inputs.preset }} SDK
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: spench-install-${{ inputs.preset }}-${{ github.sha }}
         path: out/artifacts/install/${{ inputs.preset }}
@@ -123,7 +123,7 @@ runs:
 
     - name: Upload packaged ${{ inputs.preset }} SDK
       if: inputs.package == 'true'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: spench-package-${{ inputs.preset }}-${{ github.sha }}
         path: out/artifacts/${{ inputs.preset }}

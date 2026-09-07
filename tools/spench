@@ -1200,7 +1200,7 @@ def web_workflow(action: str, host: bool) -> None:
         return
 
     if action == "playwright":
-        installed_sdk = web_dir / "node_modules/@gigaedge/spench-web-sdk/package.json"
+        installed_sdk = web_dir / "apps/spench-site/node_modules/@gigaedge/spench-web-sdk/package.json"
         if not installed_sdk.is_file():
             raise SystemExit(
                 "The packed Web SDK is not installed. Install the downloaded package into "

@@ -180,6 +180,8 @@ elseif (BUILD_ONNX_ENGINE)
           OPTIONAL
             cpuinfo
             cpuinfo_internals
+            onnxruntime_mlas_arm64
+            onnxruntime_mlas_x86_64
         )
       else()
         spench_define_dependency_bundle_target(REQUIRED onnxruntime)
