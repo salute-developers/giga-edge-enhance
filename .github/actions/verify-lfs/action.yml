@@ -4,6 +4,10 @@ description: Fail early when actions/checkout leaves LFS pointer files in the wo
 runs:
   using: composite
   steps:
+    - name: Materialize fetched Git LFS objects
+      shell: bash
+      run: git lfs checkout
+
     - name: Verify Git LFS files are materialized
       shell: bash
       run: |
@@ -42,7 +46,7 @@ runs:
                 details.append("still LFS pointers: " + ", ".join(pointers))
             raise SystemExit(
                 "Git LFS checkout is incomplete (" + "; ".join(details) + "). "
-                "Repair the runner's smudge filter and remove its stale repository workspace."
+                "Confirm actions/checkout uses lfs: true and inspect the Git LFS fetch output."
             )
 
         print(f"Verified {len(files)} materialized Git LFS files.")

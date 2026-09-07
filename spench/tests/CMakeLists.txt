@@ -49,7 +49,7 @@ if (BUILD_TFLITE_ENGINE)
 elseif (BUILD_ONNX_ENGINE)
   target_link_libraries(spench_tests PRIVATE util__onnx)
 
-  if (NOT APPLE)
+  if (UNIX AND NOT APPLE)
     target_link_libraries(spench_tests PRIVATE gomp)
   endif()
 endif()

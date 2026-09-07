@@ -144,6 +144,12 @@ elseif (BUILD_ONNX_ENGINE)
       set(onnxruntime_BUILD_SHARED_LIB ON)
     endif()
 
+    if(MSVC)
+      # Protobuf defaults to the static MSVC runtime even when it is linked into
+      # ONNX Runtime's DLL. Match CMake's /MD default for the complete graph.
+      set(protobuf_MSVC_STATIC_RUNTIME OFF CACHE BOOL "" FORCE)
+    endif()
+
     # Keep ONNX Runtime's own dependencies static. onnxruntime_BUILD_SHARED_LIB
     # already selects the engine linkage, and the bundle ships only the engine
     # library, so onnx and onnx_proto have to end up inside it. A shared
