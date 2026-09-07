@@ -15,11 +15,17 @@ CORE_INPUTS=(
 
 cd "$REPO_DIR"
 
+archive_contains_onnxruntime() {
+  xcrun nm -gjU "$1" | grep -Fx '_OrtGetApiBase' >/dev/null
+}
+
 core_is_current() {
   [[ -f "$ARTIFACT_DIR/device/libspench.a" ]] || return 1
   [[ -f "$ARTIFACT_DIR/simulator/libspench.a" ]] || return 1
   [[ -d "$REPO_DIR/out/build/ios-device-release" ]] || return 1
   [[ -d "$REPO_DIR/out/build/ios-simulator-release" ]] || return 1
+  archive_contains_onnxruntime "$ARTIFACT_DIR/device/libspench.a" || return 1
+  archive_contains_onnxruntime "$ARTIFACT_DIR/simulator/libspench.a" || return 1
 
   local reference="$CORE_STAMP"
   if [[ ! -f "$reference" ]]; then
@@ -47,11 +53,16 @@ build_target() {
 merge_archives() {
   local build_dir="$1"
   local output_path="$2"
+  local prebuilt_root="$3"
 
   local archives=()
+  local archive_roots=("$build_dir")
+  if [[ -n "$prebuilt_root" && -d "$prebuilt_root/lib/archives" ]]; then
+    archive_roots+=("$prebuilt_root/lib/archives")
+  fi
   while IFS= read -r archive; do
     archives+=("$archive")
-  done < <(find "$build_dir" -type f -name '*.a' -print | LC_ALL=C sort)
+  done < <(find "${archive_roots[@]}" -type f -name '*.a' -print | LC_ALL=C sort)
 
   if [[ "${#archives[@]}" -eq 0 ]]; then
     echo "error: no static archives were produced in $build_dir" >&2
@@ -61,6 +72,10 @@ merge_archives() {
   mkdir -p "$(dirname "$output_path")"
   rm -f "$output_path"
   xcrun libtool -static -o "$output_path" "${archives[@]}"
+  if ! archive_contains_onnxruntime "$output_path"; then
+    echo "error: merged iOS core archive does not contain ONNX Runtime" >&2
+    exit 1
+  fi
 }
 
 if core_is_current; then
@@ -72,8 +87,14 @@ fi
 build_target ios-device-release
 build_target ios-simulator-release
 
-merge_archives "$REPO_DIR/out/build/ios-device-release" "$ARTIFACT_DIR/device/libspench.a"
-merge_archives "$REPO_DIR/out/build/ios-simulator-release" "$ARTIFACT_DIR/simulator/libspench.a"
+merge_archives \
+  "$REPO_DIR/out/build/ios-device-release" \
+  "$ARTIFACT_DIR/device/libspench.a" \
+  "${SPENCH_PREBUILT_ORT_DEVICE_ROOT:-}"
+merge_archives \
+  "$REPO_DIR/out/build/ios-simulator-release" \
+  "$ARTIFACT_DIR/simulator/libspench.a" \
+  "${SPENCH_PREBUILT_ORT_SIMULATOR_ROOT:-}"
 touch "$CORE_STAMP"
 
 echo "Built device static library: $ARTIFACT_DIR/device/libspench.a"
