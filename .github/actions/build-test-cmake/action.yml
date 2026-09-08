@@ -81,7 +81,7 @@ runs:
         name: spench-install-${{ inputs.preset }}-${{ github.sha }}
         path: out/artifacts/install/${{ inputs.preset }}
         if-no-files-found: error
-        retention-days: 14
+        retention-days: 1
 
     - name: Package ${{ inputs.preset }}
       if: inputs.package == 'true'
@@ -103,4 +103,4 @@ runs:
         name: spench-package-${{ inputs.preset }}-${{ github.sha }}
         path: out/artifacts/${{ inputs.preset }}
         if-no-files-found: error
-        retention-days: 14
+        retention-days: 1

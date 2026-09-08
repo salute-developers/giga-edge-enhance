@@ -33,6 +33,7 @@ jobs:
         with:
           name: ${{ matrix.preset }}
           path: out/artifacts/${{ matrix.preset }}
+          retention-days: 1
 
   android:
     runs-on: ubuntu-24.04
@@ -58,6 +59,7 @@ jobs:
         with:
           name: android
           path: out/artifacts/spench-android-${{ github.ref_name }}.tar.gz
+          retention-days: 1
 
   # ios:
   #   runs-on: macos-14
@@ -154,6 +156,7 @@ jobs:
         with:
           name: web-sdk
           path: out/artifacts/web/*.tgz
+          retention-days: 1
 
   release:
     needs: [native, android, web] # , ios, macos, windows

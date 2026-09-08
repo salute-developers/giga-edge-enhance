@@ -439,14 +439,14 @@ jobs:
           name: spench-web-sdk-${{ github.sha }}
           path: out/artifacts/web/*.tgz
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
       - name: Upload Web site
         uses: actions/upload-artifact@v7
         with:
           name: spench-web-site-${{ github.sha }}
           path: platform_wrappers/web/apps/spench-site/build
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
   web-playwright:
     name: Test Web Playwright
@@ -501,7 +501,7 @@ jobs:
             platform_wrappers/web/apps/spench-site/playwright-report
             platform_wrappers/web/apps/spench-site/test-results
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 1
 
   preview:
     name: Publish PR web preview
@@ -631,7 +631,7 @@ jobs:
             platform_wrappers/android/**/build/reports/androidTests/**
             platform_wrappers/android/**/build/outputs/androidTest-results/**
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 1
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -641,7 +641,7 @@ jobs:
             platform_wrappers/android/spench-model-full24k/build/outputs/aar/*-release.aar
             platform_wrappers/android/spench-model-full48k/build/outputs/aar/*-release.aar
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
   deps-macos-arm64-onnx:
     name: Build macOS arm64 ONNX Release dependency OCI
@@ -969,4 +969,4 @@ jobs:
           name: spench-ios-${{ github.sha }}
           path: platform_wrappers/ios/build/xcframework
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
