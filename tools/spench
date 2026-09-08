@@ -1206,12 +1206,22 @@ def web_workflow(action: str, host: bool) -> None:
                 "The packed Web SDK is not installed. Install the downloaded package into "
                 "@gigaedge/spench-site before running Playwright.")
         stage = None if host else "web"
+        browser_cache_host = ROOT / "out/cache/playwright"
+        browser_cache_host.mkdir(parents=True, exist_ok=True)
+        browser_cache = (str(browser_cache_host) if host else
+                         f"/workspace/{browser_cache_host.relative_to(ROOT)}")
+        playwright_environment = {"PLAYWRIGHT_BROWSERS_PATH": browser_cache}
+        run_web_node(["npx", "playwright", "install", "chromium"],
+                     container_stage=stage, environment=playwright_environment,
+                     workdir=web_dir, isolate_node_modules=False)
         run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-site"],
-                     container_stage=stage, environment={"SPENCH_SITE_BASE": "/"},
+                     container_stage=stage,
+                     environment={**playwright_environment, "SPENCH_SITE_BASE": "/"},
                      workdir=web_dir, isolate_node_modules=False)
         run_web_node(["npm", "run", "pw:test", "--workspace=@gigaedge/spench-site"],
                      container_stage=stage,
-                     environment={"PLAYWRIGHT_WORKERS": "1"}, workdir=web_dir,
+                     environment={**playwright_environment, "PLAYWRIGHT_WORKERS": "1"},
+                     workdir=web_dir,
                      isolate_node_modules=False)
         return
 

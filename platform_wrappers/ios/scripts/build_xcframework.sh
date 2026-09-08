@@ -65,6 +65,7 @@ for test_scheme in SpenchAudioKit AudioDemoApp; do
     -configuration Release \
     -destination "generic/platform=iOS Simulator" \
     -derivedDataPath "$TEST_BUILD_DIR" \
+    ENABLE_TESTABILITY=YES \
     CODE_SIGNING_ALLOWED=NO
 done
 
