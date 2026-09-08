@@ -89,9 +89,9 @@ jobs:
         with:
           preset: windows-x64-release-static-tflite
       - name: Build Windows static Release
-        run: python tools/spench build windows-x64-release-static-tflite --host
+        run: python tools/spench build windows-x64-release-static-tflite
       - name: Test Windows static Release
-        run: python tools/spench test windows-x64-release-static-tflite --host
+        run: python tools/spench test windows-x64-release-static-tflite
 
   web-debug:
     name: Build and test Web Debug internals

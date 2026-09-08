@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+# Development-only toolchain base. Source and build outputs are mounted at runtime.
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ARG NVM_VERSION=v0.40.7
+
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+        build-essential \
+        ca-certificates \
+        ccache \
+        clang \
+        clang-tidy \
+        cpplint \
+        libclang-rt-18-dev \
+        cmake \
+        curl \
+        git \
+        ninja-build \
+        openjdk-17-jdk-headless \
+        pkg-config \
+        python3 \
+        unzip \
+        llvm \
+        zip && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /usr/local/lib/nvm && \
+    /bin/bash -o pipefail -c 'curl --fail --location --retry 3 \
+        "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh" | \
+        NVM_DIR=/usr/local/lib/nvm PROFILE=/dev/null bash'

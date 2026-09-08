@@ -11,10 +11,6 @@ inputs:
   token:
     description: GitHub token with packages:read.
     required: true
-  host:
-    description: Whether this is a host-only target.
-    required: false
-    default: 'false'
 
 runs:
   using: composite
@@ -41,18 +37,13 @@ runs:
       env:
         SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
         TARGET: ${{ inputs.target }}
-        HOST_BUILD: ${{ inputs.host }}
         DOCKER_CONFIG: ${{ runner.temp }}/spench-oras
       run: |
         python_command=python3
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
           python_command=python
         fi
-        host_argument=()
-        if [[ "$HOST_BUILD" == "true" ]]; then
-          host_argument=(--host)
-        fi
-        tag="$($python_command tools/spench dependency-key "$TARGET" "${host_argument[@]}")"
+        tag="$($python_command tools/spench dependency-key "$TARGET")"
         reference="ghcr.io/${GITHUB_REPOSITORY}/dependencies:${tag}"
         download_dir="${RUNNER_TEMP}/spench-dependency-${tag}"
         mkdir -p "$download_dir"
@@ -62,4 +53,4 @@ runs:
           echo "error: $reference did not contain a dependency archive" >&2
           exit 1
         fi
-        $python_command tools/spench restore-deps "$TARGET" "$archive" "${host_argument[@]}"
+        $python_command tools/spench restore-deps "$TARGET" "$archive"

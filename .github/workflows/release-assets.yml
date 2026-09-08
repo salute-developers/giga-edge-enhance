@@ -68,7 +68,7 @@ jobs:
   #     - uses: ./.github/actions/setup-spench-cache
   #       with:
   #         preset: ios
-  #     - run: tools/spench build ios --host
+  #     - run: tools/spench build ios
   #     - run: tar -C platform_wrappers/ios/build/xcframework -czf ../../../out/artifacts/spench-ios-${{ github.ref_name }}.tar.gz SpenchAudioKit.xcframework SpenchModelLite8k.bundle SpenchModelQuality48k.bundle
   #     - uses: actions/upload-artifact@v7
   #       with:
@@ -97,7 +97,7 @@ jobs:
   #     - uses: ./.github/actions/setup-spench-cache
   #       with:
   #         preset: ${{ matrix.preset }}
-  #     - run: tools/spench install ${{ matrix.preset }} --host
+  #     - run: tools/spench install ${{ matrix.preset }}
   #     - run: tar -C out/artifacts/install -czf out/artifacts/spench-${{ matrix.preset }}-${{ github.ref_name }}.tar.gz ${{ matrix.preset }}
   #     - uses: actions/upload-artifact@v7
   #       with:
@@ -118,7 +118,7 @@ jobs:
   #     - uses: ./.github/actions/setup-spench-cache
   #       with:
   #         preset: ${{ matrix.preset }}
-  #     - run: python tools/spench install ${{ matrix.preset }} --host
+  #     - run: python tools/spench install ${{ matrix.preset }}
   #     - shell: bash
   #       run: tar -C out/artifacts/install -czf out/artifacts/spench-${{ matrix.preset }}-${{ github.ref_name }}.tar.gz ${{ matrix.preset }}
   #     - uses: actions/upload-artifact@v7

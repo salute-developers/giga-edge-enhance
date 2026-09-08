@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+FROM spench-base AS android
+
+ARG ANDROID_COMMAND_LINE_TOOLS=11076708
+ARG ANDROID_NDK_VERSION=29.0.14206865
+ARG ANDROID_CMAKE_VERSION=3.22.1
+
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_SDK_ROOT=/opt/android-sdk
+
+RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" && \
+    curl --fail --location --retry 3 \
+        --output /tmp/android-command-line-tools.zip \
+        "https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_COMMAND_LINE_TOOLS}_latest.zip" && \
+    unzip -q /tmp/android-command-line-tools.zip -d "${ANDROID_HOME}/cmdline-tools" && \
+    mv "${ANDROID_HOME}/cmdline-tools/cmdline-tools" "${ANDROID_HOME}/cmdline-tools/latest" && \
+    rm /tmp/android-command-line-tools.zip
+
+ENV PATH=${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${PATH}
+
+RUN yes | sdkmanager --licenses && \
+    sdkmanager \
+        "platform-tools" \
+        "platforms;android-35" \
+        "build-tools;35.0.0" \
+        "cmake;${ANDROID_CMAKE_VERSION}" \
+        "ndk;${ANDROID_NDK_VERSION}"

@@ -15,10 +15,6 @@ inputs:
   token:
     required: true
     description: GitHub token with packages:read.
-  host:
-    required: false
-    default: 'false'
-    description: Build with the host toolchain.
   package:
     required: false
     default: 'false'
@@ -36,13 +32,11 @@ runs:
         target: ${{ inputs.preset }}
         toolchain-identity: ${{ inputs.toolchain-identity }}
         token: ${{ inputs.token }}
-        host: ${{ inputs.host }}
 
     - name: Build ${{ inputs.preset }}
       shell: bash
       env:
         PRESET: ${{ inputs.preset }}
-        HOST_BUILD: ${{ inputs.host }}
         SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
         SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
         SPENCH_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
@@ -51,17 +45,12 @@ runs:
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
           python_command=python
         fi
-        host_argument=()
-        if [[ "$HOST_BUILD" == "true" ]]; then
-          host_argument=(--host)
-        fi
-        $python_command tools/spench build "$PRESET" "${host_argument[@]}"
+        $python_command tools/spench build "$PRESET"
 
     - name: Test ${{ inputs.preset }}
       shell: bash
       env:
         PRESET: ${{ inputs.preset }}
-        HOST_BUILD: ${{ inputs.host }}
         SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
         SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
         SPENCH_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
@@ -70,17 +59,12 @@ runs:
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
           python_command=python
         fi
-        host_argument=()
-        if [[ "$HOST_BUILD" == "true" ]]; then
-          host_argument=(--host)
-        fi
-        $python_command tools/spench test "$PRESET" "${host_argument[@]}"
+        $python_command tools/spench test "$PRESET"
 
     - name: Install ${{ inputs.preset }}
       shell: bash
       env:
         PRESET: ${{ inputs.preset }}
-        HOST_BUILD: ${{ inputs.host }}
         SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
         SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
         SPENCH_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
@@ -89,11 +73,7 @@ runs:
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
           python_command=python
         fi
-        host_argument=()
-        if [[ "$HOST_BUILD" == "true" ]]; then
-          host_argument=(--host)
-        fi
-        $python_command tools/spench install "$PRESET" "${host_argument[@]}"
+        $python_command tools/spench install "$PRESET"
 
     - name: Upload installed ${{ inputs.preset }} SDK
       uses: actions/upload-artifact@v7
@@ -108,18 +88,13 @@ runs:
       shell: bash
       env:
         PRESET: ${{ inputs.preset }}
-        HOST_BUILD: ${{ inputs.host }}
         SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
       run: |
         python_command=python3
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
           python_command=python
         fi
-        host_argument=()
-        if [[ "$HOST_BUILD" == "true" ]]; then
-          host_argument=(--host)
-        fi
-        $python_command tools/spench package "$PRESET" "${host_argument[@]}"
+        $python_command tools/spench package "$PRESET"
 
     - name: Upload packaged ${{ inputs.preset }} SDK
       if: inputs.package == 'true'

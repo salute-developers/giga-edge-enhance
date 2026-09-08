@@ -21,5 +21,6 @@ tools/spench build ios
 tools/spench test ios
 ```
 
-Docker is the default for native, WebAssembly, Android, and web targets. iOS uses the host Xcode
-toolchain. Use `--host` only when the matching local toolchain is already installed.
+Docker is the default for native, WebAssembly, Android, and web targets. Use `--host` only when
+running one of those targets with an installed local toolchain. macOS, iOS, and Windows always use
+their host toolchains.

@@ -42,17 +42,19 @@ jobs:
           echo "identity=$(tools/spench recipe-key native)" >> "$GITHUB_OUTPUT"
       - id: build
         name: Build native toolchain
-        uses: docker/build-push-action@v7
+        uses: docker/bake-action@v7
         with:
-          context: .
-          target: native
-          push: true
+          source: .
+          files: docker-bake.hcl
+          targets: native
           # Skip buildx attestations so a single-platform image manifest is
           # published; the pinned recipe key is our reproducible identity.
           provenance: false
-          tags: ${{ steps.metadata.outputs.image }}
-          cache-from: type=gha,scope=toolchain-native
-          cache-to: type=gha,mode=max,scope=toolchain-native
+          set: |
+            native.tags=${{ steps.metadata.outputs.image }}
+            native.output=type=registry
+            native.cache-from=type=gha,scope=toolchain-native
+            native.cache-to=type=gha,mode=max,scope=toolchain-native
 
   toolchain-web:
     name: Build Web toolchain image
@@ -80,17 +82,19 @@ jobs:
           echo "identity=$(tools/spench recipe-key web)" >> "$GITHUB_OUTPUT"
       - id: build
         name: Build Web toolchain
-        uses: docker/build-push-action@v7
+        uses: docker/bake-action@v7
         with:
-          context: .
-          target: web
-          push: true
+          source: .
+          files: docker-bake.hcl
+          targets: web
           # Skip buildx attestations so a single-platform image manifest is
           # published; the pinned recipe key is our reproducible identity.
           provenance: false
-          tags: ${{ steps.metadata.outputs.image }}
-          cache-from: type=gha,scope=toolchain-web
-          cache-to: type=gha,mode=max,scope=toolchain-web
+          set: |
+            web.tags=${{ steps.metadata.outputs.image }}
+            web.output=type=registry
+            web.cache-from=type=gha,scope=toolchain-web
+            web.cache-to=type=gha,mode=max,scope=toolchain-web
 
   toolchain-android:
     name: Build Android toolchain image
@@ -118,17 +122,19 @@ jobs:
           echo "identity=$(tools/spench recipe-key android)" >> "$GITHUB_OUTPUT"
       - id: build
         name: Build Android toolchain
-        uses: docker/build-push-action@v7
+        uses: docker/bake-action@v7
         with:
-          context: .
-          target: android
-          push: true
+          source: .
+          files: docker-bake.hcl
+          targets: android
           # Skip buildx attestations so a single-platform image manifest is
           # published; the pinned recipe key is our reproducible identity.
           provenance: false
-          tags: ${{ steps.metadata.outputs.image }}
-          cache-from: type=gha,scope=toolchain-android
-          cache-to: type=gha,mode=max,scope=toolchain-android
+          set: |
+            android.tags=${{ steps.metadata.outputs.image }}
+            android.output=type=registry
+            android.cache-from=type=gha,scope=toolchain-android
+            android.cache-to=type=gha,mode=max,scope=toolchain-android
 
   commits:
     name: Check conventional commits
@@ -634,7 +640,6 @@ jobs:
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
-          host: 'true'
 
   deps-macos-arm64-tflite:
     name: Build macOS arm64 TFLite Release dependency OCI
@@ -660,7 +665,6 @@ jobs:
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
-          host: 'true'
 
   macos-arm64-onnx:
     name: Build and test macOS arm64 Release (ONNX)
@@ -679,7 +683,6 @@ jobs:
           preset: macos-arm64-release-onnx
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          host: 'true'
 
   macos-arm64-tflite:
     name: Build and test macOS arm64 Release (TFLite)
@@ -698,7 +701,6 @@ jobs:
           preset: macos-arm64-release-tflite
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          host: 'true'
 
   deps-macos-intel-onnx:
     name: Build macOS x86_64 ONNX Release dependency OCI
@@ -724,7 +726,6 @@ jobs:
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
-          host: 'true'
 
   deps-macos-intel-tflite:
     name: Build macOS x86_64 TFLite Release dependency OCI
@@ -750,7 +751,6 @@ jobs:
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
-          host: 'true'
 
   macos-intel-onnx:
     name: Build and test macOS x86_64 Release (ONNX)
@@ -769,7 +769,6 @@ jobs:
           preset: macos-x86_64-release-onnx
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          host: 'true'
 
   macos-intel-tflite:
     name: Build and test macOS x86_64 Release (TFLite)
@@ -788,7 +787,6 @@ jobs:
           preset: macos-x86_64-release-tflite
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          host: 'true'
 
   deps-windows-onnx:
     name: Build Windows x86_64 ONNX Release dependency OCI
@@ -814,7 +812,6 @@ jobs:
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
-          host: 'true'
 
   deps-windows-tflite:
     name: Build Windows x86_64 TFLite Release dependency OCI
@@ -840,7 +837,6 @@ jobs:
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
-          host: 'true'
 
   windows-onnx:
     name: Build and test Windows x86_64 Release (ONNX)
@@ -859,7 +855,6 @@ jobs:
           preset: windows-x64-release-onnx
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          host: 'true'
 
   windows-tflite:
     name: Build and test Windows x86_64 Release (TFLite)
@@ -878,7 +873,6 @@ jobs:
           preset: windows-x64-release-tflite
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          host: 'true'
 
   deps-ios:
     name: Build iOS ${{ matrix.slice }} Release dependency OCI
@@ -908,7 +902,6 @@ jobs:
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
           github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
-          host: 'true'
 
   ios:
     name: Build and test iOS Release
@@ -930,21 +923,19 @@ jobs:
           target: ios-device-release
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          host: 'true'
       - uses: ./.github/actions/setup-spench-dependency
         with:
           target: ios-simulator-release
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          host: 'true'
       - name: Build iOS Release
         env:
           SPENCH_TOOLCHAIN_IDENTITY: ${{ steps.toolchain.outputs.identity }}
-        run: tools/spench build ios --host
+        run: tools/spench build ios
       - name: Test iOS Release
         env:
           SPENCH_TOOLCHAIN_IDENTITY: ${{ steps.toolchain.outputs.identity }}
-        run: tools/spench test ios --host
+        run: tools/spench test ios
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v7
         with:
