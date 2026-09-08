@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.2">
 <title data-rh="true">Spench website | Spench</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://gigaedge.github.io/spench/pr/1/docs/source/platform_wrappers/web/apps/spench-site/"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Spench website | Spench"><meta data-rh="true" name="description" content="This workspace builds the static Docusaurus website used for the interactive Web SDK workbench and"><meta data-rh="true" property="og:description" content="This workspace builds the static Docusaurus website used for the interactive Web SDK workbench and"><link data-rh="true" rel="icon" href="/spench/pr/1/img/favicon.svg"><link data-rh="true" rel="canonical" href="https://gigaedge.github.io/spench/pr/1/docs/source/platform_wrappers/web/apps/spench-site/"><link data-rh="true" rel="alternate" href="https://gigaedge.github.io/spench/pr/1/docs/source/platform_wrappers/web/apps/spench-site/" hreflang="en"><link data-rh="true" rel="alternate" href="https://gigaedge.github.io/spench/pr/1/docs/source/platform_wrappers/web/apps/spench-site/" hreflang="x-default"><script src="/spench/pr/1/coi-serviceworker.min.js"></script><link rel="stylesheet" href="/spench/pr/1/assets/css/styles.7e8fe835.css">
-<script src="/spench/pr/1/assets/js/runtime~main.e4b05437.js" defer="defer"></script>
+<script src="/spench/pr/1/assets/js/runtime~main.39ea1e51.js" defer="defer"></script>
 <script src="/spench/pr/1/assets/js/main.a8c9e62b.js" defer="defer"></script>
 </head>
 <body>
@@ -33,8 +33,8 @@ their canonical locations.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="browser-tests">Browser tests<a href="#browser-tests" class="hash-link" aria-label="Direct link to Browser tests" title="Direct link to Browser tests" translate="no">​</a></h2>
 <div class="language-bash codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#F8F8F2;--prism-background-color:#282A36"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-bash codeBlock_TAPP thin-scrollbar" style="color:#F8F8F2;background-color:#282A36"><code class="codeBlockLines_AdAo"><div class="token-line" style="color:#F8F8F2"><span class="token plain">cd platform_wrappers/web</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">npm run pw:test --workspace=@gigaedge/spench-site</span><br></div></code></pre></div></div>
 <p>Playwright starts the production build automatically unless <code>PUBLIC_INDEX_URL</code> points to an existing
-deployment. The 8 kHz denoiser scenarios are temporarily skipped because the resampler path is under
-investigation; the test declarations remain in place so they can be re-enabled with a focused change.</p>
+deployment. The suite covers the 8 kHz denoiser in processing, benchmark, MOS, and feature-switching
+scenarios.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="github-pages">GitHub Pages<a href="#github-pages" class="hash-link" aria-label="Direct link to GitHub Pages" title="Direct link to GitHub Pages" translate="no">​</a></h2>
 <p>Set <code>SPENCH_SITE_BASE</code> to the repository path, including surrounding slashes, when building a project
 site. For example:</p>
