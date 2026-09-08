@@ -2,8 +2,6 @@ import { test, expect, Page, Download } from '@playwright/test';
 import { join } from 'path';
 import { stat, mkdir } from 'fs/promises';
 
-const RESAMPLER_8K_SKIP_REASON = 'Skipped while the 8 kHz resampler failure is under investigation.';
-
 const setFeature = async (page: Page, testId: string, value: boolean | string) => {
     const element = page.getByTestId(testId);
     const type = await element.getAttribute('type');
@@ -113,6 +111,8 @@ runFeatureSwitchingTest('Feature switching test. SharedArrayBuffer transport.', 
     transportSelect: 'shared',
 });
 
-test.skip('Feature switching through the fast 8 kHz denoiser', async () => {
-    test.info().annotations.push({ type: 'issue', description: RESAMPLER_8K_SKIP_REASON });
+runFeatureSwitchingTest('Feature switching through the fast 8 kHz denoiser', {
+    transportSelect: 'shared',
+    sampleRateInput: '8000',
+    denoiserFast8: true,
 });

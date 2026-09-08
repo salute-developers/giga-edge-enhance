@@ -2,8 +2,6 @@ import { test, expect, Page, Download } from '@playwright/test';
 import { join } from 'path';
 import { stat, mkdir } from 'fs/promises';
 
-const RESAMPLER_8K_SKIP_REASON = 'Skipped while the 8 kHz resampler failure is under investigation.';
-
 const setFeature = async (page: Page, testId: string, value: boolean | string) => {
     const element = page.getByTestId(testId);
     const type = await element.getAttribute('type');
@@ -44,10 +42,8 @@ const waitForDownload = async (page: Page): Promise<string> => {
 const runSingleFeatureTest = (
     description: string,
     featureConfig: Record<string, boolean | string>,
-    skipReason?: string,
 ) => {
     test(description, async ({ page }) => {
-        test.skip(Boolean(skipReason), skipReason);
         await page.goto('/');
 
         for (const [testId, value] of Object.entries(featureConfig)) {
@@ -77,10 +73,8 @@ const runSingleFeatureTest = (
 const runBenchmarkTest = (
     description: string,
     featureConfig: Record<string, boolean | string>,
-    skipReason?: string,
 ) => {
     test(description, async ({ page }) => {
-        test.skip(Boolean(skipReason), skipReason);
         await page.goto('/');
         await page.getByTestId('benchmarkModeTab').click();
 
@@ -127,7 +121,7 @@ runSingleFeatureTest('Normalization + fast denoiser. MessageChannel transport.',
     vadNormalizationToggle: false,
     aecToggle: false,
     denoiserFast8: true,
-}, RESAMPLER_8K_SKIP_REASON);
+});
 
 runSingleFeatureTest('VAD normalization + quality denoiser. MessageChannel transport.', {
     transportSelect: 'message',
@@ -144,7 +138,7 @@ runSingleFeatureTest('VAD normalization + fast denoiser. MessageChannel transpor
     vadNormalizationToggle: true,
     aecToggle: false,
     denoiserFast8: true,
-}, RESAMPLER_8K_SKIP_REASON);
+});
 
 runSingleFeatureTest('Normalization only. SharedArrayBuffer transport.', {
     transportSelect: 'shared',
@@ -194,7 +188,6 @@ runBenchmarkTest(
         denoiserFast8: true,
         benchmarkInstancesCount: '2',
     },
-    RESAMPLER_8K_SKIP_REASON,
 );
 
 runBenchmarkTest('Multiple node benchmark. 2 nodes. VAD Normalization. SharedArrayBuffer transport.', {
@@ -229,5 +222,4 @@ runBenchmarkTest(
         denoiserFast8: true,
         benchmarkInstancesCount: '2',
     },
-    RESAMPLER_8K_SKIP_REASON,
 );

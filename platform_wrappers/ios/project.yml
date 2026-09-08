@@ -92,14 +92,6 @@ targets:
       - target: SpenchModelQuality48k
     sources:
       - path: Sources/AudioDemoApp
-    postBuildScripts:
-      - name: Copy model bundles
-        script: |
-          set -euo pipefail
-          "$SRCROOT/scripts/copy_model_bundles.sh" \
-            "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH" \
-            SpenchModelLite8k \
-            SpenchModelQuality48k
 
   SpenchAudioKitTests:
     type: bundle.unit-test
@@ -114,14 +106,6 @@ targets:
       - target: SpenchModelQuality48k
     sources:
       - path: Tests/SpenchAudioKitTests
-    postBuildScripts:
-      - name: Copy model bundles
-        script: |
-          set -euo pipefail
-          "$SRCROOT/scripts/copy_model_bundles.sh" \
-            "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH" \
-            SpenchModelLite8k \
-            SpenchModelQuality48k
 
   AudioDemoAppUITests:
     type: bundle.ui-testing
