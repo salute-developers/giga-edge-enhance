@@ -10,8 +10,6 @@ const candidatesPath = './tests/mos/candidates.json';
 const limits = JSON.parse(readFileSync(limitsPath, 'utf8'));
 const candidates = existsSync(candidatesPath) ? JSON.parse(readFileSync(candidatesPath, 'utf8')) : {};
 const MAX_CHANGE = 0.8;
-const RESAMPLER_8K_SKIP_REASON = 'Skipped while the 8 kHz resampler failure is under investigation.';
-
 test.describe.configure({ mode: 'serial' });
 
 const setFeature = async (page: Page, testId: string, value: boolean | string) => {
@@ -119,10 +117,8 @@ const runSingleFeatureTest = (
     featureSetCodename: string,
     fileName: string,
     featureConfig: Record<string, boolean | string>,
-    skipReason?: string,
 ) => {
     test(`Process ${featureSetCodename} for file: ${fileName}`, async ({ page }) => {
-        test.skip(Boolean(skipReason), skipReason);
         test.slow();
         test.setTimeout(4 * 60_000);
 
@@ -159,5 +155,5 @@ for (const fileName of sourceFiles) {
         normalizationToggle: true,
         aecToggle: false,
         denoiserFast8: true,
-    }, RESAMPLER_8K_SKIP_REASON);
+    });
 }
