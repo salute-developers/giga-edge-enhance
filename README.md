@@ -71,6 +71,9 @@ Common validation commands:
 tools/spench build native-debug-onnx
 tools/spench test native-debug-onnx
 
+# Open the native Linux container to run built command-line tools
+tools/spench shell native
+
 # Release engine coverage
 tools/spench build native-release-onnx
 tools/spench test native-release-onnx
@@ -93,6 +96,14 @@ tools/spench test android
 tools/spench build ios
 tools/spench test ios
 ```
+
+The shell starts in `/workspace`, where the repository and Linux build outputs are mounted. The host
+home directory is mounted read/write at `/host-home` and becomes the shell's home, so `cd ~` opens
+the host home and files such as `~/Music/input.wav` are available to Linux command-line tools. Project
+caches remain under `/workspace/out/cache`. The shell does not build automatically; run a native build
+first, then execute its binaries from `out/build/container-clang-llvm-tools/<preset>`. Use `exit` or
+Ctrl-D to leave the disposable container. Only use the shell with code you trust because it can modify
+files in the host home directory.
 
 ### Supported target families
 

@@ -213,7 +213,10 @@ def ensure_container_image(container_stage: str) -> str:
 def run(command: list[str], *, container_stage: str | None = None,
         environment: dict[str, str] | None = None, workdir: Path = ROOT,
         isolate_web_node_modules: bool = False,
-        devices: tuple[str, ...] = ()) -> None:
+        devices: tuple[str, ...] = (), interactive: bool = False,
+        mount_host_home: bool = False) -> None:
+    if interactive and (not sys.stdin.isatty() or not sys.stdout.isatty()):
+        raise SystemExit("The shell action requires an interactive terminal.")
     if container_stage is None:
         process_environment = os.environ.copy()
         process_environment.update(environment or {})
@@ -225,12 +228,20 @@ def run(command: list[str], *, container_stage: str | None = None,
 
     cache_home = ROOT / "out" / "cache" / "container-home"
     cache_home.mkdir(parents=True, exist_ok=True)
+    container_home = "/workspace/out/cache/container-home"
     container_command = [
         "docker", "run", "--rm", "--init", "--platform", "linux/amd64",
         "--user", f"{os.getuid()}:{os.getgid()}",
         "--volume", f"{ROOT}:/workspace",
         "--workdir", f"/workspace/{workdir.relative_to(ROOT)}",
     ]
+    if interactive:
+        container_command.extend(("--interactive", "--tty"))
+    if mount_host_home:
+        host_home = Path.home()
+        container_home = "/host-home"
+        print(f"Mounting host home {host_home} at {container_home}.")
+        container_command.extend(("--volume", f"{host_home}:{container_home}"))
     for device in devices:
         if not Path(device).exists():
             raise SystemExit(f"Required container device is unavailable: {device}")
@@ -249,7 +260,7 @@ def run(command: list[str], *, container_stage: str | None = None,
             cache_path.mkdir(parents=True, exist_ok=True)
             container_command.extend(("--volume", f"{cache_path}:{container_path}"))
     container_command.extend((
-        "--env", "HOME=/workspace/out/cache/container-home",
+        "--env", f"HOME={container_home}",
         "--env", "GRADLE_USER_HOME=/workspace/out/cache/gradle",
         "--env", "npm_config_cache=/workspace/out/cache/npm",
     ))
@@ -276,7 +287,10 @@ def run(command: list[str], *, container_stage: str | None = None,
         "sh",
         *command,
     ))
-    subprocess.run(container_command, check=True, env=container_environment)
+    process = subprocess.run(
+        container_command, check=not interactive, env=container_environment)
+    if interactive and process.returncode:
+        raise SystemExit(process.returncode)
 
 
 def add_github_git_auth(environment: dict[str, str]) -> None:
@@ -1330,7 +1344,7 @@ def prepare_platform_dependencies(target: str, host: bool) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=(
-        "build", "test", "package", "install", "core", "cache-key", "prepare-deps",
+        "build", "test", "package", "install", "core", "shell", "cache-key", "prepare-deps",
         "image-key", "recipe-key", "dependency-key", "dependency-archive",
         "restore-deps"))
     parser.add_argument(
@@ -1344,6 +1358,19 @@ def main() -> None:
     parser.add_argument("--host", action="store_true",
                         help="Use local tools instead of Docker for Native, Web, or Android.")
     args = parser.parse_args()
+
+    if args.action == "shell":
+        if args.target != "native":
+            raise SystemExit("shell expects the native target.")
+        if args.host:
+            raise SystemExit("shell always uses the native Linux container; --host is not supported.")
+        if args.artifact:
+            raise SystemExit("shell does not accept an artifact argument.")
+        shell_environment = compiler_cache_environment(True)
+        shell_environment["PS1"] = r"spench:\w\$ "
+        run(["bash", "--noprofile", "--norc"], container_stage="native",
+            environment=shell_environment, interactive=True, mount_host_home=True)
+        return
 
     if args.action == "image-key":
         if args.target not in {"native", "web", "android", "android-ui"}:
