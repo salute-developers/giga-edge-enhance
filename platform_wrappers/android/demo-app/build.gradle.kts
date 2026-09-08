@@ -7,6 +7,9 @@ plugins {
 android {
     namespace = "com.gigaedge.spench.demo"
     compileSdk = 35
+    val androidTestBuildType = providers.gradleProperty("spenchAndroidTestBuildType")
+        .getOrElse("debug")
+    testBuildType = androidTestBuildType
 
     defaultConfig {
         applicationId = "com.gigaedge.spench.demo"
@@ -24,6 +27,14 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    buildTypes {
+        getByName("release") {
+            if (androidTestBuildType == "release") {
+                signingConfig = signingConfigs.getByName("debug")
+            }
+        }
     }
 
     packaging {

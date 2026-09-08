@@ -97,7 +97,7 @@ jobs:
             web.cache-to=type=gha,mode=max,scope=toolchain-web
 
   toolchain-android:
-    name: Build Android toolchain image
+    name: Build Android toolchain images
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     timeout-minutes: 60
@@ -106,6 +106,7 @@ jobs:
       packages: write
     outputs:
       image: ${{ steps.metadata.outputs.image }}
+      ui_image: ${{ steps.metadata.outputs.ui_image }}
       identity: ${{ steps.metadata.outputs.identity }}
     steps:
       - uses: actions/checkout@v6
@@ -118,15 +119,18 @@ jobs:
       - id: metadata
         name: Resolve Android toolchain image
         run: |
-          echo "image=ghcr.io/${GITHUB_REPOSITORY}/toolchain:android-$(tools/spench image-key android)" >> "$GITHUB_OUTPUT"
-          echo "identity=$(tools/spench recipe-key android)" >> "$GITHUB_OUTPUT"
+          {
+            echo "image=ghcr.io/${GITHUB_REPOSITORY}/toolchain:android-$(tools/spench image-key android)"
+            echo "ui_image=ghcr.io/${GITHUB_REPOSITORY}/toolchain:android-ui-$(tools/spench image-key android-ui)"
+            echo "identity=$(tools/spench recipe-key android)"
+          } >> "$GITHUB_OUTPUT"
       - id: build
-        name: Build Android toolchain
+        name: Build Android toolchain images
         uses: docker/bake-action@v7
         with:
           source: .
           files: docker-bake.hcl
-          targets: android
+          targets: android,android-ui
           # Skip buildx attestations so a single-platform image manifest is
           # published; the pinned recipe key is our reproducible identity.
           provenance: false
@@ -135,6 +139,10 @@ jobs:
             android.output=type=registry
             android.cache-from=type=gha,scope=toolchain-android
             android.cache-to=type=gha,mode=max,scope=toolchain-android
+            android-ui.tags=${{ steps.metadata.outputs.ui_image }}
+            android-ui.output=type=registry
+            android-ui.cache-from=type=gha,scope=toolchain-android-ui
+            android-ui.cache-to=type=gha,mode=max,scope=toolchain-android-ui
 
   commits:
     name: Check conventional commits
@@ -562,7 +570,7 @@ jobs:
     name: Build and test Android Release
     needs: [toolchain-android, deps-android]
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v6
         with:
@@ -605,6 +613,25 @@ jobs:
         env:
           SPENCH_CONTAINER_IMAGE_ANDROID: ${{ needs.toolchain-android.outputs.image }}
         run: tools/spench test android
+      - name: Enable KVM access
+        run: |
+          test -e /dev/kvm
+          sudo chmod 666 /dev/kvm
+      - name: Test Android Release UI
+        env:
+          SPENCH_CONTAINER_IMAGE_ANDROID_UI: ${{ needs.toolchain-android.outputs.ui_image }}
+        run: tools/spench test android-ui
+      - name: Upload Android UI test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-ui-diagnostics-${{ github.sha }}
+          path: |
+            out/artifacts/android-emulator.log
+            platform_wrappers/android/**/build/reports/androidTests/**
+            platform_wrappers/android/**/build/outputs/androidTest-results/**
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v7
         with:

@@ -31,3 +31,12 @@ target "android" {
     spench-base = "target:base"
   }
 }
+
+target "android-ui" {
+  context    = "."
+  dockerfile = "dockerfiles/Dockerfile.android-ui"
+  platforms  = ["linux/amd64"]
+  contexts = {
+    android-base = "target:android"
+  }
+}
