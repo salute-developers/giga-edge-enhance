@@ -56,11 +56,12 @@ Platform SDK consumers should use the model packages documented for that platfor
 Run commands from the repository root:
 
 ```bash
-tools/spench <build|test|package|install|core|cache-key|prepare-deps|prepare-image> <target> [--host]
+tools/spench <build|test|package|install|core|cache-key|prepare-deps> <target> [--host]
 ```
 
-Docker is the default where supported. Use `--host` only when the matching local toolchain is already
-installed. iOS always uses the host Xcode toolchain. Commands are deliberately composable: `build`
+Docker is the default for Native, Web, and Android. Use `--host` for those targets only when the
+matching local toolchain is already installed. macOS, iOS, and Windows always use their host
+toolchains. Commands are deliberately composable: `build`
 creates outputs, while `test`, `package`, and `install` consume an existing build without rebuilding it.
 
 Common validation commands:

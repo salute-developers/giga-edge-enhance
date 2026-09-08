@@ -18,7 +18,13 @@ import tarfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCKERFILE = ROOT / "Dockerfile"
+BAKE_FILE = ROOT / "docker-bake.hcl"
+BASE_DOCKERFILE = ROOT / "dockerfiles/Dockerfile.base"
+TOOLCHAIN_DOCKERFILES = {
+    "native": ROOT / "dockerfiles/Dockerfile.native",
+    "web": ROOT / "dockerfiles/Dockerfile.web",
+    "android": ROOT / "dockerfiles/Dockerfile.android",
+}
 WEB_PACKAGE_LOCK = ROOT / "platform_wrappers/web/package-lock.json"
 # Only files whose contents are actually baked into the Web toolchain image may
 # key its tag; anything else churns the image needlessly. The Web stage installs
@@ -111,16 +117,24 @@ NATIVE_PRESETS = {
 } | set(HOST_ONLY_PRESETS)
 
 
-def recipe_key() -> str:
-    """Return the stable toolchain-compiler identity shared by every image stage.
+def update_digest_with_file(digest, path: Path) -> None:
+    """Add an unambiguous repository file entry to a content digest."""
+    digest.update(path.relative_to(ROOT).as_posix().encode())
+    digest.update(b"\0")
+    digest.update(path.read_bytes())
+    digest.update(b"\0")
 
-    All native, Web, and Android stages compile with the same multi-stage
-    Dockerfile, so its content hash is the identity that a compiled dependency
-    bundle depends on. Unlike the buildx image digest, it is reproducible across
-    runs, branches, and pull requests, so restored dependency OCI artifacts stay
-    valid as long as the Dockerfile is unchanged.
-    """
-    return hashlib.sha256(DOCKERFILE.read_bytes()).hexdigest()[:16]
+
+def toolchain_recipe_digest(container_stage: str) -> str:
+    """Return the stable compiler identity for one container toolchain."""
+    try:
+        dockerfile = TOOLCHAIN_DOCKERFILES[container_stage]
+    except KeyError as error:
+        raise ValueError(f"Unsupported container stage: {container_stage}") from error
+    digest = hashlib.sha256()
+    update_digest_with_file(digest, BASE_DOCKERFILE)
+    update_digest_with_file(digest, dockerfile)
+    return digest.hexdigest()[:16]
 
 
 def playwright_version() -> str:
@@ -134,53 +148,32 @@ def playwright_version() -> str:
 
 
 def container_image_digest(container_stage: str) -> str:
-    """Return the content-derived tag for a toolchain or dependency image stage."""
+    """Return the content-derived tag for a toolchain image."""
     image_digest = hashlib.sha256()
-    image_digest.update(DOCKERFILE.relative_to(ROOT).as_posix().encode())
-    image_digest.update(DOCKERFILE.read_bytes())
+    try:
+        dockerfile = TOOLCHAIN_DOCKERFILES[container_stage]
+    except KeyError as error:
+        raise ValueError(f"Unsupported container stage: {container_stage}") from error
+    update_digest_with_file(image_digest, BASE_DOCKERFILE)
+    update_digest_with_file(image_digest, dockerfile)
     if container_stage == "web":
         # The Web image additionally bakes Node, the MOS venv, and a pinned
         # Playwright Chromium; fold exactly those inputs so the tag tracks real
         # image containment rather than unrelated Web SDK source changes.
         for image_input in WEB_IMAGE_INPUTS:
-            image_digest.update(image_input.relative_to(ROOT).as_posix().encode())
-            image_digest.update(image_input.read_bytes())
+            update_digest_with_file(image_digest, image_input)
         image_digest.update(b"playwright=")
         image_digest.update(playwright_version().encode())
-    dependency_root = ROOT / "out" / "artifacts" / "dependencies"
-    dependency_stage_system = {
-        "deps-native": "linux",
-        "deps-wasm": "emscripten",
-        "deps-android": "android",
-        "deps-ios": "ios",
-        "deps-macos-x86_64": "macos",
-        "deps-macos-arm64": "macos",
-        "deps-windows-x64": "windows",
-    }
-    if container_stage in dependency_stage_system:
-        stage_system = dependency_stage_system[container_stage]
-        for manifest in sorted(dependency_root.rglob("manifest.json")):
-            relative_parts = manifest.relative_to(dependency_root).parts
-            if relative_parts[0] != stage_system:
-                continue
-            if container_stage == "deps-macos-x86_64" and relative_parts[1] != "x86_64":
-                continue
-            if container_stage == "deps-macos-arm64" and relative_parts[1] != "arm64":
-                continue
-            if container_stage == "deps-windows-x64" and relative_parts[1] != "x86_64":
-                continue
-            image_digest.update(manifest.relative_to(ROOT).as_posix().encode())
-            image_digest.update(manifest.read_bytes())
     return image_digest.hexdigest()[:16]
 
 
 def container_image_name(container_stage: str) -> str:
-    """Return the immutable local image name for a toolchain or dependency stage."""
+    """Return the immutable local image name for a toolchain stage."""
     return f"spench-dev:{container_stage}-{container_image_digest(container_stage)}"
 
 
 def ensure_container_image(container_stage: str) -> str:
-    """Build a stage only when its Dockerfile inputs or dependency bundles changed."""
+    """Build a toolchain only when its Dockerfile inputs changed."""
     if shutil.which("docker") is None:
         raise SystemExit("Docker is required for this target. Use --host for a local toolchain.")
     if subprocess.run(["docker", "info"], stdout=subprocess.DEVNULL,
@@ -202,15 +195,12 @@ def ensure_container_image(container_stage: str) -> str:
         print("Remote toolchain image is unavailable; building it locally.")
 
     build_command = [
-        "docker", "build", "--platform", "linux/amd64", "--target", container_stage,
-        "--tag", image,
+        "docker", "buildx", "bake", "--file", str(BAKE_FILE),
+        "--set", f"{container_stage}.tags={image}",
+        "--set", f"{container_stage}.output=type=docker",
+        container_stage,
     ]
-    if container_stage.startswith("deps-"):
-        dependency_root = ROOT / "out" / "artifacts" / "dependencies"
-        dependency_root.mkdir(parents=True, exist_ok=True)
-        build_command.extend(("--build-context", f"spench_deps={dependency_root}"))
-    build_command.append(str(ROOT))
-    subprocess.run(build_command, check=True)
+    subprocess.run(build_command, cwd=ROOT, check=True)
     return image
 
 
@@ -874,7 +864,7 @@ def prepare_dependency(preset: str, host: bool) -> Path | None:
         use_host = host or preset in HOST_ONLY_PRESETS
         stage = None if use_host else PRESET_STAGES[preset]
         container = stage is not None
-        preparation_stage = f"{stage}-base" if stage in {"native", "android"} else stage
+        preparation_stage = stage
         environment = compiler_cache_environment(container)
         target_system, target_arch = cache_target(preset, host)
         linkage = bundle_linkage(preset)
@@ -990,7 +980,7 @@ def prepare_android_tflite(abi: str, build_type: str, host: bool) -> Path:
         android_ndk = f"/opt/android-sdk/ndk/{ANDROID_NDK_VERSION}"
         source_dir = "/workspace"
         build_dir = f"/workspace/out/build/prebuilt/android/{abi}/tflite/{build_type.lower()}"
-        stage = "android-base"
+        stage = "android"
     environment = compiler_cache_environment(stage is not None)
     with artifact_lock(artifact_root):
         if manifest_path.is_file() and prefix.is_dir():
@@ -1314,59 +1304,21 @@ def prepare_platform_dependencies(target: str, host: bool) -> None:
     prepare_dependency(target, host)
 
 
-def prepare_image(target: str) -> None:
-    """Prepare dependency bundles, package them in OCI images, and export archives."""
-    if target == "native":
-        for preset in ("native-debug-onnx", "native-release-onnx",
-                       "native-release-static-onnx", "native-debug-tflite",
-                       "native-release-tflite", "native-release-static-tflite"):
-            prepare_dependency(preset, False)
-        stages = ("deps-native",)
-    elif target == "wasm":
-        for preset in ("wasm-debug", "wasm-release"):
-            prepare_dependency(preset, False)
-        stages = ("deps-wasm",)
-    elif target == "android":
-        prepare_platform_dependencies("android", False)
-        stages = ("deps-android",)
-    elif target == "ios":
-        prepare_platform_dependencies("ios", True)
-        stages = ("deps-ios",)
-    elif target == "macos":
-        prepare_platform_dependencies("macos", True)
-        stages = ("deps-macos-x86_64", "deps-macos-arm64")
-    elif target == "windows":
-        prepare_platform_dependencies("windows", True)
-        stages = ("deps-windows-x64",)
-    else:
-        raise SystemExit("prepare-image supports native, wasm, android, ios, macos, or windows.")
-
-    image_directory = ROOT / "out" / "artifacts" / "images"
-    image_directory.mkdir(parents=True, exist_ok=True)
-    for stage in stages:
-        image = ensure_container_image(stage)
-        archive = image_directory / f"{image.replace(':', '-').replace('/', '-')}.tar"
-        subprocess.run(["docker", "save", "--output", str(archive), image], check=True)
-        checksum = hashlib.sha256(archive.read_bytes()).hexdigest()
-        archive.with_suffix(archive.suffix + ".sha256").write_text(f"{checksum}  {archive.name}\n")
-        print(f"Prepared dependency image artifact: {archive.relative_to(ROOT)}")
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=(
         "build", "test", "package", "install", "core", "cache-key", "prepare-deps",
-        "prepare-image", "image-key", "recipe-key", "dependency-key", "dependency-archive",
+        "image-key", "recipe-key", "dependency-key", "dependency-archive",
         "restore-deps"))
     parser.add_argument(
         "target",
         choices=(*PRESET_STAGES, *HOST_ONLY_PRESETS, *ANDROID_DEPENDENCY_TARGETS,
-                 "android", "ios", "web", "web-playwright", "macos", "windows", "native", "wasm"),
+                 "android", "ios", "web", "web-playwright", "macos", "windows", "native"),
         help="CMake preset or platform workflow",
     )
     parser.add_argument("artifact", nargs="?", help="Archive path used by restore-deps.")
     parser.add_argument("--host", action="store_true",
-                        help="Use locally installed tools instead of Docker where Docker is the default.")
+                        help="Use local tools instead of Docker for Native, Web, or Android.")
     args = parser.parse_args()
 
     if args.action == "image-key":
@@ -1375,9 +1327,9 @@ def main() -> None:
         print(container_image_digest(args.target))
         return
     if args.action == "recipe-key":
-        # The compiler toolchain identity is Dockerfile-content-derived and shared
-        # by every container stage; the target only documents the caller's intent.
-        print(recipe_key())
+        if args.target not in {"native", "web", "android"}:
+            raise SystemExit("recipe-key expects native, web, or android.")
+        print(toolchain_recipe_digest(args.target))
         return
     if args.action == "dependency-key":
         print(dependency_tag(args.target, args.host))
@@ -1398,12 +1350,9 @@ def main() -> None:
         print_cache_keys(args.target, args.host)
         return
     if args.action == "prepare-deps":
-        if args.target in {"native", "wasm", "web"}:
+        if args.target in {"native", "web"}:
             raise SystemExit("prepare-deps expects a preset or platform workflow, not a Docker stage.")
         prepare_platform_dependencies(args.target, args.host)
-        return
-    if args.action == "prepare-image":
-        prepare_image(args.target)
         return
 
     if args.target in PRESET_STAGES or args.target in HOST_ONLY_PRESETS:
@@ -1427,7 +1376,7 @@ def main() -> None:
             raise SystemExit("The Web Playwright target supports test only.")
         web_workflow("playwright", args.host)
     else:
-        raise SystemExit(f"{args.target} is only valid with prepare-deps or prepare-image.")
+        raise SystemExit(f"{args.target} is only valid with a metadata or prepare-deps action.")
 
 
 if __name__ == "__main__":

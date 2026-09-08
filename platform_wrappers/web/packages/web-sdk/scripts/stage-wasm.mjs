@@ -128,7 +128,7 @@ if (verifyOnly) {
             await stageArtifact(tempDir, 'spench', fullBuildDir),
             await stageArtifact(tempDir, 'spench.dsp', dspBuildDir),
         ];
-        const dockerfile = await readFile(resolve(rootDir, 'Dockerfile'), 'utf8');
+        const dockerfile = await readFile(resolve(rootDir, 'dockerfiles/Dockerfile.web'), 'utf8');
         const emsdkVersion = dockerfile.match(/^ARG EMSDK_VERSION=(.+)$/m)?.[1] || 'unknown';
         const manifest = {
             schemaVersion: 1,
