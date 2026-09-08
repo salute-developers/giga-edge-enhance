@@ -1,7 +1,7 @@
 {
   "name": "Spench Native",
   "build": {
-    "dockerfile": "../dockerfiles/Dockerfile.base",
+    "dockerfile": "../dockerfiles/Dockerfile.native",
     "context": ".."
   },
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",

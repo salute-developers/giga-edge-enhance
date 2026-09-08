@@ -15,7 +15,8 @@ revisions that passed the required platform gates.
   dependency bundle is available.
 - Treat dependency and compiler caches as accelerators, never release sources.
 - Upload focused failure diagnostics rather than entire workspaces.
-- Keep static Release, sanitizer, Debug, and emulator coverage in the manual validation workflow.
+- Keep static Release, sanitizer, Web Debug, and Android Debug emulator coverage in the manual
+  validation workflow; regular CI runs Android Release emulator tests.
 - Do not expose write tokens or release secrets to forked pull requests.
 
 ## Release order

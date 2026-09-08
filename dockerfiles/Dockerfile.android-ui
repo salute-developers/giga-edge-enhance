@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+FROM android-base AS android-ui
+
+ARG ANDROID_API_LEVEL=35
+ARG ANDROID_SYSTEM_IMAGE="system-images;android-${ANDROID_API_LEVEL};google_apis;x86_64"
+
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+        libasound2t64 \
+        libdbus-1-3 \
+        libfontconfig1 \
+        libgl1 \
+        libnss3 \
+        libpulse0 \
+        libx11-6 \
+        libxcb1 \
+        libxcomposite1 \
+        libxcursor1 \
+        libxi6 \
+        libxkbfile1 \
+        libxrandr2 \
+        libxtst6 && \
+    rm -rf /var/lib/apt/lists/* && \
+    sdkmanager \
+        "emulator" \
+        "${ANDROID_SYSTEM_IMAGE}"
+
+ENV PATH=${ANDROID_HOME}/emulator:${PATH}
+ENV SPENCH_ANDROID_SYSTEM_IMAGE=${ANDROID_SYSTEM_IMAGE}

@@ -24,6 +24,7 @@ TOOLCHAIN_DOCKERFILES = {
     "native": ROOT / "dockerfiles/Dockerfile.native",
     "web": ROOT / "dockerfiles/Dockerfile.web",
     "android": ROOT / "dockerfiles/Dockerfile.android",
+    "android-ui": ROOT / "dockerfiles/Dockerfile.android-ui",
 }
 WEB_PACKAGE_LOCK = ROOT / "platform_wrappers/web/package-lock.json"
 # Only files whose contents are actually baked into the Web toolchain image may
@@ -150,6 +151,11 @@ def playwright_version() -> str:
 def container_image_digest(container_stage: str) -> str:
     """Return the content-derived tag for a toolchain image."""
     image_digest = hashlib.sha256()
+    if container_stage == "android-ui":
+        update_digest_with_file(image_digest, TOOLCHAIN_DOCKERFILES[container_stage])
+        image_digest.update(b"android-toolchain=")
+        image_digest.update(container_image_digest("android").encode())
+        return image_digest.hexdigest()[:16]
     try:
         dockerfile = TOOLCHAIN_DOCKERFILES[container_stage]
     except KeyError as error:
@@ -198,7 +204,7 @@ def ensure_container_image(container_stage: str) -> str:
         "docker", "buildx", "bake", "--file", str(BAKE_FILE),
         "--set", f"{container_stage}.tags={image}",
         "--set", f"{container_stage}.output=type=docker",
-        container_stage,
+        container_stage
     ]
     subprocess.run(build_command, cwd=ROOT, check=True)
     return image
@@ -206,7 +212,8 @@ def ensure_container_image(container_stage: str) -> str:
 
 def run(command: list[str], *, container_stage: str | None = None,
         environment: dict[str, str] | None = None, workdir: Path = ROOT,
-        isolate_web_node_modules: bool = False) -> None:
+        isolate_web_node_modules: bool = False,
+        devices: tuple[str, ...] = ()) -> None:
     if container_stage is None:
         process_environment = os.environ.copy()
         process_environment.update(environment or {})
@@ -224,6 +231,10 @@ def run(command: list[str], *, container_stage: str | None = None,
         "--volume", f"{ROOT}:/workspace",
         "--workdir", f"/workspace/{workdir.relative_to(ROOT)}",
     ]
+    for device in devices:
+        if not Path(device).exists():
+            raise SystemExit(f"Required container device is unavailable: {device}")
+        container_command.extend(("--device", device))
     if isolate_web_node_modules:
         dependency_hash = hashlib.sha256(
             (ROOT / "platform_wrappers/web/package-lock.json").read_bytes()
@@ -1139,6 +1150,18 @@ def android_workflow(action: str, host: bool) -> None:
         environment=environment)
 
 
+def android_ui_workflow() -> None:
+    environment = compiler_cache_environment(True)
+    environment["SPENCH_PREBUILT_DEPENDENCIES_ROOT"] = "/workspace/out/artifacts/dependencies"
+    environment["GRADLE_OPTS"] = (
+        "-Dorg.gradle.vfs.watch=false -Dorg.gradle.workers.max=2 "
+        "-Dorg.gradle.jvmargs=-Xmx3g"
+    )
+    run(["platform_wrappers/android/scripts/test-release-ui.sh"],
+        container_stage="android-ui", environment=environment,
+        devices=("/dev/kvm",))
+
+
 def ios_workflow(action: str) -> None:
     scripts = {
         "build": "build_xcframework.sh",
@@ -1313,7 +1336,8 @@ def main() -> None:
     parser.add_argument(
         "target",
         choices=(*PRESET_STAGES, *HOST_ONLY_PRESETS, *ANDROID_DEPENDENCY_TARGETS,
-                 "android", "ios", "web", "web-playwright", "macos", "windows", "native"),
+                 "android", "android-ui", "ios", "web", "web-playwright", "macos",
+                 "windows", "native"),
         help="CMake preset or platform workflow",
     )
     parser.add_argument("artifact", nargs="?", help="Archive path used by restore-deps.")
@@ -1322,8 +1346,8 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.action == "image-key":
-        if args.target not in {"native", "web", "android"}:
-            raise SystemExit("image-key expects native, web, or android.")
+        if args.target not in {"native", "web", "android", "android-ui"}:
+            raise SystemExit("image-key expects native, web, android, or android-ui.")
         print(container_image_digest(args.target))
         return
     if args.action == "recipe-key":
@@ -1363,6 +1387,10 @@ def main() -> None:
         if args.action not in {"build", "test"}:
             raise SystemExit("Android supports build and test.")
         android_workflow(args.action, args.host)
+    elif args.target == "android-ui":
+        if args.action != "test":
+            raise SystemExit("Android UI supports test only.")
+        android_ui_workflow()
     elif args.target == "ios":
         if args.action not in {"build", "test", "core"}:
             raise SystemExit("iOS supports build, core, and test.")

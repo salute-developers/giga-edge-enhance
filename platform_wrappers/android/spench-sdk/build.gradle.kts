@@ -8,6 +8,7 @@ android {
     namespace = "com.gigaedge.spench"
     compileSdk = 35
     ndkVersion = "29.0.14206865"
+    testBuildType = providers.gradleProperty("spenchAndroidTestBuildType").getOrElse("debug")
 
     defaultConfig {
         minSdk = 26
