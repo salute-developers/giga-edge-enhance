@@ -153,6 +153,7 @@ except RuntimeError:
     pass
 PY
 
-RUN mkdir -p "${NUMBA_CACHE_DIR}" && \
+RUN rm -rf "${NUMBA_CACHE_DIR}" && \
+    mkdir -p "${NUMBA_CACHE_DIR}" && \
     chmod 1777 "${NUMBA_CACHE_DIR}" && \
     rm -rf /root/.cache /root/.npm /tmp/spench-web/node_modules

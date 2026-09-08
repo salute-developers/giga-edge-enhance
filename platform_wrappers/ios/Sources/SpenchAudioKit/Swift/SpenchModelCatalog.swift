@@ -36,8 +36,8 @@ public enum SpenchModelCatalog {
     /// Returns all installed Spench model identifiers sorted by raw value.
     ///
     /// - Throws: ``SpenchError/invalidArgument(_:)`` if a bundle declares a
-    ///   `SpenchModelID` but is missing required metadata, or if two
-    ///   bundles declare the same `SpenchModelID`.
+    ///   `SpenchModelID` but is missing required metadata, or if distinct
+    ///   bundle products declare the same `SpenchModelID`.
     public static func availableModels() throws -> [SpenchModelDescriptor] {
         try modelEntries()
             .map(\.id)
@@ -74,13 +74,33 @@ public enum SpenchModelCatalog {
             return cached
         }
 
+        let entries = try modelEntries(in: candidateBundleURLs())
+        cacheLock.withLock {
+            cachedEntries = entries
+        }
+        return entries
+    }
+
+    static func availableModels(in bundleURLs: [URL]) throws -> [SpenchModelDescriptor] {
+        try modelEntries(in: bundleURLs)
+            .map(\.id)
+            .sorted()
+    }
+
+    private static func modelEntries(in bundleURLs: [URL]) throws -> [ModelEntry] {
         var entriesByID: [SpenchModelDescriptor: ModelEntry] = [:]
 
-        for bundleURL in try candidateBundleURLs() {
+        for bundleURL in bundleURLs.sorted(by: { $0.path < $1.path }) {
             guard let bundle = Bundle(url: bundleURL) else { continue }
             guard let entry = try modelEntry(in: bundle) else { continue }
 
             if let existingEntry = entriesByID[entry.id] {
+                // XCTest can expose copies of one bundle product through multiple discovery roots.
+                if let bundleIdentifier = entry.bundleIdentifier,
+                   !bundleIdentifier.isEmpty,
+                   existingEntry.bundleIdentifier == bundleIdentifier {
+                    continue
+                }
                 let description = "Duplicate Spench model id \(entry.id.rawValue) in bundles " +
                     "\(existingEntry.bundleURL.lastPathComponent) and \(entry.bundleURL.lastPathComponent)"
                 throw SpenchError.invalidArgument(description)
@@ -89,11 +109,7 @@ public enum SpenchModelCatalog {
             entriesByID[entry.id] = entry
         }
 
-        let entries = Array(entriesByID.values)
-        cacheLock.withLock {
-            cachedEntries = entries
-        }
-        return entries
+        return Array(entriesByID.values)
     }
 
     private static func modelEntry(in bundle: Bundle) throws -> ModelEntry? {
@@ -120,7 +136,10 @@ public enum SpenchModelCatalog {
                                      reason: "Missing model resource \(fileName).\(fileExtension)")
         }
 
-        return ModelEntry(id: modelID, url: modelURL, bundleURL: bundle.bundleURL)
+        return ModelEntry(id: modelID,
+                          url: modelURL,
+                          bundleURL: bundle.bundleURL,
+                          bundleIdentifier: bundle.bundleIdentifier)
     }
 
     private static func candidateBundleURLs() throws -> [URL] {
@@ -183,6 +202,7 @@ private struct ModelEntry {
     let id: SpenchModelDescriptor
     let url: URL
     let bundleURL: URL
+    let bundleIdentifier: String?
 }
 
 private final class SpenchBundleLocator: NSObject {}

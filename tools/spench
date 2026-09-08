@@ -1206,7 +1206,9 @@ def web_workflow(action: str, host: bool) -> None:
                 "The packed Web SDK is not installed. Install the downloaded package into "
                 "@gigaedge/spench-site before running Playwright.")
         stage = None if host else "web"
-        browser_cache_host = ROOT / "out/cache/playwright"
+        browser_platform = (f"{platform.system().lower()}-{platform.machine().lower()}"
+                            if host else "linux-amd64")
+        browser_cache_host = ROOT / "out/cache/playwright" / browser_platform
         browser_cache_host.mkdir(parents=True, exist_ok=True)
         browser_cache = (str(browser_cache_host) if host else
                          f"/workspace/{browser_cache_host.relative_to(ROOT)}")
