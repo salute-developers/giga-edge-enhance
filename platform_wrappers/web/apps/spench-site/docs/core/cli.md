@@ -10,4 +10,12 @@ arguments supported by that build.
 
 ```bash
 tools/spench build native-release-onnx
+tools/spench shell native
+
+# Inside the container
+out/build/container-clang-llvm-tools/native-release-onnx/spench/cli/demo/spench --help
 ```
+
+The shell starts in `/workspace` with the repository, user identity, and development caches mounted
+the same way as other containerized workflows. It does not build the CLI automatically. Run `exit`
+or press Ctrl-D to remove the disposable container and return to the host terminal.
