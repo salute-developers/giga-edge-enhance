@@ -48,8 +48,7 @@ npm run pw:test --workspace=@gigaedge/spench-site
 ```
 
 Playwright starts the production build automatically unless `PUBLIC_INDEX_URL` points to an existing
-deployment. The suite covers the 8 kHz denoiser in processing, benchmark, MOS, and feature-switching
-scenarios.
+deployment. The suite covers the denoiser in processing, benchmark, MOS, and feature-switching scenarios.
 
 ## GitHub Pages
 
