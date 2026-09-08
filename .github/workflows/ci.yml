@@ -20,6 +20,7 @@ jobs:
     name: Build native toolchain image
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -57,6 +58,7 @@ jobs:
     name: Build Web toolchain image
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -94,6 +96,7 @@ jobs:
     name: Build Android toolchain image
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -131,6 +134,7 @@ jobs:
     name: Check conventional commits
     needs: toolchain-native
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: read
@@ -146,6 +150,7 @@ jobs:
     name: Lint C and C++
     needs: toolchain-native
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -175,6 +180,7 @@ jobs:
     name: Lint Web SDK and documentation
     needs: toolchain-web
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -195,6 +201,7 @@ jobs:
     name: Lint Android
     needs: toolchain-android
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -220,6 +227,7 @@ jobs:
     name: Lint iOS
     needs: toolchain-native
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - name: Install iOS lint tools
@@ -230,6 +238,7 @@ jobs:
     name: Check GitHub workflows
     needs: toolchain-native
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - uses: raven-actions/actionlint@v2
@@ -242,6 +251,7 @@ jobs:
     name: Build Native ONNX Release dependency OCI
     needs: toolchain-native
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -270,6 +280,7 @@ jobs:
     name: Build Native TFLite Release dependency OCI
     needs: toolchain-native
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -298,6 +309,7 @@ jobs:
     name: Build and test Native Release (ONNX)
     needs: [toolchain-native, deps-native-onnx]
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -320,6 +332,7 @@ jobs:
     name: Build and test Native Release (TFLite)
     needs: [toolchain-native, deps-native-tflite]
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -342,6 +355,7 @@ jobs:
     name: Build WASM ONNX Release dependency OCI
     needs: toolchain-web
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -370,6 +384,7 @@ jobs:
     name: Build Web and test unit
     needs: [toolchain-web, deps-wasm]
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -423,6 +438,7 @@ jobs:
     name: Test Web Playwright
     needs: [toolchain-web, web]
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -442,6 +458,11 @@ jobs:
           node-version-file: platform_wrappers/web/.nvmrc
           cache: npm
           cache-dependency-path: platform_wrappers/web/package-lock.json
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v6
+        with:
+          path: out/cache/playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('platform_wrappers/web/package-lock.json') }}
       - name: Install Web test dependencies
         working-directory: platform_wrappers/web
         run: npm ci
@@ -473,6 +494,7 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     needs: web
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
     permissions:
       contents: write
     concurrency:
@@ -496,7 +518,7 @@ jobs:
     name: Build Android ${{ matrix.abi }} Release dependency OCI
     needs: toolchain-android
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
-    timeout-minutes: 90
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -534,6 +556,7 @@ jobs:
     name: Build and test Android Release
     needs: [toolchain-android, deps-android]
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -591,6 +614,7 @@ jobs:
     name: Build macOS arm64 ONNX Release dependency OCI
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -616,6 +640,7 @@ jobs:
     name: Build macOS arm64 TFLite Release dependency OCI
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -641,6 +666,7 @@ jobs:
     name: Build and test macOS arm64 Release (ONNX)
     needs: deps-macos-arm64-onnx
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -659,6 +685,7 @@ jobs:
     name: Build and test macOS arm64 Release (TFLite)
     needs: deps-macos-arm64-tflite
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -677,6 +704,7 @@ jobs:
     name: Build macOS x86_64 ONNX Release dependency OCI
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -702,6 +730,7 @@ jobs:
     name: Build macOS x86_64 TFLite Release dependency OCI
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -727,6 +756,7 @@ jobs:
     name: Build and test macOS x86_64 Release (ONNX)
     needs: deps-macos-intel-onnx
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -745,6 +775,7 @@ jobs:
     name: Build and test macOS x86_64 Release (TFLite)
     needs: deps-macos-intel-tflite
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -763,6 +794,7 @@ jobs:
     name: Build Windows x86_64 ONNX Release dependency OCI
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -788,6 +820,7 @@ jobs:
     name: Build Windows x86_64 TFLite Release dependency OCI
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -813,6 +846,7 @@ jobs:
     name: Build and test Windows x86_64 Release (ONNX)
     needs: deps-windows-onnx
     runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -831,6 +865,7 @@ jobs:
     name: Build and test Windows x86_64 Release (TFLite)
     needs: deps-windows-tflite
     runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
@@ -849,6 +884,7 @@ jobs:
     name: Build iOS ${{ matrix.slice }} Release dependency OCI
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -878,6 +914,7 @@ jobs:
     name: Build and test iOS Release
     needs: deps-ios
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
