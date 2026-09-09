@@ -87,7 +87,6 @@ DEPENDENCY_RECIPE_INPUTS = (
     ROOT / "cmake/SpenchOptions.cmake",
     ROOT / "cmake/SpenchPlatform.cmake",
     ROOT / "platform_wrappers/ios/cmake/ios.toolchain.cmake",
-    ROOT / "spench/contrib/CMakeLists.txt",
 )
 DEPENDENCY_BUNDLE_FORMAT = 5
 # A compiled engine bundle is defined by:

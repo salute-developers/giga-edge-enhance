@@ -1,14 +1,14 @@
 #pragma once
 
+#include <dsplib.h>
+
 #include <memory>
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
-// #include "spench/contrib/ctpl/ctpl_stl.h"
-#include <dsplib.h>
-#include "spench/util/sound/range_control.h"
 #include "spench/errors.h"
+#include "spench/util/sound/range_control.h"
 
 namespace spench {
 

@@ -77,7 +77,7 @@ Headers under `spench/include/spench/` that define **`SPENCH_API`** types (e.g. 
 
 ## Out of scope
 
-- `spench/contrib/**`, `spench/submodules/**`, `build_*/**` — third-party code; do not reformat or rename.
+- `spench/submodules/**`, `out/cache/cpm/**`, `build_*/**` — third-party code; do not reformat or rename.
 - Generated build output and vendored source are not style targets.
 
 ## Enforcement

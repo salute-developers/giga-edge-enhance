@@ -1,9 +1,10 @@
 #include "spench/src/fft_calculator.h"
 
+#include <pocketfft_hdronly.h>
+
 #include <algorithm>
 #include <cmath>
 
-#include "contrib/pocketfft/pocketfft_hdronly.h"
 #include "spench/src/spench_context.h"
 
 namespace spench {
