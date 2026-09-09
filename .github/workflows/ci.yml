@@ -731,7 +731,7 @@ jobs:
   deps-macos-intel-onnx:
     name: Build macOS x86_64 ONNX Release dependency OCI
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15"') }}
     timeout-minutes: 60
     permissions:
       contents: read
@@ -756,7 +756,7 @@ jobs:
   deps-macos-intel-tflite:
     name: Build macOS x86_64 TFLite Release dependency OCI
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15"') }}
     timeout-minutes: 60
     permissions:
       contents: read
@@ -781,7 +781,7 @@ jobs:
   macos-intel-onnx:
     name: Build and test macOS x86_64 Release (ONNX)
     needs: deps-macos-intel-onnx
-    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15"') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
@@ -799,7 +799,7 @@ jobs:
   macos-intel-tflite:
     name: Build and test macOS x86_64 Release (TFLite)
     needs: deps-macos-intel-tflite
-    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15"') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
