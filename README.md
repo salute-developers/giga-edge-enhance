@@ -186,8 +186,8 @@ for GitHub Pages.
 - Keep tests close to affected behavior under `spench/tests/` or the matching platform wrapper.
 - Run the narrowest relevant check first, then broaden coverage for cross-platform, ABI, model,
   memory-ownership, or packaging changes.
-- Do not reformat or refactor vendored code under `spench/contrib/` unless that dependency is the
-  explicit target.
+- Do not edit dependency sources under `out/cache/cpm/`; update `package-lock.cmake` or the
+  corresponding patch under `cmake/patches/` instead.
 - Preserve generated-file boundaries and keep lockfiles synchronized with manifest changes.
 
 For C and C++ style validation:

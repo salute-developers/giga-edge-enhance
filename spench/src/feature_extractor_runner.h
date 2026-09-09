@@ -1,12 +1,13 @@
 #pragma once
+#include <ctpl_stl.h>
+
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
-#include "contrib/ctpl/ctpl_stl.h"
+#include "spench/src/feature_extractor.h"
 #include "spench/src/feature_params.h"
 #include "spench/src/spench_task.h"
-#include "spench/src/feature_extractor.h"
 
 namespace spench {
 

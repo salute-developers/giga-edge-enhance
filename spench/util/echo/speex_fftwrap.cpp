@@ -1,7 +1,7 @@
+#include <pocketfft_hdronly.h>
+
 #include <cstdint>
 #include <cstring>
-
-#include "contrib/pocketfft/pocketfft_hdronly.h"  ///< TODO(vayulis): file not found for <pocketfft_hdronly.h>
 
 struct SpxFftPlan {
   explicit SpxFftPlan(uint32_t n) : nfft{n} { tmp.resize(n * 2); }

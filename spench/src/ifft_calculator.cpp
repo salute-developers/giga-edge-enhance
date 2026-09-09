@@ -1,8 +1,8 @@
 #include "spench/src/ifft_calculator.h"
 
-#include <cmath>
+#include <pocketfft_hdronly.h>
 
-#include "contrib/pocketfft/pocketfft_hdronly.h"
+#include <cmath>
 
 namespace spench {
 namespace fe {

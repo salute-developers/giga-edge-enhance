@@ -6,7 +6,6 @@ set(SPENCH_DEPS
   dsplib
 )
 
-add_subdirectory(contrib)
 spench_relax_ios_third_party_warnings()
 
 if(BUILD_RESAMPLER)
@@ -46,7 +45,7 @@ if(BUILD_TFLITE_ENGINE OR BUILD_ONNX_ENGINE OR TARGET onnxruntime::onnxruntime)
     src/spench_audio_denoise.cpp
     src/spench_c.cpp
   )
-  list(APPEND SPENCH_DEPS util__packed_model)
+  list(APPEND SPENCH_DEPS util__packed_model ctpl pocketfft)
 endif()
 
 if(BUILD_TFLITE_ENGINE)

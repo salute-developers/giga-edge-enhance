@@ -39,7 +39,7 @@ endif()
 set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER CACHE STRING
     "Never satisfy FetchContent dependencies from host packages" FORCE)
 
-# Preserve whether the spench target itself is shared. CPM deps and contrib/
+# Preserve whether the spench target itself is shared. CPM dependencies can
 # reset BUILD_SHARED_LIBS in the cache for third-party static linking.
 set(_spench_build_shared ${BUILD_SHARED_LIBS})
 
