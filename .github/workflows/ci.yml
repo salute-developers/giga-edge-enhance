@@ -966,6 +966,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: spench-ios-${{ github.sha }}
-          path: platform_wrappers/ios/build/xcframework
+          path: |
+            platform_wrappers/ios/build/xcframework/SpenchAudioKit.xcframework
+            platform_wrappers/ios/build/xcframework/SpenchModelLite8k.bundle
+            platform_wrappers/ios/build/xcframework/SpenchModelQuality48k.bundle
           if-no-files-found: error
           retention-days: 1
