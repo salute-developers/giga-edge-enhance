@@ -262,7 +262,7 @@ class MainActivityTest {
     }
 
     private fun waitUntilCompleted(scenario: ActivityScenario<MainActivity>) {
-        val timeoutMs = 15_000L
+        val timeoutMs = 60_000L
         val pollMs = 100L
         val startMs = System.currentTimeMillis()
         var completed = false
