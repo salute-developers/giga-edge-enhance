@@ -56,6 +56,16 @@ const config: Config = {
             },
         ],
     ],
+    plugins: [
+        () => ({
+            name: 'preserve-workspace-package-builds',
+            configureWebpack: () => ({
+                // Keep linked workspace packages under node_modules so their prebuilt
+                // worker and worklet assets are not transpiled as website source.
+                resolve: { symlinks: false },
+            }),
+        }),
+    ],
     themeConfig: {
         colorMode: {
             defaultMode: 'dark',
