@@ -49,6 +49,23 @@ CPMDeclarePackage(yaml-cpp
   EXCLUDE_FROM_ALL ON
 )
 
+string_option(CTPL_URL "https://github.com/vit-vit/CTPL.git")
+CPMDeclarePackage(ctpl
+  NAME ctpl
+  VERSION 0.0.2
+  GIT_TAG v.0.0.2
+  GIT_REPOSITORY ${CTPL_URL}
+  DOWNLOAD_ONLY YES
+)
+
+string_option(POCKETFFT_URL "https://github.com/mreineck/pocketfft.git")
+CPMDeclarePackage(pocketfft
+  NAME pocketfft
+  GIT_TAG c90e55b3d529f8efa40ed01a20de22405f45fc65
+  GIT_REPOSITORY ${POCKETFFT_URL}
+  DOWNLOAD_ONLY YES
+)
+
 # dev dependencies
 
 string_option(ARGPARSE_URL "https://github.com/p-ranav/argparse")
@@ -111,5 +128,18 @@ CPMDeclarePackage(soxr
     "WITH_OPENMP OFF"
     "BUILD_TESTS OFF"
     "BUILD_SHARED_LIBS OFF"
+  EXCLUDE_FROM_ALL ON
+)
+
+string_option(CATCH2_URL "https://github.com/catchorg/Catch2.git")
+CPMDeclarePackage(Catch2
+  NAME Catch2
+  VERSION 2.13.10
+  GIT_TAG v2.13.10
+  GIT_REPOSITORY ${CATCH2_URL}
+  OPTIONS
+    "CATCH_BUILD_TESTING OFF"
+    "CATCH_INSTALL_DOCS OFF"
+    "CATCH_INSTALL_HELPERS OFF"
   EXCLUDE_FROM_ALL ON
 )

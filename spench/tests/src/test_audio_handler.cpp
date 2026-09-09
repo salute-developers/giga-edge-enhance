@@ -250,4 +250,3 @@ TEST_CASE("SUCCEED Run denoise and check finalize a chunk for the best quality m
   REQUIRE(std::vector<float>(input_frame_size * 1, 0.0) != output);
   scheduler_test_env.handler->destroy_context(&ctx);
 }
-

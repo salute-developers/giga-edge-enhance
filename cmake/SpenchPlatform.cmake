@@ -1,7 +1,7 @@
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
   # Soften iOS SDK warnings for vendored code. ORT still sets
   # COMPILE_WARNING_AS_ERROR ON per-target (adds trailing -Werror); that is
-  # cleared after add_subdirectory(contrib) by spench_relax_ios_third_party_warnings().
+  # cleared after dependencies are configured by spench_relax_ios_third_party_warnings().
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-shorten-64-to-32 -Wno-error")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-shorten-64-to-32 -Wno-error")
   set(CMAKE_COMPILE_WARNING_AS_ERROR OFF)

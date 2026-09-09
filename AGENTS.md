@@ -9,8 +9,8 @@ added later, follow the more specific instructions for files in that subtree.
   demos, and Catch2 tests.
 - `spench/include/spench/`: supported public C and C++ SDK surface. Treat API
   and ABI compatibility here as intentional product constraints.
-- `spench/contrib/`: vendored third-party code. Do not reformat or refactor it
-  unless the task explicitly targets that dependency.
+- `package-lock.cmake` and `out/cache/cpm/`: pinned dependency declarations and
+  their generated source cache. Do not edit cached dependency sources.
 - `cmake/` and `CMakePresets.json`: build profiles, dependencies, packaging,
   platform selection, and compiler settings.
 - `platform_wrappers/android/`, `platform_wrappers/ios/`, and

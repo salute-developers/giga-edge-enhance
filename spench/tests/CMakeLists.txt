@@ -28,13 +28,23 @@ elseif (BUILD_ONNX_ENGINE)
         )
 endif()
 
-include_directories(${CMAKE_SOURCE_DIR}/spench/contrib/Catch2)
-
 add_executable(spench_tests ${TEST_SRC})
+target_include_directories(spench_tests SYSTEM PRIVATE
+  "${Catch2_SOURCE_DIR}/single_include/catch2")
 
 spench_apply_build_config(spench_tests)
 
-target_link_libraries(spench_tests PRIVATE spench util::packed_model yaml-cpp util::sound util__echo util__metrics dsplib spdlog_header_only)
+target_link_libraries(spench_tests PRIVATE
+  spench
+  util::packed_model
+  yaml-cpp
+  util::sound
+  util__echo
+  util__metrics
+  dsplib
+  spdlog_header_only
+  Catch2::Catch2
+  ctpl)
 
 if(BUILD_RESAMPLER)
   target_link_libraries(spench_tests PRIVATE soxr)
@@ -54,8 +64,7 @@ elseif (BUILD_ONNX_ENGINE)
   endif()
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/spench/contrib/Catch2/contrib/")
-include(Catch)
+include("${Catch2_SOURCE_DIR}/contrib/Catch.cmake")
 catch_discover_tests(spench_tests)
 
 if (BUILD_SHARED_LIBS AND WIN32)
