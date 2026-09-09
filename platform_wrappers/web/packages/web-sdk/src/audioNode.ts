@@ -234,7 +234,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
 
     /** Internal alias for the worklet port. */
     get #port(): WorkletPort {
-        return super.port;
+        return this.port;
     }
 
     get #useSharedMemory(): boolean {
@@ -272,7 +272,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
                 features.noiseCancellation === true
                     ? (getDefaultNoiseCancellationModel(
                           this.#loader.models,
-                          super.context.sampleRate,
+                          this.context.sampleRate,
                       ) as keyof M['noiseCancellation'])
                     : features.noiseCancellation || false,
         };
@@ -329,7 +329,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         this.#port.close();
 
         super.removeEventListener('processorerror', this.#handleProcessorError);
-        super.context.removeEventListener('statechange', this.#handleContextStateChange);
+        this.context.removeEventListener('statechange', this.#handleContextStateChange);
 
         super.dispatchEvent(new Event('destroyed'));
     }
@@ -539,7 +539,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
 
         this.#initStartTime = performance.now();
 
-        const { sampleRate } = super.context;
+        const { sampleRate } = this.context;
         const inputBufferSeconds = getInputBufferSeconds(this.#settings);
         const outputBufferSeconds = getOutputBufferSeconds(this.#settings);
         const worker = await this.#loader.loadWorker();
@@ -676,7 +676,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
 
     /** Responds to changes in the audio context state. */
     #handleContextStateChange = () => {
-        switch (super.context.state) {
+        switch (this.context.state) {
             case 'closed':
                 this.destroy();
                 break;
@@ -694,7 +694,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
      * @private
      */
     #init(): void {
-        super.context.addEventListener('statechange', this.#handleContextStateChange);
+        this.context.addEventListener('statechange', this.#handleContextStateChange);
         super.addEventListener('processorerror', this.#handleProcessorError);
 
         this.#port.addEventListener('message', this.#handleWorkletMessage);

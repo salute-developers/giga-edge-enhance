@@ -53,7 +53,7 @@ export class SpenchBaseWorkletProcessor extends AudioWorkletProcessor {
     }
 
     protected get controllerPort(): ControllerPort {
-        return super.port;
+        return this.port;
     }
 
     protected get isProcessingEnabled(): boolean {
