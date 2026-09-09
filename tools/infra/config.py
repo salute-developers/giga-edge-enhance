@@ -62,13 +62,9 @@ CACHE_INPUTS = (
     ROOT / "cmake/SpenchDependencies.cmake",
 )
 DEPENDENCY_RECIPE_INPUTS = (
-    ROOT / "CMakePresets.json",
     ROOT / "package-lock.cmake",
-    ROOT / "cmake/CPM.cmake",
     ROOT / "cmake/SpenchDependencies.cmake",
-    ROOT / "cmake/SpenchOptions.cmake",
     ROOT / "cmake/SpenchPlatform.cmake",
-    ROOT / "platform_wrappers/ios/cmake/ios.toolchain.cmake",
 )
 DEPENDENCY_BUNDLE_FORMAT = 5
 ENGINE_PACKAGE = {"onnx": "onnxruntime", "tflite": "tflite"}
