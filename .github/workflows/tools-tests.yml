@@ -1,0 +1,31 @@
+name: Test infrastructure tool
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  test:
+    name: Test tools/spench
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            infra:
+              - 'tools/spench'
+              - 'tools/infra/**'
+      - name: Run infrastructure unit tests
+        if: steps.changes.outputs.infra == 'true'
+        env:
+          PYTHONPATH: tools
+        run: python3 -m unittest discover -s tools/infra/tests -v
+      - name: Validate infrastructure Python syntax
+        if: steps.changes.outputs.infra == 'true'
+        run: python3 -m compileall -q tools/infra tools/spench
