@@ -6,7 +6,7 @@ AVD_NAME="spench-ci-api35"
 export ANDROID_AVD_HOME="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
 AVD_DIR="$ANDROID_AVD_HOME"
 SYSTEM_IMAGE="${SPENCH_ANDROID_SYSTEM_IMAGE:?Android emulator system image is not configured}"
-EMULATOR_LOG="$ROOT_DIR/../../../out/artifacts/android-emulator.log"
+EMULATOR_LOG="$ROOT_DIR/../../out/artifacts/android-emulator.log"
 
 mkdir -p "$AVD_DIR" "$(dirname "$EMULATOR_LOG")"
 if [[ ! -d "$AVD_DIR/$AVD_NAME.avd" ]]; then
