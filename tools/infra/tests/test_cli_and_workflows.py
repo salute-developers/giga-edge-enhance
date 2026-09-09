@@ -1,0 +1,67 @@
+import io
+from pathlib import Path
+import tempfile
+import unittest
+from unittest import mock
+
+from infra import cli, workflows
+
+
+class CliTest(unittest.TestCase):
+    def test_metadata_action_prints_value(self):
+        output = io.StringIO()
+        with mock.patch.object(cli, "container_image_digest", return_value="digest"), \
+             mock.patch("sys.stdout", output):
+            cli.main(["image-key", "native"])
+        self.assertEqual(output.getvalue(), "digest\n")
+
+    def test_restore_requires_archive(self):
+        with self.assertRaisesRegex(SystemExit, "requires an archive"):
+            cli.main(["restore-deps", "native-release-onnx"])
+
+    def test_platform_action_dispatches(self):
+        with mock.patch.object(cli, "android_workflow") as android:
+            cli.main(["build", "android", "--host"])
+        android.assert_called_once_with("build", True)
+
+    def test_invalid_platform_action_fails_without_dispatch(self):
+        with self.assertRaisesRegex(SystemExit, "Android supports build and test"):
+            cli.main(["package", "android"])
+
+
+class WorkflowsTest(unittest.TestCase):
+    def test_container_cmake_build_uses_expected_commands(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with mock.patch.object(workflows, "ROOT", root), \
+                 mock.patch.object(workflows, "find_prebuilt_dependency", return_value=None), \
+                 mock.patch.object(workflows, "compiler_cache_environment", return_value={}), \
+                 mock.patch.object(workflows, "print_compiler_cache_stats"), \
+                 mock.patch.object(workflows, "run") as run:
+                workflows.cmake_workflow("build", "native-release-onnx", False)
+        configure = run.call_args_list[0]
+        build = run.call_args_list[1]
+        self.assertEqual(configure.args[0][:3], ["cmake", "--preset", "native-release-onnx"])
+        self.assertIn("-DCMAKE_AR=/usr/bin/llvm-ar", configure.args[0])
+        self.assertEqual(configure.kwargs["container_stage"], "native")
+        self.assertEqual(build.args[0][:2], ["cmake", "--build"])
+
+    def test_android_workflow_sets_dependency_root(self):
+        with mock.patch.object(workflows, "compiler_cache_environment", return_value={}), \
+             mock.patch.object(workflows, "run") as run:
+            workflows.android_workflow("test", False)
+        self.assertEqual(run.call_args.args[0], ["platform_wrappers/android/scripts/test-all.sh"])
+        self.assertEqual(run.call_args.kwargs["container_stage"], "android")
+        self.assertEqual(
+            run.call_args.kwargs["environment"]["SPENCH_PREBUILT_DEPENDENCIES_ROOT"],
+            "/workspace/out/artifacts/dependencies")
+
+    def test_prepare_android_target_dispatches_single_abi(self):
+        with mock.patch.object(workflows, "prepare_android_tflite") as prepare:
+            workflows.prepare_platform_dependencies(
+                "android-release-tflite-x86_64", False)
+        prepare.assert_called_once_with("x86_64", "Release", False)
+
+
+if __name__ == "__main__":
+    unittest.main()
