@@ -23,7 +23,7 @@ jobs:
   native-debug:
     name: Build and test Native Debug (${{ matrix.engine }})
     if: inputs.suite == 'native-debug'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     strategy:
       fail-fast: false
       matrix:
@@ -43,7 +43,7 @@ jobs:
   native-sanitizer:
     name: Build and test Native ASAN
     if: inputs.suite == 'native-sanitizer'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -59,7 +59,7 @@ jobs:
   linux-static-release:
     name: Build and test Linux static Release (${{ matrix.engine }})
     if: inputs.suite == 'static-release'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     strategy:
       fail-fast: false
       matrix:
@@ -79,7 +79,7 @@ jobs:
   windows-static-release:
     name: Build and test Windows static Release (TFLite)
     if: inputs.suite == 'static-release'
-    runs-on: windows-2022
+    runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -96,7 +96,7 @@ jobs:
   web-debug:
     name: Build and test Web Debug internals
     if: inputs.suite == 'web-debug'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -116,7 +116,7 @@ jobs:
   android-emulator:
     name: Build and test Android Debug on emulator
     if: inputs.suite == 'android-emulator'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
