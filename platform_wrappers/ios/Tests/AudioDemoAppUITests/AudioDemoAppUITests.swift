@@ -61,11 +61,11 @@ final class AudioDemoAppUITests: XCTestCase {
         try runFileProcessingFlow(selectedModelID: nil)
     }
 
-    func testFileProcessingAndSaveWithoutErrorsForLite8k() throws {
+    func testFileProcessingAndSaveWithoutErrorsForFast8() throws {
         try runFileProcessingFlow(selectedModelID: "fast8")
     }
 
-    func testFileProcessingAndSaveWithoutErrorsForQuality48k() throws {
+    func testFileProcessingAndSaveWithoutErrorsForQuality48() throws {
         try runFileProcessingFlow(selectedModelID: "quality48")
     }
 
