@@ -985,7 +985,7 @@ jobs:
           name: spench-ios-${{ github.sha }}
           path: |
             platform_wrappers/ios/build/xcframework/SpenchAudioKit.xcframework
-            platform_wrappers/ios/build/xcframework/SpenchModelLite8k.bundle
-            platform_wrappers/ios/build/xcframework/SpenchModelQuality48k.bundle
+            platform_wrappers/ios/build/xcframework/SpenchModelFast8.bundle
+            platform_wrappers/ios/build/xcframework/SpenchModelQuality48.bundle
           if-no-files-found: error
           retention-days: 1

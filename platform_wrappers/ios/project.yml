@@ -61,9 +61,9 @@ targets:
     platform: iOS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.SpenchModelLite8k
+        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.SpenchModelFast8
         GENERATE_INFOPLIST_FILE: NO
-         INFOPLIST_FILE: Resources/ModelBundles/SpenchModelFast8-Info.plist
+        INFOPLIST_FILE: Resources/ModelBundles/SpenchModelFast8-Info.plist
     sources:
       - path: Resources/Models/fast8.spench
 
@@ -72,9 +72,9 @@ targets:
     platform: iOS
     settings:
       base:
-         PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.SpenchModelQuality48
+        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.SpenchModelQuality48
         GENERATE_INFOPLIST_FILE: NO
-         INFOPLIST_FILE: Resources/ModelBundles/SpenchModelQuality48-Info.plist
+        INFOPLIST_FILE: Resources/ModelBundles/SpenchModelQuality48-Info.plist
     sources:
       - path: Resources/Models/quality48.spench
 
@@ -102,8 +102,8 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: SpenchAudioKit
-      - target: SpenchModelLite8k
-      - target: SpenchModelQuality48k
+      - target: SpenchModelFast8
+      - target: SpenchModelQuality48
     sources:
       - path: Tests/SpenchAudioKitTests
 
@@ -128,8 +128,8 @@ schemes:
     build:
       targets:
         SpenchAudioKit: all
-        SpenchModelLite8k: all
-        SpenchModelQuality48k: all
+        SpenchModelFast8: all
+        SpenchModelQuality48: all
         SpenchAudioKitTests: [test]
     test:
       gatherCoverageData: true
