@@ -61,3 +61,14 @@ TEST_CASE("FAIL PackedModelReader throws on invalid model size [packed_model]") 
   data.insert(data.end(), model_bytes.begin(), model_bytes.end());
   REQUIRE_THROWS_AS(spench::PackedModelReader(data), std::runtime_error);
 }
+
+TEST_CASE("FAIL PackedModelReader rejects a null buffer [packed_model]") {
+  REQUIRE_THROWS_AS(spench::PackedModelReader(nullptr, 8), std::runtime_error);
+}
+
+TEST_CASE("FAIL PackedModelReader rejects trailing data [packed_model]") {
+  auto data = spench::util::write_packed_model("config", {1, 2, 3});
+  data.push_back(0);
+
+  REQUIRE_THROWS_AS(spench::PackedModelReader(data), std::runtime_error);
+}

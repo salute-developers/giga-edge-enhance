@@ -81,14 +81,14 @@ const std::vector<uint8_t>& PackedModelReader::model() const noexcept {
 }
 
 void PackedModelReader::parse_packed_data(const uint8_t* data, size_t data_size) {
-  if (data_size < 8) {
+  if (data == nullptr || data_size < 8) {
     throw std::runtime_error("packed data too short");
   }
 
   size_t offset = 0;
   auto config_size = util::read_uint32_le(&data[offset]);
   offset += 4;
-  if (offset + config_size + 4 > data_size) {
+  if (config_size > data_size - offset || data_size - offset - config_size < sizeof(uint32_t)) {
     throw std::runtime_error("malformed packed data (config)");
   }
 
@@ -97,11 +97,15 @@ void PackedModelReader::parse_packed_data(const uint8_t* data, size_t data_size)
 
   auto model_size = util::read_uint32_le(&data[offset]);
   offset += 4;
-  if (offset + model_size > data_size) {
+  if (model_size > data_size - offset) {
     throw std::runtime_error("malformed packed data (model)");
   }
 
   model_.assign(&data[offset], &data[offset] + model_size);
+  offset += model_size;
+  if (offset != data_size) {
+    throw std::runtime_error("malformed packed data (trailing bytes)");
+  }
 }
 
 }  // namespace spench
