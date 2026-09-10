@@ -55,8 +55,8 @@ xcodebuild build \
   -derivedDataPath "$BUNDLE_BUILD_DIR" \
   CODE_SIGNING_ALLOWED=NO
 
-cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/SpenchModelLite8k.bundle" "$BUILD_DIR"
-cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/SpenchModelQuality48k.bundle" "$BUILD_DIR"
+cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/SpenchModelFast8.bundle" "$BUILD_DIR"
+cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/SpenchModelQuality48.bundle" "$BUILD_DIR"
 
 for test_scheme in SpenchAudioKit AudioDemoApp; do
   xcodebuild build-for-testing \
