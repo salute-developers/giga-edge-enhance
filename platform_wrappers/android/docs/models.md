@@ -54,9 +54,9 @@ Runtime discovery keeps a model picker in sync with whatever modules are importe
 compile-time dependency on a specific model, use the name constant directly:
 
 ```kotlin
-import com.gigaedge.spench.models.SpenchFull48kModel
+import com.gigaedge.spench.models.SpenchQuality48Model
 
-processor.setFeatures(SpenchFeatures(noiseSuppression = SpenchFull48kModel.NAME))
+processor.setFeatures(SpenchFeatures(noiseSuppression = SpenchQuality48Model.NAME))
 ```
 
 ## Selecting a model
