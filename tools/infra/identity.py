@@ -163,12 +163,15 @@ def cache_target(preset: str, host: bool) -> tuple[str, str]:
 def print_cache_keys(preset: str, host: bool) -> None:
     dependency_digest = dependency_cache_digest()
     target_system, target_arch = cache_target(preset, host)
+    source_system = platform.system().lower() or "unknown"
+    if source_system == "darwin":
+        source_system = "macos"
     compiler_prefix = (
         f"spench-compiler-v1-{target_system}-{target_arch}-{preset}-{dependency_digest}"
     )
     print("source_cache_path=out/cache/cpm")
-    print(f"source_cache_key=spench-sources-v1-{dependency_digest}")
-    print("source_cache_restore_key=spench-sources-v1-")
+    print(f"source_cache_key=spench-sources-v2-{source_system}-{dependency_digest}")
+    print(f"source_cache_restore_key=spench-sources-v2-{source_system}-")
     print("compiler_cache_path=out/cache/compiler")
     print(f"compiler_cache_key_prefix={compiler_prefix}")
     print(

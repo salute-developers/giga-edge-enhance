@@ -69,4 +69,31 @@ describe('default noise cancellation models', () => {
     it('uses the bundled quality model above 8 kHz', () => {
         expect(getDefaultNoiseCancellationModel(models, 8001)).toBe('quality48');
     });
+
+    it.each([
+        ['fast24', 'fast24'],
+        ['quality24', 'quality24'],
+        ['fast48', 'fast48'],
+        ['quality48', 'quality48'],
+    ] as const)('selects an available %s model', (model, expected) => {
+        expect(getDefaultNoiseCancellationModel({ noiseCancellation: { [model]: new ArrayBuffer(1) } }, 48_000)).toBe(
+            expected,
+        );
+    });
+
+    it('prefers lower-cost models in load order', () => {
+        expect(
+            getDefaultNoiseCancellationModel(
+                {
+                    noiseCancellation: {
+                        quality48: new ArrayBuffer(1),
+                        fast48: new ArrayBuffer(1),
+                        quality24: new ArrayBuffer(1),
+                        fast24: new ArrayBuffer(1),
+                    },
+                },
+                48_000,
+            ),
+        ).toBe('fast24');
+    });
 });

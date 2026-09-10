@@ -48,16 +48,27 @@ class IdentityTest(unittest.TestCase):
         output = io.StringIO()
         with mock.patch.object(identity, "dependency_cache_digest", return_value="abc123"), \
              mock.patch.object(identity, "cache_target", return_value=("linux", "x86_64")), \
+             mock.patch.object(identity.platform, "system", return_value="Linux"), \
              mock.patch("sys.stdout", output):
             identity.print_cache_keys("native-release-onnx", False)
         self.assertEqual(output.getvalue().splitlines(), [
             "source_cache_path=out/cache/cpm",
-            "source_cache_key=spench-sources-v1-abc123",
-            "source_cache_restore_key=spench-sources-v1-",
+            "source_cache_key=spench-sources-v2-linux-abc123",
+            "source_cache_restore_key=spench-sources-v2-linux-",
             "compiler_cache_path=out/cache/compiler",
             "compiler_cache_key_prefix=spench-compiler-v1-linux-x86_64-native-release-onnx-abc123",
             "compiler_cache_restore_key=spench-compiler-v1-linux-x86_64-native-release-onnx-",
         ])
+
+    def test_source_cache_key_normalizes_macos(self):
+        output = io.StringIO()
+        with mock.patch.object(identity, "dependency_cache_digest", return_value="abc123"), \
+             mock.patch.object(identity, "cache_target", return_value=("ios", "arm64")), \
+             mock.patch.object(identity.platform, "system", return_value="Darwin"), \
+             mock.patch("sys.stdout", output):
+            identity.print_cache_keys("ios-device-release", False)
+        self.assertIn("source_cache_key=spench-sources-v2-macos-abc123",
+                      output.getvalue().splitlines())
 
     def test_invalid_engine_and_container_stage_fail_clearly(self):
         with self.assertRaisesRegex(ValueError, "Unsupported dependency bundle engine"):

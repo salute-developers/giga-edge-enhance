@@ -135,7 +135,7 @@ final class SpenchProcessorTests: XCTestCase {
     func testDenoiserProcessesNativeChunk() throws {
         let processor = try SpenchProcessor(
             sampleRate: 48_000,
-                                                                      features: SpenchFeatures(normalization: false, noiseSuppression: .quality48)
+            features: SpenchFeatures(normalization: false, noiseSuppression: .quality48)
         )
         var samples = Array(repeating: Float(0.25), count: 1_536)
         let frameCount = samples.count

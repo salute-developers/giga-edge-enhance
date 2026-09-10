@@ -70,7 +70,7 @@ class MainActivityTest {
     }
 
     @Test
-fun noiseSuppressionSelectorDefaultsToSortedFirstAndCanSelectOffAndQuality48() {
+    fun noiseSuppressionSelectorDefaultsToSortedFirstAndCanSelectOffAndQuality48() {
         val targetContext = targetContext()
         ActivityScenario.launch<MainActivity>(Intent(targetContext, MainActivity::class.java)).use {
             onView(withId(R.id.noiseSuppressionSpinner)).check(matches(withSpinnerText("quality48")))
