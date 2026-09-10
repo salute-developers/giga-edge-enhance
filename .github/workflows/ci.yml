@@ -648,8 +648,7 @@ jobs:
           name: spench-android-${{ github.sha }}
           path: |
             platform_wrappers/android/spench-sdk/build/outputs/aar/*-release.aar
-            platform_wrappers/android/spench-model-full24k/build/outputs/aar/*-release.aar
-            platform_wrappers/android/spench-model-full48k/build/outputs/aar/*-release.aar
+            platform_wrappers/android/spench-model-quality48/build/outputs/aar/*-release.aar
           if-no-files-found: error
           retention-days: 1
 

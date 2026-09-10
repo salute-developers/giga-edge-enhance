@@ -16,6 +16,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "spench-android-sdk"
 include(":spench-sdk")
-include(":spench-model-full24k")
-include(":spench-model-full48k")
+include(":spench-model-quality48")
 include(":demo-app")

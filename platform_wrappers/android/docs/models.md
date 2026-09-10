@@ -11,8 +11,7 @@ contributes a single packed asset. You add the models you need alongside the SDK
 ```kotlin
 dependencies {
     implementation(project(":spench-sdk"))
-    implementation(project(":spench-model-full24k"))
-    implementation(project(":spench-model-full48k"))
+    implementation(project(":spench-model-quality48"))
 }
 ```
 
@@ -28,16 +27,14 @@ Each model module places its packed model under:
 spench/models/{name}.spench
 ```
 
-For example, `:spench-model-full24k` contributes `spench/models/full24k.spench` and
-`:spench-model-full48k` contributes `spench/models/full48k.spench`. When your app is built, these
-assets are merged into the app's assets alongside any other model modules you import.
+For example, `:spench-model-quality48` contributes `spench/models/quality48.spench`. When your app
+is built, this asset is merged into the app's assets alongside any other model modules you import.
 
 ## Available models
 
 | Module | Asset | Name constant |
 | --- | --- | --- |
-| `:spench-model-full24k` | `spench/models/full24k.spench` | `com.gigaedge.spench.models.SpenchFull24kModel.NAME` (`"full24k"`) |
-| `:spench-model-full48k` | `spench/models/full48k.spench` | `com.gigaedge.spench.models.SpenchFull48kModel.NAME` (`"full48k"`) |
+| `:spench-model-quality48` | `spench/models/quality48.spench` | `com.gigaedge.spench.models.SpenchQuality48Model.NAME` (`"quality48"`) |
 
 ## Runtime discovery
 
@@ -49,7 +46,7 @@ names **sorted**:
 import com.gigaedge.spench.SpenchFeatures
 import com.gigaedge.spench.SpenchModels
 
-val modelIds = SpenchModels.available(context) // e.g. ["full24k", "full48k"]
+val modelIds = SpenchModels.available(context) // e.g. ["quality48"]
 processor.setFeatures(SpenchFeatures(noiseSuppression = modelIds.firstOrNull()))
 ```
 

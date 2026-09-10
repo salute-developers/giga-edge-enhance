@@ -32,8 +32,7 @@ Add the SDK plus every model package your app needs to your app module's `build.
 ```kotlin
 dependencies {
     implementation(project(":spench-sdk"))
-    implementation(project(":spench-model-full24k"))
-    implementation(project(":spench-model-full48k"))
+    implementation(project(":spench-model-quality48"))
 }
 ```
 
@@ -51,7 +50,7 @@ import com.gigaedge.spench.SpenchProcessor
 
 fun processOneChunk(context: Context, sampleRateHz: Int, input: FloatArray) {
     SpenchProcessor(context, sampleRateHz).use { processor ->
-        processor.setFeatures(SpenchFeatures(normalization = true, noiseSuppression = "full48k"))
+        processor.setFeatures(SpenchFeatures(normalization = true, noiseSuppression = "quality48"))
         val output = FloatArray(input.size)
         processor.process(input, output, input.size)
         // `output` holds processed samples; early samples may be zero until the worker warms up.
@@ -82,7 +81,7 @@ See [Telemetry and performance](telemetry-and-performance.md).
 ```kotlin
 import com.gigaedge.spench.SpenchModels
 
-val modelIds = SpenchModels.available(context) // sorted, e.g. ["full24k", "full48k"]
+val modelIds = SpenchModels.available(context) // sorted, e.g. ["quality48"]
 processor.setFeatures(SpenchFeatures(noiseSuppression = modelIds.firstOrNull()))
 ```
 
@@ -92,7 +91,7 @@ processor.setFeatures(SpenchFeatures(noiseSuppression = modelIds.firstOrNull()))
 2. You construct `SpenchProcessor` with the **actual input sample rate** in Hz (`> 0`).
 3. You call `setFeatures(...)` — a fresh processor has all stages **disabled**.
 4. Noise-suppression names come from [`SpenchModels.available(context)`](models.md) (or the
-   `SpenchFull24kModel.NAME` / `SpenchFull48kModel.NAME` constants).
+   `SpenchQuality48Model.NAME` constant).
 5. Input/output buffers are at least `numFrames` long, and audio is **mono**.
 6. You `close()` the processor (or use `use { }`) when done.
 7. No manual ProGuard/R8 rules are needed; the SDK ships [consumer rules](proguard-r8.md).

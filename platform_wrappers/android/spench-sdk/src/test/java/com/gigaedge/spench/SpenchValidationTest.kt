@@ -15,7 +15,7 @@ class SpenchValidationTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun validationRejectsPathLikeModelName() {
-        SpenchValidation.requireModelName("../full48k")
+        SpenchValidation.requireModelName("../quality48")
     }
 
     @Test
@@ -25,7 +25,7 @@ class SpenchValidationTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun validationRejectsInvalidOptionalModelName() {
-        SpenchValidation.requireOptionalModelName("../full48k")
+        SpenchValidation.requireOptionalModelName("../quality48")
     }
 
     @Test(expected = IllegalArgumentException::class)
