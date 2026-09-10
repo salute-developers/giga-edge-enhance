@@ -67,8 +67,13 @@ class SpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
      * @returns {boolean} `true` if supported, otherwise `false`.
      */
     static isEnvironmentSupported(): boolean {
-        // TODO browser versions
-        return true;
+        if (typeof window === 'undefined' || typeof Worker !== 'function' || typeof AudioWorkletNode !== 'function') {
+            return false;
+        }
+
+        const AudioContextConstructor = window.AudioContext || (window as any).webkitAudioContext;
+
+        return typeof AudioContextConstructor === 'function' && 'audioWorklet' in AudioContextConstructor.prototype;
     }
 
     /**
