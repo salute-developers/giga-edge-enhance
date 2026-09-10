@@ -51,6 +51,7 @@ class BaseTfliteRunner {
 
   void init_model(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config, const uint32_t num_threads,
                   bool on_gpu);
+  void set_model_io_order(const std::vector<std::string>& input_names, const std::vector<std::string>& output_names);
 
   template <typename T>
   void run(std::vector<std::vector<T>*>& inputs, const std::vector<std::vector<int32_t>>& input_shapes);

@@ -60,6 +60,27 @@ void BaseTfliteRunner::init_model(const std::shared_ptr<gigaedge::denoiser::Netw
   refresh_tensor_metadata();
 }
 
+void BaseTfliteRunner::set_model_io_order(const std::vector<std::string>& input_names,
+                                          const std::vector<std::string>& output_names) {
+  const auto validate_names = [](const std::vector<std::string>& discovered, const std::vector<std::string>& ordered,
+                                 const char* kind) {
+    if (discovered.size() != ordered.size()) {
+      throw TfliteValidationException(std::string("Unexpected number of model ") + kind);
+    }
+    for (const auto& name : ordered) {
+      if (std::find(discovered.begin(), discovered.end(), name) == discovered.end()) {
+        throw TfliteValidationException(std::string("Required model ") + kind + " is missing: " + name);
+      }
+    }
+  };
+
+  validate_names(model_input_names_, input_names, "inputs");
+  validate_names(model_output_names_, output_names, "outputs");
+  model_input_names_ = input_names;
+  model_output_names_ = output_names;
+  refresh_tensor_metadata();
+}
+
 template <typename T>
 void BaseTfliteRunner::run(std::vector<std::vector<T>*>& inputs,
                            const std::vector<std::vector<int32_t>>& input_shapes) {
@@ -275,6 +296,7 @@ DenoiserFTfliteRunner::DenoiserFTfliteRunner(const std::shared_ptr<gigaedge::den
     : BaseTfliteRunner::BaseTfliteRunner() {
   read_config(config->params()["model"]);
   init_model(config, inference_engine_threads, on_gpu);
+  set_model_io_order({"noisy_mag", "fb_h", "fb_c", "prev_fb_out"}, {"fb_h", "fb_c", "updated_fb_out", "out_mask"});
   warm_up<float>();
 }
 
@@ -412,6 +434,11 @@ DenoiserQTfliteRunner::DenoiserQTfliteRunner(const std::shared_ptr<gigaedge::den
     : BaseTfliteRunner::BaseTfliteRunner() {
   read_config(config->params()["model"]);
   init_model(config, inference_engine_threads, on_gpu);
+  set_model_io_order(
+      {"noisy_mag_in", "prev_fb_hidden_in", "prev_fb_snr_noise_psd_in", "prev_fb_snr_noise_pg_in",
+       "prev_sb_snr_noise_psd_in", "prev_sb_snr_noise_pg_in", "prev_fb_conv1_buf_in", "prev_fb_conv3_buf_in"},
+      {"cur_fb_hidden_out", "cur_fb_snr_noise_psd_out", "cur_fb_snr_noise_pg_out", "cur_sb_snr_noise_psd_out",
+       "cur_sb_snr_noise_pg_out", "cur_fb_conv1_buf_out", "cur_fb_conv3_buf_out", "predicted_mask_out"});
   warm_up<float>();
 }
 
