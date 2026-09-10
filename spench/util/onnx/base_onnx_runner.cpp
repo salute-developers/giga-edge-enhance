@@ -159,13 +159,16 @@ void BaseOnnxRunner::resize_if_needed_in_place(std::vector<float>& to_check,
 
   uint64_t element_count = 1;
   for (const int64_t dimension : shape) {
-    if (dimension <= 0 || static_cast<uint64_t>(dimension) >
-                              std::numeric_limits<uint64_t>::max() / element_count) {
+    // State tensors use a symbolic batch dimension. It represents one stream
+    // here; the dynamic audio time axis is resolved by the caller first.
+    const uint64_t concrete_dimension = dimension == -1 ? 1 : static_cast<uint64_t>(dimension);
+    if (dimension == 0 || dimension < -1 || concrete_dimension >
+                                                  std::numeric_limits<uint64_t>::max() / element_count) {
       throw OnnxValidationException("Resolved tensor shape is invalid or too large");
     }
-    element_count *= static_cast<uint64_t>(dimension);
+    element_count *= concrete_dimension;
   }
-  if (element_count % num_parts != 0 || element_count / num_parts > std::numeric_limits<size_t>::max()) {
+  if (element_count / num_parts > std::numeric_limits<size_t>::max()) {
     throw OnnxValidationException("Resolved tensor size is invalid or too large");
   }
 
@@ -183,13 +186,14 @@ void BaseOnnxRunner::resize_if_needed_in_place(std::valarray<float>& to_check,
 
   uint64_t element_count = 1;
   for (const int64_t dimension : shape) {
-    if (dimension <= 0 || static_cast<uint64_t>(dimension) >
-                              std::numeric_limits<uint64_t>::max() / element_count) {
+    const uint64_t concrete_dimension = dimension == -1 ? 1 : static_cast<uint64_t>(dimension);
+    if (dimension == 0 || dimension < -1 || concrete_dimension >
+                                                  std::numeric_limits<uint64_t>::max() / element_count) {
       throw OnnxValidationException("Resolved tensor shape is invalid or too large");
     }
-    element_count *= static_cast<uint64_t>(dimension);
+    element_count *= concrete_dimension;
   }
-  if (element_count % num_parts != 0 || element_count / num_parts > std::numeric_limits<size_t>::max()) {
+  if (element_count / num_parts > std::numeric_limits<size_t>::max()) {
     throw OnnxValidationException("Resolved tensor size is invalid or too large");
   }
 
