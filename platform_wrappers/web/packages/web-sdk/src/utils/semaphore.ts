@@ -1,5 +1,4 @@
 import { MAX_SEMAPHORE_WAIT_TIME_MS, SYNC_WAIT_TIMEOUT } from './constants';
-import { assert } from './error';
 
 export class BinarySemaphore {
     static readonly INTERNAL_BUFFER_SIZE = Int32Array.BYTES_PER_ELEMENT;
@@ -43,25 +42,23 @@ export class BinarySemaphore {
          * wait for it to become available and try again.
          */
         while (!this.tryLock()) {
-            let currentWaitTimeMs = 0;
+            if (lockOverallWaitTimeMs >= MAX_SEMAPHORE_WAIT_TIME_MS) {
+                throw new Error(`Semaphore lock timed out after ${lockOverallWaitTimeMs}ms`);
+            }
 
-            assert(
-                lockOverallWaitTimeMs > MAX_SEMAPHORE_WAIT_TIME_MS,
-                `semaphore must not lock for too long. Currently waiting for ${lockOverallWaitTimeMs}ms`,
+            const waitTimeMs = Math.min(SYNC_WAIT_TIMEOUT, MAX_SEMAPHORE_WAIT_TIME_MS - lockOverallWaitTimeMs);
+            const result = Atomics.wait(
+                this.header,
+                BinarySemaphore.INDEX,
+                BinarySemaphore.LOCKED,
+                waitTimeMs,
             );
 
-            do {
-                const result = Atomics.wait(
-                    this.header,
-                    BinarySemaphore.INDEX,
-                    BinarySemaphore.LOCKED,
-                    SYNC_WAIT_TIMEOUT,
-                );
-
-                if (result !== 'timed-out') break;
-            } while (++currentWaitTimeMs < MAX_SEMAPHORE_WAIT_TIME_MS);
-
-            lockOverallWaitTimeMs += currentWaitTimeMs;
+            // AudioWorklet cannot measure wall-clock time reliably. Count only
+            // completed timeouts, which gives the lock a bounded wait budget.
+            if (result === 'timed-out') {
+                lockOverallWaitTimeMs += waitTimeMs;
+            }
         }
     }
 

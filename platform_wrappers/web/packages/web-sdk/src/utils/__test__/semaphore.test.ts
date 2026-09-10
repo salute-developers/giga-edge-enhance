@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// packages/web-sdk/src/utils/__test__/semaphore.test.ts
-import path from 'path';
+import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 
 import { BinarySemaphore } from '../semaphore';
@@ -73,124 +71,92 @@ describe('BinarySemaphore (2 instances)', () => {
     });
 });
 
-function createWorker(script: string, workerData: Record<string, unknown>) {
-    const worker = new Worker(script, { eval: true, workerData });
-
-    function waitFor(command: string, timeout: number = 0): Promise<void> {
-        return new Promise((res, rej) => {
-            worker.once('message', ({ cmd }) => {
-                if (command === cmd) {
-                    res();
-                }
-            });
-
-            if (timeout > 0) {
-                setTimeout(() => rej, timeout);
-            }
-        });
-    }
-
-    function send(cmd: string) {
-        worker.postMessage({ cmd });
-    }
-
-    return { worker, send, waitFor };
-}
-
 const workerScript = `
-  // Compile TS on the fly
-  process.env.TS_NODE_COMPILER_OPTIONS = JSON.stringify({ module: 'CommonJS' });
-  require('ts-node/register/transpile-only');
+    process.env.TS_NODE_COMPILER_OPTIONS = JSON.stringify({ module: 'CommonJS' });
+    require('ts-node/register/transpile-only');
 
-  const { parentPort, workerData } = require('worker_threads');
-  const { BinarySemaphore } = require(workerData.modulePath);
+    const { parentPort, workerData } = require('worker_threads');
+    const { BinarySemaphore } = require(workerData.modulePath);
+    const semaphore = new BinarySemaphore(workerData.buffer);
 
-  const sem = new BinarySemaphore(workerData.sharedBuffer);
-
-  parentPort.on('message', async ({ cmd }) => {
-    switch (cmd) {
-      case 'lock':
-        try {
-            sem.lock();
-        } catch {
-            parentPort.postMessage({ cmd: 'timeout' });
+    parentPort.on('message', ({ command }) => {
+        if (command === 'acquire') {
+            parentPort.postMessage({ type: 'attempting' });
+            try {
+                semaphore.lock();
+                parentPort.postMessage({ type: 'acquired' });
+            } catch (error) {
+                parentPort.postMessage({ type: 'timeout', message: error.message });
+            }
+        } else if (command === 'release') {
+            semaphore.unlock();
+            parentPort.postMessage({ type: 'released' });
         }
-        parentPort.postMessage({ cmd: 'locked' });
-        break;
-      case 'unlock':
-        sem.unlock();
-        parentPort.postMessage({ cmd: 'unlocked' });
-        break;
-      default:
-    }
-  });
+    });
 `;
 
-describe('BinarySemaphore – master‑worker protocol', () => {
-    const sharedBuffer = new SharedArrayBuffer(BinarySemaphore.INTERNAL_BUFFER_SIZE);
+function waitFor(worker: Worker, type: string, timeoutMs = 2_000): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            worker.off('message', handler);
+            reject(new Error(`Timed out waiting for worker message '${type}'`));
+        }, timeoutMs);
+        const handler = (message: { type: string }) => {
+            if (message.type !== type) return;
+            clearTimeout(timer);
+            worker.off('message', handler);
+            resolve();
+        };
+        worker.on('message', handler);
+    });
+}
 
+describe('BinarySemaphore (worker synchronization)', () => {
+    const buffer = new SharedArrayBuffer(BinarySemaphore.INTERNAL_BUFFER_SIZE);
     const modulePath = path.resolve(__dirname, '../semaphore');
+    let first: Worker;
+    let second: Worker;
 
-    const w1 = createWorker(workerScript, { modulePath, sharedBuffer });
-    const w2 = createWorker(workerScript, { modulePath, sharedBuffer });
-
-    test('Binary semaphore (2 workers)', async () => {
-        let res = w1.waitFor('locked');
-        w1.send('lock');
-        expect(res).resolves.toBeUndefined();
-
-        res = w2.waitFor('locked', 100);
-        w2.send('lock');
-        expect(res).rejects.toThrow();
-
-        res = w1.waitFor('unlocked');
-        let res2 = w2.waitFor('locked');
-        w1.send('unlock');
-        expect(res).resolves.toBeUndefined();
-        expect(res2).resolves.toBeUndefined();
-
-        res = w1.waitFor('locked', 100);
-        w1.send('lock');
-        expect(res).rejects.toThrow();
-
-        res = w2.waitFor('unlocked');
-        res2 = w1.waitFor('locked');
-        w2.send('unlock');
-        expect(res).resolves.toBeUndefined();
-        expect(res2).resolves.toBeUndefined();
-
-        res = w1.waitFor('unlocked');
-        w1.send('unlock');
-        expect(res).resolves.toBeUndefined();
-
-        const sem = new BinarySemaphore(sharedBuffer);
-
-        expect(sem.tryLock()).toBe(true);
+    beforeEach(() => {
+        first = new Worker(workerScript, { eval: true, workerData: { buffer, modulePath } });
+        second = new Worker(workerScript, { eval: true, workerData: { buffer, modulePath } });
     });
 
-    test('Binary semaphore lock timeout', async () => {
-        let res = w1.waitFor('locked');
-        w1.send('lock');
-        expect(res).resolves.toBeUndefined();
-
-        res = w2.waitFor('timeout', 1000);
-        w2.send('lock');
-        expect(res).resolves.toBeUndefined();
-
-        w2.send('lock');
-        res = w1.waitFor('unlocked');
-        const res2 = w2.waitFor('locked');
-        w1.send('unlock');
-        expect(res).resolves.toBeUndefined();
-        expect(res2).resolves.toBeUndefined();
+    afterEach(async () => {
+        await Promise.all([first.terminate(), second.terminate()]);
     });
 
-    afterAll(() => {
-        w1.worker.terminate();
-        w2.worker.terminate();
+    test('unlock wakes a worker waiting for the semaphore', async () => {
+        const firstAcquired = waitFor(first, 'acquired');
+        first.postMessage({ command: 'acquire' });
+        await firstAcquired;
+
+        const secondAttempting = waitFor(second, 'attempting');
+        second.postMessage({ command: 'acquire' });
+        await secondAttempting;
+
+        const secondAcquired = waitFor(second, 'acquired');
+        const firstReleased = waitFor(first, 'released');
+        first.postMessage({ command: 'release' });
+        await Promise.all([firstReleased, secondAcquired]);
+
+        const secondReleased = waitFor(second, 'released');
+        second.postMessage({ command: 'release' });
+        await secondReleased;
     });
 
-    afterEach(() => {
-        jest.clearAllMocks();
+    test('a contended lock reports a bounded timeout', async () => {
+        const firstAcquired = waitFor(first, 'acquired');
+        first.postMessage({ command: 'acquire' });
+        await firstAcquired;
+
+        const secondAttempting = waitFor(second, 'attempting');
+        const secondTimedOut = waitFor(second, 'timeout');
+        second.postMessage({ command: 'acquire' });
+        await Promise.all([secondAttempting, secondTimedOut]);
+
+        const firstReleased = waitFor(first, 'released');
+        first.postMessage({ command: 'release' });
+        await firstReleased;
     });
 });
