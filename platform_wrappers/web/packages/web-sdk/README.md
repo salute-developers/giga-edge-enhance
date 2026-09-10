@@ -196,7 +196,7 @@ const customModel = await fetch('/path/to/my/denoise.spench').arrayBuffer();
 
 const sdk = SpenchSDK.create(audioCtx, {
   models: {
-    noiseCancellation: { lite48k: customModel },
+    noiseCancellation: { fast48: customModel },
   },
 });
 ```

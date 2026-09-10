@@ -7,7 +7,7 @@ import {
     WORKLET_OUTPUT_BUFFER_STEP,
 } from './constants';
 
-export type ModelKey = 'fast8' | 'lite24k' | 'full24k' | 'lite48k' | 'quality48';
+export type ModelKey = 'fast8' | 'fast24' | 'quality24' | 'fast48' | 'quality48';
 
 /**
  * A value that can represent a model. It can be a string URL, a `URL` instance,
@@ -177,7 +177,7 @@ export function getDspFeatures(features: Partial<DspFeatures> = {}): DspFeatures
     return { normalization, echoCancellation };
 }
 
-const modelTypeLoadOrder = ['lite24k', 'full24k', 'lite48k', 'quality48'] as const;
+const modelTypeLoadOrder = ['fast24', 'quality24', 'fast48', 'quality48'] as const;
 export function getDefaultNoiseCancellationModel(models: ModelsTmpl | undefined, sampleRate: number): ModelKey {
     if (sampleRate <= 8000 && models?.noiseCancellation?.fast8) {
         return 'fast8';

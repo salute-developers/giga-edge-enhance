@@ -35,7 +35,7 @@ target_compile_features(spench-native-tests PRIVATE cxx_std_20)
 target_compile_definitions(
     spench-native-tests
     PRIVATE
-    SPENCH_TEST_MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/assets/full48k.spench"
+    SPENCH_TEST_MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/assets/quality48.spench"
 )
 
 target_link_libraries(

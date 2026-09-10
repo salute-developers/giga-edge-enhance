@@ -123,8 +123,8 @@ describe('getTransferableModelRepresentation', () => {
     test('converts URLs to href strings and keeps ArrayBuffers', () => {
         const raw = {
             noiseCancellation: {
-                lite24k: new ArrayBuffer(4),
-                full24k: new URL('https://example.com/full24k.spench'),
+                fast24: new ArrayBuffer(4),
+                quality24: new URL('https://example.com/quality24.spench'),
                 custom: 'https://example.com/custom.spench',
             },
         } as unknown as ModelsTmpl<string | ArrayBuffer>;
@@ -134,13 +134,13 @@ describe('getTransferableModelRepresentation', () => {
         // Transferables should contain the single ArrayBuffer.
         expect(trans).toHaveLength(1);
         expect(trans[0]).toBeInstanceOf(ArrayBuffer);
-        expect(trans[0]).toBe((raw as any).noiseCancellation.lite24k);
+        expect(trans[0]).toBe((raw as any).noiseCancellation.fast24);
 
         // Models map should have href string for URL and keep strings untouched.
         expect(models).toMatchObject({
             noiseCancellation: {
-                lite24k: raw.noiseCancellation!.lite24k,
-                full24k: 'https://example.com/full24k.spench',
+                fast24: raw.noiseCancellation!.fast24,
+                quality24: 'https://example.com/quality24.spench',
                 custom: 'https://example.com/custom.spench',
             },
         });
@@ -159,8 +159,8 @@ describe('SpenchWorker', () => {
     test('constructor posts INIT message with the correct resources', () => {
         const rawModels = {
             noiseCancellation: {
-                lite24k: new ArrayBuffer(4),
-                full24k: new URL('https://example.com/model.spench'),
+                fast24: new ArrayBuffer(4),
+                quality24: new URL('https://example.com/model.spench'),
             },
         } as unknown as ModelsTmpl<string | ArrayBuffer>;
 
@@ -183,13 +183,13 @@ describe('SpenchWorker', () => {
         // The models object must keep ArrayBuffers and convert URLs to hrefs.
         expect(msg.resources.models).toMatchObject({
             noiseCancellation: {
-                lite24k: rawModels.noiseCancellation!.lite24k,
-                full24k: 'https://example.com/model.spench',
+                fast24: rawModels.noiseCancellation!.fast24,
+                quality24: 'https://example.com/model.spench',
             },
         });
 
         // The transfer list must include the ArrayBuffer from the models.
-        expect(transfer).toEqual([rawModels.noiseCancellation!.lite24k]);
+        expect(transfer).toEqual([rawModels.noiseCancellation!.fast24]);
     });
 
     test('createPort returns a port that is destroyed when the last client closes', async () => {
