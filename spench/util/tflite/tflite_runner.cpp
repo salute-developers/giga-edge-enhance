@@ -621,12 +621,13 @@ void SpenchQTfliteRunner::infer(spench::SpenchTask* denoise_task) {
       specs[t].write_magnitude_interleaved(mag, t, num_frames);
     }
 
-    std::vector<std::vector<int32_t>> resolved_input_shapes = model_input_shapes_;
-    set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], static_cast<int32_t>(num_frames));
-
-    SpenchQTfliteRunner::prepare_input_in_place(mag, inputs, denoise_context);
     {
+      // Tensor resizing rebuilds metadata. Keep every metadata read and the
+      // corresponding run in one critical section when a runner is shared.
       std::lock_guard<std::mutex> lock(model_run_mutex_);
+      std::vector<std::vector<int32_t>> resolved_input_shapes = model_input_shapes_;
+      set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], static_cast<int32_t>(num_frames));
+      SpenchQTfliteRunner::prepare_input_in_place(mag, inputs, denoise_context);
       run(inputs, resolved_input_shapes);
       SpenchQTfliteRunner::init_output_tensors(denoise_data, static_cast<uint32_t>(output_tensor_sizes[7]));
       parse_results<float>(denoise_data);
