@@ -12,7 +12,7 @@ let settings = SpenchSettings(minLatency: 0.08,
                                maxProcessingChunkSeconds: 0.032)
 
 let features = SpenchFeatures(normalization: true,
-                               noiseSuppression: .quality48k)
+                               noiseSuppression: .quality48)
 
 let unit = try SpenchAVAudioUnit(features: features, settings: settings)
 ```

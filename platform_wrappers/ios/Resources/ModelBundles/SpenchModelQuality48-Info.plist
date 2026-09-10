@@ -5,11 +5,11 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleIdentifier</key>
-    <string>com.gigaedge.SpenchModelQuality48k</string>
+    <string>com.gigaedge.SpenchModelQuality48</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>SpenchModelQuality48k</string>
+    <string>SpenchModelQuality48</string>
     <key>CFBundlePackageType</key>
     <string>BNDL</string>
     <key>CFBundleShortVersionString</key>
@@ -21,6 +21,6 @@
     <key>SpenchModelFileName</key>
     <string>quality48</string>
     <key>SpenchModelID</key>
-    <string>quality48k</string>
+    <string>quality48</string>
 </dict>
 </plist>

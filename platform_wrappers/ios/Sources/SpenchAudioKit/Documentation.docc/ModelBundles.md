@@ -4,8 +4,8 @@
 
 Spench denoiser models are packaged as `.bundle` resources with metadata that identifies each model. SpenchAudioKit ships with two default bundles:
 
-- ``SpenchModelDescriptor/lite8k``
-- ``SpenchModelDescriptor/quality48k``
+- ``SpenchModelDescriptor/fast8``
+- ``SpenchModelDescriptor/quality48``
 
 Custom builds can ship additional bundles; ``SpenchModelCatalog`` discovers anything in the framework, the main bundle, or the loaded bundles list.
 
@@ -31,7 +31,7 @@ dynamically (e.g. through On-Demand Resources).
 
 ```swift
 let features = SpenchFeatures(normalization: true,
-                               noiseSuppression: .quality48k)
+                               noiseSuppression: .quality48)
 ```
 
 You can also build a descriptor from a custom raw value:

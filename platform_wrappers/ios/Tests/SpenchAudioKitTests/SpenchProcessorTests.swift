@@ -28,7 +28,7 @@ final class SpenchProcessorTests: XCTestCase {
         XCTAssertEqual(processor.features, disabledFeatures)
 
         let enabledFeatures = SpenchFeatures(normalization: true,
-                                              noiseSuppression: SpenchModelDescriptor(rawValue: "quality48k"))
+                                              noiseSuppression: SpenchModelDescriptor(rawValue: "quality48"))
         try processor.setFeatures(enabledFeatures)
         XCTAssertEqual(processor.features, enabledFeatures)
     }
@@ -42,7 +42,7 @@ final class SpenchProcessorTests: XCTestCase {
 
     func testSampleRateCanBeUpdated() throws {
         let features = SpenchFeatures(normalization: true,
-                                       noiseSuppression: SpenchModelDescriptor(rawValue: "quality48k"))
+                                       noiseSuppression: SpenchModelDescriptor(rawValue: "quality48"))
         let processor = try SpenchProcessor(sampleRate: 44_100, features: features)
 
         try processor.setSampleRate(48_000)
@@ -89,7 +89,7 @@ final class SpenchProcessorTests: XCTestCase {
     func testResetSucceedsForConfiguredPipelines() throws {
         let processor = try SpenchProcessor(sampleRate: 44_100,
                                             features: SpenchFeatures(normalization: true,
-                                                                      noiseSuppression: SpenchModelDescriptor(rawValue: "quality48k")))
+                                                                      noiseSuppression: SpenchModelDescriptor(rawValue: "quality48")))
 
         let input = Array(repeating: Float(0.25), count: 512)
         var output = Array(repeating: Float.zero, count: input.count)
@@ -98,7 +98,7 @@ final class SpenchProcessorTests: XCTestCase {
 
         processor.reset()
 
-        XCTAssertEqual(processor.features.noiseSuppression, SpenchModelDescriptor(rawValue: "quality48k"))
+        XCTAssertEqual(processor.features.noiseSuppression, SpenchModelDescriptor(rawValue: "quality48"))
         XCTAssertEqual(processor.telemetry, telemetryBeforeReset)
     }
 
@@ -120,7 +120,7 @@ final class SpenchProcessorTests: XCTestCase {
     func testTelemetryRecordsBothProcessingStages() throws {
         let processor = try SpenchProcessor(sampleRate: 44_100,
                                             features: SpenchFeatures(normalization: true,
-                                                                     noiseSuppression: SpenchModelDescriptor(rawValue: "quality48k")),
+                                                                     noiseSuppression: SpenchModelDescriptor(rawValue: "quality48")),
                                             settings: SpenchSettings(telemetryRoundingMilliseconds: 0.25))
 
         let input = Array(repeating: Float(0.25), count: 512)
@@ -135,7 +135,7 @@ final class SpenchProcessorTests: XCTestCase {
     func testDenoiserProcessesNativeChunk() throws {
         let processor = try SpenchProcessor(
             sampleRate: 48_000,
-            features: SpenchFeatures(normalization: false, noiseSuppression: .quality48k)
+                                                                      features: SpenchFeatures(normalization: false, noiseSuppression: .quality48)
         )
         var samples = Array(repeating: Float(0.25), count: 1_536)
         let frameCount = samples.count
@@ -168,7 +168,7 @@ final class SpenchProcessorTests: XCTestCase {
     func testAvailableModelsFindInstalledBundles() throws {
         let modelIDs = try SpenchModelCatalog.availableModels().map(\.rawValue)
 
-        XCTAssertEqual(modelIDs, ["lite8k", "quality48k"])
+        XCTAssertEqual(modelIDs, ["fast8", "quality48"])
     }
 
     func testNormalizationConfigIncludesVadParametersWhenEnabled() {

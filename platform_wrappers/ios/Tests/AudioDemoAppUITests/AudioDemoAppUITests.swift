@@ -40,8 +40,8 @@ final class AudioDemoAppUITests: XCTestCase {
         XCTAssertEqual(denoiserTelemetryLabel.label, "Denoising mean: --")
         XCTAssertTrue(!lowPerformanceLabel.exists || !lowPerformanceLabel.isHittable)
 
-        selectModel(withID: "lite8k", in: app)
-        XCTAssertEqual(modelButton.label, "lite8k")
+        selectModel(withID: "fast8", in: app)
+        XCTAssertEqual(modelButton.label, "fast8")
 
         fileButton.tap()
 
@@ -49,8 +49,8 @@ final class AudioDemoAppUITests: XCTestCase {
         XCTAssertTrue(modelButton.isEnabled)
         XCTAssertTrue(processingSwitch.isEnabled)
 
-        selectModel(withID: "quality48k", in: app)
-        XCTAssertEqual(modelButton.label, "quality48k")
+        selectModel(withID: "quality48", in: app)
+        XCTAssertEqual(modelButton.label, "quality48")
 
         XCTAssertTrue(saveButton.waitForExistence(timeout: 15))
         XCTAssertEqual(statusLabel.label, "OK")
@@ -62,11 +62,11 @@ final class AudioDemoAppUITests: XCTestCase {
     }
 
     func testFileProcessingAndSaveWithoutErrorsForLite8k() throws {
-        try runFileProcessingFlow(selectedModelID: "lite8k")
+        try runFileProcessingFlow(selectedModelID: "fast8")
     }
 
     func testFileProcessingAndSaveWithoutErrorsForQuality48k() throws {
-        try runFileProcessingFlow(selectedModelID: "quality48k")
+        try runFileProcessingFlow(selectedModelID: "quality48")
     }
 
     private func runFileProcessingFlow(selectedModelID: String?) throws {

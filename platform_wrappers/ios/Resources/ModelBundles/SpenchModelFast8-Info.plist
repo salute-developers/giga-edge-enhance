@@ -5,11 +5,11 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleIdentifier</key>
-    <string>com.gigaedge.SpenchModelLite8k</string>
+    <string>com.gigaedge.SpenchModelFast8</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>SpenchModelLite8k</string>
+    <string>SpenchModelFast8</string>
     <key>CFBundlePackageType</key>
     <string>BNDL</string>
     <key>CFBundleShortVersionString</key>
@@ -21,6 +21,6 @@
     <key>SpenchModelFileName</key>
     <string>fast8</string>
     <key>SpenchModelID</key>
-    <string>lite8k</string>
+    <string>fast8</string>
 </dict>
 </plist>
