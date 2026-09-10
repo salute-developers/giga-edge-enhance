@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.gigaedge.spench.models.full48k"
+    namespace = "com.gigaedge.spench.models.quality48"
     compileSdk = 35
 
     defaultConfig {

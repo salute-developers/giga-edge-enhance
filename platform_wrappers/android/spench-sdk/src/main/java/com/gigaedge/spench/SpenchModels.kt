@@ -5,7 +5,7 @@ import android.content.Context
 /**
  * Runtime discovery of the noise-suppression models packaged into the app.
  *
- * Models are contributed by importing model AAR modules (for example `:spench-model-full24k`); only
+ * Models are contributed by importing model AAR modules (for example `:spench-model-quality48`); only
  * imported models are packaged. Each contributes an asset `spench/models/{name}.spench`.
  */
 object SpenchModels {

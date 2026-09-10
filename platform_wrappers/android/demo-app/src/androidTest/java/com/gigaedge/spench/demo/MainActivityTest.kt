@@ -70,19 +70,19 @@ class MainActivityTest {
     }
 
     @Test
-    fun noiseSuppressionSelectorDefaultsToSortedFirstAndCanSelectOffAndFull48k() {
+fun noiseSuppressionSelectorDefaultsToSortedFirstAndCanSelectOffAndQuality48() {
         val targetContext = targetContext()
         ActivityScenario.launch<MainActivity>(Intent(targetContext, MainActivity::class.java)).use {
-            onView(withId(R.id.noiseSuppressionSpinner)).check(matches(withSpinnerText("full24k")))
+            onView(withId(R.id.noiseSuppressionSpinner)).check(matches(withSpinnerText("quality48")))
 
             onView(withId(R.id.noiseSuppressionSpinner)).perform(click())
             onData(hasToString("Off")).perform(click())
             onView(withId(R.id.noiseSuppressionSpinner)).check(matches(withSpinnerText("Off")))
 
             onView(withId(R.id.noiseSuppressionSpinner)).perform(click())
-            onData(hasToString("full48k")).perform(click())
+            onData(hasToString("quality48")).perform(click())
 
-            onView(withId(R.id.noiseSuppressionSpinner)).check(matches(withSpinnerText("full48k")))
+            onView(withId(R.id.noiseSuppressionSpinner)).check(matches(withSpinnerText("quality48")))
         }
     }
 
@@ -184,7 +184,7 @@ class MainActivityTest {
 
     @Test
     fun fileProcessingFlowCreatesOutputWithFull48k() {
-        runFileProcessingFlow(selectedNoiseSuppression = "full48k", inputName = "ui-input-48k.wav", outputName = "ui-output-48k.wav")
+        runFileProcessingFlow(selectedNoiseSuppression = "quality48", inputName = "ui-input-48k.wav", outputName = "ui-output-48k.wav")
     }
 
     @Test

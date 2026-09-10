@@ -24,7 +24,7 @@ import com.gigaedge.spench.SpenchModels
 
 // sampleRateHz is your input rate in Hz; audio must be mono.
 SpenchProcessor(context, sampleRateHz).use { processor ->
-    val model = SpenchModels.available(context).firstOrNull() // e.g. "full48k", or null
+    val model = SpenchModels.available(context).firstOrNull() // e.g. "quality48", or null
     processor.setFeatures(SpenchFeatures(normalization = true, noiseSuppression = model))
 
     val output = FloatArray(input.size)
@@ -40,8 +40,7 @@ Add the SDK and the model modules to your app's dependencies:
 ```kotlin
 dependencies {
     implementation(project(":spench-sdk"))
-    implementation(project(":spench-model-full24k"))
-    implementation(project(":spench-model-full48k"))
+    implementation(project(":spench-model-quality48"))
 }
 ```
 

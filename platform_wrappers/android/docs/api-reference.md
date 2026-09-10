@@ -157,8 +157,7 @@ object SpenchModels {
 
 ## Model name constants (`com.gigaedge.spench.models`)
 
-- `SpenchFull24kModel.NAME` == `"full24k"` (from `:spench-model-full24k`).
-- `SpenchFull48kModel.NAME` == `"full48k"` (from `:spench-model-full48k`).
+- `SpenchQuality48Model.NAME` == `"quality48"` (from `:spench-model-quality48`).
 
 ## Internal (not public API)
 

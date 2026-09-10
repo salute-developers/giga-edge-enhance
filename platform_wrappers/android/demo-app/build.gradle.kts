@@ -51,8 +51,7 @@ detekt {
 
 dependencies {
     implementation(project(":spench-sdk"))
-    implementation(project(":spench-model-full24k"))
-    implementation(project(":spench-model-full48k"))
+    implementation(project(":spench-model-quality48"))
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

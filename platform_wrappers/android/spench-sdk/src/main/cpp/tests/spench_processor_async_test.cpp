@@ -22,7 +22,7 @@ std::shared_ptr<spench::PackedModelReader> test_model_reader() {
 
 constexpr std::uint32_t test_sample_rate_hz = 48000U;
 constexpr std::size_t test_chunk_frames = 768U;
-constexpr const char* test_model_name = "full48k";
+constexpr const char* test_model_name = "quality48";
 
 void enable_full_processing(spench::SpenchProcessor& processor) {
   processor.set_features(true, test_model_name, test_model_reader());

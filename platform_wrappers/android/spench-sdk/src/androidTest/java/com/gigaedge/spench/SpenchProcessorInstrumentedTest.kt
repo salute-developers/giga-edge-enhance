@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class SpenchProcessorInstrumentedTest {
-    private val modelName = "full48k"
+    private val modelName = "quality48"
     private val sampleRateHz = 48_000
     private val chunkFrames = 768
 
