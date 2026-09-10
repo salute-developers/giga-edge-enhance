@@ -183,7 +183,7 @@ fun noiseSuppressionSelectorDefaultsToSortedFirstAndCanSelectOffAndQuality48() {
     }
 
     @Test
-    fun fileProcessingFlowCreatesOutputWithFull48k() {
+    fun fileProcessingFlowCreatesOutputWithQuality48() {
         runFileProcessingFlow(selectedNoiseSuppression = "quality48", inputName = "ui-input-48k.wav", outputName = "ui-output-48k.wav")
     }
 
