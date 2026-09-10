@@ -27,7 +27,7 @@ function App() {
     const setFeaturesRef = useRef<(f: Features) => Promise<void | Error>>(null);
     const customDenoiserInputRef = useRef<HTMLInputElement>(null);
     const [features, setFeatures] = useState<Features>({
-        noiseCancellation: 'full48k',
+        noiseCancellation: 'quality48',
         normalization: true,
         echoCancellation: false,
     });
@@ -183,11 +183,11 @@ function App() {
                                 <span><strong>Off</strong><small>Pass the signal through</small></span>
                             </label>
                             <label className="choiceCard">
-                                <input type="radio" data-testid="denoiserQuality48" checked={features.noiseCancellation === 'full48k'} name="denoiserChoice" onChange={() => handleDenoiserChange('full48k', 48000)} />
+                                <input type="radio" data-testid="denoiserQuality48" checked={features.noiseCancellation === 'quality48'} name="denoiserChoice" onChange={() => handleDenoiserChange('quality48', 48000)} />
                                 <span><strong>Quality</strong><small>Best voice quality · 48 kHz</small></span>
                             </label>
                             <label className="choiceCard">
-                                <input type="radio" data-testid="denoiserFast8" checked={features.noiseCancellation === 'lite8k'} name="denoiserChoice" onChange={() => handleDenoiserChange('lite8k', 8000)} />
+                                <input type="radio" data-testid="denoiserFast8" checked={features.noiseCancellation === 'fast8'} name="denoiserChoice" onChange={() => handleDenoiserChange('fast8', 8000)} />
                                 <span><strong>Fast</strong><small>Lower CPU use · 8 kHz</small></span>
                             </label>
                             <label className="choiceCard customChoice">
