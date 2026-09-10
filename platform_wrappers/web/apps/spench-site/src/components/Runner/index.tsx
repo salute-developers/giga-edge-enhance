@@ -11,7 +11,7 @@ type Result = {
 };
 
 type Models = {
-    noiseCancellation: { lite8k: URL; full48k: URL; lite48k: ArrayBuffer };
+    noiseCancellation: { fast8: URL; quality48: URL; lite48k: ArrayBuffer };
 };
 export type Features = RawFeatures<Models>;
 

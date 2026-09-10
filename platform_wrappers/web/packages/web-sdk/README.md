@@ -45,7 +45,7 @@ const sdk = SpenchSDK.create(audioCtx);
 
 // 3️⃣ Define the feature set
 const features: Features = {
-  noiseCancellation: 'full48k',
+  noiseCancellation: 'quality48',
   normalization: true,
   echoCancellation: false,
 };
@@ -142,9 +142,9 @@ audio processing is lagging.  The event contains the most probable cause
 |----------|------|---------|
 | `normalization` | `boolean` | `false` |
 | `echoCancellation` | `boolean` | `false` |
-| `noiseCancellation` | `boolean \| "lite8k" \| "full48k"` | `false` |
+| `noiseCancellation` | `boolean \| "fast8" \| "quality48"` | `false` |
 
-The SDK bundles `fast8.spench` as `lite8k` and `quality48.spench` as `full48k`. Supply other model keys through
+The SDK bundles `fast8.spench` as `fast8` and `quality48.spench` as `quality48`. Supply other model keys through
 `params.models` when using custom model files.
 
 ## Testing
@@ -218,7 +218,7 @@ const ctx = new AudioContext({ sampleRate });
 
 // Model accuracy depends on input signal normalization; enable it below.
 const features = {
-  noiseCancellation: 'full48k' as const, // Use 'lite8k' for 8 kHz input.
+  noiseCancellation: 'quality48' as const, // Use 'fast8' for 8 kHz input.
   normalization: true,
 } as const;
 

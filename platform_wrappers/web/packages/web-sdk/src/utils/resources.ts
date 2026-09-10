@@ -8,8 +8,8 @@ const DENOISE_QUALITY_48_MODEL_URL = new URL('../../models/quality48.spench', im
 
 export const DEFAULT_MODELS = {
     noiseCancellation: {
-        lite8k: DENOISE_FAST_8_MODEL_URL,
-        full48k: DENOISE_QUALITY_48_MODEL_URL,
+        fast8: DENOISE_FAST_8_MODEL_URL,
+        quality48: DENOISE_QUALITY_48_MODEL_URL,
     },
 } as const;
 

@@ -57,16 +57,16 @@ describe('chunk size settings', () => {
 describe('default noise cancellation models', () => {
     const models = {
         noiseCancellation: {
-            lite8k: new URL('https://example.com/fast8.spench'),
-            full48k: new URL('https://example.com/quality48.spench'),
+            fast8: new URL('https://example.com/fast8.spench'),
+            quality48: new URL('https://example.com/quality48.spench'),
         },
     };
 
     it('uses the bundled fast model for 8 kHz input', () => {
-        expect(getDefaultNoiseCancellationModel(models, 8000)).toBe('lite8k');
+        expect(getDefaultNoiseCancellationModel(models, 8000)).toBe('fast8');
     });
 
     it('uses the bundled quality model above 8 kHz', () => {
-        expect(getDefaultNoiseCancellationModel(models, 8001)).toBe('full48k');
+        expect(getDefaultNoiseCancellationModel(models, 8001)).toBe('quality48');
     });
 });
