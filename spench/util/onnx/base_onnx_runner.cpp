@@ -1,6 +1,7 @@
 #include "spench/util/onnx/base_onnx_runner.h"
 
 #include <filesystem>
+#include <limits>
 
 namespace util {
 namespace onnx {
@@ -150,27 +151,49 @@ void BaseOnnxRunner::validate_model(const std::vector<std::string>& input_names,
 }
 
 void BaseOnnxRunner::resize_if_needed_in_place(std::vector<float>& to_check,
-                                          const std::vector<int64_t>& shape,
-                                          uint32_t num_parts) {
-  if (to_check.size() == 0) {
-    uint64_t multi = std::accumulate(shape.begin(),
-                                     shape.end(),
-                                     uint64_t{1},
-                                     std::multiplies<uint64_t>());
-    to_check.resize(multi / num_parts, 0.0f);
+                                           const std::vector<int64_t>& shape,
+                                           uint32_t num_parts) {
+  if (num_parts == 0) {
+    throw OnnxValidationException("Tensor part count must be greater than zero");
   }
+
+  uint64_t element_count = 1;
+  for (const int64_t dimension : shape) {
+    if (dimension <= 0 || static_cast<uint64_t>(dimension) >
+                              std::numeric_limits<uint64_t>::max() / element_count) {
+      throw OnnxValidationException("Resolved tensor shape is invalid or too large");
+    }
+    element_count *= static_cast<uint64_t>(dimension);
+  }
+  if (element_count % num_parts != 0 || element_count / num_parts > std::numeric_limits<size_t>::max()) {
+    throw OnnxValidationException("Resolved tensor size is invalid or too large");
+  }
+
+  // Dynamic time dimensions can change between calls. The tensor view passed to
+  // ONNX must match the current shape exactly, not the first shape seen.
+  to_check.resize(static_cast<size_t>(element_count / num_parts), 0.0f);
 }
 
 void BaseOnnxRunner::resize_if_needed_in_place(std::valarray<float>& to_check,
-                                          const std::vector<int64_t>& shape,
-                                          uint32_t num_parts) {
-  if (to_check.size() == 0) {
-    uint64_t multi = std::accumulate(shape.begin(),
-                                     shape.end(),
-                                     uint64_t{1},
-                                     std::multiplies<uint64_t>());
-    to_check.resize(multi / num_parts, 0.0f);
+                                           const std::vector<int64_t>& shape,
+                                           uint32_t num_parts) {
+  if (num_parts == 0) {
+    throw OnnxValidationException("Tensor part count must be greater than zero");
   }
+
+  uint64_t element_count = 1;
+  for (const int64_t dimension : shape) {
+    if (dimension <= 0 || static_cast<uint64_t>(dimension) >
+                              std::numeric_limits<uint64_t>::max() / element_count) {
+      throw OnnxValidationException("Resolved tensor shape is invalid or too large");
+    }
+    element_count *= static_cast<uint64_t>(dimension);
+  }
+  if (element_count % num_parts != 0 || element_count / num_parts > std::numeric_limits<size_t>::max()) {
+    throw OnnxValidationException("Resolved tensor size is invalid or too large");
+  }
+
+  to_check.resize(static_cast<size_t>(element_count / num_parts), 0.0f);
 }
 
 }  // namespace onnx
