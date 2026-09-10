@@ -11,7 +11,7 @@ type Result = {
 };
 
 type Models = {
-    noiseCancellation: { fast8: URL; quality48: URL; lite48k: ArrayBuffer };
+    noiseCancellation: { fast8: URL; quality48: URL; fast48: ArrayBuffer };
 };
 export type Features = RawFeatures<Models>;
 
@@ -59,7 +59,7 @@ async function processAudio(
         },
         models: {
             noiseCancellation: {
-                lite48k: customDenoiseModel!,
+                fast48: customDenoiseModel!,
             },
         },
         sendMetric: (metric, value) => {
@@ -255,7 +255,7 @@ async function processLiveDemo(
         },
         models: {
             noiseCancellation: {
-                lite48k: customDenoiseModel!,
+                fast48: customDenoiseModel!,
             },
         },
         sendMetric: (metric, value) => {
