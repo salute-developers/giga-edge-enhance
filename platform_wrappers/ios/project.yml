@@ -56,25 +56,25 @@ targets:
         buildPhase: headers
         headerVisibility: private
 
-  SpenchModelLite8k:
+  SpenchModelFast8:
     type: bundle
     platform: iOS
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.SpenchModelLite8k
         GENERATE_INFOPLIST_FILE: NO
-        INFOPLIST_FILE: Resources/ModelBundles/SpenchModelLite8k-Info.plist
+         INFOPLIST_FILE: Resources/ModelBundles/SpenchModelFast8-Info.plist
     sources:
       - path: Resources/Models/fast8.spench
 
-  SpenchModelQuality48k:
+  SpenchModelQuality48:
     type: bundle
     platform: iOS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.SpenchModelQuality48k
+         PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.SpenchModelQuality48
         GENERATE_INFOPLIST_FILE: NO
-        INFOPLIST_FILE: Resources/ModelBundles/SpenchModelQuality48k-Info.plist
+         INFOPLIST_FILE: Resources/ModelBundles/SpenchModelQuality48-Info.plist
     sources:
       - path: Resources/Models/quality48.spench
 
@@ -88,8 +88,8 @@ targets:
         INFOPLIST_FILE: Sources/AudioDemoApp/Info.plist
     dependencies:
       - target: SpenchAudioKit
-      - target: SpenchModelLite8k
-      - target: SpenchModelQuality48k
+      - target: SpenchModelFast8
+      - target: SpenchModelQuality48
     sources:
       - path: Sources/AudioDemoApp
 

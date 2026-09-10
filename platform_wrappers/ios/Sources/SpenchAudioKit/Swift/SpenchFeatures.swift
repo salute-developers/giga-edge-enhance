@@ -16,7 +16,7 @@ public struct SpenchFeatures: Hashable, Sendable {
     public var normalization: Bool
     /// Identifier of the bundled denoiser model to use, or `nil` to skip
     /// denoising. Use static descriptors such as
-    /// ``SpenchModelDescriptor/quality48k`` or build a custom descriptor.
+    /// ``SpenchModelDescriptor/quality48`` or build a custom descriptor.
     public var noiseSuppression: SpenchModelDescriptor?
 
     /// Creates a feature set.
