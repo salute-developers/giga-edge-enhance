@@ -107,26 +107,26 @@ static void CheckOptNear(const std::optional<T>& v, T expected, T tol = static_c
 TEST_CASE("FAIL Create RangeControl with negative attack_time [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().Init(16, 16, 48000, 48000));
   CHECK_THROWS_WITH(util::sound::RangeControl(48000, -2.0, 5.0, -0.05, 300, 5),
-                    "RangeControl: `attack_time` must be positive.");
+                    "RangeControl: `attack_time` must be non-negative.");
 }
 
 TEST_CASE("FAIL Create RangeControl with negative release_time [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().Init(16, 16, 48000, 48000));
   CHECK_THROWS_WITH(util::sound::RangeControl(48000, -2.0, 5.0, 0.05, -300, 5),
-                    "RangeControl: `release_time` must be positive.");
+                    "RangeControl: `release_time` must be non-negative.");
 }
 
 TEST_CASE("FAIL Create RangeControl with negative hold_time [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().Init(16, 16, 48000, 48000));
   CHECK_THROWS_WITH(util::sound::RangeControl(48000, -2.0, 5.0, 0.05, 300, -5),
-                    "RangeControl: `hold_time` must be positive.");
+                    "RangeControl: `hold_time` must be non-negative.");
 }
 
-TEST_CASE("FAIL Create RangeControl with zero timing or sample rate [sound]") {
+TEST_CASE("RangeControl accepts instantaneous timing but rejects zero sample rate [sound]") {
   CHECK_THROWS(util::sound::RangeControl(0, -2.0F, 5.0F, 0.05F, 0.3F, 0.05F));
-  CHECK_THROWS(util::sound::RangeControl(48000, -2.0F, 5.0F, 0.0F, 0.3F, 0.05F));
-  CHECK_THROWS(util::sound::RangeControl(48000, -2.0F, 5.0F, 0.05F, 0.0F, 0.05F));
-  CHECK_THROWS(util::sound::RangeControl(48000, -2.0F, 5.0F, 0.05F, 0.3F, 0.0F));
+  CHECK_NOTHROW(util::sound::RangeControl(48000, -2.0F, 5.0F, 0.0F, 0.3F, 0.05F));
+  CHECK_NOTHROW(util::sound::RangeControl(48000, -2.0F, 5.0F, 0.05F, 0.0F, 0.05F));
+  CHECK_NOTHROW(util::sound::RangeControl(48000, -2.0F, 5.0F, 0.05F, 0.3F, 0.0F));
 }
 
 TEST_CASE("SUCCEED Create RangeControl and check operator() [sound]") {
