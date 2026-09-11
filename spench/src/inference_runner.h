@@ -33,16 +33,14 @@ class InferenceRunner {
 
   void infer(spench::SpenchTask* denoise_task);
 
-  const ModelType get_model_type() {return model_type_;}
-  uint32_t get_model_future_context_len() {
-    return engine_runner_ptr_->get_future_context_len();
-  }
+  ModelType get_model_type() const { return model_type_; }
+  uint32_t get_model_future_context_len() const { return engine_runner_ptr_->get_future_context_len(); }
 
  protected:
 #ifdef BUILD_TFLITE_ENGINE
-  std::unique_ptr<util::tf_lite::BaseTfliteRunner> engine_runner_ptr_ = nullptr;
+  std::unique_ptr<::util::tf_lite::BaseTfliteRunner> engine_runner_ptr_ = nullptr;
 #else
-  std::unique_ptr<util::onnx::BaseOnnxRunner> engine_runner_ptr_ = nullptr;
+  std::unique_ptr<::util::onnx::BaseOnnxRunner> engine_runner_ptr_ = nullptr;
 #endif
   ModelType model_type_;
 

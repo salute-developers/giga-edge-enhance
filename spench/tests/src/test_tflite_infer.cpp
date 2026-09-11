@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "spench/src/inference_runner.h"
 #include "spench/util/tflite/tflite_runner.h"
 #include "tests/src/utils.h"
 
@@ -44,6 +45,14 @@ struct TestTfliteRunner {
     return *this;
   }
 };
+
+TEST_CASE("FAIL TFLite rejects unsupported model type before inference [tflite]") {
+  const auto config = std::make_shared<spench::DenoiserConfig>(
+      spench::StringConfigReader("model:\n  model_path: unused.tflite\n"
+                                 "inference:\n  model_type: best_speed_new\n"));
+  CHECK_THROWS_WITH(spench::InferenceRunner(config, 1, false),
+                    "Model type is not supported by the selected inference engine.");
+}
 
 TEST_CASE("SUCCEED Run relu model dummy inference [tflite]") {
   std::unique_ptr<tflite::FlatBufferModel> model =

@@ -33,6 +33,9 @@ InferenceRunner::InferenceRunner(std::shared_ptr<spench::NetworkConfig> config,
                                                                             gpu);
   }
 #endif
+  if (engine_runner_ptr_ == nullptr) {
+    throw std::invalid_argument("Model type is not supported by the selected inference engine.");
+  }
 }
 
 InferenceRunner::~InferenceRunner() {
@@ -40,11 +43,10 @@ InferenceRunner::~InferenceRunner() {
 }
 
 void InferenceRunner::infer(spench::SpenchTask* denoise_task) {
-  if (denoise_task) {
-    engine_runner_ptr_->infer(denoise_task);
-  } else {
-    throw("Task data or context are not initialized!");
+  if (denoise_task == nullptr) {
+    throw std::invalid_argument("Task data is not initialized.");
   }
+  engine_runner_ptr_->infer(denoise_task);
 }
 
 }  // namespace spench
