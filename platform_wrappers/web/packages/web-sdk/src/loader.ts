@@ -44,6 +44,8 @@ class Loader<M extends ModelsTmpl> {
 
     preloadedWorker: SpenchWorker | LoadError | undefined;
 
+    protected preloadedWorkerSettings: Settings | undefined;
+
     workletLoadPromise: Promise<void | LoadError> | undefined;
 
     dspWorkletLoadPromise: Promise<void | LoadError> | undefined;
@@ -128,14 +130,14 @@ class Loader<M extends ModelsTmpl> {
             }
 
             if (!settings.dspOnAudioThread) {
-                this.loadWorker(true);
+                this.loadWorker(settings, true);
             }
         }
 
         if (Object.values(getMainFeatures(features)).some(Boolean)) {
             Loader.preloadWasm();
             Loader.preloadModels(features, this.models);
-            this.loadWorker(true);
+            this.loadWorker(settings, true);
         }
     }
 
@@ -166,20 +168,33 @@ class Loader<M extends ModelsTmpl> {
         return res as LoadError;
     }
 
-    async loadWorker(preload = false): Promise<SpenchWorker | LoadError> {
-        if (this.preloadedWorker instanceof Worker) {
+    async loadWorker(settings: Settings = this.settings, preload = false): Promise<SpenchWorker | LoadError> {
+        if (
+            this.preloadedWorker instanceof Worker &&
+            JSON.stringify(this.preloadedWorkerSettings) === JSON.stringify(settings)
+        ) {
             return this.preloadedWorker;
         }
 
+        if (this.preloadedWorker instanceof Worker) {
+            this.preloadedWorker.terminate();
+        }
+        this.preloadedWorker = undefined;
+        this.preloadedWorkerSettings = undefined;
+
         const load = () => {
             try {
-                return new SpenchWorker(this.logger, this.telemetry, this.settings, this.models);
+                return new SpenchWorker(this.logger, this.telemetry, settings, this.models);
             } catch (e) {
                 return new LoadError(e);
             }
         };
 
-        return retry(async () => (this.preloadedWorker = load()), preload ? 0 : this.settings.fetchRetries) as Promise<
+        return retry(async () => {
+            this.preloadedWorker = load();
+            this.preloadedWorkerSettings = settings;
+            return this.preloadedWorker;
+        }, preload ? 0 : settings.fetchRetries) as Promise<
             SpenchWorker | LoadError
         >;
     }

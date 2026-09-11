@@ -542,7 +542,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         const { sampleRate } = this.context;
         const inputBufferSeconds = getInputBufferSeconds(this.#settings);
         const outputBufferSeconds = getOutputBufferSeconds(this.#settings);
-        const worker = await this.#loader.loadWorker();
+        const worker = await this.#loader.loadWorker(this.#settings);
         this.#loader.preloadedWorker = undefined;
 
         if (worker instanceof LoadError) {
