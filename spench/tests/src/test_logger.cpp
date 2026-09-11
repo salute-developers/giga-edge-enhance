@@ -1,0 +1,20 @@
+#include <catch.hpp>
+#include <spdlog/sinks/null_sink.h>
+#include <spdlog/spdlog.h>
+
+#include "spench/src/spench_logger.h"
+
+TEST_CASE("Spench logger does not modify host logging state [logger]") {
+  auto host_sink = std::make_shared<spdlog::sinks::null_sink_mt>();
+  auto host_logger = std::make_shared<spdlog::logger>("spench-test-host", host_sink);
+  host_logger->set_level(spdlog::level::warn);
+  spdlog::set_default_logger(host_logger);
+
+  spench::init_logger(static_cast<uint32_t>(spench::LogLevel::off), "spench-test");
+  REQUIRE(spdlog::default_logger() == host_logger);
+  REQUIRE(host_logger->level() == spdlog::level::warn);
+
+  spench::shutdown_logger();
+  REQUIRE(spdlog::default_logger() == host_logger);
+  REQUIRE(host_logger->level() == spdlog::level::warn);
+}

@@ -1,6 +1,9 @@
 #include "spench/src/denoiser_model_adviser.h"
+
 #include <spdlog/spdlog.h>
+
 #include "spench/src/spench_context.h"
+#include "spench/src/spench_logger.h"
 
 namespace spench {
 
