@@ -46,6 +46,25 @@ class WorkflowsTest(unittest.TestCase):
         self.assertEqual(configure.kwargs["container_stage"], "native")
         self.assertEqual(build.args[0][:2], ["cmake", "--build"])
 
+    def test_container_install_verifies_external_consumer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            build_dir = (root / "out" / "build" / "container-clang-llvm-tools" /
+                         "native-release-onnx")
+            build_dir.mkdir(parents=True)
+            with mock.patch.object(workflows, "ROOT", root), \
+                 mock.patch.object(workflows, "find_prebuilt_dependency", return_value=None), \
+                 mock.patch.object(workflows, "compiler_cache_environment", return_value={}), \
+                 mock.patch.object(workflows, "write_artifact_checksums"), \
+                 mock.patch.object(workflows, "run") as run:
+                workflows.cmake_workflow("install", "native-release-onnx", False)
+
+        self.assertEqual(run.call_count, 4)
+        self.assertEqual(run.call_args_list[0].args[0][:2], ["cmake", "--install"])
+        self.assertEqual(run.call_args_list[1].args[0][0:2], ["cmake", "-S"])
+        self.assertEqual(run.call_args_list[2].args[0][0:2], ["cmake", "--build"])
+        self.assertIn("LD_LIBRARY_PATH", run.call_args_list[3].kwargs["environment"])
+
     def test_android_workflow_sets_dependency_root(self):
         with mock.patch.object(workflows, "compiler_cache_environment", return_value={}), \
              mock.patch.object(workflows, "run") as run:

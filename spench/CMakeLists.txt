@@ -64,6 +64,12 @@ else()
   add_library(spench STATIC ${SPENCH_SOURCES})
 endif()
 
+if(APPLE)
+  set_target_properties(spench PROPERTIES INSTALL_RPATH "@loader_path")
+elseif(UNIX)
+  set_target_properties(spench PROPERTIES INSTALL_RPATH "$ORIGIN")
+endif()
+
 add_library(spench::spench ALIAS spench)
 
 target_include_directories(spench
