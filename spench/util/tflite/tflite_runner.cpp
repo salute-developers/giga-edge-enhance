@@ -1,9 +1,11 @@
-#include <functional>
+#include "spench/util/tflite/tflite_runner.h"
+
 #include <algorithm>
-#include <string>
+#include <functional>
+#include <limits>
 #include <memory>
 #include <sstream>
-#include "spench/util/tflite/tflite_runner.h"
+#include <string>
 
 namespace util {
 namespace tf_lite {
@@ -164,14 +166,15 @@ void BaseTfliteRunner::set_time_dim_if_dynamic(std::vector<int32_t>& shape,
 }
 
 uint64_t BaseTfliteRunner::shape_product(const std::vector<int32_t>& shape) {
-  return std::accumulate(shape.begin(), shape.end(),
-                         uint64_t{1},
-                         [](uint64_t acc, int32_t dim) {
-                           if (dim <= 0) {
-                             throw TfliteValidationException("Resolved tensor shape contains non-positive dimension");
-                           }
-                           return acc * static_cast<uint64_t>(dim);
-                         });
+  return std::accumulate(shape.begin(), shape.end(), uint64_t{1}, [](uint64_t acc, int32_t dim) {
+    if (dim <= 0) {
+      throw TfliteValidationException("Resolved tensor shape contains non-positive dimension");
+    }
+    if (static_cast<uint64_t>(dim) > std::numeric_limits<uint64_t>::max() / acc) {
+      throw TfliteValidationException("Resolved tensor shape is too large");
+    }
+    return acc * static_cast<uint64_t>(dim);
+  });
 }
 
 void BaseTfliteRunner::refresh_tensor_metadata() {
@@ -409,13 +412,12 @@ void SpenchFTfliteRunner::infer(spench::SpenchTask* denoise_task) {
 
   if (denoise_task->stage == spench::PipelineStage::fourier_transformed_spec) {
     std::vector<std::vector<float>*> inputs;
-    std::vector<std::vector<float>> outputs;
     std::vector<float> mag = denoise_data.input_spectrogram[0].get_magnitude();
-    SpenchFTfliteRunner::prepare_input_in_place(mag, inputs, denoise_context);
-    SpenchFTfliteRunner::init_output_tensors(denoise_data, output_tensor_sizes[3]);
 
     {
       std::lock_guard<std::mutex> lock(model_run_mutex_);
+      SpenchFTfliteRunner::prepare_input_in_place(mag, inputs, denoise_context);
+      SpenchFTfliteRunner::init_output_tensors(denoise_data, output_tensor_sizes[3]);
       run(inputs, model_input_shapes_);
       parse_results<float>(denoise_data);
     }

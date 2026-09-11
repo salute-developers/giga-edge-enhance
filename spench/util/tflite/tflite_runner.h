@@ -42,11 +42,13 @@ class BaseTfliteRunner {
 
   virtual void infer(spench::SpenchTask* denoise_task) = 0;
   // change two last arguments
-  virtual void prepare_input_in_place(std::vector<float>& mag,
-                                   std::vector<std::vector<float>*>& inputs,
-                                   spench::SpenchContext<float>* denoise_context) = 0;
-  template<typename T>
-  void test_run(std::vector<std::vector<T>*>& inputs) {run(inputs);}
+  virtual void prepare_input_in_place(std::vector<float>& mag, std::vector<std::vector<float>*>& inputs,
+                                      spench::SpenchContext<float>* denoise_context) = 0;
+  template <typename T>
+  void test_run(std::vector<std::vector<T>*>& inputs) {
+    std::lock_guard<std::mutex> lock(model_run_mutex_);
+    run(inputs);
+  }
   virtual uint32_t get_future_context_len() {
     return model_params_.network_input_ctx_len;
   }
