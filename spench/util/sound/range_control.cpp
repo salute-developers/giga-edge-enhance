@@ -1,10 +1,34 @@
 #include "spench/util/sound/range_control.h"
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace util {
 namespace sound {
+
+namespace {
+
+uint32_t detector_frame_size(uint32_t sample_rate) {
+  if (sample_rate == 0 || sample_rate > 100000) {
+    throw std::runtime_error("RangeControl: `sample_rate` must be in (0, 100000].");
+  }
+  return std::max<uint32_t>(1, static_cast<uint32_t>(sample_rate * 0.01));
+}
+
+uint32_t detector_frame_count(float hold_time) {
+  if (!std::isfinite(hold_time) || hold_time <= 0.0F) {
+    throw std::runtime_error("RangeControl: `hold_time` must be positive.");
+  }
+  const double frames = hold_time / 0.01;
+  if (frames > std::numeric_limits<uint32_t>::max()) {
+    throw std::runtime_error("RangeControl: `hold_time` is too large.");
+  }
+  return std::max<uint32_t>(1, static_cast<uint32_t>(frames));
+}
+
+}  // namespace
 
 template<typename T>
 PeakDetector<T>::PeakDetector(uint32_t frame_size,
@@ -34,24 +58,16 @@ RangeControl::RangeControl(uint32_t sample_rate,
                            float max_gain_db,
                            float attack_time,
                            float release_time,
-                           float hold_time) : detector_{uint32_t(sample_rate * 0.01),
-                                                         hold_time < 0 ? 0 : uint32_t(hold_time / 0.01)},
-                                              target_{target_db},
-                                              max_gain_{max_gain_db} {
-  if (sample_rate > 100000) {
-    throw std::runtime_error("RangeControl: `sample_rate` must be < 100.000.");
-  }
-
-  if (attack_time < 0.0) {
+                            float hold_time) : detector_{detector_frame_size(sample_rate),
+                                                          detector_frame_count(hold_time)},
+                                               target_{target_db},
+                                               max_gain_{max_gain_db} {
+  if (!std::isfinite(attack_time) || attack_time <= 0.0F) {
     throw std::runtime_error("RangeControl: `attack_time` must be positive.");
   }
 
-  if (release_time < 0.0) {
+  if (!std::isfinite(release_time) || release_time <= 0.0F) {
     throw std::runtime_error("RangeControl: `release_time` must be positive.");
-  }
-
-  if (hold_time < 0.0) {
-    throw std::runtime_error("RangeControl: `hold_time` must be positive.");
   }
   wa_ = std::exp(-std::log(9) / (sample_rate * attack_time));
   wr_ = std::exp(-std::log(9) / (sample_rate * release_time));
