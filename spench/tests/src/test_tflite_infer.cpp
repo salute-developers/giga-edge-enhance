@@ -1,6 +1,7 @@
 #include <spdlog/spdlog.h>
 
 #include <catch.hpp>
+#include <future>  // NOLINT
 #include <string>
 #include <vector>
 
@@ -110,6 +111,29 @@ TEST_CASE("SUCCEED Run dummy multi inference for a model 48kHz and with differen
       delete inputs[i];
     }
   }
+}
+
+TEST_CASE("Shared TFLite runner serializes concurrent inference [tflite]") {
+  auto data = std::move(TestTfliteRunner().InitRunner("default_configuration_best_quality_tflite_48khz.yaml"));
+
+  auto run = [&data]() {
+    std::vector<std::vector<float>> storage;
+    std::vector<std::vector<float>*> inputs;
+    storage.reserve(data.denoiser_runner->input_tensor_sizes.size());
+    inputs.reserve(data.denoiser_runner->input_tensor_sizes.size());
+    for (const uint64_t size : data.denoiser_runner->input_tensor_sizes) {
+      storage.emplace_back(size, 0.0F);
+      inputs.push_back(&storage.back());
+    }
+    for (size_t i = 0; i < 10; ++i) {
+      data.denoiser_runner->test_run<float>(inputs);
+    }
+  };
+
+  auto first = std::async(std::launch::async, run);
+  auto second = std::async(std::launch::async, run);
+  REQUIRE_NOTHROW(first.get());
+  REQUIRE_NOTHROW(second.get());
 }
 
 // TEST_CASE(
