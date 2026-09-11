@@ -20,6 +20,9 @@ uint32_t AudioProcessPipelineElement::process(uintptr_t src_ptr, const uint32_t 
   this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
   m_normalizer.ProcessChunk(this->m_input, this->m_normalized);
 
+  if (this->m_normalized.size() > chunk_size) {
+    return 0;
+  }
   if (this->m_normalized.size()) {
     memcpy(src_ptr_, this->m_normalized.data(), this->m_normalized.size() * sizeof(float));
   }
@@ -42,6 +45,9 @@ uint32_t EchoCancellationElement::process(uintptr_t src_ptr, const uint32_t chun
   this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
   m_aec.ProcessChunk(this->m_input, this->m_result);
 
+  if (this->m_result.size() > chunk_size) {
+    return 0;
+  }
   if (this->m_result.size()) {
     memcpy(src_ptr_, this->m_result.data(), this->m_result.size() * sizeof(float));
   }
@@ -61,6 +67,9 @@ uint32_t EchoCancellationElement::processMono(uintptr_t src_ptr,
   this->m_loopback.assign(lbk_ptr_, lbk_ptr_ + chunk_size);
   m_aec.ProcessChunk(this->m_input, this->m_loopback, this->m_result);
 
+  if (this->m_result.size() > chunk_size) {
+    return 0;
+  }
   if (this->m_result.size()) {
     memcpy(src_ptr_, this->m_result.data(), this->m_result.size() * sizeof(float));
   }
@@ -95,6 +104,9 @@ uint32_t DenoisePipelineElement::process(uintptr_t src_ptr, const uint32_t chunk
   SpenchRetCode ret_code = m_denoiser.ProcessChunk(this->m_input,
                                                    this->m_result,
                                                    ctx);
+  if (this->m_result.size() > chunk_size) {
+    return 0;
+  }
   if (ret_code >= SpenchRetCode::SUCCESS && this->m_result.size()) {
     memcpy(src_ptr_, this->m_result.data(), this->m_result.size() * sizeof(float));
   }

@@ -34,6 +34,8 @@ export abstract class AbstractSpenchWrapper {
 
     protected abstract get heap(): Float32Array;
 
+    protected abstract ensureScratchCapacity(frameSize: number, loopbackSize: number): void;
+
     clear() {
         while (this.pop());
     }
@@ -43,6 +45,10 @@ export abstract class AbstractSpenchWrapper {
             return new Float32Array(frame.subarray());
         }
 
+        if (loopback && loopback.length < frame.length) {
+            throw new RangeError('Loopback frame must contain at least as many samples as the input frame');
+        }
+        this.ensureScratchCapacity(frame.length, loopback?.length || 0);
         this.heap.set(frame, this.dataStartIndex);
 
         if (loopback) {
@@ -76,6 +82,11 @@ export abstract class AbstractSpenchWrapper {
             const [, element] = current;
             element.delete();
         }
+        for (const [clear, element] of this.cache.values()) {
+            clear();
+            element.delete();
+        }
+        this.cache.clear();
     }
 
     protected tryGetFromCache(key: string): PipelineElement | undefined {
