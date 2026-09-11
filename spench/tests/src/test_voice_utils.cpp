@@ -122,6 +122,13 @@ TEST_CASE("FAIL Create RangeControl with negative hold_time [sound]") {
                     "RangeControl: `hold_time` must be positive.");
 }
 
+TEST_CASE("FAIL Create RangeControl with zero timing or sample rate [sound]") {
+  CHECK_THROWS(util::sound::RangeControl(0, -2.0F, 5.0F, 0.05F, 0.3F, 0.05F));
+  CHECK_THROWS(util::sound::RangeControl(48000, -2.0F, 5.0F, 0.0F, 0.3F, 0.05F));
+  CHECK_THROWS(util::sound::RangeControl(48000, -2.0F, 5.0F, 0.05F, 0.0F, 0.05F));
+  CHECK_THROWS(util::sound::RangeControl(48000, -2.0F, 5.0F, 0.05F, 0.3F, 0.0F));
+}
+
 TEST_CASE("SUCCEED Create RangeControl and check operator() [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().Init(16, 16, 48000, 48000));
 
