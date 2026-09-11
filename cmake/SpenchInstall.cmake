@@ -123,7 +123,7 @@ if(DEFINED ENV{SPENCH_ARTIFACT_VERSION})
   set(_spench_default_artifact_version "$ENV{SPENCH_ARTIFACT_VERSION}")
 endif()
 set(SPENCH_ARTIFACT_VERSION "${_spench_default_artifact_version}" CACHE STRING
-    "Version used in distributable artifact names; may include a SemVer prerelease suffix.")
+    "Version used in distributable artifact names; may include a SemVer prerelease suffix." FORCE)
 set(CPACK_PACKAGE_VERSION ${SPENCH_ARTIFACT_VERSION})
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
 
