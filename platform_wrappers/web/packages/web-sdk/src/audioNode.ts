@@ -209,6 +209,8 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
     /** Promise that blocks concurrent calls to {@link setFeatures}. */
     #setFeaturesLock: Promise<void> | undefined;
 
+    #destroyed = false;
+
     /** Timestamp of the last feature configuration start. */
     #initStartTime = performance.now();
 
@@ -264,50 +266,51 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         const { promise, resolve } = new Deferred<void>();
         this.#setFeaturesLock = promise;
         this.#initStartTime = performance.now();
+        try {
+            const enrichedFeatures: Features<M> = {
+                normalization: Boolean(features.normalization),
+                echoCancellation: Boolean(features.echoCancellation),
+                noiseCancellation:
+                    features.noiseCancellation === true
+                        ? (getDefaultNoiseCancellationModel(
+                              this.#loader.models,
+                              this.context.sampleRate,
+                          ) as keyof M['noiseCancellation'])
+                        : features.noiseCancellation || false,
+            };
+            this.#logger.info('Setting Spench features:', enrichedFeatures);
 
-        const enrichedFeatures: Features<M> = {
-            normalization: Boolean(features.normalization),
-            echoCancellation: Boolean(features.echoCancellation),
-            noiseCancellation:
-                features.noiseCancellation === true
-                    ? (getDefaultNoiseCancellationModel(
-                          this.#loader.models,
-                          this.context.sampleRate,
-                      ) as keyof M['noiseCancellation'])
-                    : features.noiseCancellation || false,
-        };
-        this.#logger.info('Setting Spench features:', enrichedFeatures);
+            let res;
 
-        let res;
+            if (this.#settings.dspOnAudioThread) {
+                if (areMainFeaturesEnabled(enrichedFeatures)) {
+                    this.#logger.warn('Main features are not available when dspOnAudioThread is enabled');
+                }
 
-        if (this.#settings.dspOnAudioThread) {
-            if (areMainFeaturesEnabled(enrichedFeatures)) {
-                this.#logger.warn('Main features are not available when dspOnAudioThread is enabled');
-            }
+                res = await this.#setDspWorkletFeatures(enrichedFeatures);
+            } else if (
+                areMainFeaturesEnabled(enrichedFeatures) &&
+                areDspFeaturesEnabled(enrichedFeatures) &&
+                !this.#workerPort
+            ) {
+                this.#logger.debug('Starting DSP features first to speed up loading');
+                this.#loader.preload(enrichedFeatures);
+                const workletFeatures = getDspFeatures(enrichedFeatures);
 
-            res = await this.#setDspWorkletFeatures(enrichedFeatures);
-        } else if (
-            areMainFeaturesEnabled(enrichedFeatures) &&
-            areDspFeaturesEnabled(enrichedFeatures) &&
-            !this.#workerPort
-        ) {
-            this.#logger.debug('Starting DSP features first to speed up loading');
-            this.#loader.preload(enrichedFeatures);
-            const workletFeatures = getDspFeatures(enrichedFeatures);
+                res = await this.#setFeatures({ ...workletFeatures, ...getMainFeatures() });
 
-            res = await this.#setFeatures({ ...workletFeatures, ...getMainFeatures() });
-
-            if (!(res instanceof SpenchError)) {
+                if (!(res instanceof SpenchError)) {
+                    res = await this.#setFeatures(enrichedFeatures);
+                }
+            } else {
                 res = await this.#setFeatures(enrichedFeatures);
             }
-        } else {
-            res = await this.#setFeatures(enrichedFeatures);
+
+            return res;
+        } finally {
+            this.#setFeaturesLock = undefined;
+            resolve();
         }
-
-        this.#setFeaturesLock = undefined;
-        resolve();
-
-        return res;
     }
 
     /**
@@ -315,6 +318,8 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
      * workers, and dispatching a `destroyed` event.
      */
     destroy(): void {
+        if (this.#destroyed) return;
+        this.#destroyed = true;
         this.#logger.debug('Destroying Spench AudioNode');
 
         this.#workerPort?.removeEventListener('message', this.#handleWorkerMessage);
@@ -404,6 +409,14 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         });
 
         return new Promise<void | SetFeaturesFailedError>((resolve) => {
+            const cleanup = () => {
+                this.#port.removeEventListener('message', handler);
+                this.removeEventListener('destroyed', handleDestroyed);
+            };
+            const finish = (result?: SetFeaturesFailedError) => {
+                cleanup();
+                resolve(result);
+            };
             const handler = (ev: MessageEvent<ControllerMessage>) => {
                 if (ev.data.type !== CONTROLLER_MESSAGES.SET_FEATURES_RESULT) {
                     return;
@@ -421,16 +434,16 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
 
                 if (error) {
                     this.#logger.error('DSP worklet features not applied', error);
-                    resolve(new SetFeaturesFailedError(error));
+                    finish(new SetFeaturesFailedError(error));
                 } else {
                     this.#logger.debug('DSP worklet features applied');
-                    resolve();
+                    finish();
                 }
-
-                this.#port.removeEventListener('message', handler);
             };
+            const handleDestroyed = () => finish(new SetFeaturesFailedError('Destroyed while loading'));
 
             this.#port.addEventListener('message', handler);
+            this.addEventListener('destroyed', handleDestroyed, { once: true });
         });
     }
 
@@ -462,6 +475,15 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         });
 
         return new Promise<void | LoadError | SetFeaturesFailedError>((resolve) => {
+            const workerPort = this.#workerPort!;
+            const cleanup = () => {
+                workerPort.removeEventListener('message', handler);
+                this.removeEventListener('destroyed', handleDestroyed);
+            };
+            const finish = (result?: LoadError | SetFeaturesFailedError) => {
+                cleanup();
+                resolve(result);
+            };
             const handler = (ev: MessageEvent<ControllerMessage>) => {
                 if (ev.data.type !== CONTROLLER_MESSAGES.SET_FEATURES_RESULT) {
                     return;
@@ -488,19 +510,18 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
                 const criticalError = errors.find((e) => e.name !== 'LoadError');
 
                 if (criticalError) {
-                    resolve(new SetFeaturesFailedError(criticalError));
+                    finish(new SetFeaturesFailedError(criticalError));
                 } else if (loadError) {
-                    resolve(new LoadError(loadError));
+                    finish(new LoadError(loadError));
                 } else {
                     this.#logger.debug('Features applied', resultFeatures);
-                    resolve();
+                    finish();
                 }
-
-                this.#workerPort!.removeEventListener('message', handler);
             };
+            const handleDestroyed = () => finish(new LoadError('Destroyed while loading'));
 
-            this.#workerPort!.addEventListener('message', handler);
-            this.addEventListener('destroyed', () => resolve(new LoadError('Destroyed while loading')));
+            workerPort.addEventListener('message', handler);
+            this.addEventListener('destroyed', handleDestroyed, { once: true });
         });
     }
 

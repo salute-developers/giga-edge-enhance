@@ -149,10 +149,17 @@ class SpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
             return node;
         }
 
-        const res = await node.setFeatures(features);
+        try {
+            const res = await node.setFeatures(features);
 
-        if (res instanceof SpenchError) {
-            return res;
+            if (res instanceof SpenchError) {
+                node.destroy();
+
+                return res;
+            }
+        } catch (error) {
+            node.destroy();
+            throw error;
         }
 
         return node;
