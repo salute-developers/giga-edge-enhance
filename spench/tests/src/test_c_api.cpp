@@ -8,6 +8,51 @@
 
 #include "tests/src/utils.h"
 
+TEST_CASE("C API initializes outputs [spench c api]") {
+  SECTION("failed model initialization clears the handle") {
+    SpenchDenoise model = reinterpret_cast<SpenchDenoise>(1);
+    REQUIRE(SpenchDenoiseInit(nullptr, &model) == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+    REQUIRE(model == nullptr);
+  }
+
+  SECTION("failed scalar query clears the output") {
+    uint64_t sample_rate = 123;
+    REQUIRE(SpenchDenoiseGetSampleRate(nullptr, &sample_rate) == SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+    REQUIRE(sample_rate == 0);
+  }
+}
+
+TEST_CASE("C API validates byte buffers without aligned reads [spench c api]") {
+  SpenchAudioProcess processor = nullptr;
+  REQUIRE(SpenchAudioProcessInit("", &processor) == SpenchRetCode::SUCCESS);
+  REQUIRE(processor != nullptr);
+
+  SECTION("non-divisible floating-point byte length is rejected") {
+    const uint8_t input[sizeof(float)]{};
+    uint8_t* output = reinterpret_cast<uint8_t*>(1);
+    uint64_t output_size = 123;
+    REQUIRE(SpenchAudioProcessChunkFp(processor, input, sizeof(input) - 1, &output, &output_size) ==
+            SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+    REQUIRE(output == nullptr);
+    REQUIRE(output_size == 0);
+  }
+
+  SECTION("unaligned floating-point input is copied safely") {
+    const std::vector<float> samples{0.25F, -0.5F};
+    std::vector<uint8_t> storage(1 + samples.size() * sizeof(float));
+    std::memcpy(storage.data() + 1, samples.data(), samples.size() * sizeof(float));
+    uint8_t* output = nullptr;
+    uint64_t output_size = 0;
+    REQUIRE(SpenchAudioProcessChunkFp(processor, storage.data() + 1, samples.size() * sizeof(float), &output,
+                                      &output_size) == SpenchRetCode::SUCCESS);
+    REQUIRE(output_size == samples.size() * sizeof(float));
+    REQUIRE(std::memcmp(output, samples.data(), output_size) == 0);
+    std::free(output);
+  }
+
+  SpenchAudioProcessFree(processor);
+}
+
 struct TestCAPI {
   std::vector<float> wav_data;
   std::vector<int16_t> pcm_wav_data;
