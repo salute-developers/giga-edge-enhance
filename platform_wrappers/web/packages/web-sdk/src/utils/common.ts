@@ -99,8 +99,29 @@ export type Settings = {
     unstable_customAECConfig?: string;
 };
 
+const numericSettingRules = {
+    fetchRetries: { max: 10, integer: true },
+    lowPerformanceWindowSeconds: { max: 60 },
+    lowPerformanceMaxRefillTimes: { max: 32, integer: true },
+    lowPerformanceMaxRefillTimeFactor: { max: 100 },
+    minLatency: { max: 10 },
+    latencyIncreaseStep: { max: 1 },
+    maxProcessingChunkSeconds: { max: 1 },
+} as const satisfies Partial<Record<keyof Settings, { max: number; integer?: boolean }>>;
+
+function validateSettings(settings: Settings): Settings {
+    for (const [name, rule] of Object.entries(numericSettingRules)) {
+        const value = settings[name as keyof typeof numericSettingRules];
+        if (!Number.isFinite(value) || value < 0 || value > rule.max || ('integer' in rule && !Number.isInteger(value))) {
+            throw new RangeError(`${name} must be a finite, non-negative${'integer' in rule ? ' integer' : ''} <= ${rule.max}`);
+        }
+    }
+
+    return settings;
+}
+
 export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Settings {
-    return {
+    return validateSettings({
         ...settings,
         dspOnAudioThread: Boolean(settings.dspOnAudioThread),
         useVadNormalization: Boolean(settings.useVadNormalization),
@@ -129,7 +150,7 @@ export function getSettingsWithDefaults(settings: Partial<Settings> = {}): Setti
                 : WORKLET_OUTPUT_BUFFER_STEP,
         maxProcessingChunkSeconds:
             typeof settings.maxProcessingChunkSeconds === 'number' ? settings.maxProcessingChunkSeconds : 0.016,
-    };
+    });
 }
 
 export function areMainFeaturesEnabled<M extends ModelsTmpl>(features: Partial<MainFeatures<M>>) {
