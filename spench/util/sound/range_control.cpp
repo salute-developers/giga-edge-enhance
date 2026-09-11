@@ -18,8 +18,8 @@ uint32_t detector_frame_size(uint32_t sample_rate) {
 }
 
 uint32_t detector_frame_count(float hold_time) {
-  if (!std::isfinite(hold_time) || hold_time <= 0.0F) {
-    throw std::runtime_error("RangeControl: `hold_time` must be positive.");
+  if (!std::isfinite(hold_time) || hold_time < 0.0F) {
+    throw std::runtime_error("RangeControl: `hold_time` must be non-negative.");
   }
   const double frames = hold_time / 0.01;
   if (frames > std::numeric_limits<uint32_t>::max()) {
@@ -62,15 +62,15 @@ RangeControl::RangeControl(uint32_t sample_rate,
                                                           detector_frame_count(hold_time)},
                                                target_{target_db},
                                                max_gain_{max_gain_db} {
-  if (!std::isfinite(attack_time) || attack_time <= 0.0F) {
-    throw std::runtime_error("RangeControl: `attack_time` must be positive.");
+  if (!std::isfinite(attack_time) || attack_time < 0.0F) {
+    throw std::runtime_error("RangeControl: `attack_time` must be non-negative.");
   }
 
-  if (!std::isfinite(release_time) || release_time <= 0.0F) {
-    throw std::runtime_error("RangeControl: `release_time` must be positive.");
+  if (!std::isfinite(release_time) || release_time < 0.0F) {
+    throw std::runtime_error("RangeControl: `release_time` must be non-negative.");
   }
-  wa_ = std::exp(-std::log(9) / (sample_rate * attack_time));
-  wr_ = std::exp(-std::log(9) / (sample_rate * release_time));
+  wa_ = attack_time == 0.0F ? 0.0F : std::exp(-std::log(9) / (sample_rate * attack_time));
+  wr_ = release_time == 0.0F ? 0.0F : std::exp(-std::log(9) / (sample_rate * release_time));
 }
 
 RangeControl::Result RangeControl::process(const std::vector<float>& x) noexcept {
