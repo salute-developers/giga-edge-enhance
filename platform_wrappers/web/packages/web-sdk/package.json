@@ -1,9 +1,9 @@
 {
   "name": "@gigaedge/spench-web-sdk",
-  "version": "3.5.1",
-  "author": "GIGA.Audio",
+  "version": "0.0.1",
+  "author": "Giga Edge",
   "description": "Spench Web SDK",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,7 +14,7 @@
     "!**/__spec__/**"
   ],
   "scripts": {
-    "prebuild": "npm-run-all clean verify:wasm",
+    "prebuild": "npm-run-all clean verify:wasm stage:license",
     "prepack": "node scripts/stage-wasm.mjs --verify release && npm run build",
     "build": "npm-run-all inject-version -p 'build:*'",
     "build:webpack": "webpack --mode=production",
@@ -25,6 +25,7 @@
     "inject-version": "node -p \"'export const LIB_VERSION = \\'' + require('./package.json').version + (process.env.CI ? '' : '-dev') + '\\';'\" > src/utils/version.ts",
     "clean": "rm -rf dist",
     "verify:wasm": "node scripts/stage-wasm.mjs --verify",
+    "stage:license": "node scripts/stage-license.mjs",
     "test": "jest --ci --runInBand --detectOpenHandles --logHeapUsage",
     "lint": "eslint .",
     "lint:eslint:fix": "eslint --fix",

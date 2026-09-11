@@ -335,7 +335,7 @@ class DenoiseCommand : public IParseCommand {
 };
 
 int32_t main(int32_t argc, char const* argv[]) {
-  argparse::ArgumentParser program("spench-tool", "v0.0.1");
+  argparse::ArgumentParser program("spench-tool", SPENCH_CLI_VERSION);
 
   EchoCommand echo;
   program.add_subparser(echo.parser());
