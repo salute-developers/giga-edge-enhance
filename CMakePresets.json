@@ -166,12 +166,18 @@
     {
       "name": "native-release-static-onnx",
       "displayName": "Native Release Static (ONNX)",
-      "inherits": ["native-base", "native-release-static-onnx-options"]
+      "inherits": ["native-base", "native-release-static-onnx-options"],
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": "OFF"
+      }
     },
     {
       "name": "native-release-static-tflite",
       "displayName": "Native Release Static (TensorFlow Lite)",
-      "inherits": ["native-base", "native-release-static-tflite-options"]
+      "inherits": ["native-base", "native-release-static-tflite-options"],
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": "OFF"
+      }
     },
     {
       "name": "native-debug-tflite",
