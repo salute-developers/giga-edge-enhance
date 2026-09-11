@@ -1,6 +1,7 @@
-#include <catch.hpp>
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/spdlog.h>
+
+#include <catch.hpp>
 
 #include "spench/src/spench_logger.h"
 
