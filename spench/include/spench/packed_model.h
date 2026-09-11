@@ -4,9 +4,11 @@
 #include <string>
 #include <vector>
 
+#include "spench/export.h"
+
 namespace spench {
 
-class PackedModelReader {
+class SPENCH_API PackedModelReader {
  public:
   PackedModelReader(const PackedModelReader&) = default;
   PackedModelReader& operator=(const PackedModelReader&) = default;
