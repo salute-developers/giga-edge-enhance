@@ -2,6 +2,7 @@
   "name": "@gigaedge/spench-site",
   "private": true,
   "version": "0.0.1",
+  "license": "MIT",
   "scripts": {
     "start": "npm-run-all -p 'watch:*'",
     "watch:sdk": "npm run start --workspace=@gigaedge/spench-web-sdk",

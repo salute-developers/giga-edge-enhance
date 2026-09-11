@@ -45,7 +45,14 @@ if(TARGET model_packer)
   )
 endif()
 
-include(CPack)
+# Ship the project license next to the binaries so an installed or packaged copy carries
+# its terms. Third-party dependency notices are tracked separately and are still required
+# before publishing binaries that statically link non-MIT dependencies.
+install(
+  FILES "${CMAKE_SOURCE_DIR}/LICENSE"
+  DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/spench"
+)
+
 set(CPACK_PACKAGE_NAME spench)
 set(_spench_default_artifact_version "${PROJECT_VERSION}")
 if(DEFINED ENV{SPENCH_ARTIFACT_VERSION})
@@ -54,3 +61,8 @@ endif()
 set(SPENCH_ARTIFACT_VERSION "${_spench_default_artifact_version}" CACHE STRING
     "Version used in distributable artifact names; may include a SemVer prerelease suffix.")
 set(CPACK_PACKAGE_VERSION ${SPENCH_ARTIFACT_VERSION})
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+
+# CPack captures the CPACK_* variables when it is included, so this must stay last. Including
+# it earlier silently discarded the SPENCH_ARTIFACT_VERSION override above.
+include(CPack)

@@ -67,3 +67,7 @@ spench_apply_build_config(${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/..")
 target_link_libraries(${PROJECT_NAME} PRIVATE ${DEMO_LIBS} argparse dsplib fmt)
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "spench")
+
+# This directory calls project(), which resets PROJECT_VERSION, so report the top-level
+# Spench version from SPENCH_VERSION instead of a separately maintained literal.
+target_compile_definitions(${PROJECT_NAME} PRIVATE SPENCH_CLI_VERSION="${spench_VERSION}")

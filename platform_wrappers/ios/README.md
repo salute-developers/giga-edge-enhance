@@ -11,7 +11,8 @@ iOS wrapper and demo app for GigaEdge Spench audio processing, with:
 - Demo app (`AVAudioEngine`) for live mic + realtime file processing
 - Unit tests + XCUITest
 
-Current SDK version: **1.0.0** (see `MARKETING_VERSION` in `project.yml`).
+The SDK version comes from `SPENCH_VERSION` at the repository root and is applied to the
+framework as `MARKETING_VERSION` in `project.yml`.
 
 ## Stack
 
