@@ -151,6 +151,17 @@ describe('SpenchWrapper', () => {
         expect((wrapper as any).bridge._free).toHaveBeenCalledWith(expect.any(Number));
     });
 
+    test('grows the input allocation for oversized chunks', () => {
+        const elem = dummyElement();
+        elem.process.mockReturnValue(600);
+        (wrapper as any).pipeline.push(['x', elem]);
+
+        wrapper.process(new Float32Array(600));
+
+        expect((wrapper as any).dataCapacity).toBe(600);
+        expect((wrapper as any).bridge._malloc).toHaveBeenCalledWith(600 * Float32Array.BYTES_PER_ELEMENT);
+    });
+
     /* ---------------------- Noise Canceller ---------------------- */
 
     test('addNoiseCanceller loads model, creates element, and caches it', async () => {
@@ -285,6 +296,18 @@ describe('SpenchDspWrapper', () => {
         expect((wrapper as any).pipeline.length).toBe(0);
         expect(elem.delete).toHaveBeenCalled();
         expect((wrapper as any).bridge._free).toHaveBeenCalledWith(expect.any(Number));
+    });
+
+    test('grows input and loopback allocations independently', () => {
+        const elem = dummyElement();
+        (wrapper as any).pipeline.push(['aec', elem]);
+
+        wrapper.process(new Float32Array(600), new Float32Array(700));
+
+        expect((wrapper as any).dataCapacity).toBe(600);
+        expect((wrapper as any).loopbackCapacity).toBe(700);
+        expect((wrapper as any).bridge._malloc).toHaveBeenCalledWith(600 * Float32Array.BYTES_PER_ELEMENT);
+        expect((wrapper as any).bridge._malloc).toHaveBeenCalledWith(700 * Float32Array.BYTES_PER_ELEMENT);
     });
 
     afterEach(() => {

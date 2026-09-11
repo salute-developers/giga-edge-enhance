@@ -34,6 +34,12 @@ class TestWrapper extends AbstractSpenchWrapper {
         return this._heap;
     }
 
+    protected ensureScratchCapacity(frameSize: number, loopbackSize: number): void {
+        if (this.dataStartIndex + frameSize > this._heap.length || this.lbStartIndex + loopbackSize > this._heap.length) {
+            throw new RangeError('test scratch buffer too small');
+        }
+    }
+
     protected pop(): boolean {
         return this.pipeline.pop() !== undefined;
     }
@@ -106,6 +112,18 @@ describe('AbstractSpenchWrapper', () => {
             frame.length,
         );
         expect(result.length).toBe(4);
+    });
+
+    test('process rejects a shorter loopback allocation', () => {
+        const aecEl: any = {
+            process: jest.fn(),
+            resetContext: jest.fn(),
+            delete: jest.fn(),
+        };
+        wrapper.publicPipeline.push(['aec', aecEl]);
+
+        expect(() => wrapper.process(new Float32Array(5), new Float32Array(4))).toThrow(RangeError);
+        expect(aecEl.process).not.toHaveBeenCalled();
     });
 
     /* --------------------------------------------------------------------- */
@@ -199,6 +217,18 @@ describe('AbstractSpenchWrapper', () => {
         expect(el1.delete).toHaveBeenCalledTimes(1);
         expect(el2.delete).toHaveBeenCalledTimes(1);
         expect(wrapper.publicPipeline.length).toBe(0);
+    });
+
+    test('destroy clears and deletes cached elements', () => {
+        const clear = jest.fn();
+        const element: any = { delete: jest.fn(), resetContext: jest.fn() };
+        wrapper.publicCache.set('cached', [clear, element]);
+
+        wrapper.destroy();
+
+        expect(clear).toHaveBeenCalledTimes(1);
+        expect(element.delete).toHaveBeenCalledTimes(1);
+        expect(wrapper.publicCache.size).toBe(0);
     });
 
     /* --------------------------------------------------------------------- */

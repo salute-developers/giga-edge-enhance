@@ -32,6 +32,10 @@ interface CreateSpenchWrapperParams {
 export class SpenchDspWrapper extends AbstractSpenchWrapper {
     protected bridge: SpenchDSPCore;
 
+    protected dataCapacity = HEAP_SIZE;
+
+    protected loopbackCapacity = HEAP_SIZE;
+
     protected constructor(
         wasm: ArrayBuffer,
         protected readonly sampleRate: number,
@@ -42,11 +46,35 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
 
         this.bridge = SpenchDsp({ wasmBinary: wasm, print: logger.debug, printErr: logger.error });
         this.dataPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
-        this.lbPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
+        if (!this.dataPtr) throw new InternalError('Could not allocate the WASM input buffer');
+        try {
+            this.lbPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
+            if (!this.lbPtr) throw new InternalError('Could not allocate the WASM loopback buffer');
+        } catch (error) {
+            this.bridge._free(this.dataPtr);
+            throw error;
+        }
     }
 
     protected get heap(): Float32Array {
         return this.bridge.HEAPF32;
+    }
+
+    protected ensureScratchCapacity(frameSize: number, loopbackSize: number): void {
+        if (frameSize > this.dataCapacity) {
+            const dataPtr = this.bridge._malloc(frameSize * Float32Array.BYTES_PER_ELEMENT);
+            if (!dataPtr) throw new InternalError('Could not allocate the WASM input buffer');
+            this.bridge._free(this.dataPtr);
+            this.dataPtr = dataPtr;
+            this.dataCapacity = frameSize;
+        }
+        if (loopbackSize > this.loopbackCapacity) {
+            const lbPtr = this.bridge._malloc(loopbackSize * Float32Array.BYTES_PER_ELEMENT);
+            if (!lbPtr) throw new InternalError('Could not allocate the WASM loopback buffer');
+            this.bridge._free(this.lbPtr);
+            this.lbPtr = lbPtr;
+            this.loopbackCapacity = loopbackSize;
+        }
     }
 
     static async create({
@@ -139,6 +167,8 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
 export class SpenchWrapper extends AbstractSpenchWrapper {
     protected bridge: SpenchCore;
 
+    protected dataCapacity = HEAP_SIZE;
+
     protected constructor(
         wasm: ArrayBuffer,
         protected readonly sampleRate: number,
@@ -155,11 +185,22 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
             printErr: logger.error,
         });
         this.dataPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
+        if (!this.dataPtr) throw new InternalError('Could not allocate the WASM input buffer');
         onHeavyLoadEnd();
     }
 
     protected get heap(): Float32Array {
         return this.bridge.HEAPF32;
+    }
+
+    protected ensureScratchCapacity(frameSize: number): void {
+        if (frameSize <= this.dataCapacity) return;
+
+        const dataPtr = this.bridge._malloc(frameSize * Float32Array.BYTES_PER_ELEMENT);
+        if (!dataPtr) throw new InternalError('Could not allocate the WASM input buffer');
+        this.bridge._free(this.dataPtr);
+        this.dataPtr = dataPtr;
+        this.dataCapacity = frameSize;
     }
 
     static async create({
@@ -250,15 +291,13 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
         (this.bridge.HEAPU8 as Uint8Array).set(modelU8, dataPtr);
 
         try {
-            const modelReader = new this.bridge.PackedModelReader(dataPtr, modelU8.length);
-
-            this.bridge._free(dataPtr);
-
-            return modelReader;
+            return new this.bridge.PackedModelReader(dataPtr, modelU8.length);
         } catch (e) {
             this.logger.error('Could not load model.');
 
             return new InternalError(e);
+        } finally {
+            this.bridge._free(dataPtr);
         }
     }
 }
