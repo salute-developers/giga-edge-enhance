@@ -50,6 +50,11 @@ TEST_CASE("C API validates byte buffers without aligned reads [spench c api]") {
     std::free(output);
   }
 
+  SECTION("DSP constructor exceptions are contained") {
+    REQUIRE(SpenchAudioProcessAddRcWithParam(processor, 0, -3.0F, 10.0F, 0.01F, 1.0F, 0.1F) ==
+            SpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  }
+
   SpenchAudioProcessFree(processor);
 }
 

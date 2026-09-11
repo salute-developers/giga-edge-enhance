@@ -4,6 +4,7 @@
 
 #include <array>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
 namespace util::sound {
@@ -66,11 +67,12 @@ class SOSFilter {
             const std::vector<std::array<float, 3>>& den,
             const std::vector<float>&                 scale)
       : scale_{scale} {
-    DSPLIB_ASSERT((num.size() == den.size()) &&
-                  (num[0].size() == den[0].size()),
-                  "filter size error");
-    DSPLIB_ASSERT(scale.size() == num.size() + 1,
-                  "scale size error");
+    if (num.empty() || num.size() != den.size()) {
+      throw std::invalid_argument("Filter coefficients must contain matching non-empty sections.");
+    }
+    if (scale.size() != num.size() + 1) {
+      throw std::invalid_argument("Filter scale count does not match its sections.");
+    }
 
     for (size_t i = 0; i < num.size(); ++i)
       iirs_.emplace_back(num[i], den[i]);   // uses new double-precision ctor
@@ -98,7 +100,7 @@ class SOSFilter {
   }
 
   // whole-buffer helper
-  std::vector<float> process(const std::vector<float>& x) noexcept {
+  std::vector<float> process(const std::vector<float>& x) {
     std::vector<float> y(x.size());
     for (size_t i = 0; i < x.size(); ++i) y[i] = process(x[i]);
     return y;
@@ -137,7 +139,7 @@ class WeightingFilter {
 
   [[nodiscard]] Type type() const noexcept { return type_; }
 
-  std::vector<float> process(const std::vector<float>& x) noexcept {
+  std::vector<float> process(const std::vector<float>& x) {
     if (!filter_) return x;      // Raw or unsupported Fs
     return filter_->process(x);
   }

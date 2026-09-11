@@ -1,16 +1,22 @@
 #include "util/sound/common.h"
 
 #include <dsplib/math.h>
+
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
+#include <stdexcept>
 
 namespace util::sound {
 
 float quantile(const dsplib::arr_real& x, float q, bool sorted) {
-  const int32_t n = static_cast<int32_t>(x.size());
-  int32_t idx = static_cast<int32_t>(std::round((n - 1) * q));
-  idx = dsplib::min(idx, n - 1);
-  idx = dsplib::max(idx, 0);
+  if (x.empty()) {
+    throw std::invalid_argument("Cannot calculate a quantile of empty data.");
+  }
+  if (!std::isfinite(q) || q < 0.0F || q > 1.0F) {
+    throw std::invalid_argument("Quantile must be finite and in [0, 1].");
+  }
+  const size_t idx = static_cast<size_t>(std::round((x.size() - 1) * q));
   if (!sorted) {
     const auto p = dsplib::sort(x).first;
     return p[idx];

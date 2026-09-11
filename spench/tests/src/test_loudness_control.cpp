@@ -82,6 +82,17 @@ TEST_CASE("FAIL LoudnessControlBuilder create with unknown method returns nullpt
   REQUIRE(lc == nullptr);
 }
 
+TEST_CASE("FAIL Loudness components reject invalid state [Loudness control]") {
+  CHECK_THROWS_AS(LoudnessMeter(0), std::invalid_argument);
+  CHECK_THROWS_AS(LoudnessControlBuilder().set_sample_rate(16000).set_target_level(-15.0F).set_max_gain(-1.0F).create(),
+                  std::invalid_argument);
+}
+
+TEST_CASE("SUCCEED LoudnessMeter accepts empty updates [Loudness control]") {
+  LoudnessMeter meter(16000);
+  REQUIRE_NOTHROW(meter.update({}));
+}
+
 TEST_CASE("SUCCEED LoudnessControlBuilder default method is SIMPLE [Loudness control]") {
   const uint32_t sample_rate = 16000;
   auto lc = LoudnessControlBuilder().set_sample_rate(sample_rate).create();

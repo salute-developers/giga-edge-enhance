@@ -1,7 +1,9 @@
+#include <spench/util/sound/common.h>
 #include <spench/util/sound/range_control.h>
 #include <spench/util/sound/resampler.h>
 #include <spench/util/sound/sound_stream.h>
 #include <spench/util/sound/stat_collector.h>
+#include <spench/util/sound/weighting_filter.h>
 
 #include <algorithm>
 #include <catch.hpp>
@@ -104,6 +106,13 @@ static void CheckOptNear(const std::optional<T>& v, T expected, T tol = static_c
   }
 }
 
+TEST_CASE("Sound buffers and quantiles reject empty state [sound]") {
+  CHECK_THROWS_AS(util::sound::CycleBuffer(0), std::invalid_argument);
+  CHECK_THROWS_AS(util::sound::quantile(dsplib::arr_real{}, 0.5F), std::invalid_argument);
+  CHECK_THROWS_AS(util::sound::quantile(dsplib::arr_real{1.0F}, -0.1F), std::invalid_argument);
+  CHECK_THROWS_AS(util::sound::SOSFilter({}, {}, std::vector<float>{1.0F}), std::invalid_argument);
+}
+
 TEST_CASE("FAIL Create RangeControl with negative attack_time [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().Init(16, 16, 48000, 48000));
   CHECK_THROWS_WITH(util::sound::RangeControl(48000, -2.0, 5.0, -0.05, 300, 5),
@@ -127,6 +136,11 @@ TEST_CASE("RangeControl accepts instantaneous timing but rejects zero sample rat
   CHECK_NOTHROW(util::sound::RangeControl(48000, -2.0F, 5.0F, 0.0F, 0.3F, 0.05F));
   CHECK_NOTHROW(util::sound::RangeControl(48000, -2.0F, 5.0F, 0.05F, 0.0F, 0.05F));
   CHECK_NOTHROW(util::sound::RangeControl(48000, -2.0F, 5.0F, 0.05F, 0.3F, 0.0F));
+}
+
+TEST_CASE("RangeControl rejects invalid levels [sound]") {
+  CHECK_THROWS(util::sound::RangeControl(48000, NAN, 5.0F));
+  CHECK_THROWS(util::sound::RangeControl(48000, -3.0F, -1.0F));
 }
 
 TEST_CASE("SUCCEED Create RangeControl and check operator() [sound]") {
@@ -1051,17 +1065,9 @@ TEST_CASE("SUCCEED StatCollector quantile values for 1..100 [stat]") {
   CHECK(s.median.value() <= s.q95.value());
 }
 
-TEST_CASE("FAIL invalid parameters: sr==0 and window<=0 are clamped [stat]") {
-  // Both should clamp internally to sr=1, window=1
-  util::sound::StatCollector col("clamp", /*sample_rate=*/0, /*window_seconds=*/0.0,
-                                 util::sound::StatCollector::Options::all());
-  CHECK(col.window_seconds() == Approx(1.0));
-
-  // After construction, exact 1s worth of samples should flush once
-  auto res = col.update(2.0f, /*samples_in_value=*/1);  // sr was clamped to 1
-  REQUIRE(res.has_value());
-  const auto s = *res;
-  CheckOptNear(s.mean, 2.0f);
+TEST_CASE("FAIL invalid StatCollector parameters are rejected [stat]") {
+  CHECK_THROWS_AS(util::sound::StatCollector("zero-rate", 0, 1.0), std::invalid_argument);
+  CHECK_THROWS_AS(util::sound::StatCollector("zero-window", 1000, 0.0), std::invalid_argument);
 }
 
 TEST_CASE("FAIL zero-sample updates do not flush and do not advance time [stat]") {
@@ -1099,17 +1105,10 @@ TEST_CASE("FAIL large overrun: one flush per call and leftover time kept [stat]"
   CHECK(col.progress_seconds() == Approx(0.07).margin(1e-6));
 }
 
-TEST_CASE("FAIL set_window_seconds(0) clamps to 1.0 and hard-resets [stat]") {
+TEST_CASE("FAIL set_window_seconds rejects zero [stat]") {
   util::sound::StatCollector col("set0", 1000, 2.0, util::sound::StatCollector::Options::all());
-  REQUIRE_FALSE(col.update(1.0f, /*samples_in_value=*/500).has_value());  // partial fill
-  col.set_window_seconds(0.0);                                            // clamp to 1.0 and hard reset
-  CHECK(col.window_seconds() == Approx(1.0));
-
-  // Exactly 1s should now flush
-  auto res = col.update(3.0f, /*samples_in_value=*/1000);
-  REQUIRE(res.has_value());
-  const auto s = *res;
-  CheckOptNear(s.mean, 3.0f);
+  CHECK_THROWS_AS(col.set_window_seconds(0.0), std::invalid_argument);
+  CHECK(col.window_seconds() == Approx(2.0));
 }
 
 TEST_CASE("SUCCESS StatCollector matches reference stats on random vectors [stat]") {

@@ -7,6 +7,7 @@
 #include <cmath>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 #include "util/sound/binary_medfilt.h"
@@ -361,16 +362,25 @@ class LoudnessControlImpl : public ILoudnessControl {
 };
 
 std::unique_ptr<ILoudnessControl> LoudnessControlBuilder::create() {
+  const uint32_t sample_rate = sample_rate_.value();
+  const float target_level = target_level_db_.value();
+  const float max_gain = max_gain_db_.value();
+  const float bypass_time = bypass_time_.value_or(method_ == ILoudnessControl::simple ? 3.0F : 0.5F);
+  if (sample_rate < 100 || sample_rate > 100000) {
+    throw std::invalid_argument("Loudness Control sample rate must be in [100, 100000].");
+  }
+  if (!std::isfinite(target_level) || !std::isfinite(max_gain) || !std::isfinite(bypass_time) || max_gain < 0.0F ||
+      bypass_time < 0.0F) {
+    throw std::invalid_argument("Loudness Control levels and timing are invalid.");
+  }
+
   if (method_ == ILoudnessControl::simple) {
-    return std::make_unique<legacy::LoudnessControlImpl>(sample_rate_.value(), target_level_db_.value(),
-                                                         postprocessing_.value_or(false),
-                                                         bypass_time_.value_or(3.0f),
-                                                         max_gain_db_.value());
+    return std::make_unique<legacy::LoudnessControlImpl>(sample_rate, target_level, postprocessing_.value_or(false),
+                                                         bypass_time, max_gain);
   }
   if (method_ == ILoudnessControl::vadbase) {
-    return std::make_unique<LoudnessControlImpl>(sample_rate_.value(), target_level_db_.value(),
-                                                 max_gain_db_.value(), postprocessing_.value(),
-                                                 bypass_time_.value_or(0.5));
+    return std::make_unique<LoudnessControlImpl>(sample_rate, target_level, max_gain, postprocessing_.value_or(false),
+                                                 bypass_time);
   }
   return nullptr;
 }

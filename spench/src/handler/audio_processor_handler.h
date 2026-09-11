@@ -373,6 +373,10 @@ class AudioProcDRCompressor : public AudioProcItem {
     set_parameters(&parameters);
   }
   std::vector<float>& process(const std::vector<float>& in, std::vector<float>& out) override {
+    if (in.empty()) {
+      out.clear();
+      return out;
+    }
     dsplib::arr_real ng_input_sig(in);
     auto [sig, gain] = drc_ptr_->process(ng_input_sig);
     out = sig.to_vec();
