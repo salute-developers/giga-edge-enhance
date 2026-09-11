@@ -623,6 +623,32 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 fra
   test_data.denoiser->DestroyContext(&ctx);
 }
 
+#ifdef BUILD_ONNX_ENGINE
+TEST_CASE("ONNX dynamic buffers shrink after a larger chunk [spench c++ api]") {
+  auto test_data =
+      std::move(TestFixture()
+                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml"))
+                    .SetWav("test1_48_noised.wav"));
+  spench::SpenchContext<float>* ctx = test_data.denoiser->CreateContext();
+  const auto chunks = ChunkWav<float>(test_data.wav_data, test_data.denoiser->GetModelSampleRate(), 16, 16);
+  REQUIRE(chunks.size() >= 7);
+
+  for (const size_t frame_count : {size_t{1}, size_t{4}, size_t{2}}) {
+    std::vector<float> input;
+    for (size_t i = 0; i < frame_count; ++i) {
+      input.insert(input.end(), chunks[i].begin(), chunks[i].end());
+    }
+
+    std::vector<float> output;
+    const SpenchRetCode ret_code = test_data.denoiser->ProcessChunk(input, output, ctx);
+    REQUIRE(ret_code >= SpenchRetCode::SUCCESS);
+    REQUIRE(output.size() == input.size());
+  }
+
+  test_data.denoiser->DestroyContext(&ctx);
+}
+#endif
+
 #if 0
 #ifdef BUILD_RESAMPLER
 TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resampling [spench c++ api]") {

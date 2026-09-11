@@ -14,7 +14,7 @@
 namespace util {
 namespace onnx {
 class SpenchQOnnxRunner: public BaseOnnxRunner {
-  void init_output_tensors(spench::SpenchTaskData& data, uint32_t num_frames = 1);
+  void init_output_tensors(spench::SpenchTaskData& data, uint32_t num_frames = 2);
 
   template<typename T>
   void parse_results(std::vector<Ort::Value>& network_output, spench::SpenchTaskData& data) {
@@ -169,7 +169,7 @@ class SpenchFOnnxRunner: public BaseOnnxRunner {
 };
 
 class SpenchSFOnnxRunner : public BaseOnnxRunner {
-  void init_output_tensors(spench::SpenchTaskData& data, uint32_t out_shape = 1);
+  void init_output_tensors(spench::SpenchTaskData& data, uint32_t out_shape = 2);
 
   template<typename T>
   void parse_results(std::vector<Ort::Value>& network_output, spench::SpenchTaskData& data) {

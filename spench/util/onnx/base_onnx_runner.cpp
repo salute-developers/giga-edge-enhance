@@ -78,7 +78,7 @@ int32_t BaseOnnxRunner::get_single_dynamic_axis(const std::vector<int64_t>& shap
       if (found >= 0) {
         std::stringstream iss;
         iss << "Tensor has more than one dynamic dim (-1): " << tensor_debug_name;
-        // throw OnnxValidationException(iss.str());
+        throw OnnxValidationException(iss.str());
       }
       found = static_cast<int32_t>(i);
     }
@@ -168,7 +168,7 @@ void BaseOnnxRunner::resize_if_needed_in_place(std::vector<float>& to_check,
     }
     element_count *= concrete_dimension;
   }
-  if (element_count / num_parts > std::numeric_limits<size_t>::max()) {
+  if (element_count % num_parts != 0 || element_count / num_parts > std::numeric_limits<size_t>::max()) {
     throw OnnxValidationException("Resolved tensor size is invalid or too large");
   }
 
@@ -193,7 +193,7 @@ void BaseOnnxRunner::resize_if_needed_in_place(std::valarray<float>& to_check,
     }
     element_count *= concrete_dimension;
   }
-  if (element_count / num_parts > std::numeric_limits<size_t>::max()) {
+  if (element_count % num_parts != 0 || element_count / num_parts > std::numeric_limits<size_t>::max()) {
     throw OnnxValidationException("Resolved tensor size is invalid or too large");
   }
 
