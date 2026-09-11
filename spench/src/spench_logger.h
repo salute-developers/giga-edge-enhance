@@ -1,18 +1,10 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <memory>
+#include <spdlog/spdlog.h>
 
-// Forward declarations to avoid including spdlog headers (spdlog names are NOLINT).
-// NOLINTBEGIN(readability-identifier-naming)
-namespace spdlog {
-class logger;
-namespace sinks { class sink; }
-using sink_ptr = std::shared_ptr<sinks::sink>;
-namespace level { enum level_enum : int32_t; }
-}  // namespace spdlog
-// NOLINTEND(readability-identifier-naming)
+#include <memory>
+#include <string>
+#include <utility>
 
 namespace spench {
 
@@ -26,18 +18,49 @@ namespace spench {
 
 enum class LogLevel : uint32_t { trace = 0, debug, info, warn, error, off };
 
-// Global logger instance (static, inline) to be used directly: use spdlog::info(), etc. after init.
-inline std::shared_ptr<spdlog::logger> g_logger;
-
-// Initialize the global logger (call once at startup)
+// Initialize Spench's logger without changing the host application's logger.
 // name: logger name, level: minimum log level to output, logfile: optional file path
-void init_logger(uint32_t level = static_cast<unsigned int>(LogLevel::info),
-                 const std::string& name = "Spench",
+void init_logger(uint32_t level = static_cast<unsigned int>(LogLevel::info), const std::string& name = "Spench",
                  const std::string& logfile = {});
 
-// Shutdown and flush all loggers
+// Flush and release only Spench's logger.
 void shutdown_logger();
 
 // Change the log level at runtime (0=Trace ... 5=Off)
 void set_log_level(uint32_t level);
+
+std::shared_ptr<::spdlog::logger> get_logger();
+
+// Keep existing internal spdlog-style calls scoped to Spench's own logger.
+namespace spdlog {  // NOLINT(readability-identifier-naming)
+template <typename... Args>
+void trace(Args&&... args) {
+  get_logger()->trace(std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void debug(Args&&... args) {
+  get_logger()->debug(std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void info(Args&&... args) {
+  get_logger()->info(std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void warn(Args&&... args) {
+  get_logger()->warn(std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void error(Args&&... args) {
+  get_logger()->error(std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void critical(Args&&... args) {
+  get_logger()->critical(std::forward<Args>(args)...);
+}
+}  // namespace spdlog
 }  // namespace spench

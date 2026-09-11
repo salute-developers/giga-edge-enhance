@@ -13,6 +13,7 @@ set(TEST_SRC
     src/test_voice_utils.cpp
     src/test_voice_activity_detection.cpp
     src/test_loudness_control.cpp
+    src/test_logger.cpp
     src/utils.cpp
     src/main.cpp)
 

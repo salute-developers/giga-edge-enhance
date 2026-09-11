@@ -1,7 +1,10 @@
 #include "spench/src/handler/base_audio_handler.h"
 
-#include <utility>
 #include <spdlog/spdlog.h>
+
+#include <utility>
+
+#include "spench/src/spench_logger.h"
 
 namespace spench {
 
