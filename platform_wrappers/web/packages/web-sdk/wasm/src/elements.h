@@ -60,9 +60,10 @@ class DenoisePipelineElement : public PipelineElement {
   spench::SpenchDenoise m_denoiser;
   spench::SpenchContext<float>* ctx;
 
- public:
-  DenoisePipelineElement(uint32_t sample_rate, std::shared_ptr<spench::PackedModelReader> model);
-  uint32_t process(uintptr_t src_ptr, const uint32_t chunk_size) noexcept final;
+  public:
+   DenoisePipelineElement(uint32_t sample_rate, std::shared_ptr<spench::PackedModelReader> model);
+   ~DenoisePipelineElement() override;
+   uint32_t process(uintptr_t src_ptr, const uint32_t chunk_size) noexcept final;
 
   void resetContext() noexcept;
 };
