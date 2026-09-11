@@ -52,6 +52,20 @@ describe('chunk size settings', () => {
 
         expect(getOutputBufferSeconds(settings)).toBe(0.16);
     });
+
+    it.each([
+        ['fetchRetries', -1],
+        ['fetchRetries', 1.5],
+        ['fetchRetries', 11],
+        ['minLatency', Number.NaN],
+        ['latencyIncreaseStep', Number.POSITIVE_INFINITY],
+        ['maxProcessingChunkSeconds', 1.01],
+        ['lowPerformanceWindowSeconds', 61],
+        ['lowPerformanceMaxRefillTimes', 33],
+        ['lowPerformanceMaxRefillTimeFactor', -1],
+    ])('rejects invalid numeric setting %s=%s', (name, value) => {
+        expect(() => getSettingsWithDefaults({ [name]: value })).toThrow(RangeError);
+    });
 });
 
 describe('default noise cancellation models', () => {
