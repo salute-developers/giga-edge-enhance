@@ -81,6 +81,12 @@ DenoisePipelineElement::DenoisePipelineElement(uint32_t sample_rate, std::shared
   ctx = m_denoiser.CreateContext(sample_rate, sample_rate);
 }
 
+DenoisePipelineElement::~DenoisePipelineElement() {
+  if (ctx != nullptr) {
+    m_denoiser.DestroyContext(&ctx);
+  }
+}
+
 uint32_t DenoisePipelineElement::process(uintptr_t src_ptr, const uint32_t chunk_size) noexcept {
   float* src_ptr_ = reinterpret_cast<float*>(src_ptr);
   this->m_input.resize(chunk_size);
