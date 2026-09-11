@@ -491,12 +491,12 @@ void AudioProcessorConfig::validate() const {
     const auto rt = sec["release_time"].as<double>();
     const auto ht = sec["hold_time"].as<double>();
 
-    ensure(sr <= 100000, "range_ctrl.sample_rate must be <= 100000");
+    ensure(sr > 0 && sr <= 100000, "range_ctrl.sample_rate must be in (0, 100000]");
     ensure(finite(tldb), "range_ctrl.target_level_db must be finite");
-    ensure(finite(maxdb), "range_ctrl.max_gain_db must be finite");
-    ensure(at >= 0.0, "range_ctrl.attack_time must be >= 0");
-    ensure(rt >= 0.0, "range_ctrl.release_time must be >= 0");
-    ensure(ht >= 0.0, "range_ctrl.hold_time must be >= 0");
+    ensure(finite(maxdb) && maxdb >= 0.0, "range_ctrl.max_gain_db must be finite and >= 0");
+    ensure(finite(at) && at >= 0.0, "range_ctrl.attack_time must be finite and >= 0");
+    ensure(finite(rt) && rt >= 0.0, "range_ctrl.release_time must be finite and >= 0");
+    ensure(finite(ht) && ht >= 0.0, "range_ctrl.hold_time must be finite and >= 0");
   }
 
   // AGC
@@ -508,11 +508,11 @@ void AudioProcessorConfig::validate() const {
     const auto tr = sec["step_size_rise"].as<double>();
     const auto tf = sec["step_size_fall"].as<double>();
 
-    ensure(tl > 0.0, "auto_gain_ctrl.target_level must be > 0");
-    ensure(mg > 0.0, "auto_gain_ctrl.max_gain must be > 0");
+    ensure(finite(tl) && tl > 0.0, "auto_gain_ctrl.target_level must be finite and > 0");
+    ensure(finite(mg) && mg > 0.0, "auto_gain_ctrl.max_gain must be finite and > 0");
     ensure(al > 0u, "auto_gain_ctrl.average_len must be > 0");
-    ensure(tr > 0.0, "auto_gain_ctrl.step_size_rise must be > 0");
-    ensure(tf > 0.0, "auto_gain_ctrl.step_size_fall must be > 0");
+    ensure(finite(tr) && tr > 0.0, "auto_gain_ctrl.step_size_rise must be finite and > 0");
+    ensure(finite(tf) && tf > 0.0, "auto_gain_ctrl.step_size_fall must be finite and > 0");
   }
 
   // NG
@@ -524,11 +524,11 @@ void AudioProcessorConfig::validate() const {
     const auto rt = sec["release_time"].as<double>();
     const auto ht = sec["hold_time"].as<double>();
 
-    ensure(sr <= 100000, "noise_gate_ctrl.sample_rate must be <= 100000");
+    ensure(sr > 0 && sr <= 100000, "noise_gate_ctrl.sample_rate must be in (0, 100000]");
     ensure(finite(th), "noise_gate_ctrl.threshold must be finite");
-    ensure(at > 0.0, "noise_gate_ctrl.attack_time must be > 0");
-    ensure(rt > 0.0, "noise_gate_ctrl.release_time must be > 0");
-    ensure(ht > 0.0, "noise_gate_ctrl.hold_time must be > 0");
+    ensure(finite(at) && at > 0.0, "noise_gate_ctrl.attack_time must be finite and > 0");
+    ensure(finite(rt) && rt > 0.0, "noise_gate_ctrl.release_time must be finite and > 0");
+    ensure(finite(ht) && ht > 0.0, "noise_gate_ctrl.hold_time must be finite and > 0");
   }
 
   // DRC
@@ -536,14 +536,17 @@ void AudioProcessorConfig::validate() const {
     const auto sec = sp["dynamic_range_compressor_ctrl"];
     const auto sr = sec["sample_rate"].as<uint32_t>();
     const auto th = sec["threshold"].as<double>();
+    const auto ratio = sec["ratio"].as<uint32_t>();
+    const auto knee = sec["knee_width"].as<double>();
     const auto at = sec["attack_time"].as<double>();
     const auto rt = sec["release_time"].as<double>();
 
-    ensure(sr <= 100000,
-           "dynamic_range_compressor_ctrl.sample_rate must be <= 100000");
+    ensure(sr > 0 && sr <= 100000, "dynamic_range_compressor_ctrl.sample_rate must be in (0, 100000]");
     ensure(finite(th), "dynamic_range_compressor_ctrl.threshold must be finite");
-    ensure(at >= 0.0, "dynamic_range_compressor_ctrl.attack_time must be >= 0");
-    ensure(rt >= 0.0, "dynamic_range_compressor_ctrl.release_time must be >= 0");
+    ensure(ratio >= 1, "dynamic_range_compressor_ctrl.ratio must be >= 1");
+    ensure(finite(knee) && knee >= 0.0, "dynamic_range_compressor_ctrl.knee_width must be finite and >= 0");
+    ensure(finite(at) && at >= 0.0, "dynamic_range_compressor_ctrl.attack_time must be finite and >= 0");
+    ensure(finite(rt) && rt >= 0.0, "dynamic_range_compressor_ctrl.release_time must be finite and >= 0");
   }
 
   // LC
@@ -554,10 +557,10 @@ void AudioProcessorConfig::validate() const {
     const auto bt = sec["bypass_time"].as<double>();
     const auto mg = sec["max_gain_db"].as<double>();
 
-    ensure(sr <= 100000, "loudness_ctrl.sample_rate must be <= 100000");
+    ensure(sr >= 100 && sr <= 100000, "loudness_ctrl.sample_rate must be in [100, 100000]");
     ensure(finite(tldb), "loudness_ctrl.target_level_db must be finite");
-    ensure(finite(mg), "loudness_ctrl.max_gain_db must be finite");
-    ensure(bt >= 0.0, "loudness_ctrl.bypass_time must be >= 0");
+    ensure(finite(mg) && mg >= 0.0, "loudness_ctrl.max_gain_db must be finite and >= 0");
+    ensure(finite(bt) && bt >= 0.0, "loudness_ctrl.bypass_time must be finite and >= 0");
   }
 
   // Limiter
@@ -565,13 +568,15 @@ void AudioProcessorConfig::validate() const {
     const auto sec = sp["limiter_ctrl"];
     const auto sr = sec["sample_rate"].as<uint32_t>();
     const auto th = sec["threshold"].as<double>();
+    const auto knee = sec["knee_width"].as<double>();
     const auto at = sec["attack_time"].as<double>();
     const auto rt = sec["release_time"].as<double>();
 
-    ensure(sr <= 100000, "limiter_ctrl.sample_rate must be <= 100000");
+    ensure(sr > 0 && sr <= 100000, "limiter_ctrl.sample_rate must be in (0, 100000]");
     ensure(finite(th), "limiter_ctrl.threshold must be finite");
-    ensure(at >= 0.0, "limiter_ctrl.attack_time must be >= 0");
-    ensure(rt >= 0.0, "limiter_ctrl.release_time must be >= 0");
+    ensure(finite(knee) && knee >= 0.0, "limiter_ctrl.knee_width must be finite and >= 0");
+    ensure(finite(at) && at >= 0.0, "limiter_ctrl.attack_time must be finite and >= 0");
+    ensure(finite(rt) && rt >= 0.0, "limiter_ctrl.release_time must be finite and >= 0");
   }
 }
 

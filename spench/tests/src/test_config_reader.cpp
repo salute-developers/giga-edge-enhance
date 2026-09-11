@@ -627,6 +627,24 @@ sound_processing:
   REQUIRE_THROWS_AS(cfg = std::make_unique<spench::AudioProcessorConfig>(base), std::runtime_error);
 }
 
+TEST_CASE("FAIL AudioProcessorConfig rejects unsafe DSP state sizes [audio processing reader]") {
+  SECTION("zero Range Control sample rate") {
+    auto base = spench::StringConfigReader("sound_processing:\n  range_ctrl:\n    sample_rate: 0\n");
+    CHECK_THROWS_AS(spench::AudioProcessorConfig(base), std::runtime_error);
+  }
+
+  SECTION("zero compressor ratio") {
+    auto base = spench::StringConfigReader("sound_processing:\n  dynamic_range_compressor_ctrl:\n    ratio: 0\n");
+    CHECK_THROWS_AS(spench::AudioProcessorConfig(base), std::runtime_error);
+  }
+
+  SECTION("negative limiter knee") {
+    auto base = spench::StringConfigReader("sound_processing:\n  limiter_ctrl:\n    knee_width: -1\n");
+    CHECK_THROWS_AS(spench::AudioProcessorConfig(base), std::runtime_error);
+  }
+}
+
+
 TEST_CASE("SUCCESS NetworkConfig constructed from bundled model uses bundle [network config]") {
   // Config that would normally reference a model file
   const std::string cfg = "model:\n  model_bundled: true\n";

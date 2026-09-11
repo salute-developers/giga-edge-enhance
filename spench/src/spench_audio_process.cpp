@@ -1,14 +1,32 @@
 #include "spench/spench_audio_process.h"
 
-#include <limits>
-#include <algorithm>
-#include <filesystem>
-#include <memory>
 #include <spdlog/spdlog.h>
 
-#include "spench/src/spench_task.h"
+#include <algorithm>
+#include <cmath>
+#include <filesystem>
+#include <limits>
+#include <memory>
+
 #include "spench/src/handler/audio_processor_handler.h"
 #include "spench/src/spench_logger.h"
+#include "spench/src/spench_task.h"
+
+namespace {
+
+void require_parameter(bool condition, const char* message) {
+  if (!condition) {
+    throw std::invalid_argument(message);
+  }
+}
+
+void validate_sample_rate(uint32_t sample_rate) {
+  require_parameter(sample_rate > 0 && sample_rate <= 100000, "Audio sample rate must be in (0, 100000].");
+}
+
+void validate_finite(float value, const char* message) { require_parameter(std::isfinite(value), message); }
+
+}  // namespace
 
 namespace spench {
 SpenchAudioProcess::SpenchAudioProcess()
@@ -126,8 +144,16 @@ SpenchAudioProcess& SpenchAudioProcess::AddAGC(uint32_t audio_sample_rate,
                                                float max_power_gain,
                                                float time_rise,
                                                float time_fall) {
-  dsp_->add_agc({target_power_level, max_power_gain,
-                  audio_sample_rate / 4, time_rise, time_fall});
+  validate_sample_rate(audio_sample_rate);
+  validate_finite(target_power_level, "AGC target level must be finite.");
+  validate_finite(max_power_gain, "AGC maximum gain must be finite.");
+  validate_finite(time_rise, "AGC rise time must be finite.");
+  validate_finite(time_fall, "AGC fall time must be finite.");
+  require_parameter(target_power_level > 0.0F, "AGC target level must be positive.");
+  require_parameter(max_power_gain > 0.0F, "AGC maximum gain must be positive.");
+  require_parameter(time_rise > 0.0F && time_fall > 0.0F, "AGC rise and fall times must be positive.");
+  dsp_->add_agc(
+      {target_power_level, max_power_gain, std::max<uint32_t>(1, audio_sample_rate / 4), time_rise, time_fall});
   return *this;
 }
 
@@ -142,6 +168,15 @@ SpenchAudioProcess& SpenchAudioProcess::AddRC(uint32_t audio_sample_rate,
                                               float attack_time,
                                               float release_time,
                                               float hold_time) {
+  validate_sample_rate(audio_sample_rate);
+  validate_finite(target_level_db, "Range Control target level must be finite.");
+  validate_finite(max_gain_db, "Range Control maximum gain must be finite.");
+  validate_finite(attack_time, "Range Control attack time must be finite.");
+  validate_finite(release_time, "Range Control release time must be finite.");
+  validate_finite(hold_time, "Range Control hold time must be finite.");
+  require_parameter(max_gain_db >= 0.0F, "Range Control maximum gain must be non-negative.");
+  require_parameter(attack_time >= 0.0F && release_time >= 0.0F && hold_time >= 0.0F,
+                    "Range Control timing values must be non-negative.");
   dsp_->add_rc({audio_sample_rate, target_level_db, max_gain_db,
                 attack_time, release_time, hold_time});
   return *this;
@@ -158,6 +193,12 @@ SpenchAudioProcess& SpenchAudioProcess::AddLC(uint32_t audio_sample_rate,
                                               float max_gain_db,
                                               bool vad,
                                               bool post_processing) {
+  validate_sample_rate(audio_sample_rate);
+  validate_finite(target_level_db, "Loudness Control target level must be finite.");
+  validate_finite(bypass_time, "Loudness Control bypass time must be finite.");
+  validate_finite(max_gain_db, "Loudness Control maximum gain must be finite.");
+  require_parameter(bypass_time >= 0.0F, "Loudness Control bypass time must be non-negative.");
+  require_parameter(max_gain_db >= 0.0F, "Loudness Control maximum gain must be non-negative.");
   dsp_->add_lc({audio_sample_rate, target_level_db, bypass_time, max_gain_db, vad, post_processing});
   return *this;
 }
@@ -172,6 +213,13 @@ SpenchAudioProcess& SpenchAudioProcess::AddNG(uint32_t audio_sample_rate,
                                               float attack_time,
                                               float release_time,
                                               float hold_time) {
+  validate_sample_rate(audio_sample_rate);
+  validate_finite(threshold_db, "Noise Gate threshold must be finite.");
+  validate_finite(attack_time, "Noise Gate attack time must be finite.");
+  validate_finite(release_time, "Noise Gate release time must be finite.");
+  validate_finite(hold_time, "Noise Gate hold time must be finite.");
+  require_parameter(attack_time > 0.0F && release_time > 0.0F && hold_time > 0.0F,
+                    "Noise Gate timing values must be positive.");
   dsp_->add_noise_gate({audio_sample_rate, threshold_db,
                   attack_time, release_time, hold_time});
   return *this;
@@ -187,6 +235,13 @@ SpenchAudioProcess& SpenchAudioProcess::AddLim(uint32_t audio_sample_rate,
                                               float knee_width,
                                               float attack_time,
                                               float release_time) {
+  validate_sample_rate(audio_sample_rate);
+  validate_finite(threshold_db, "Limiter threshold must be finite.");
+  validate_finite(knee_width, "Limiter knee width must be finite.");
+  validate_finite(attack_time, "Limiter attack time must be finite.");
+  validate_finite(release_time, "Limiter release time must be finite.");
+  require_parameter(knee_width >= 0.0F && attack_time >= 0.0F && release_time >= 0.0F,
+                    "Limiter knee width and timing values must be non-negative.");
   dsp_->add_limiter({audio_sample_rate, threshold_db,
                   knee_width, attack_time, release_time});
   return *this;
@@ -203,6 +258,14 @@ SpenchAudioProcess& SpenchAudioProcess::AddDRC(uint32_t audio_sample_rate,
                                                float knee_width,
                                                float attack_time,
                                                float release_time) {
+  validate_sample_rate(audio_sample_rate);
+  validate_finite(threshold_db, "Compressor threshold must be finite.");
+  validate_finite(knee_width, "Compressor knee width must be finite.");
+  validate_finite(attack_time, "Compressor attack time must be finite.");
+  validate_finite(release_time, "Compressor release time must be finite.");
+  require_parameter(ratio >= 1, "Compressor ratio must be at least one.");
+  require_parameter(knee_width >= 0.0F && attack_time >= 0.0F && release_time >= 0.0F,
+                    "Compressor knee width and timing values must be non-negative.");
   dsp_->add_dr_compressor({audio_sample_rate, threshold_db,
                           ratio, knee_width, attack_time,
                           release_time});

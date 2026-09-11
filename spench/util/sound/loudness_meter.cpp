@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 #include "util/sound/weighting_filter.h"
@@ -18,6 +19,9 @@ namespace {
 constexpr float eps = 1e-8;
 
 float max_abs(const std::vector<float>& x) noexcept {
+  if (x.empty()) {
+    return 0.0F;
+  }
   float max = std::abs(x[0]);
   for (size_t i = 1; i < x.size(); ++i) {
     max = std::max(std::abs(x[i]), max);
@@ -29,7 +33,9 @@ float max_abs(const std::vector<float>& x) noexcept {
 class PowerMeter {
  public:
   explicit PowerMeter(int32_t winlen, int32_t overlap) : win_len_{winlen}, stride_len_{winlen - overlap} {
-    DSPLIB_ASSERT(winlen > overlap, "window size must be greater than overlap");
+    if (winlen <= 0 || overlap < 0 || winlen <= overlap) {
+      throw std::invalid_argument("PowerMeter window must be positive and greater than overlap.");
+    }
     buf_ = dsplib::zeros(winlen);
   }
 
@@ -58,6 +64,9 @@ class PowerMeter {
 };
 
 LoudnessMeter::LoudnessMeter(int32_t sample_rate) {
+  if (sample_rate < 100 || sample_rate > 100000) {
+    throw std::invalid_argument("LoudnessMeter sample rate must be in [100, 100000].");
+  }
   // see EBU R 128
   mm_meter_ = std::make_shared<PowerMeter>(sample_rate * 0.4, sample_rate * 0.35);  ///< 0.4s, 0.35 overlap
   st_meter_ = std::make_shared<PowerMeter>(sample_rate * 3.0, sample_rate * 2.95);  ///< 3.0s, 2.95 overlap

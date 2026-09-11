@@ -4,13 +4,19 @@
 #include <dsplib/math.h>
 
 #include <algorithm>
+#include <stdexcept>
 #include <vector>
 
 namespace util::sound {
 
 class CycleBuffer {
  public:
-  explicit CycleBuffer(size_t size, float init = 0) : size_{size} { buf_.resize(size_, init); }
+  explicit CycleBuffer(size_t size, float init = 0) : size_{size} {
+    if (size_ == 0) {
+      throw std::invalid_argument("CycleBuffer size must be greater than zero.");
+    }
+    buf_.resize(size_, init);
+  }
 
   void push(float value) noexcept {
     buf_[pos_] = value;
@@ -51,7 +57,7 @@ class FIFOBuffer {
    * @param data Contiguous span of elements to append
    * Appends elements to the end of buffer. No-op for empty spans.
    */
-  void write(const std::vector<float>& data) noexcept {
+  void write(const std::vector<T>& data) {
     if (data.empty()) {
       return;
     }
@@ -62,7 +68,7 @@ class FIFOBuffer {
    * @brief Write single element (copy)
    * @param value Element to append
    */
-  void write(const T& value) noexcept { buf_.push_back(value); }
+  void write(const T& value) { buf_.push_back(value); }
 
   /**
    * @brief Read data from buffer
@@ -90,7 +96,7 @@ class FIFOBuffer {
    * @param n Number of elements to read
    * @return Vector with read elements
    */
-  std::vector<T> read(uint32_t n) noexcept {
+  std::vector<T> read(uint32_t n) {
     n = dsplib::min(n, buf_.size());
     std::vector<T> out(n);
     this->read(out);
@@ -101,7 +107,7 @@ class FIFOBuffer {
    * @brief Get current element count
    * @return Number of elements in buffer
    */
-  [[nodiscard]] uint32_t size() const noexcept { return buf_.size(); }
+  [[nodiscard]] size_t size() const noexcept { return buf_.size(); }
 
   /**
    * @brief Check if buffer empty

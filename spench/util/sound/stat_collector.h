@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -37,13 +38,16 @@ class StatCollector {
   explicit StatCollector(std::string name, uint32_t sample_rate,
                          double window_seconds, Options opts = Options::all())
       : name_(std::move(name)), sr_(sample_rate), win_sec_(window_seconds), opt_(opts) {
-    if (win_sec_ <= 0.0) { win_sec_ = 1.0; }
-    if (sr_ == 0) { sr_ = 1; }
+    if (sr_ == 0 || !std::isfinite(win_sec_) || win_sec_ <= 0.0) {
+      throw std::invalid_argument("StatCollector sample rate and window must be positive and finite.");
+    }
     win_samples_ = to_samples(win_sec_, sr_);
-    if (win_samples_ == 0) { win_samples_ = 1; }
+    if (win_samples_ == 0 || win_samples_ == std::numeric_limits<size_t>::max()) {
+      throw std::invalid_argument("StatCollector window is outside the supported size range.");
+    }
   }
 
-  std::optional<Stat> update(float value, size_t samples_in_value) noexcept {
+  std::optional<Stat> update(float value, size_t samples_in_value) {
     if (opt_.need_min)  { min_ = min_ ? std::min(*min_, value) : value; }
     if (opt_.need_max)  { max_ = max_ ? std::max(*max_, value) : value; }
     if (opt_.need_mean) { sum_ += value; ++count_; }
@@ -56,7 +60,7 @@ class StatCollector {
   }
 
   // NEW: advance time only (no value)
-  std::optional<Stat> advance(size_t samples_in_value) noexcept {
+  std::optional<Stat> advance(size_t samples_in_value) {
     elapsed_samples_ += samples_in_value;
     return try_flush();
   }
@@ -65,7 +69,7 @@ class StatCollector {
 
   std::optional<Stat> last() const noexcept { return last_; }
 
-  std::string name() const noexcept { return name_; }
+  const std::string& name() const noexcept { return name_; }
   double window_seconds() const noexcept { return win_sec_; }
 
   double progress_seconds() const noexcept {
@@ -74,10 +78,14 @@ class StatCollector {
   }
 
   void set_window_seconds(double win_sec) {
-    win_sec_ = (win_sec > 0.0 ? win_sec : 1.0);
-    if (sr_ == 0) { sr_ = 1; }
+    if (!std::isfinite(win_sec) || win_sec <= 0.0) {
+      throw std::invalid_argument("StatCollector window must be positive and finite.");
+    }
+    win_sec_ = win_sec;
     win_samples_ = to_samples(win_sec_, sr_);
-    if (win_samples_ == 0) { win_samples_ = 1; }
+    if (win_samples_ == 0 || win_samples_ == std::numeric_limits<size_t>::max()) {
+      throw std::invalid_argument("StatCollector window is outside the supported size range.");
+    }
     reset_window(ResetMode::hard);
   }
 
@@ -94,7 +102,10 @@ class StatCollector {
 
   static size_t to_samples(double seconds, uint32_t sr) noexcept {
     const double s = std::ceil(seconds * static_cast<double>(sr));
-    return static_cast<size_t>(s > 0.0 ? s : 0.0);
+    if (!std::isfinite(s) || s >= static_cast<double>(std::numeric_limits<size_t>::max())) {
+      return std::numeric_limits<size_t>::max();
+    }
+    return static_cast<size_t>(s);
   }
 
   bool needs_order_stats() const noexcept {

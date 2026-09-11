@@ -82,11 +82,9 @@ class RangeControl {
     std::vector<float> gain;
   };
 
-  Result operator()(const std::vector<float>& x) noexcept {
-    return this->process(x);
-  }
+  Result operator()(const std::vector<float>& x) { return this->process(x); }
 
-  Result process(const std::vector<float>& x) noexcept;
+  Result process(const std::vector<float>& x);
 };
 
 }  // namespace sound
