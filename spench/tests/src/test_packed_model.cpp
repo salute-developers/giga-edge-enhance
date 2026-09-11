@@ -72,3 +72,7 @@ TEST_CASE("FAIL PackedModelReader rejects trailing data [packed_model]") {
 
   REQUIRE_THROWS_AS(spench::PackedModelReader(data), std::runtime_error);
 }
+
+TEST_CASE("FAIL packed integer reader rejects a null buffer [packed_model]") {
+  REQUIRE_THROWS_AS(spench::util::read_uint32_le(nullptr), std::invalid_argument);
+}
