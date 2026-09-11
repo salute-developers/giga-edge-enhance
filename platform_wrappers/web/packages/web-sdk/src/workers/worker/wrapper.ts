@@ -179,14 +179,17 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
     ) {
         super();
         onHeavyLoadStart();
-        this.bridge = Spench({
-            wasmBinary: wasm,
-            print: logger.debug,
-            printErr: logger.error,
-        });
-        this.dataPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
-        if (!this.dataPtr) throw new InternalError('Could not allocate the WASM input buffer');
-        onHeavyLoadEnd();
+        try {
+            this.bridge = Spench({
+                wasmBinary: wasm,
+                print: logger.debug,
+                printErr: logger.error,
+            });
+            this.dataPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
+            if (!this.dataPtr) throw new InternalError('Could not allocate the WASM input buffer');
+        } finally {
+            onHeavyLoadEnd();
+        }
     }
 
     protected get heap(): Float32Array {
@@ -256,23 +259,24 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
             this.logger.debug('model loaded');
 
             this.onHeavyLoadStart();
-            const model = this.loadModel(loadedModel);
-
-            if (model instanceof SpenchError) {
-                this.onHeavyLoadEnd();
-
-                return model;
-            }
-            this.logger.debug('model created');
-
             try {
-                this.pipeline.push([key, new this.bridge.DenoisePipelineElement(this.sampleRate, model)]);
-                this.onHeavyLoadEnd();
-                this.logger.debug('element created');
-            } catch (e) {
-                return new InternalError(e);
+                const model = this.loadModel(loadedModel);
+
+                if (model instanceof SpenchError) {
+                    return model;
+                }
+                this.logger.debug('model created');
+
+                try {
+                    this.pipeline.push([key, new this.bridge.DenoisePipelineElement(this.sampleRate, model)]);
+                    this.logger.debug('element created');
+                } catch (e) {
+                    return new InternalError(e);
+                } finally {
+                    model.delete();
+                }
             } finally {
-                model.delete();
+                this.onHeavyLoadEnd();
             }
         }
 
