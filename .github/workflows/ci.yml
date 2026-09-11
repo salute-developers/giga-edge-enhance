@@ -46,10 +46,18 @@ jobs:
       - id: metadata
         name: Resolve native toolchain image
         run: |
-          echo "image=ghcr.io/${GITHUB_REPOSITORY}/toolchain:native-$(tools/spench image-key native)" >> "$GITHUB_OUTPUT"
+          image="ghcr.io/${GITHUB_REPOSITORY}/toolchain:native-$(tools/spench image-key native)"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
           echo "identity=$(tools/spench recipe-key native)" >> "$GITHUB_OUTPUT"
+          if docker manifest inspect "$image" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Reusing $image"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
       - id: build
         name: Build native toolchain
+        if: steps.metadata.outputs.exists != 'true'
         uses: docker/bake-action@v7
         with:
           source: .
@@ -87,10 +95,18 @@ jobs:
       - id: metadata
         name: Resolve Web toolchain image
         run: |
-          echo "image=ghcr.io/${GITHUB_REPOSITORY}/toolchain:web-$(tools/spench image-key web)" >> "$GITHUB_OUTPUT"
+          image="ghcr.io/${GITHUB_REPOSITORY}/toolchain:web-$(tools/spench image-key web)"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
           echo "identity=$(tools/spench recipe-key web)" >> "$GITHUB_OUTPUT"
+          if docker manifest inspect "$image" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Reusing $image"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
       - id: build
         name: Build Web toolchain
+        if: steps.metadata.outputs.exists != 'true'
         uses: docker/bake-action@v7
         with:
           source: .
@@ -129,13 +145,23 @@ jobs:
       - id: metadata
         name: Resolve Android toolchain image
         run: |
+          image="ghcr.io/${GITHUB_REPOSITORY}/toolchain:android-$(tools/spench image-key android)"
+          ui_image="ghcr.io/${GITHUB_REPOSITORY}/toolchain:android-ui-$(tools/spench image-key android-ui)"
           {
-            echo "image=ghcr.io/${GITHUB_REPOSITORY}/toolchain:android-$(tools/spench image-key android)"
-            echo "ui_image=ghcr.io/${GITHUB_REPOSITORY}/toolchain:android-ui-$(tools/spench image-key android-ui)"
+            echo "image=$image"
+            echo "ui_image=$ui_image"
             echo "identity=$(tools/spench recipe-key android)"
           } >> "$GITHUB_OUTPUT"
+          if docker manifest inspect "$image" >/dev/null 2>&1 &&
+             docker manifest inspect "$ui_image" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Reusing $image and $ui_image"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
       - id: build
         name: Build Android toolchain images
+        if: steps.metadata.outputs.exists != 'true'
         uses: docker/bake-action@v7
         with:
           source: .
