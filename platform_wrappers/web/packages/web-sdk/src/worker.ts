@@ -12,7 +12,7 @@ import { Logger } from './utils/logger';
 import { assert } from './utils/error';
 import { Telemetry } from './utils/telemetry';
 import { WASM_DSP_URL, WASM_URL } from './utils/resources';
-import { ModelsTmpl, Settings } from './utils/common';
+import { copyArrayBuffer, ModelsTmpl, Settings } from './utils/common';
 import { WORKER_URL } from './utils/jsResources';
 
 let currentWorkerNumber = 0;
@@ -31,7 +31,10 @@ export function getTransferableModelRepresentation<M extends ModelsTmpl>(
             Object.fromEntries(
                 Object.entries(modelTypeMap).map(([modelType, resourceValue]) => {
                     if (resourceValue instanceof ArrayBuffer) {
-                        transferable.push(resourceValue);
+                        const ownedBuffer = copyArrayBuffer(resourceValue);
+                        transferable.push(ownedBuffer);
+
+                        return [modelType, ownedBuffer];
                     }
 
                     return [modelType, resourceValue instanceof URL ? resourceValue.href : resourceValue];

@@ -120,7 +120,7 @@ describe('getTransferableModelRepresentation', () => {
         expect(trans).toEqual([]);
     });
 
-    test('converts URLs to href strings and keeps ArrayBuffers', () => {
+    test('converts URLs and copies caller-owned ArrayBuffers before transfer', () => {
         const raw = {
             noiseCancellation: {
                 fast24: new ArrayBuffer(4),
@@ -134,12 +134,13 @@ describe('getTransferableModelRepresentation', () => {
         // Transferables should contain the single ArrayBuffer.
         expect(trans).toHaveLength(1);
         expect(trans[0]).toBeInstanceOf(ArrayBuffer);
-        expect(trans[0]).toBe((raw as any).noiseCancellation.fast24);
+        expect(trans[0]).not.toBe((raw as any).noiseCancellation.fast24);
+        expect(trans[0]).toEqual((raw as any).noiseCancellation.fast24);
 
         // Models map should have href string for URL and keep strings untouched.
         expect(models).toMatchObject({
             noiseCancellation: {
-                fast24: raw.noiseCancellation!.fast24,
+                fast24: trans[0],
                 quality24: 'https://example.com/quality24.spench',
                 custom: 'https://example.com/custom.spench',
             },
@@ -183,13 +184,15 @@ describe('SpenchWorker', () => {
         // The models object must keep ArrayBuffers and convert URLs to hrefs.
         expect(msg.resources.models).toMatchObject({
             noiseCancellation: {
-                fast24: rawModels.noiseCancellation!.fast24,
+                fast24: transfer[0],
                 quality24: 'https://example.com/model.spench',
             },
         });
 
         // The transfer list must include the ArrayBuffer from the models.
-        expect(transfer).toEqual([rawModels.noiseCancellation!.fast24]);
+        expect(transfer).toHaveLength(1);
+        expect(transfer[0]).not.toBe(rawModels.noiseCancellation!.fast24);
+        expect(rawModels.noiseCancellation!.fast24.byteLength).toBe(4);
     });
 
     test('createPort returns a port that is destroyed when the last client closes', async () => {
