@@ -1,13 +1,18 @@
+#include "spench/packed_model.h"
+
 #include <cstdint>
 #include <fstream>
+#include <limits>
 #include <stdexcept>
 
-#include "spench/packed_model.h"
 #include "spench/util/packed_model/packed_model_writer.h"
 
 namespace spench::util {
 
 uint32_t read_uint32_le(const uint8_t* ptr) {
+  if (ptr == nullptr) {
+    throw std::invalid_argument("cannot read an integer from a null buffer");
+  }
   return static_cast<uint32_t>(ptr[0]) |
          (static_cast<uint32_t>(ptr[1]) << 8) |
          (static_cast<uint32_t>(ptr[2]) << 16) |
@@ -21,10 +26,19 @@ std::vector<uint8_t> write_uint32_le(uint32_t value) {
           (uint8_t)((value >> 24) & 0xFF)};
 }
 
-std::vector<uint8_t> write_packed_model(const std::string& config,
-                                        const std::vector<uint8_t>& model) {
+std::vector<uint8_t> write_packed_model(const std::string& config, const std::vector<uint8_t>& model) {
+  constexpr size_t header_size = 2 * sizeof(uint32_t);
+  constexpr size_t max_field_size = std::numeric_limits<uint32_t>::max();
+  if (config.size() > max_field_size || model.size() > max_field_size) {
+    throw std::length_error("packed model fields cannot exceed UINT32_MAX bytes");
+  }
+
   std::vector<uint8_t> buffer;
-  buffer.reserve(2 * 4 + config.size() + model.size());
+  if (config.size() > buffer.max_size() - header_size ||
+      model.size() > buffer.max_size() - header_size - config.size()) {
+    throw std::length_error("packed model is too large");
+  }
+  buffer.reserve(header_size + config.size() + model.size());
 
   auto config_size = write_uint32_le(static_cast<uint32_t>(config.size()));
   buffer.insert(buffer.end(), config_size.begin(), config_size.end());
