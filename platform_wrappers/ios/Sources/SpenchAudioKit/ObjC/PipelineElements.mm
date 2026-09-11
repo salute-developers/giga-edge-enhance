@@ -101,6 +101,12 @@ class DenoisePipelineElementCore final : public PipelineElementCore {
             return 0;
         }
 
+        if (output_.size() > frameCount) {
+            lastProcessingError_ =
+                "Denoising produced more samples than the equal-rate output buffer can hold.";
+            return 0;
+        }
+
         if (!output_.empty()) {
             std::memcpy(dst, output_.data(), output_.size() * sizeof(float));
         }
@@ -201,6 +207,10 @@ NSError* SpenchErrorFromException(const std::exception& exception) {
     return _core == nullptr ? 0.0F : static_cast<float>(_core->sampleRate());
 }
 
+@end
+
+@implementation DenoisePipelineElement
+
 - (nullable NSString*)lastProcessingError {
     const auto* core = dynamic_cast<const spench_ios::DenoisePipelineElementCore*>(_core.get());
     if (core == nullptr || core->lastProcessingError().empty()) {
@@ -208,10 +218,6 @@ NSError* SpenchErrorFromException(const std::exception& exception) {
     }
     return [NSString stringWithUTF8String:core->lastProcessingError().c_str()];
 }
-
-@end
-
-@implementation DenoisePipelineElement
 
 - (nullable instancetype)initWithModelPath:(NSString*)modelPath
                                 sampleRate:(float)sampleRate
