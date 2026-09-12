@@ -1,11 +1,98 @@
 {
+  "chromium": {
     "norm": {
-
+      "test1_24_noised.wav": {
+        "control": 1.937393,
+        "processed": 1.583047
+      },
+      "test1_48_noised.wav": {
+        "control": 1.71563,
+        "processed": 1.530619
+      }
     },
     "normquality48": {
-        
+      "test1_24_noised.wav": {
+        "control": 1.937393,
+        "processed": 2.059912
+      },
+      "test1_48_noised.wav": {
+        "control": 1.71563,
+        "processed": 1.952576
+      }
     },
     "normfast8": {
-        
+      "test1_24_noised.wav": {
+        "control": 1.937393,
+        "processed": 2.290457
+      },
+      "test1_48_noised.wav": {
+        "control": 1.71563,
+        "processed": 2.361784
+      }
     }
+  },
+  "firefox": {
+    "norm": {
+      "test1_24_noised.wav": {
+        "control": 1.937393,
+        "processed": 1.678589
+      },
+      "test1_48_noised.wav": {
+        "control": 1.71563,
+        "processed": 1.535739
+      }
+    },
+    "normquality48": {
+      "test1_24_noised.wav": {
+        "control": 1.937393,
+        "processed": 1.042024
+      },
+      "test1_48_noised.wav": {
+        "control": 1.71563,
+        "processed": 1.26187
+      }
+    },
+    "normfast8": {
+      "test1_24_noised.wav": {
+        "control": 1.937393,
+        "processed": 2.112953
+      },
+      "test1_48_noised.wav": {
+        "control": 1.71563,
+        "processed": 2.124256
+      }
+    }
+  },
+  "webkit": {
+    "norm": {
+      "test1_24_noised.wav": {
+        "control": 1.937393,
+        "processed": 1.613657
+      },
+      "test1_48_noised.wav": {
+        "control": 1.71563,
+        "processed": 1.553851
+      }
+    },
+    "normquality48": {
+      "test1_24_noised.wav": {
+        "control": 1.937393,
+        "processed": 2.077633
+      },
+      "test1_48_noised.wav": {
+        "control": 1.71563,
+        "processed": 1.937187
+      }
+    },
+    "normfast8": {
+      "test1_24_noised.wav": {
+        "control": 1.937393,
+        "processed": 1.632805
+      },
+      "test1_48_noised.wav": {
+        "control": 1.71563,
+        "processed": 1.611196
+      }
+    }
+  }
 }

@@ -12,7 +12,7 @@
     "test": "npm run pw:test",
     "pw:open": "npx playwright test --ui",
     "pw:test": "playwright test",
-    "pw:test:mos-candidates": "MOS_WRITE_CANDIDATES=1 npm run pw:test",
+    "pw:test:mos-candidates": "MOS_WRITE_CANDIDATES=1 PLAYWRIGHT_WORKERS=1 npm run pw:test",
     "lint": "eslint .",
     "preview": "docusaurus serve --port 5173",
     "serve:test": "node scripts/serve-static.mjs"
