@@ -6,6 +6,7 @@ framework module SpenchAudioKit_Private {
     header "RingBuffer.h"
     header "AtomicOptionalDouble.h"
     header "WorkerThreadEvent.h"
+    header "LowPerformanceEventMailbox.h"
 
     export *
 }

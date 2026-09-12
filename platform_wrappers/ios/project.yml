@@ -58,6 +58,9 @@ targets:
       - path: Sources/SpenchAudioKit/include/WorkerThreadEvent.h
         buildPhase: headers
         headerVisibility: private
+      - path: Sources/SpenchAudioKit/include/LowPerformanceEventMailbox.h
+        buildPhase: headers
+        headerVisibility: private
 
   SpenchModelFast8:
     type: bundle
