@@ -259,7 +259,7 @@ def web_workflow(action: str, host: bool) -> None:
         browser_cache = (str(browser_cache_host) if host else
                          f"/workspace/{browser_cache_host.relative_to(ROOT)}")
         playwright_environment = {"PLAYWRIGHT_BROWSERS_PATH": browser_cache}
-        run_web_node(["npx", "playwright", "install", "chromium"],
+        run_web_node(["npx", "playwright", "install", "chromium", "firefox", "webkit"],
                      container_stage=stage, environment=playwright_environment,
                      workdir=web_dir, isolate_node_modules=False)
         run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-site"],

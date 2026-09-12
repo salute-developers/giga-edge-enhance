@@ -508,7 +508,7 @@ jobs:
           node-version-file: platform_wrappers/web/.nvmrc
           cache: npm
           cache-dependency-path: platform_wrappers/web/package-lock.json
-      - name: Cache Playwright Chromium
+      - name: Cache Playwright browsers
         uses: actions/cache@v6
         with:
           path: out/cache/playwright

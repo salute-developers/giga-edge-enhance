@@ -58,9 +58,8 @@ const runSingleFeatureTest = (
         await page.getByTestId('downloadResult').click();
         const downloadPath = await downloadPromise;
 
-        await test.info().attach(`${description} – processed audio.webm`, {
+        await test.info().attach(`${description} – processed audio`, {
             path: downloadPath,
-            contentType: 'audio/webm',
         });
 
         const fstat = await stat(downloadPath);
