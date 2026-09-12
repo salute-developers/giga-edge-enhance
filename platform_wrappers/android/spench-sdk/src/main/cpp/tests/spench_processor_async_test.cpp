@@ -299,6 +299,28 @@ void test_telemetry_counters_increment_only_for_enabled_stages() {
   expect_true(telemetry.noise_suppression_counters.empty(), "noise telemetry should stay empty when disabled");
 }
 
+void test_telemetry_bucket_saturates_for_tiny_rounding_step() {
+  spench::SpenchProcessorSettings settings;
+  settings.telemetry_rounding_milliseconds = std::numeric_limits<double>::denorm_min();
+  spench::SpenchProcessor processor(test_sample_rate_hz, settings);
+  processor.set_features(true, "", nullptr);
+  std::vector<float> input(test_chunk_frames, 0.25f);
+  std::vector<float> output(input.size(), 0.0f);
+
+  for (std::int32_t attempt = 0; attempt < 50; ++attempt) {
+    processor.process(input.data(), output.data(), input.size());
+    const auto telemetry = processor.telemetry_snapshot();
+    if (!telemetry.normalization_counters.empty()) {
+      expect_true(telemetry.normalization_counters.begin()->first == std::numeric_limits<std::int32_t>::max(),
+                  "oversized telemetry bucket should saturate");
+      return;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+  }
+
+  expect_true(false, "timed out waiting for telemetry");
+}
+
 void test_reset_does_not_clear_telemetry() {
   spench::SpenchProcessor processor(test_sample_rate_hz);
   processor.set_features(true, "", nullptr);
@@ -465,6 +487,7 @@ int main() {  // spench-allow-int
   test_worker_waits_for_configured_full_chunk();
   test_invalid_processing_chunk_setting_is_rejected();
   test_telemetry_counters_increment_only_for_enabled_stages();
+  test_telemetry_bucket_saturates_for_tiny_rounding_step();
   test_reset_does_not_clear_telemetry();
   test_reverse_order_produces_finite_output();
   test_congestion_priming_returns_silence_until_threshold();

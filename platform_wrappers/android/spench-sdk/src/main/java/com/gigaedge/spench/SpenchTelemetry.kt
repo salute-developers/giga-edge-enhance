@@ -39,14 +39,14 @@ data class SpenchTelemetry(
 
     private companion object {
         fun subtract(lhs: Map<Double, Int>, rhs: Map<Double, Int>): Map<Double, Int> = lhs.mapNotNull { (bucket, count) ->
-            val delta = count - (rhs[bucket] ?: 0)
-            if (delta > 0) bucket to delta else null
+            val delta = count.toLong() - (rhs[bucket] ?: 0).toLong()
+            if (delta > 0) bucket to delta.coerceAtMost(Int.MAX_VALUE.toLong()).toInt() else null
         }.toMap()
 
         fun mean(counters: Map<Double, Int>): Double? {
-            val sampleCount = counters.values.sum()
+            val sampleCount = counters.values.sumOf { it.toDouble() }
             if (sampleCount <= 0) return null
-            return counters.entries.sumOf { (bucket, count) -> bucket * count.toDouble() } / sampleCount.toDouble()
+            return counters.entries.sumOf { (bucket, count) -> bucket * count.toDouble() } / sampleCount
         }
     }
 }

@@ -244,13 +244,14 @@ void SpenchProcessor::reset_congestion_locked() {
 }
 
 void SpenchProcessor::record_telemetry(bool normalization, double milliseconds) {
-  const std::int32_t bucket =
-      static_cast<std::int32_t>(std::llround(milliseconds / settings_.telemetry_rounding_milliseconds));
+  const double scaled_bucket = milliseconds / settings_.telemetry_rounding_milliseconds;
+  const std::int32_t bucket = !finite(scaled_bucket) || scaled_bucket >= std::numeric_limits<std::int32_t>::max()
+                                  ? std::numeric_limits<std::int32_t>::max()
+                                  : static_cast<std::int32_t>(std::llround(scaled_bucket));
   std::lock_guard<std::mutex> lock(telemetry_mutex_);
-  if (normalization) {
-    normalization_telemetry_[bucket] += 1;
-  } else {
-    noise_suppression_telemetry_[bucket] += 1;
+  std::int32_t& count = normalization ? normalization_telemetry_[bucket] : noise_suppression_telemetry_[bucket];
+  if (count < std::numeric_limits<std::int32_t>::max()) {
+    ++count;
   }
 }
 
