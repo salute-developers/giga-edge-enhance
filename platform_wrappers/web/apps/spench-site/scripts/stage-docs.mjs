@@ -1,4 +1,4 @@
-import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,48 +10,33 @@ const sourceDirectory = resolve(generatedDirectory, 'source');
 const coiServiceWorkerSource = resolve(siteDirectory, '../../node_modules/coi-serviceworker/coi-serviceworker.min.js');
 const coiServiceWorkerDestination = resolve(siteDirectory, 'static/coi-serviceworker.min.js');
 
-const excludedDirectories = new Set([
-    '.build',
-    '.cache',
-    '.cpm',
-    '.cxx',
-    '.docusaurus',
-    '.git',
-    '.generated-docs',
-    '.gradle',
-    '.swiftpm',
-    '.venv',
-    'DerivedData',
-    'build',
-    'node_modules',
-    'out',
-    'playwright-report',
-    'test-results',
-]);
-
-function isInside(candidate, parent) {
-    const path = relative(parent, candidate);
-    return path === '' || (!path.startsWith(`..${sep}`) && path !== '..');
-}
-
-async function collectMarkdownFiles(directory, files = []) {
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
-        const path = resolve(directory, entry.name);
-
-        if (entry.isDirectory()) {
-            if (!excludedDirectories.has(entry.name) && !isInside(path, resolve(siteDirectory, 'docs'))) {
-                await collectMarkdownFiles(path, files);
-            }
-            continue;
-        }
-
-        if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'AGENTS.md') {
-            files.push(path);
-        }
-    }
-
-    return files;
-}
+const repositoryDocumentation = [
+    'README.md',
+    'CHANGELOG.md',
+    'STYLE.md',
+    'platform_wrappers/android/README.md',
+    'platform_wrappers/android/docs/README.md',
+    'platform_wrappers/android/docs/api-reference.md',
+    'platform_wrappers/android/docs/architecture.md',
+    'platform_wrappers/android/docs/demo-app.md',
+    'platform_wrappers/android/docs/getting-started.md',
+    'platform_wrappers/android/docs/models.md',
+    'platform_wrappers/android/docs/proguard-r8.md',
+    'platform_wrappers/android/docs/telemetry-and-performance.md',
+    'platform_wrappers/android/docs/threading.md',
+    'platform_wrappers/android/docs/troubleshooting.md',
+    'platform_wrappers/ios/README.md',
+    'platform_wrappers/ios/Sources/SpenchAudioKit/Documentation.docc/ErrorHandling.md',
+    'platform_wrappers/ios/Sources/SpenchAudioKit/Documentation.docc/ModelBundles.md',
+    'platform_wrappers/ios/Sources/SpenchAudioKit/Documentation.docc/QuickStart.md',
+    'platform_wrappers/ios/Sources/SpenchAudioKit/Documentation.docc/SpenchAudioKit.md',
+    'platform_wrappers/ios/Sources/SpenchAudioKit/Documentation.docc/Telemetry.md',
+    'platform_wrappers/ios/Sources/SpenchAudioKit/Documentation.docc/ThreadingAndLifecycle.md',
+    'platform_wrappers/web/README.md',
+    'platform_wrappers/web/apps/spench-site/README.md',
+    'platform_wrappers/web/packages/web-sdk/README.md',
+    'platform_wrappers/web/packages/web-sdk/wasm/README.md',
+];
 
 function normalizeForDocusaurus(content, sourcePath) {
     if (!sourcePath.includes(`${sep}Documentation.docc${sep}`)) {
@@ -68,7 +53,8 @@ await cp(resolve(repositoryRoot, 'spench_logo.svg'), resolve(sourceDirectory, 's
 await cp(resolve(repositoryRoot, 'LICENSE'), resolve(sourceDirectory, 'LICENSE.md'));
 await cp(coiServiceWorkerSource, coiServiceWorkerDestination);
 
-for (const sourcePath of await collectMarkdownFiles(repositoryRoot)) {
+for (const repositoryPath of repositoryDocumentation) {
+    const sourcePath = resolve(repositoryRoot, repositoryPath);
     const destinationPath = resolve(sourceDirectory, relative(repositoryRoot, sourcePath));
     const content = normalizeForDocusaurus(await readFile(sourcePath, 'utf8'), sourcePath);
     await mkdir(dirname(destinationPath), { recursive: true });

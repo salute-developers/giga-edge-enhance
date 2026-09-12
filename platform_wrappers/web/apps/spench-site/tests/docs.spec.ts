@@ -20,6 +20,9 @@ test('repository Markdown and DocC articles are published', async ({ page }) => 
 
     await page.goto('/docs/source/platform_wrappers/ios/Sources/SpenchAudioKit/Documentation.docc/QuickStart/');
     await expect(page.getByRole('heading', { name: 'Quick Start' })).toBeVisible();
+
+    const repositoryInstructions = await page.goto('/docs/source/AGENTS/');
+    expect(repositoryInstructions?.status()).toBe(404);
 });
 
 test('demo retains a usable mobile layout', async ({ page }) => {
