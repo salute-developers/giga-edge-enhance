@@ -96,10 +96,29 @@ final class SpenchProcessorTests: XCTestCase {
         _ = try processor.process(input: input, output: &output)
         let telemetryBeforeReset = processor.telemetry
 
-        processor.reset()
+        try processor.reset()
 
         XCTAssertEqual(processor.features.noiseSuppression, SpenchModelDescriptor(rawValue: "quality48"))
         XCTAssertEqual(processor.telemetry, telemetryBeforeReset)
+    }
+
+    func testResetRestoresNormalizationState() throws {
+        let processor = try SpenchProcessor(sampleRate: 44_100,
+                                            features: SpenchFeatures(normalization: true,
+                                                                     noiseSuppression: nil))
+        let input = Array(repeating: Float(0.25), count: 512)
+        var initialOutput = Array(repeating: Float.zero, count: input.count)
+        _ = try processor.process(input: input, output: &initialOutput)
+
+        var output = Array(repeating: Float.zero, count: input.count)
+        for _ in 0..<20 {
+            _ = try processor.process(input: input, output: &output)
+        }
+
+        try processor.reset()
+        _ = try processor.process(input: input, output: &output)
+
+        XCTAssertEqual(output, initialOutput)
     }
 
     func testTelemetryRecordsAudioProcessingCounters() throws {

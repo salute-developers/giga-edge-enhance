@@ -86,11 +86,16 @@ public final class SpenchProcessor {
         }
     }
 
-    /// Resets internal state for all configured pipeline stages.
-    public func reset() {
-        stateLock.withLock {
-            audioProcessElement?.resetContext()
-            denoiseElement?.resetContext()
+    /// Rebuilds all configured pipeline stages with fresh internal state.
+    public func reset() throws {
+        try stateLock.withLock {
+            let newAudioProcessElement = try Self.makeAudioProcessElement(sampleRate: currentSampleRate,
+                                                                          settings: currentSettings,
+                                                                          isEnabled: currentFeatures.normalization)
+            let newDenoiseElement = try Self.makeDenoiseElement(sampleRate: currentSampleRate,
+                                                                modelID: currentFeatures.noiseSuppression)
+            audioProcessElement = newAudioProcessElement
+            denoiseElement = newDenoiseElement
         }
     }
 
