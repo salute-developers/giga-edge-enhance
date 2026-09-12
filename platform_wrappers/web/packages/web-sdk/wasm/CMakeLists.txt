@@ -17,7 +17,7 @@ target_include_directories(spench_wasm PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR})
 
-target_link_libraries(spench_wasm PRIVATE spench)
+target_link_libraries(spench_wasm PRIVATE spench spdlog_header_only)
 
 # Emscripten's executable target produces a JavaScript loader plus companion
 # WebAssembly and TypeScript declaration files.  Install all three so

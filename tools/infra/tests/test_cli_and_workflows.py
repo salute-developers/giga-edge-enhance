@@ -65,6 +65,39 @@ class WorkflowsTest(unittest.TestCase):
         self.assertEqual(run.call_args_list[2].args[0][0:2], ["cmake", "--build"])
         self.assertIn("LD_LIBRARY_PATH", run.call_args_list[3].kwargs["environment"])
 
+    def test_macos_x86_install_verifies_matching_consumer_architecture(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            build_dir = root / "out" / "build" / "macos-x86_64-release-onnx"
+            build_dir.mkdir(parents=True)
+            with mock.patch.object(workflows, "ROOT", root), \
+                 mock.patch.object(workflows, "find_prebuilt_dependency", return_value=None), \
+                 mock.patch.object(workflows, "compiler_cache_environment", return_value={}), \
+                 mock.patch.object(workflows, "write_artifact_checksums"), \
+                 mock.patch.object(workflows.platform, "system", return_value="Darwin"), \
+                 mock.patch.object(workflows, "run") as run:
+                workflows.cmake_workflow("install", "macos-x86_64-release-onnx", True)
+
+        self.assertIn("-DCMAKE_OSX_ARCHITECTURES=x86_64", run.call_args_list[1].args[0])
+        self.assertIn("DYLD_LIBRARY_PATH", run.call_args_list[3].kwargs["environment"])
+
+    def test_windows_install_uses_visual_studio_consumer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            build_dir = root / "out" / "build" / "windows-x64-release-onnx"
+            build_dir.mkdir(parents=True)
+            with mock.patch.object(workflows, "ROOT", root), \
+                 mock.patch.object(workflows, "find_prebuilt_dependency", return_value=None), \
+                 mock.patch.object(workflows, "compiler_cache_environment", return_value={}), \
+                 mock.patch.object(workflows, "write_artifact_checksums"), \
+                 mock.patch.object(workflows.os, "name", "nt"), \
+                 mock.patch.object(workflows, "run") as run:
+                workflows.cmake_workflow("install", "windows-x64-release-onnx", True)
+
+        self.assertIn("Visual Studio 17 2022", run.call_args_list[1].args[0])
+        self.assertEqual(run.call_args_list[2].args[0][-2:], ["--config", "Release"])
+        self.assertTrue(run.call_args_list[3].args[0][0].endswith("/Release/spench_package_consumer.exe"))
+
     def test_android_workflow_sets_dependency_root(self):
         with mock.patch.object(workflows, "compiler_cache_environment", return_value={}), \
              mock.patch.object(workflows, "run") as run:
