@@ -126,14 +126,15 @@ public final class SpenchProcessor {
     ///   than `input.count` when the denoiser stage produces a shorter
     ///   output for this chunk.
     /// - Throws: ``SpenchError/invalidArgument(_:)`` if `input` and
-    ///   `output` lengths differ.
+    ///   `output` lengths differ, or ``SpenchError/unknown(_:)`` if native
+    ///   denoising fails.
     public func process(input: [Float], output: inout [Float]) throws -> UInt32 {
         guard input.count == output.count else {
             throw SpenchError.invalidArgument("Input and output sizes must match")
         }
 
-        return input.withUnsafeBufferPointer { inputPointer in
-            output.withUnsafeMutableBufferPointer { outputPointer in
+        return try input.withUnsafeBufferPointer { inputPointer in
+            try output.withUnsafeMutableBufferPointer { outputPointer in
                 guard let inputAddress = inputPointer.baseAddress,
                       let outputAddress = outputPointer.baseAddress else {
                     return 0
@@ -160,6 +161,9 @@ public final class SpenchProcessor {
                         denoiseElement.processInput(outputAddress,
                                                     output: outputAddress,
                                                     frameCount: UInt32(input.count))
+                    }
+                    if let processingError = denoiseElement.lastProcessingError {
+                        throw SpenchError.unknown(processingError)
                     }
 
                     if state.settings.unstableReverseProcessingOrder,
