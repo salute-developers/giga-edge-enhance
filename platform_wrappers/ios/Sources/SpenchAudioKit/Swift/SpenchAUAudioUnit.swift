@@ -41,6 +41,7 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
     private var processingFailureReported = false
     private var lowPerformanceMonitor: SpenchLowPerformanceMonitor
     private let meanProcessingTimeStore = AtomicOptionalDouble()
+    private let lowPerformanceEventMailbox = LowPerformanceEventMailbox()
 
     private var workerEvent: WorkerThreadEvent?
     private var workerFinishedEvent: DispatchSemaphore?
@@ -240,7 +241,7 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
                 if let event = self.handleOutputUnderrun(now: now,
                                                          poppedFrames: popped,
                                                          requestedFrames: frameCount) {
-                    self.emitLowPerformanceEvent(event)
+                    self.queueLowPerformanceEvent(event)
                 }
             } else {
                 self.lowPerformanceMonitor.markRefilled()
@@ -293,6 +294,7 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
         var meanProcessTimeAggregator = MeanProcessTimeAggregator(window: Self.meanProcessTimeCount)
 
         while true {
+            emitQueuedLowPerformanceEvent()
             if inputRing.availableToRead < chunkFramesU32 {
                 if !workerEvent.waitForNotification() {
                     break
@@ -416,6 +418,7 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
         outputPrimed = false
         processingFailureReported = false
         meanProcessingTimeStore.storeNil()
+        lowPerformanceEventMailbox.reset()
         lowPerformanceMonitor.reset(sampleRate: sampleRate)
     }
 
@@ -466,5 +469,37 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
         let processingChunkFrames = processingChunkFrameCount(sampleRate: sampleRate, settings: settings)
         let minimumRingFrames = Int((sampleRate * maxOutputBufferDuration).rounded(.up))
         return UInt32(max(minimumRingFrames, processingChunkFrames * 2))
+    }
+}
+
+private extension SpenchAUAudioUnit {
+    func queueLowPerformanceEvent(_ event: SpenchLowPerformanceEvent) {
+        let meanProcessingTime = event.meanProcessingTimeMilliseconds ?? -1
+        if lowPerformanceEventMailbox.storeSampleRate(event.sampleRate,
+                                                      currentLatency: event.currentLatency,
+                                                      meanProcessingMilliseconds: meanProcessingTime,
+                                                      refillCount: UInt64(event.refillCount)) {
+            workerEvent?.notify()
+        }
+    }
+
+    func emitQueuedLowPerformanceEvent() {
+        var sampleRate = 0.0
+        var currentLatency = 0.0
+        var meanProcessingTime = -1.0
+        var refillCount: UInt64 = 0
+        guard lowPerformanceEventMailbox.takeSampleRate(&sampleRate,
+                                                        currentLatency: &currentLatency,
+                                                        meanProcessingMilliseconds: &meanProcessingTime,
+                                                        refillCount: &refillCount) else {
+            return
+        }
+
+        emitLowPerformanceEvent(SpenchLowPerformanceEvent(
+            sampleRate: sampleRate,
+            currentLatency: currentLatency,
+            meanProcessingTimeMilliseconds: meanProcessingTime >= 0 ? meanProcessingTime : nil,
+            refillCount: Int(refillCount)
+        ))
     }
 }

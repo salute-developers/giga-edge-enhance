@@ -17,6 +17,7 @@ internal struct SpenchLowPerformanceMonitor {
         self.sampleRate = sampleRate
         self.maxLatencySeconds = maxLatencySeconds
         currentLatencySeconds = min(max(settings.minLatency, 0), maxLatencySeconds)
+        refillTimes.reserveCapacity(settings.lowPerformanceMaxRefillTimes)
     }
 
     mutating func reset(sampleRate: Double) {
@@ -50,7 +51,7 @@ internal struct SpenchLowPerformanceMonitor {
     mutating func handleUnderrun(now: Double, meanProcessingTimeMilliseconds: Double?) -> SpenchLowPerformanceEvent? {
         refillStartTime = now
         // Keep only the underruns that belong to the current rolling detection window.
-        refillTimes = refillTimes.filter { now - $0 <= settings.lowPerformanceWindowSeconds }
+        refillTimes.removeAll { now - $0 > settings.lowPerformanceWindowSeconds }
         refillTimes.append(now)
 
         // Each repeated underrun increases the target latency until the configured cap.
