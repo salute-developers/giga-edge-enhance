@@ -102,14 +102,12 @@ public final class SpenchProcessor {
     /// Rebuilds the processing pipeline for a new sample rate.
     public func setSampleRate(_ sampleRate: Float) throws {
         let validatedSampleRate = try Self.validatedSampleRate(sampleRate)
-        let state = stateLock.withLock { (features: currentFeatures, settings: currentSettings) }
-        let newAudioProcessElement = try Self.makeAudioProcessElement(sampleRate: validatedSampleRate,
-                                                                      settings: state.settings,
-                                                                      isEnabled: state.features.normalization)
-        let newDenoiseElement = try Self.makeDenoiseElement(sampleRate: validatedSampleRate,
-                                                            modelID: state.features.noiseSuppression)
-
-        stateLock.withLock {
+        try stateLock.withLock {
+            let newAudioProcessElement = try Self.makeAudioProcessElement(sampleRate: validatedSampleRate,
+                                                                          settings: currentSettings,
+                                                                          isEnabled: currentFeatures.normalization)
+            let newDenoiseElement = try Self.makeDenoiseElement(sampleRate: validatedSampleRate,
+                                                                modelID: currentFeatures.noiseSuppression)
             audioProcessElement = newAudioProcessElement
             denoiseElement = newDenoiseElement
             currentSampleRate = validatedSampleRate
