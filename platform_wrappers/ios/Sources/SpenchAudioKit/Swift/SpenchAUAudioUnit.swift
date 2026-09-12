@@ -94,7 +94,11 @@ public final class SpenchAUAudioUnit: AUAudioUnit {
         }
 
         super.reset()
-        processor.reset()
+        do {
+            try processor.reset()
+        } catch {
+            emitProcessingFailure(error.localizedDescription)
+        }
         inputRing.reset()
         outputRing.reset()
         resetCongestionControlState(sampleRate: resolvedSampleRate())
