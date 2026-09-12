@@ -10,6 +10,26 @@ type Result = {
     beforeBlob?: Blob;
 };
 
+const recordingFormats = [
+    { mimeType: 'audio/webm;codecs=opus', extension: 'webm' },
+    { mimeType: 'audio/mp4;codecs=mp4a.40.2', extension: 'm4a' },
+    { mimeType: 'audio/mp4', extension: 'm4a' },
+] as const;
+
+function getRecordingFormat() {
+    const format = recordingFormats.find(({ mimeType }) => MediaRecorder.isTypeSupported(mimeType));
+
+    if (!format) {
+        throw new Error('This browser does not support WebM/Opus or MP4/AAC audio recording.');
+    }
+
+    return format;
+}
+
+function getRecordingExtension(blob: Blob) {
+    return blob.type.startsWith('audio/mp4') ? 'm4a' : 'webm';
+}
+
 type Models = {
     noiseCancellation: { fast8: URL; quality48: URL; fast48: ArrayBuffer };
 };
@@ -120,8 +140,9 @@ async function processAudio(
         spenchNode.connect(destNode);
 
         console.log('Recording with MediaRecorder');
+        const recordingFormat = getRecordingFormat();
         const mediaRecorder = new MediaRecorder(destNode.stream, {
-            mimeType: 'audio/webm',
+            mimeType: recordingFormat.mimeType,
         });
 
         const chunks: Blob[] = [];
@@ -206,7 +227,7 @@ async function processAudio(
 
         console.log('Recording with MediaRecorder finished');
 
-        return { processTime, afterBlob: new Blob(chunks, { type: 'audio/webm' }) };
+        return { processTime, afterBlob: new Blob(chunks, { type: recordingFormat.mimeType }) };
     } finally {
         stopRef.current = null;
         resetRef.current = null;
@@ -228,14 +249,14 @@ async function processAudio(
     }
 }
 
-function saveWebm(name: string, blob: Blob) {
+function saveRecording(name: string, blob: Blob) {
     console.log('Saving ', name);
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.style.visibility = 'hidden';
     link.style.position = 'absolute';
-    link.download = `${name}.webm`;
+    link.download = `${name}.${getRecordingExtension(blob)}`;
     console.log('Inserting link');
     document.body.appendChild(link);
     link.click();
@@ -323,8 +344,9 @@ async function processLiveDemo(
         activeSpenchNode.connect(delayNode);
         delayNode.connect(ctx.destination);
 
+        const recordingFormat = getRecordingFormat();
         recorderBefore = new MediaRecorder(micStream, {
-            mimeType: 'audio/webm',
+            mimeType: recordingFormat.mimeType,
         });
         const chunksBefore = [] as Blob[];
         recorderBefore.ondataavailable = (event) => {
@@ -339,7 +361,7 @@ async function processLiveDemo(
         });
 
         recorderAfter = new MediaRecorder(destNode.stream, {
-            mimeType: 'audio/webm',
+            mimeType: recordingFormat.mimeType,
         });
         const chunksAfter = [] as Blob[];
         recorderAfter.ondataavailable = (event) => {
@@ -377,8 +399,8 @@ async function processLiveDemo(
 
         return {
             processTime,
-            beforeBlob: new Blob(chunksBefore, { type: 'audio/webm' }),
-            afterBlob: new Blob(chunksAfter, { type: 'audio/webm' }),
+            beforeBlob: new Blob(chunksBefore, { type: recordingFormat.mimeType }),
+            afterBlob: new Blob(chunksAfter, { type: recordingFormat.mimeType }),
         };
     } finally {
         stopRef.current = null;
@@ -560,7 +582,7 @@ const Runner: React.FC<Props> = ({
             }
 
             setProcessedResult({
-                name: `spench-processed-${file.name}.webm`,
+                name: `spench-processed-${file.name}.${getRecordingExtension(res.afterBlob)}`,
                 originalUrl: URL.createObjectURL(file),
                 processedUrl: URL.createObjectURL(res.afterBlob),
             });
@@ -611,11 +633,11 @@ const Runner: React.FC<Props> = ({
 
             if (shouldSaveRecording) {
                 if (res.beforeBlob) {
-                    saveWebm('spench-recorded-original', res.beforeBlob);
+                    saveRecording('spench-recorded-original', res.beforeBlob);
                 }
 
                 if (res.afterBlob) {
-                    saveWebm('spench-recorded-processed', res.afterBlob);
+                    saveRecording('spench-recorded-processed', res.afterBlob);
                 }
             }
             setProcessTimeRaw(res.processTime);
