@@ -7,9 +7,12 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 const sourcesDir = './tests/mos/sources';
 const limitsPath = './tests/mos/limits.json';
 const candidatesPath = './tests/mos/candidates.json';
-const limits = JSON.parse(readFileSync(limitsPath, 'utf8'));
-const candidates = existsSync(candidatesPath) ? JSON.parse(readFileSync(candidatesPath, 'utf8')) : {};
-const MAX_CHANGE = 0.8;
+type MosResult = { control: number; processed: number };
+type MosBaselines = Record<string, Record<string, Record<string, MosResult>>>;
+
+const limits = JSON.parse(readFileSync(limitsPath, 'utf8')) as MosBaselines;
+const candidates = (existsSync(candidatesPath) ? JSON.parse(readFileSync(candidatesPath, 'utf8')) : {}) as MosBaselines;
+const MAX_REGRESSION_FRACTION = 0.05;
 test.describe.configure({ mode: 'serial' });
 
 const setFeature = async (page: Page, testId: string, value: boolean | string) => {
@@ -61,9 +64,7 @@ const runNisqa = (filePath: string): number => {
     }
 };
 
-const processFile = async (featureSetCodename: string, fileName: string, page: Page) => {
-    const featureLimits = limits[featureSetCodename] || {};
-
+const processFile = async (browserName: string, featureSetCodename: string, fileName: string, page: Page) => {
     const sourcePath = join(sourcesDir, fileName);
 
     // Upload the file, wait for processing, then download the retained result.
@@ -80,37 +81,23 @@ const processFile = async (featureSetCodename: string, fileName: string, page: P
 
     expect(Number.isFinite(sourceMos)).toBe(true);
     expect(Number.isFinite(processedMos)).toBe(true);
+    console.log(`MOS Result: original ${sourceMos}, processed ${processedMos}`);
 
     if (process.env.MOS_WRITE_CANDIDATES === '1') {
-        candidates[featureSetCodename] = candidates[featureSetCodename] || {};
-        candidates[featureSetCodename][fileName] = { control: sourceMos, processed: processedMos };
+        candidates[browserName] = candidates[browserName] || {};
+        candidates[browserName][featureSetCodename] = candidates[browserName][featureSetCodename] || {};
+        candidates[browserName][featureSetCodename][fileName] = { control: sourceMos, processed: processedMos };
         writeFileSync(candidatesPath, `${JSON.stringify(candidates, null, 2)}\n`);
-    }
-
-    // 4️⃣ Resolve limits (allow both simple number or {control, processed})
-    const limitEntry: { control: number; processed: number } = featureLimits[fileName];
-    if (limitEntry === undefined) {
         return;
     }
 
-    let controlLimit = -Infinity;
-    let processedLimit = -Infinity;
-    if (typeof limitEntry === 'number') {
-        controlLimit = processedLimit = limitEntry;
-    } else if (limitEntry && typeof limitEntry === 'object') {
-        controlLimit = limitEntry.control ?? -Infinity;
-        processedLimit = limitEntry.processed ?? -Infinity;
+    const baseline = limits[browserName]?.[featureSetCodename]?.[fileName];
+    if (!baseline || !Number.isFinite(baseline.control) || !Number.isFinite(baseline.processed)) {
+        throw new Error(`Missing approved MOS baseline for ${browserName}/${featureSetCodename}/${fileName}`);
     }
 
-    console.log(`MOS Result: original ${sourceMos}, processed ${processedMos}`);
-    // const limitsNew = {} as any;
-    // limitsNew[featureSetCodename] = limitsNew[featureSetCodename] || {};
-    // limitsNew[featureSetCodename][fileName] = { control: sourceMos, processed: processedMos };
-    // writeFileSync(`./tests/mos/lims/limits-${featureSetCodename}-${fileName}.json`, JSON.stringify(limitsNew, null, 2), 'utf8');
-
-    // 6️⃣ Assertions
-    expect(sourceMos).toBeGreaterThanOrEqual(controlLimit);
-    expect(processedMos).toBeGreaterThanOrEqual(processedLimit * MAX_CHANGE);
+    expect(sourceMos).toBeGreaterThanOrEqual(baseline.control * (1 - MAX_REGRESSION_FRACTION));
+    expect(processedMos).toBeGreaterThanOrEqual(baseline.processed * (1 - MAX_REGRESSION_FRACTION));
 };
 
 const runSingleFeatureTest = (
@@ -118,7 +105,7 @@ const runSingleFeatureTest = (
     fileName: string,
     featureConfig: Record<string, boolean | string>,
 ) => {
-    test(`Process ${featureSetCodename} for file: ${fileName}`, async ({ page }) => {
+    test(`Process ${featureSetCodename} for file: ${fileName}`, async ({ page, browserName }) => {
         test.slow();
         test.setTimeout(4 * 60_000);
 
@@ -128,11 +115,11 @@ const runSingleFeatureTest = (
             await setFeature(page, testId, value);
         }
 
-        await processFile(featureSetCodename, fileName, page);
+        await processFile(browserName, featureSetCodename, fileName, page);
     });
 };
 
-const sourceFiles = readdirSync(sourcesDir);
+const sourceFiles = readdirSync(sourcesDir).filter((fileName) => fileName.endsWith('.wav')).sort();
 
 for (const fileName of sourceFiles) {
     runSingleFeatureTest('norm', fileName, {
