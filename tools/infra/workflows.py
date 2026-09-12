@@ -133,19 +133,33 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
                           f"/workspace/{consumer_build_dir_host.relative_to(ROOT)}")
         consumer_source_path = (str(consumer_source) if use_host else
                                 f"/workspace/{consumer_source.relative_to(ROOT)}")
-        run(["cmake", "-S", consumer_source_path, "-B", consumer_build, "-G", "Ninja",
-             f"-DCMAKE_PREFIX_PATH={install_output}"],
-            container_stage=stage, environment=environment)
-        run(["cmake", "--build", consumer_build],
-            container_stage=stage, environment=environment)
-        consumer_environment = dict(environment)
         target_is_windows = use_host and os.name == "nt"
         target_is_macos = use_host and platform.system() == "Darwin"
+        consumer_configure = ["cmake", "-S", consumer_source_path, "-B", consumer_build,
+                              f"-DCMAKE_PREFIX_PATH={install_output}"]
+        consumer_build_command = ["cmake", "--build", consumer_build]
+        executable_directory = consumer_build
+        if target_is_windows:
+            consumer_configure.extend(("-G", "Visual Studio 17 2022", "-A", "x64"))
+            config = "Debug" if "debug" in preset or "asan" in preset else "Release"
+            consumer_build_command.extend(("--config", config))
+            executable_directory = f"{consumer_build}/{config}"
+        else:
+            consumer_configure.extend(("-G", "Ninja"))
+        if target_is_macos:
+            architecture = "x86_64" if "x86_64" in preset else "arm64"
+            consumer_configure.append(f"-DCMAKE_OSX_ARCHITECTURES={architecture}")
+
+        run(consumer_configure,
+            container_stage=stage, environment=environment)
+        run(consumer_build_command,
+            container_stage=stage, environment=environment)
+        consumer_environment = dict(environment)
         library_variable = ("PATH" if target_is_windows else
                             "DYLD_LIBRARY_PATH" if target_is_macos else "LD_LIBRARY_PATH")
         library_dir = f"{install_output}/{'bin' if target_is_windows else 'lib'}"
         consumer_environment[library_variable] = library_dir
-        executable = f"{consumer_build}/spench_package_consumer"
+        executable = f"{executable_directory}/spench_package_consumer"
         if target_is_windows:
             executable += ".exe"
         run([executable], container_stage=stage, environment=consumer_environment)
