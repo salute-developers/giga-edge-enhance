@@ -45,6 +45,18 @@ async function processAudio(
     }
 
     const processTime = [] as number[];
+    const effectiveSettings = getEffectiveSettings(settings);
+    const processingChunkSeconds = Math.max(
+        0.016,
+        Math.min(effectiveSettings.maxProcessingChunkSeconds, effectiveSettings.minLatency),
+    );
+    const drainMilliseconds = Math.ceil(
+        (effectiveSettings.minLatency +
+            Math.max(effectiveSettings.lowPerformanceMaxRefillTimes - 1, 0) *
+                effectiveSettings.latencyIncreaseStep +
+            processingChunkSeconds * 2) *
+            1000,
+    );
 
     // Create nodes
     const srcNode = ctx.createBufferSource();
@@ -81,6 +93,7 @@ async function processAudio(
     const spenchNode = await sdk.createAudioNode(features);
 
     if (spenchNode instanceof Error) {
+        if (ctx.state !== 'closed' && ctx !== context) await ctx.close();
         throw spenchNode;
     }
     const additionalNodes: (typeof spenchNode)[] = [];
@@ -91,13 +104,14 @@ async function processAudio(
         spenchNode.addEventListener('destroyed', () => {
             fail?.();
         });
-        setFeaturesRef.current = (f) => {
+        const setFeatures = (f: Features) => {
             for (const node of additionalNodes) {
                 node.setFeatures(f);
             }
 
             return spenchNode.setFeatures(f);
         };
+        setFeaturesRef.current = setFeatures;
 
         console.log('node ready');
 
@@ -134,7 +148,9 @@ async function processAudio(
         // Stop recording when audio finishes
         srcNode.onended = () => {
             console.log('MediaRecorder onended');
-            mediaRecorder.stop();
+            window.setTimeout(() => {
+                if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            }, drainMilliseconds);
         };
 
         let manuallyStopped = false;
@@ -146,7 +162,8 @@ async function processAudio(
         };
 
         stopRef.current = stop;
-        resetRef.current = () => spenchNode.reset();
+        const reset = () => spenchNode.reset();
+        resetRef.current = reset;
 
         console.log('Waiting MediaRecorder');
 
@@ -191,6 +208,10 @@ async function processAudio(
 
         return { processTime, afterBlob: new Blob(chunks, { type: 'audio/webm' }) };
     } finally {
+        stopRef.current = null;
+        resetRef.current = null;
+        setFeaturesRef.current = null;
+
         // Disconnect nodes
         if (srcNode) srcNode.disconnect();
         if (destNode) destNode.disconnect();
@@ -198,9 +219,12 @@ async function processAudio(
 
         for (const node of additionalNodes) {
             node.disconnect();
+            node.destroy();
         }
 
-        if (ctx && ctx.state !== 'closed' && ctx !== context) ctx.close();
+        spenchNode.destroy();
+
+        if (ctx.state !== 'closed' && ctx !== context) await ctx.close();
     }
 }
 
@@ -239,125 +263,142 @@ async function processLiveDemo(
         audio: { noiseSuppression: true, autoGainControl: true, echoCancellation: false },
     });
     const processTime = [] as number[];
-    const ctx = new AudioContext({ sampleRate });
-    const delayNode = ctx.createDelay();
-    delayNode.delayTime.value = Math.max(0, delayTime);
+    let ctx: AudioContext | undefined;
+    let sourceNode: MediaStreamAudioSourceNode | undefined;
+    let destNode: MediaStreamAudioDestinationNode | undefined;
+    let delayNode: DelayNode | undefined;
+    let spenchNode: Awaited<ReturnType<ReturnType<typeof SpenchSDK.create>['createAudioNode']>> | undefined;
+    let recorderBefore: MediaRecorder | undefined;
+    let recorderAfter: MediaRecorder | undefined;
 
-    // create source
-    const sourceNode = ctx.createMediaStreamSource(micStream);
-    const destNode = ctx.createMediaStreamDestination();
+    try {
+        ctx = new AudioContext({ sampleRate });
+        delayNode = ctx.createDelay();
+        delayNode.delayTime.value = Math.max(0, delayTime);
 
-    const sdk = SpenchSDK.create(ctx, {
-        loggerVerbosity: 'verbose',
-        settings: {
-            ...settings,
-            sharedMemoryEnabled: transport === 'shared',
-        },
-        models: {
-            noiseCancellation: {
-                fast48: customDenoiseModel!,
+        sourceNode = ctx.createMediaStreamSource(micStream);
+        destNode = ctx.createMediaStreamDestination();
+
+        const sdk = SpenchSDK.create(ctx, {
+            loggerVerbosity: 'verbose',
+            settings: {
+                ...settings,
+                sharedMemoryEnabled: transport === 'shared',
             },
-        },
-        sendMetric: (metric, value) => {
-            console.log(metric, value);
-            if (metric === 'frameProcessTimeRaw') {
-                const val = value as number[];
-                processTime.push(...val);
-                let s = 0;
+            models: {
+                noiseCancellation: {
+                    fast48: customDenoiseModel!,
+                },
+            },
+            sendMetric: (metric, value) => {
+                console.log(metric, value);
+                if (metric === 'frameProcessTimeRaw') {
+                    const val = value as number[];
+                    processTime.push(...val);
+                    let s = 0;
 
-                for (const v of val) {
-                    s += v;
+                    for (const v of val) {
+                        s += v;
+                    }
+
+                    setCurrentMeanProcessTime(s / val.length);
                 }
+            },
+        });
 
-                setCurrentMeanProcessTime(s / val.length);
-            }
-        },
-    });
+        spenchNode = await sdk.createAudioNode(features);
 
-    const spenchNode = await sdk.createAudioNode(features);
+        if (spenchNode instanceof Error) {
+            throw spenchNode;
+        }
+        const activeSpenchNode = spenchNode;
 
-    if (spenchNode instanceof Error) {
-        throw spenchNode;
-    }
+        activeSpenchNode.addEventListener('low_performance', onLowPerformance);
+        setFeaturesRef.current = (f) => activeSpenchNode.setFeatures(f);
 
-    spenchNode.addEventListener('low_performance', onLowPerformance);
-    setFeaturesRef.current = (f) => {
-        return spenchNode.setFeatures(f);
-    };
+        console.log('node ready');
 
-    console.log('node ready');
+        sourceNode.connect(activeSpenchNode);
+        activeSpenchNode.connect(destNode);
+        activeSpenchNode.connect(delayNode);
+        delayNode.connect(ctx.destination);
 
-    sourceNode.connect(spenchNode);
-    spenchNode.connect(destNode);
-    spenchNode.connect(delayNode);
-    delayNode.connect(ctx.destination);
-
-    const recorderBefore = new MediaRecorder(micStream, {
-        mimeType: 'audio/webm',
-    });
-    const chunksBefore = [] as Blob[];
-    recorderBefore.ondataavailable = (event) => {
-        console.log('recorderBefore ondataavailable');
-        if (event.data.size > 0) chunksBefore.push(event.data);
-    };
-    const recordingBeforeStopped = new Promise<void>((resolve) => {
-        recorderBefore.onstop = () => {
-            console.log('recorderBefore onstop');
-            resolve();
+        recorderBefore = new MediaRecorder(micStream, {
+            mimeType: 'audio/webm',
+        });
+        const chunksBefore = [] as Blob[];
+        recorderBefore.ondataavailable = (event) => {
+            console.log('recorderBefore ondataavailable');
+            if (event.data.size > 0) chunksBefore.push(event.data);
         };
-    });
+        const recordingBeforeStopped = new Promise<void>((resolve) => {
+            recorderBefore!.onstop = () => {
+                console.log('recorderBefore onstop');
+                resolve();
+            };
+        });
 
-    const recorderAfter = new MediaRecorder(destNode.stream, {
-        mimeType: 'audio/webm',
-    });
-    const chunksAfter = [] as Blob[];
-    recorderAfter.ondataavailable = (event) => {
-        console.log('recorderBefore ondataavailable');
-        if (event.data.size > 0) chunksAfter.push(event.data);
-    };
-    const recordingAfterStopped = new Promise<void>((resolve) => {
-        recorderAfter.onstop = () => {
-            console.log('recorderAfter onstop');
-            resolve();
+        recorderAfter = new MediaRecorder(destNode.stream, {
+            mimeType: 'audio/webm',
+        });
+        const chunksAfter = [] as Blob[];
+        recorderAfter.ondataavailable = (event) => {
+            console.log('recorderAfter ondataavailable');
+            if (event.data.size > 0) chunksAfter.push(event.data);
         };
-    });
+        const recordingAfterStopped = new Promise<void>((resolve) => {
+            recorderAfter!.onstop = () => {
+                console.log('recorderAfter onstop');
+                resolve();
+            };
+        });
 
-    if (ctx.state !== 'running') {
-        console.log('Resuming context');
-        await ctx.resume();
-        console.log('context resumed');
+        if (ctx.state !== 'running') {
+            console.log('Resuming context');
+            await ctx.resume();
+            console.log('context resumed');
+        }
+
+        console.log('Starting MediaRecorder');
+        recorderBefore.start();
+        recorderAfter.start();
+
+        const stop = () => {
+            console.log('Stop MediaRecorders');
+            if (recorderBefore?.state !== 'inactive') recorderBefore?.stop();
+            if (recorderAfter?.state !== 'inactive') recorderAfter?.stop();
+        };
+
+        stopRef.current = stop;
+        resetRef.current = () => activeSpenchNode.reset();
+
+        console.log('Waiting MediaRecorders');
+        await Promise.all([recordingBeforeStopped, recordingAfterStopped]);
+
+        return {
+            processTime,
+            beforeBlob: new Blob(chunksBefore, { type: 'audio/webm' }),
+            afterBlob: new Blob(chunksAfter, { type: 'audio/webm' }),
+        };
+    } finally {
+        stopRef.current = null;
+        resetRef.current = null;
+        setFeaturesRef.current = null;
+
+        if (recorderBefore?.state !== 'inactive') recorderBefore?.stop();
+        if (recorderAfter?.state !== 'inactive') recorderAfter?.stop();
+
+        sourceNode?.disconnect();
+        destNode?.disconnect();
+        delayNode?.disconnect();
+        if (spenchNode && !(spenchNode instanceof Error)) {
+            spenchNode.disconnect();
+            spenchNode.destroy();
+        }
+
+        if (ctx?.state !== 'closed') await ctx?.close();
+        micStream.getTracks().forEach((track) => track.stop());
     }
-
-    console.log('Starting MediaRecorder');
-    recorderBefore.start();
-    recorderAfter.start();
-
-    const stop = () => {
-        console.log('Stop MediaRecorders');
-        if (recorderBefore && recorderBefore.state !== 'inactive') recorderBefore.stop();
-        if (recorderAfter && recorderAfter.state !== 'inactive') recorderAfter.stop();
-
-        // Disconnect nodes
-        if (sourceNode) sourceNode.disconnect();
-        if (destNode) destNode.disconnect();
-        if (spenchNode) spenchNode.disconnect();
-        if (delayNode) delayNode.disconnect();
-
-        if (ctx && ctx.state !== 'closed') ctx.close();
-        if (micStream) micStream.getTracks().forEach((t) => t.stop());
-    };
-
-    stopRef.current = stop;
-    resetRef.current = () => spenchNode.reset();
-
-    console.log('Waiting MediaRecorders');
-    await Promise.all([recordingBeforeStopped, recordingAfterStopped]);
-
-    return {
-        processTime,
-        beforeBlob: new Blob(chunksBefore, { type: 'audio/webm' }),
-        afterBlob: new Blob(chunksAfter, { type: 'audio/webm' }),
-    };
 }
 
 type Props = {
