@@ -77,6 +77,14 @@ class SpenchProcessorInstrumentedTest {
         assertTrue(didThrow)
     }
 
+    @Test(expected = IllegalStateException::class)
+    fun closedProcessorRejectsZeroFrameProcess() {
+        val processor = SpenchProcessor(testContext(), sampleRateHz)
+        processor.close()
+
+        processor.process(FloatArray(0), FloatArray(0), 0)
+    }
+
     @Test
     fun processReturnsQuicklyWhenWorkerHasNoOutputYet() {
         SpenchProcessor(testContext(), sampleRateHz).use { processor ->

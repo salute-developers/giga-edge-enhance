@@ -43,6 +43,8 @@ inside another processor call on the same instance.
 - With `callbackExecutor = null`, callbacks run **synchronously on the `process(...)` caller
   thread**. Keep them short to avoid stalling the audio thread.
 - With an executor supplied, each event is delivered via `callbackExecutor.execute { ... }`.
+- Asynchronous events that have not started are discarded when the processor closes. If the executor
+  rejects a task while shutting down, the event is dropped without failing the audio call.
 
 Example that keeps callback work off the audio thread by using the main executor:
 

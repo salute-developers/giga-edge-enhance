@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.AssetManager
 import java.io.Closeable
 import java.util.concurrent.Executor
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
@@ -57,8 +58,9 @@ class SpenchProcessor(
      *
      * Events are queued natively and delivered from [process] after each call drains them. With
      * `callbackExecutor = null` the listener runs synchronously on the [process] caller thread;
-     * otherwise it runs via the supplied executor. Native code never invokes this listener directly.
-     * Assignable at any time; the field is volatile.
+     * otherwise it runs via the supplied executor. Queued asynchronous callbacks are discarded after
+     * [close], and a rejected executor task is dropped rather than failing [process]. Native code never
+     * invokes this listener directly. Assignable at any time; the field is volatile.
      */
     @Volatile
     var onLowPerformance: ((SpenchLowPerformanceEvent) -> Unit)? = null
@@ -121,6 +123,7 @@ class SpenchProcessor(
         SpenchValidation.requireBufferSize("input", input, numFrames)
         SpenchValidation.requireBufferSize("output", output, numFrames)
         if (numFrames == 0) {
+            withOpenHandle { }
             return
         }
         val events = withOpenHandle { handle ->
@@ -175,6 +178,7 @@ class SpenchProcessor(
         if (!closed.compareAndSet(false, true)) {
             return
         }
+        onLowPerformance = null
         lifecycleLock.write {
             val handle = nativeHandle
             nativeHandle = 0L
@@ -198,7 +202,15 @@ class SpenchProcessor(
             if (executor == null) {
                 callback(event)
             } else {
-                executor.execute { callback(event) }
+                try {
+                    executor.execute {
+                        if (!closed.get()) {
+                            callback(event)
+                        }
+                    }
+                } catch (_: RejectedExecutionException) {
+                    // A shutting-down callback executor must not fail the audio call.
+                }
             }
         }
     }
