@@ -25,6 +25,16 @@ class SpenchTelemetryTest {
     }
 
     @Test
+    fun weightedMeanDoesNotOverflowLargeCounts() {
+        val telemetry = SpenchTelemetry(
+            normalizationCounters = mapOf(1.0 to Int.MAX_VALUE, 3.0 to Int.MAX_VALUE),
+            noiseSuppressionCounters = emptyMap(),
+        )
+
+        assertEquals(2.0, telemetry.normalizationMeanMilliseconds!!, 1.0e-9)
+    }
+
+    @Test
     fun subtractionKeepsPositiveDeltasOnly() {
         val current = SpenchTelemetry(
             normalizationCounters = mapOf(1.0 to 4, 2.0 to 2, 3.0 to 1),
@@ -39,5 +49,13 @@ class SpenchTelemetryTest {
 
         assertEquals(mapOf(1.0 to 3), delta.normalizationCounters)
         assertEquals(emptyMap<Double, Int>(), delta.noiseSuppressionCounters)
+    }
+
+    @Test
+    fun subtractionDoesNotOverflowUntrustedSnapshots() {
+        val current = SpenchTelemetry(mapOf(1.0 to Int.MAX_VALUE), emptyMap())
+        val previous = SpenchTelemetry(mapOf(1.0 to Int.MIN_VALUE), emptyMap())
+
+        assertEquals(mapOf(1.0 to Int.MAX_VALUE), (current - previous).normalizationCounters)
     }
 }
