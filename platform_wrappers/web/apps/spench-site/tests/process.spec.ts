@@ -110,6 +110,10 @@ const runSingleFeatureTest = (
         test.setTimeout(4 * 60_000);
 
         await page.goto('/');
+        test.skip(
+            !(await page.evaluate(() => typeof MediaRecorder !== 'undefined')),
+            'This Playwright browser build does not expose MediaRecorder.',
+        );
 
         for (const [testId, value] of Object.entries(featureConfig)) {
             await setFeature(page, testId, value);

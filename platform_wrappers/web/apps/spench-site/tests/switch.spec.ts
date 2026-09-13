@@ -53,6 +53,10 @@ async function waitForInvisible(page: Page, testId: string, timeout: number = 10
 const runFeatureSwitchingTest = (description: string, bootstrapFeatures: Record<string, boolean | string>) => {
     test(description, async ({ page }) => {
         await page.goto('/');
+        test.skip(
+            !(await page.evaluate(() => typeof MediaRecorder !== 'undefined')),
+            'This Playwright browser build does not expose MediaRecorder.',
+        );
 
         bootstrapFeatures = {
             normalizationToggle: false,

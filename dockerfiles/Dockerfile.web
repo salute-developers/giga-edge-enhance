@@ -28,7 +28,7 @@ COPY platform_wrappers/web/apps/spench-site/mos_install.sh \
     platform_wrappers/web/apps/spench-site/requirements-mos.txt /tmp/mos/
 
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y ffmpeg python3-venv && \
+    apt-get install --no-install-recommends -y ffmpeg pulseaudio python3-venv && \
     rm -rf /var/lib/apt/lists/* && \
     MOS_VENV_DIR="${MOS_VENV_DIR}" /tmp/mos/mos_install.sh
 

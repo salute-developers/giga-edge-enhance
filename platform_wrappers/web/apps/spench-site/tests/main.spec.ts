@@ -45,6 +45,10 @@ const runSingleFeatureTest = (
 ) => {
     test(description, async ({ page }) => {
         await page.goto('/');
+        test.skip(
+            !(await page.evaluate(() => typeof MediaRecorder !== 'undefined')),
+            'This Playwright browser build does not expose MediaRecorder.',
+        );
 
         for (const [testId, value] of Object.entries(featureConfig)) {
             await setFeature(page, testId, value);
@@ -73,7 +77,11 @@ const runBenchmarkTest = (
     description: string,
     featureConfig: Record<string, boolean | string>,
 ) => {
-    test(description, async ({ page }) => {
+    test(description, async ({ page, browserName }) => {
+        test.skip(
+            browserName === 'firefox' && process.platform === 'linux',
+            'Linux Firefox cannot sustain this multi-node workload.',
+        );
         await page.goto('/');
         await page.getByTestId('benchmarkModeTab').click();
 

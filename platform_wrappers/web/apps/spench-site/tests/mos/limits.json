@@ -3,7 +3,7 @@
     "norm": {
       "test1_24_noised.wav": {
         "control": 1.937393,
-        "processed": 1.583047
+        "processed": 1.452495
       },
       "test1_48_noised.wav": {
         "control": 1.71563,
@@ -27,7 +27,7 @@
       },
       "test1_48_noised.wav": {
         "control": 1.71563,
-        "processed": 2.361784
+        "processed": 2.055943
       }
     }
   },
@@ -35,11 +35,11 @@
     "norm": {
       "test1_24_noised.wav": {
         "control": 1.937393,
-        "processed": 1.678589
+        "processed": 1.455522
       },
       "test1_48_noised.wav": {
         "control": 1.71563,
-        "processed": 1.535739
+        "processed": 1.423829
       }
     },
     "normquality48": {
@@ -59,7 +59,7 @@
       },
       "test1_48_noised.wav": {
         "control": 1.71563,
-        "processed": 2.124256
+        "processed": 1.904908
       }
     }
   },

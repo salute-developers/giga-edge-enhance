@@ -266,8 +266,18 @@ def web_workflow(action: str, host: bool) -> None:
                      container_stage=stage,
                      environment={**playwright_environment, "SPENCH_SITE_BASE": "/"},
                      workdir=web_dir, isolate_node_modules=False)
-        run_web_node(["npm", "run", "pw:test", "--workspace=@gigaedge/spench-site"],
-                     container_stage=stage,
+        browsers = ["chromium", "firefox", "webkit"]
+        playwright_command = [
+            "npm", "run", "pw:test", "--workspace=@gigaedge/spench-site", "--",
+            *(f"--project={browser}" for browser in browsers),
+        ]
+        if stage is not None:
+            playwright_command = [
+                "bash", "-c",
+                'pulseaudio --start --exit-idle-time=-1 && exec "$@"',
+                "bash", *playwright_command,
+            ]
+        run_web_node(playwright_command, container_stage=stage,
                      environment={**playwright_environment, "PLAYWRIGHT_WORKERS": "1"},
                      workdir=web_dir, isolate_node_modules=False)
         return
