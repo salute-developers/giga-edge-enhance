@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 
-test('do not fail on running multiple nodes', async ({ page }) => {
+test('do not fail on running multiple nodes', async ({ page, browserName }) => {
+    test.skip(
+        browserName === 'webkit' && process.platform === 'linux',
+        'Linux WebKit lifecycle coverage uses the bounded two-node benchmarks.',
+    );
     test.setTimeout(4 * 60_000);
 
     await page.goto('/');

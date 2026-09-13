@@ -39,6 +39,8 @@ added later, follow the more specific instructions for files in that subtree.
   model binaries. Models are retrieved with DVC as described in `README.md`.
 - Avoid destructive Git commands. Do not delete caches or build directories
   merely to work around a failure; diagnose the failure first.
+- Record durable product, platform, release, and CI decisions in this file in
+  the same change, including both the decision and its rationale.
 
 ## Canonical build and test interface
 
@@ -180,8 +182,16 @@ uploaded and downloaded between runners.
 
 - Linux validates ONNX Runtime and TensorFlow Lite shared Release targets;
   static Release coverage is manually dispatched.
-- Web owns both full and DSP-only WASM builds. Web SDK unit tests and Playwright
-  browser tests use the combined Web toolchain image. Playwright consumes the
+- Web owns both full and DSP-only WASM builds. Web SDK unit tests and the full
+  Chromium, Firefox, and WebKit Playwright matrix run in the Linux combined Web
+  toolchain image. Playwright WebKit is supported on Linux and provides WebKit
+  engine coverage; it is not branded Safari, so macOS is not required for this
+  matrix. Recording and MOS cases are capability-gated because Linux WebKit
+  does not expose `MediaRecorder`; WebKit must still run worker/worklet
+  lifecycle and MessageChannel/SharedArrayBuffer coverage through bounded
+  benchmarks. The separate 2,500-node stress case may remain gated where
+  emulation cannot sustain it. Linux MOS results are the authoritative CI
+  baselines because scores vary by host media stack. Playwright consumes the
   packed SDK from the Web build job and runs against the local COOP/COEP server.
 - Android restores one TFLite dependency per ABI and runs Release unit/native
   and connected emulator tests. Debug emulator coverage is manual.

@@ -114,6 +114,24 @@ class WorkflowsTest(unittest.TestCase):
                 "android-release-tflite-x86_64", False)
         prepare.assert_called_once_with("x86_64", "Release", False)
 
+    def test_container_playwright_runs_all_browsers_with_audio(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            installed_sdk = (root / "platform_wrappers/web/apps/spench-site/node_modules" /
+                             "@gigaedge/spench-web-sdk/package.json")
+            installed_sdk.parent.mkdir(parents=True)
+            installed_sdk.touch()
+            with mock.patch.object(workflows, "ROOT", root), \
+                 mock.patch.object(workflows, "run_web_node") as run_web_node:
+                workflows.web_workflow("playwright", False)
+
+        install_command = run_web_node.call_args_list[0].args[0]
+        test_command = run_web_node.call_args_list[2].args[0]
+        self.assertEqual(install_command[-3:], ["chromium", "firefox", "webkit"])
+        self.assertEqual(test_command[:3], ["bash", "-c", 'pulseaudio --start --exit-idle-time=-1 && exec "$@"'])
+        self.assertEqual(test_command[-3:], ["--project=chromium", "--project=firefox", "--project=webkit"])
+        self.assertEqual(run_web_node.call_args_list[2].kwargs["container_stage"], "web")
+
 
 if __name__ == "__main__":
     unittest.main()

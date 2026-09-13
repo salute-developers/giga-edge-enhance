@@ -37,6 +37,10 @@ test('runner tabs have one visible active state', async ({ page }) => {
 test('processed statistics use the product metric layout', async ({ page, browserName }) => {
     test.skip(browserName === 'firefox', 'The short fixture does not produce a Firefox raw-timing batch.');
     await page.goto('/');
+    test.skip(
+        !(await page.evaluate(() => typeof MediaRecorder !== 'undefined')),
+        'This Playwright browser build does not expose MediaRecorder.',
+    );
 
     const chooserPromise = page.waitForEvent('filechooser');
     await page.getByTestId('processingInput').click();

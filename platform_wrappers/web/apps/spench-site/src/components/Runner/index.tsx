@@ -49,6 +49,7 @@ async function processAudio(
     customDenoiseModel?: ArrayBuffer,
     instances?: number,
     context?: AudioContext,
+    captureOutput = true,
 ): Promise<Result> {
     const ctx = context || new AudioContext({ sampleRate });
     const inputBuffer = await ctx.decodeAudioData(fileBuffer);
@@ -139,30 +140,35 @@ async function processAudio(
         srcNode.connect(spenchNode);
         spenchNode.connect(destNode);
 
-        console.log('Recording with MediaRecorder');
-        const recordingFormat = getRecordingFormat();
-        const mediaRecorder = new MediaRecorder(destNode.stream, {
-            mimeType: recordingFormat.mimeType,
-        });
+        const recordingFormat = captureOutput ? getRecordingFormat() : undefined;
+        const mediaRecorder = recordingFormat
+            ? new MediaRecorder(destNode.stream, { mimeType: recordingFormat.mimeType })
+            : undefined;
 
         const chunks: Blob[] = [];
 
-        mediaRecorder.ondataavailable = (event) => {
-            console.log('MediaRecorder ondataavailable');
-            if (event.data.size > 0) chunks.push(event.data);
-        };
-
-        const recordingStopped = new Promise<void>((resolve, reject) => {
+        let finish: (() => void) | undefined;
+        const processingStopped = new Promise<void>((resolve, reject) => {
             fail = () => reject();
-            mediaRecorder.onstop = () => {
-                console.log('MediaRecorder onstop');
+            finish = () => {
                 fail = undefined;
                 resolve();
             };
         });
 
-        console.log('Starting MediaRecorder');
-        mediaRecorder.start();
+        if (mediaRecorder) {
+            console.log('Recording with MediaRecorder');
+            mediaRecorder.ondataavailable = (event) => {
+                console.log('MediaRecorder ondataavailable');
+                if (event.data.size > 0) chunks.push(event.data);
+            };
+            mediaRecorder.onstop = () => {
+                console.log('MediaRecorder onstop');
+                finish?.();
+            };
+            console.log('Starting MediaRecorder');
+            mediaRecorder.start();
+        }
         console.log('Starting source, context state', ctx.state);
         srcNode.start();
 
@@ -170,7 +176,8 @@ async function processAudio(
         srcNode.onended = () => {
             console.log('MediaRecorder onended');
             window.setTimeout(() => {
-                if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+                else finish?.();
             }, drainMilliseconds);
         };
 
@@ -180,13 +187,14 @@ async function processAudio(
             console.log('Stop processing');
             manuallyStopped = true;
             if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            else finish?.();
         };
 
         stopRef.current = stop;
         const reset = () => spenchNode.reset();
         resetRef.current = reset;
 
-        console.log('Waiting MediaRecorder');
+        console.log('Waiting for processing to finish');
 
         const totalAdditionalInstances = (instances || 1) - 1;
 
@@ -218,16 +226,19 @@ async function processAudio(
             }
         }
 
-        await recordingStopped;
+        await processingStopped;
 
         if (manuallyStopped) {
             console.log('Stopped manually');
             return { processTime };
         }
 
-        console.log('Recording with MediaRecorder finished');
+        console.log('Processing finished');
 
-        return { processTime, afterBlob: new Blob(chunks, { type: recordingFormat.mimeType }) };
+        return {
+            processTime,
+            afterBlob: recordingFormat ? new Blob(chunks, { type: recordingFormat.mimeType }) : undefined,
+        };
     } finally {
         stopRef.current = null;
         resetRef.current = null;
@@ -506,6 +517,8 @@ const Runner: React.FC<Props> = ({
                 sampleRate,
                 customDenoiseModel,
                 instances,
+                undefined,
+                false,
             );
 
             setProcessTimeRaw(res.processTime);
