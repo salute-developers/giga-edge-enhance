@@ -7,77 +7,102 @@ PipelineElement:: PipelineElement(uint32_t sample_rate) noexcept
 
 #ifdef BUILD_DSP
 
-AudioProcessPipelineElement::AudioProcessPipelineElement(const std::string& yaml_config, uint32_t sample_rate) :
-                                                         PipelineElement(sample_rate),
-                                                         m_normalizer(yaml_config) {
-  m_normalizer.AddLC().AddNG().AddLim();
+AudioProcessPipelineElement::AudioProcessPipelineElement(const std::string& yaml_config, uint32_t sample_rate)
+    : PipelineElement(sample_rate),
+      m_yaml_config(yaml_config),
+      m_normalizer(std::make_unique<spench::SpenchAudioProcess>(yaml_config)) {
+  m_normalizer->AddLC().AddNG().AddLim();
 }
 
 uint32_t AudioProcessPipelineElement::process(uintptr_t src_ptr, const uint32_t chunk_size) noexcept {
-  float* src_ptr_ = reinterpret_cast<float*>(src_ptr);
-  this->m_input.resize(chunk_size);
-  this->m_normalized.resize(chunk_size);
-  this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
-  m_normalizer.ProcessChunk(this->m_input, this->m_normalized);
-
-  if (this->m_normalized.size() > chunk_size) {
+  try {
+    float* src_ptr_ = reinterpret_cast<float*>(src_ptr);
+    this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
+    this->m_normalized.clear();
+    if (m_normalizer->ProcessChunk(this->m_input, this->m_normalized) < SpenchRetCode::SUCCESS ||
+        this->m_normalized.size() > chunk_size) {
+      this->m_normalized.clear();
+      return 0;
+    }
+    if (!this->m_normalized.empty()) {
+      memcpy(src_ptr_, this->m_normalized.data(), this->m_normalized.size() * sizeof(float));
+    }
+    return this->m_normalized.size();
+  } catch (...) {
+    this->m_normalized.clear();
     return 0;
   }
-  if (this->m_normalized.size()) {
-    memcpy(src_ptr_, this->m_normalized.data(), this->m_normalized.size() * sizeof(float));
-  }
-
-  return this->m_normalized.size();
 }
 
 void AudioProcessPipelineElement::resetContext() noexcept {
+  try {
+    auto normalizer = std::make_unique<spench::SpenchAudioProcess>(m_yaml_config);
+    normalizer->AddLC().AddNG().AddLim();
+    m_normalizer = std::move(normalizer);
+    m_input.clear();
+    m_normalized.clear();
+  } catch (...) {
+  }
 }
 
 EchoCancellationElement::EchoCancellationElement(const std::string& yaml_config)
-: PipelineElement(0),
-  m_aec(yaml_config) {
-}
+    : PipelineElement(0),
+      m_yaml_config(yaml_config),
+      m_aec(std::make_unique<spench::SpenchAudioEchoCancelation>(yaml_config)) {}
 
 uint32_t EchoCancellationElement::process(uintptr_t src_ptr, const uint32_t chunk_size) noexcept {
-  float* src_ptr_ = reinterpret_cast<float*>(src_ptr);
-  this->m_input.resize(chunk_size);
-  this->m_result.resize(chunk_size);
-  this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
-  m_aec.ProcessChunk(this->m_input, this->m_result);
-
-  if (this->m_result.size() > chunk_size) {
+  try {
+    float* src_ptr_ = reinterpret_cast<float*>(src_ptr);
+    this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
+    this->m_result.clear();
+    if (m_aec->ProcessChunk(this->m_input, this->m_result) < SpenchRetCode::SUCCESS ||
+        this->m_result.size() > chunk_size) {
+      this->m_result.clear();
+      return 0;
+    }
+    if (!this->m_result.empty()) {
+      memcpy(src_ptr_, this->m_result.data(), this->m_result.size() * sizeof(float));
+    }
+    return this->m_result.size();
+  } catch (...) {
+    this->m_result.clear();
     return 0;
   }
-  if (this->m_result.size()) {
-    memcpy(src_ptr_, this->m_result.data(), this->m_result.size() * sizeof(float));
-  }
-
-  return this->m_result.size();
 }
 
 uint32_t EchoCancellationElement::processMono(uintptr_t src_ptr,
                                               uintptr_t lbk_ptr,
                                               const uint32_t chunk_size) noexcept {
-  float* src_ptr_ = reinterpret_cast<float*>(src_ptr);
-  float* lbk_ptr_ = reinterpret_cast<float*>(lbk_ptr);
-  this->m_input.resize(chunk_size);
-  this->m_loopback.resize(chunk_size);
-  this->m_result.resize(chunk_size);
-  this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
-  this->m_loopback.assign(lbk_ptr_, lbk_ptr_ + chunk_size);
-  m_aec.ProcessChunk(this->m_input, this->m_loopback, this->m_result);
-
-  if (this->m_result.size() > chunk_size) {
+  try {
+    float* src_ptr_ = reinterpret_cast<float*>(src_ptr);
+    float* lbk_ptr_ = reinterpret_cast<float*>(lbk_ptr);
+    this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
+    this->m_loopback.assign(lbk_ptr_, lbk_ptr_ + chunk_size);
+    this->m_result.clear();
+    if (m_aec->ProcessChunk(this->m_input, this->m_loopback, this->m_result) < SpenchRetCode::SUCCESS ||
+        this->m_result.size() > chunk_size) {
+      this->m_result.clear();
+      return 0;
+    }
+    if (!this->m_result.empty()) {
+      memcpy(src_ptr_, this->m_result.data(), this->m_result.size() * sizeof(float));
+    }
+    return this->m_result.size();
+  } catch (...) {
+    this->m_result.clear();
     return 0;
   }
-  if (this->m_result.size()) {
-    memcpy(src_ptr_, this->m_result.data(), this->m_result.size() * sizeof(float));
-  }
-
-  return this->m_result.size();
 }
 
 void EchoCancellationElement::resetContext() noexcept {
+  try {
+    auto aec = std::make_unique<spench::SpenchAudioEchoCancelation>(m_yaml_config);
+    m_aec = std::move(aec);
+    m_input.clear();
+    m_loopback.clear();
+    m_result.clear();
+  } catch (...) {
+  }
 }
 
 #endif
@@ -91,32 +116,44 @@ DenoisePipelineElement::DenoisePipelineElement(uint32_t sample_rate, std::shared
 }
 
 DenoisePipelineElement::~DenoisePipelineElement() {
-  if (ctx != nullptr) {
-    m_denoiser.DestroyContext(&ctx);
+  try {
+    if (ctx != nullptr) {
+      m_denoiser.DestroyContext(&ctx);
+    }
+  } catch (...) {
   }
 }
 
 uint32_t DenoisePipelineElement::process(uintptr_t src_ptr, const uint32_t chunk_size) noexcept {
-  float* src_ptr_ = reinterpret_cast<float*>(src_ptr);
-  this->m_input.resize(chunk_size);
-  // this->m_result.resize run inside of ProcessChunk
-  this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
-  SpenchRetCode ret_code = m_denoiser.ProcessChunk(this->m_input,
-                                                   this->m_result,
-                                                   ctx);
-  if (this->m_result.size() > chunk_size) {
+  try {
+    float* src_ptr_ = reinterpret_cast<float*>(src_ptr);
+    this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
+    this->m_result.clear();
+    const SpenchRetCode ret_code = m_denoiser.ProcessChunk(this->m_input, this->m_result, ctx);
+    if (ret_code < SpenchRetCode::SUCCESS || this->m_result.size() > chunk_size) {
+      this->m_result.clear();
+      return 0;
+    }
+    if (!this->m_result.empty()) {
+      memcpy(src_ptr_, this->m_result.data(), this->m_result.size() * sizeof(float));
+    }
+    return this->m_result.size();
+  } catch (...) {
+    this->m_result.clear();
     return 0;
   }
-  if (ret_code >= SpenchRetCode::SUCCESS && this->m_result.size()) {
-    memcpy(src_ptr_, this->m_result.data(), this->m_result.size() * sizeof(float));
-  }
-
-  return this->m_result.size();
 }
 
 void DenoisePipelineElement::resetContext() noexcept {
-  m_denoiser.DestroyContext(&ctx);
-  ctx = m_denoiser.CreateContext(m_sample_rate, m_sample_rate);
+  try {
+    m_denoiser.DestroyContext(&ctx);
+    ctx = m_denoiser.CreateContext(m_sample_rate, m_sample_rate);
+    m_input.clear();
+    m_result.clear();
+  } catch (...) {
+    ctx = nullptr;
+    m_result.clear();
+  }
 }
 
 #endif
