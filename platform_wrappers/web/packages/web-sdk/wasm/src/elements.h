@@ -27,19 +27,21 @@ class PipelineElement {
 
 class AudioProcessPipelineElement : public PipelineElement {
  private:
-  spench::SpenchAudioProcess m_normalizer;
+  std::string m_yaml_config;
+  std::unique_ptr<spench::SpenchAudioProcess> m_normalizer;
 
  public:
   AudioProcessPipelineElement(const std::string& yaml_config, uint32_t sample_rate = 0);
 
   uint32_t process(uintptr_t src_ptr, const uint32_t chunk_size) noexcept final;
 
-  void resetContext() noexcept;
+  void resetContext() noexcept final;
 };
 
 class EchoCancellationElement : public PipelineElement {
  private:
-  spench::SpenchAudioEchoCancelation m_aec;
+  std::string m_yaml_config;
+  std::unique_ptr<spench::SpenchAudioEchoCancelation> m_aec;
   std::vector<float> m_loopback;
 
  public:
@@ -65,7 +67,7 @@ class DenoisePipelineElement : public PipelineElement {
    ~DenoisePipelineElement() override;
    uint32_t process(uintptr_t src_ptr, const uint32_t chunk_size) noexcept final;
 
-  void resetContext() noexcept;
+   void resetContext() noexcept final;
 };
 
 #endif
