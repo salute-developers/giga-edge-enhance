@@ -350,7 +350,7 @@
       "generator": "Xcode",
       "cacheVariables": {
         "SPENCH_PROFILE": "ios",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/platform_wrappers/ios/cmake/ios.toolchain.cmake",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/ios/cmake/ios.toolchain.cmake",
         "PLATFORM": "OS64",
         "DEPLOYMENT_TARGET": "15.0",
         "BUILD_ONNX_ENGINE": "ON",

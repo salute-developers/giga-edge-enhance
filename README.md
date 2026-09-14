@@ -16,9 +16,9 @@ entry point.
 | Surface | Location | Intended use |
 | --- | --- | --- |
 | C and C++ | `spench/include/spench/` | Native applications and direct buffer processing |
-| Web | `platform_wrappers/web/packages/web-sdk/` | Web Audio, AudioWorklet, workers, and WebAssembly |
-| Android | `platform_wrappers/android/` | Kotlin applications over the JNI/native pipeline |
-| iOS | `platform_wrappers/ios/` | AVAudioEngine and direct Swift buffer processing |
+| Web | `web/packages/web-sdk/` | Web Audio, AudioWorklet, workers, and WebAssembly |
+| Android | `android/` | Kotlin applications over the JNI/native pipeline |
+| iOS | `ios/` | AVAudioEngine and direct Swift buffer processing |
 
 Public headers under `spench/include/spench/` are compatibility-sensitive. Existing exported C
 symbols and public C++ methods are not renamed for style.
@@ -29,7 +29,7 @@ symbols and public C++ methods are not renamed for style.
 - Docker for the default native, WebAssembly, Android, and web workflows.
 - Xcode for iOS and host macOS builds.
 - Visual Studio 2022 for Windows builds.
-- Node.js from `platform_wrappers/web/.nvmrc` for host web development.
+- Node.js from `web/.nvmrc` for host web development.
 
 Restore LFS objects after cloning:
 
@@ -145,7 +145,7 @@ The Web SDK is an npm workspace package with a separate demo service:
 ```bash
 tools/spench build web
 
-cd platform_wrappers/web
+cd web
 npm run test:web-sdk
 npm run build:web-sdk
 ```
@@ -156,7 +156,7 @@ Do not edit staged or generated WebAssembly artifacts manually.
 For local demo development:
 
 ```bash
-cd platform_wrappers/web
+cd web
 npm ci
 npm start --workspace=@gigaedge/spench-site
 ```
@@ -172,11 +172,11 @@ user-facing repository Markdown while excluding generated, vendored, cached, and
 files. Platform READMEs and iOS DocC articles remain canonical in their existing locations.
 
 ```bash
-cd platform_wrappers/web
+cd web
 npm run build --workspace=@gigaedge/spench-site
 ```
 
-The static output is written to `platform_wrappers/web/apps/spench-site/build/` and is suitable
+The static output is written to `web/apps/spench-site/build/` and is suitable
 for GitHub Pages.
 
 ## Development

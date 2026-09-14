@@ -126,7 +126,7 @@ class WorkflowsTest(unittest.TestCase):
         with mock.patch.object(workflows, "compiler_cache_environment", return_value={}), \
              mock.patch.object(workflows, "run") as run:
             workflows.android_workflow("test", False)
-        self.assertEqual(run.call_args.args[0], ["platform_wrappers/android/scripts/test-all.sh"])
+        self.assertEqual(run.call_args.args[0], ["android/scripts/test-all.sh"])
         self.assertEqual(run.call_args.kwargs["container_stage"], "android")
         self.assertEqual(
             run.call_args.kwargs["environment"]["SPENCH_PREBUILT_DEPENDENCIES_ROOT"],
@@ -141,7 +141,7 @@ class WorkflowsTest(unittest.TestCase):
     def test_container_playwright_runs_all_browsers_with_audio(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            installed_sdk = (root / "platform_wrappers/web/apps/spench-site/node_modules" /
+            installed_sdk = (root / "web/apps/spench-site/node_modules" /
                              "@gigaedge/spench-web-sdk/package.json")
             installed_sdk.parent.mkdir(parents=True)
             installed_sdk.touch()
@@ -159,7 +159,7 @@ class WorkflowsTest(unittest.TestCase):
     def test_container_playwright_honors_ci_browser_selection(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            installed_sdk = (root / "platform_wrappers/web/apps/spench-site/node_modules" /
+            installed_sdk = (root / "web/apps/spench-site/node_modules" /
                              "@gigaedge/spench-web-sdk/package.json")
             installed_sdk.parent.mkdir(parents=True)
             installed_sdk.touch()
