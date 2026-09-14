@@ -156,8 +156,6 @@ Workflows have event-specific responsibilities and narrowly scoped permissions:
 
 - `ci.yml`: pull requests and pushes to the protected default branch. It uses
   Release configurations only, uploads tested job artifacts, and never deploys.
-- `manual-validation.yml`: manually dispatched Debug, ASAN, static Release,
-  Web Debug, and Android Debug emulator coverage. There is no scheduled nightly workflow.
 - `ci.yml` publishes same-repository pull-request previews immediately after the
   Web build and unit tests. `pages.yml` publishes the default-branch artifact,
   while `preview-cleanup.yml` handles only a closed pull request.
@@ -181,8 +179,9 @@ barrier. Native, Web, and Android do not depend on each other. Build and test
 remain separate named steps in one job so large build trees do not have to be
 uploaded and downloaded between runners.
 
-- Linux validates ONNX Runtime and TensorFlow Lite shared Release targets;
-  static Release coverage is manually dispatched.
+- Linux CI validates ONNX Runtime and TensorFlow Lite shared Release targets.
+  Debug, ASAN, and static presets remain local `tools/spench` workflows rather
+  than manually dispatched GitHub Actions jobs.
 - Web owns both full and DSP-only WASM builds. Web SDK unit tests and the full
   Chromium, Firefox, and WebKit Playwright matrix run in the Linux combined Web
   toolchain image. Playwright WebKit is supported on Linux and provides WebKit
@@ -195,7 +194,7 @@ uploaded and downloaded between runners.
   baselines because scores vary by host media stack. Playwright consumes the
   packed SDK from the Web build job and runs against the local COOP/COEP server.
 - Android restores one TFLite dependency per ABI and runs Release unit/native
-  and connected emulator tests. Debug emulator coverage is manual.
+  and connected emulator tests. Debug validation remains a local workflow.
 - macOS validates each runner architecture with both engines. Windows validates
   both shared-engine targets. iOS restores both device and
   simulator dependencies before producing and testing the XCFramework.
