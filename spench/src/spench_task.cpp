@@ -1,5 +1,9 @@
 #include "spench/src/spench_task.h"
+
 #include <spdlog/spdlog.h>
+
+#include <stdexcept>
+
 #include "spench/src/spench_logger.h"
 
 namespace spench {
@@ -24,7 +28,7 @@ void DenoiseModelParams::read_model_node(const YAML::Node& yaml_config) {
 
     network_input_ctx_len = yaml_config["model_input_ctx_len"].as<uint32_t>(0);
   } catch(...) {
-    throw("Config reading error!");
+    throw std::runtime_error("Config reading error!");
   }
 }
 

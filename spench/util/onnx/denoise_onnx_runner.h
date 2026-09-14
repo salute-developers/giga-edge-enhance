@@ -1,15 +1,17 @@
 #pragma once
 
+#include <exception>
+#include <functional>
 #include <memory>
+#include <numeric>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <exception>
-#include <numeric>
-#include <functional>
+
+#include "spench/src/spench_context.h"
+#include "spench/src/spench_task.h"
 #include "spench/util/onnx/base_onnx_runner.h"
 #include "spench/util/onnx/onnx_env.h"
-#include "spench/src/spench_task.h"
-#include "spench/src/spench_context.h"
 
 namespace util {
 namespace onnx {
@@ -108,10 +110,10 @@ class SpenchFOnnxRunner: public BaseOnnxRunner {
   template<typename T>
   void parse_results(std::vector<Ort::Value>& network_output, spench::SpenchTaskData& data) {
     if (model_params_.model_outputs.size() != network_output.size()) {
-      throw("Model output error");
+      throw std::runtime_error("Model output error");
     }
     if (data.context == nullptr) {
-      throw("Context is not allocated!");
+      throw std::runtime_error("Context is not allocated!");
     }
 
     spench::DenoiseContextF<T>* context = dynamic_cast<spench::DenoiseContextF<T>*>(data.context);

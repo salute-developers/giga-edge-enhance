@@ -1,5 +1,7 @@
 #include "spench/util/onnx/denoise_onnx_runner.h"
+
 #include <algorithm>
+#include <stdexcept>
 
 namespace util {
 namespace onnx {
@@ -149,7 +151,7 @@ void SpenchFOnnxRunner::prepare_input_in_place(std::vector<float>& mag,
                                             std::vector<std::vector<float>*>& inputs,
                                             spench::SpenchContext<float>* context) {
   if (context == nullptr) {
-    throw("Context is not allocated!");
+    throw std::runtime_error("Context is not allocated!");
   }
   spench::DenoiseContextF<float>* denoise_context =
                                      dynamic_cast<spench::DenoiseContextF<float>*>(context);
@@ -184,10 +186,10 @@ void SpenchFOnnxRunner::prepare_input_in_place(std::vector<float>& mag,
 
 void SpenchFOnnxRunner::infer(spench::SpenchTask* denoise_task) {
   if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
-    throw("Task data or context are not initialized!");
+    throw std::runtime_error("Task data or context are not initialized!");
   }
   if (denoise_task->data.input_spectrogram.size() == 0) {
-    throw("Input spectrogram should be calculated before this step!");
+    throw std::runtime_error("Input spectrogram should be calculated before this step!");
   }
   auto& denoise_data = denoise_task->data;
   auto& denoise_context = denoise_data.context;
@@ -211,12 +213,12 @@ void SpenchFOnnxRunner::infer(spench::SpenchTask* denoise_task) {
       std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
       denoise_task->stage = spench::PipelineStage::predicted_mask;
     } else if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len + 1) {
-      throw("Incorrect number of previous states!");
+      throw std::runtime_error("Incorrect number of previous states!");
     } else {
       denoise_task->stage = spench::PipelineStage::predicted_mask;
     }
   } else {
-    throw("State is not appropriate");
+    throw std::runtime_error("State is not appropriate");
   }
 }
 
