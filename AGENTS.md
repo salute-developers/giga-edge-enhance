@@ -35,8 +35,9 @@ added later, follow the more specific instructions for files in that subtree.
   XCFramework directories.
 - Do not add or upgrade production dependencies unless the task requires it.
   Keep lockfiles synchronized with dependency-manifest changes.
-- Never commit credentials, `.dvc/config`, private model URLs, or downloaded
-  model binaries. Models are retrieved with DVC as described in `README.md`.
+- Never commit credentials, private model URLs, or downloaded model binaries.
+  Repository model and media assets are restored through Git LFS as described
+  in `README.md`; there is no DVC or submodule setup step.
 - Avoid destructive Git commands. Do not delete caches or build directories
   merely to work around a failure; diagnose the failure first.
 - Record durable product, platform, release, and CI decisions in this file in
@@ -229,7 +230,7 @@ uploaded and downloaded between runners.
   exist. Keep failure artifacts for a limited debugging retention period.
 - On success, upload only deliberate products from `out/artifacts/`, together
   with a manifest and SHA-256 checksums. Never upload the entire workspace,
-  dependency caches, credentials, or `.dvc/config`.
+  dependency caches, credentials, or private artifact configuration.
 - Put a compact matrix and cache summary in `GITHUB_STEP_SUMMARY`; job logs
   remain the detailed source of truth.
 

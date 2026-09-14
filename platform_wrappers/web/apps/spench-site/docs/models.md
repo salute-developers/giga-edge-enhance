@@ -9,14 +9,14 @@ match the model's expected sample rate to the audio pipeline.
 
 ## Repository contributors
 
-Authorized contributors restore development and test models through DVC:
+Contributors restore the model and test assets tracked by this repository through Git LFS:
 
 ```bash
-dvc pull
+git lfs checkout
 ```
 
-Never commit `.dvc/config`, credentials, private storage URLs, or downloaded `.onnx`, `.tflite`, and
-packed model binaries outside the repository's established LFS/DVC rules.
+Never commit credentials, private storage URLs, or downloaded `.onnx`, `.tflite`, and packed model
+binaries outside the repository's established LFS rules.
 
 ## Platform packaging
 
