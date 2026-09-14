@@ -237,8 +237,9 @@ uploaded and downloaded between runners.
 ### CD and release order
 
 Release from the exact tested tag commit, never by rebuilding an unpinned
-branch. Use a protected GitHub Environment for approvals and secrets. Prefer
-short-lived/OIDC credentials where the destination supports them.
+branch. Release publication uses only the repository `GITHUB_TOKEN`, so it does
+not use a protected GitHub Environment; add an Environment only if a future
+external destination introduces secrets or an explicit approval requirement.
 
 1. Validate the version/tag and confirm the commit passed every required check
    configured in branch protection.
@@ -246,13 +247,11 @@ short-lived/OIDC credentials where the destination supports them.
    WASM using the same helper commands as CI.
 3. Verify each install/package with a consumer or smoke test, then generate
    checksums and provenance/SBOM metadata. Sign and notarize where applicable.
-4. Publish immutable native/platform artifacts and the validated WASM artifacts
-   first.
-5. Stage the exact published WASM outputs into the Web SDK, rerun Web SDK unit,
-   build, and browser tests, and only then publish the npm package. Do not build
-   a different WASM binary during the Web SDK release.
-6. Create or finalize the GitHub Release only after every required publication
-   succeeds. Record all artifact hashes and versions in the release notes.
+4. Create a draft GitHub Release and attach the exact validated native,
+   platform, WASM, and Web SDK archives. GitHub release assets are the only
+   publication destination; do not publish the Web SDK to npm.
+5. Publish the GitHub Release only after every required attachment succeeds.
+   Record all artifact hashes and versions in the release notes.
 
 A rerun must be idempotent: it may verify an already published artifact with
 the same hash, but it must fail rather than overwrite an existing version with
