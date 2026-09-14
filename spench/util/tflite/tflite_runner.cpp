@@ -5,6 +5,7 @@
 #include <limits>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 namespace util {
@@ -319,7 +320,7 @@ void SpenchFTfliteRunner::prepare_input_in_place(std::vector<float>& mag,
                                             std::vector<std::vector<float>*>& inputs,
                                             spench::SpenchContext<float>* context) {
   if (context == nullptr) {
-    throw("Context is not allocated!");
+    throw std::runtime_error("Context is not allocated!");
   }
   spench::DenoiseContextF<float>* denoise_context =
                                      dynamic_cast<spench::DenoiseContextF<float>*>(context);
@@ -362,7 +363,7 @@ void SpenchFTfliteRunner::prepare_input_in_place(std::vector<float>& mag,
 template<typename T>
 void SpenchFTfliteRunner::parse_results(spench::SpenchTaskData& data) {
   if (data.context == nullptr) {
-    throw("Context is not allocated!");
+    throw std::runtime_error("Context is not allocated!");
   }
   spench::DenoiseContextF<T>* context = dynamic_cast<spench::DenoiseContextF<T>*>(data.context);
 
@@ -391,17 +392,17 @@ void SpenchFTfliteRunner::parse_results(spench::SpenchTaskData& data) {
       default:
         std::string err_msg = "Error in parsing results. Unknown output_idx: ";
         err_msg += std::to_string(output_idx);
-        throw(err_msg);
+        throw std::runtime_error(err_msg);
     }
   }
 }
 
 void SpenchFTfliteRunner::infer(spench::SpenchTask* denoise_task) {
   if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
-    throw("Task data or context are not initialized!");
+    throw std::runtime_error("Task data or context are not initialized!");
   }
   if (denoise_task->data.input_spectrogram.size() == 0) {
-    throw("Input spectrogram should be calculated before this step!");
+    throw std::runtime_error("Input spectrogram should be calculated before this step!");
   }
   auto& denoise_data = denoise_task->data;
   auto& denoise_context = denoise_data.context;
@@ -427,12 +428,12 @@ void SpenchFTfliteRunner::infer(spench::SpenchTask* denoise_task) {
       std::fill_n(denoise_data.enhanced_wav.begin(), denoise_data.enhanced_wav.size(), 0.0);
       denoise_task->stage = spench::PipelineStage::predicted_mask;
     } else if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len + 1) {
-      throw("Incorrect number of previous states!");
+      throw std::runtime_error("Incorrect number of previous states!");
     } else {
       denoise_task->stage = spench::PipelineStage::predicted_mask;
     }
   } else {
-    throw("State is not appropriate");
+    throw std::runtime_error("State is not appropriate");
   }
 }
 
@@ -529,7 +530,7 @@ void SpenchQTfliteRunner::prepare_input_in_place(std::vector<float>& mag,
 template<typename T>
 void SpenchQTfliteRunner::parse_results(spench::SpenchTaskData& data) {
   if (data.context == nullptr) {
-    throw("Context is not allocated!");
+    throw std::runtime_error("Context is not allocated!");
   }
   spench::DenoiseContextQ<T>* context = dynamic_cast<spench::DenoiseContextQ<T>*>(data.context);
 
@@ -589,17 +590,17 @@ void SpenchQTfliteRunner::parse_results(spench::SpenchTaskData& data) {
       default:
         std::string err_msg = "Error in parsing results. Unknown output_idx: ";
         err_msg += std::to_string(output_idx);
-        throw(err_msg);
+        throw std::runtime_error(err_msg);
     }
   }
 }
 
 void SpenchQTfliteRunner::infer(spench::SpenchTask* denoise_task) {
   if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
-    throw("Task data or context are not initialized!");
+    throw std::runtime_error("Task data or context are not initialized!");
   }
   if (denoise_task->data.input_spectrogram.size() == 0) {
-    throw("Input spectrogram should be calculated before this step!");
+    throw std::runtime_error("Input spectrogram should be calculated before this step!");
   }
   auto& denoise_data = denoise_task->data;
   auto& denoise_context = denoise_data.context;
@@ -650,7 +651,7 @@ void SpenchQTfliteRunner::infer(spench::SpenchTask* denoise_task) {
 
     denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
   } else {
-    throw("State is not appropriate");
+    throw std::runtime_error("State is not appropriate");
   }
 }
 

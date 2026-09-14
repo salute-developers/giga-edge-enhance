@@ -15,10 +15,6 @@ NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::shared_ptr<NetworkConf
   // Ensure do_start() runs after derived members are initialized.
   SpenchRetCode ret_code = restart();
   if (ret_code != SpenchRetCode::SUCCESS) {
-    spdlog::error("Due to errors a neural network handler module could not be created!  {}",
-                                        std::to_string(static_cast<int32_t>(ret_code)));
-    throw("Due to errors a neural network handler module could not be created! ret_code: " +
-                                        std::to_string(static_cast<int32_t>(ret_code)));
     spdlog::error("A neural network handler could not be created! {}",
                   std::to_string(static_cast<int32_t>(ret_code)));
     throw std::runtime_error("A neural network handler module creation failed. ret_code=" +

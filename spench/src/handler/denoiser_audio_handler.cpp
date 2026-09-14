@@ -1,8 +1,12 @@
 #include "spench/src/handler/denoiser_audio_handler.h"
-#include <algorithm>
+
 #include <spdlog/spdlog.h>
-#include "spench/src/spench_logger.h"
+
+#include <algorithm>
+#include <stdexcept>
+
 #include "spench/src/denoiser_model_adviser.h"
+#include "spench/src/spench_logger.h"
 
 namespace spench {
 
@@ -37,7 +41,7 @@ SpenchContext<float>* DenoiserAudioHandler::create_context(uint32_t input_sample
   SpenchRetCode ret_code = init_audio_streams(ctx, input_sample_rate, output_sample_rate);
   if (ret_code != SpenchRetCode::SUCCESS) {
     spdlog::error("Due to errors a context could not be created!");
-    throw("Due to errors a context could not be created!");
+    throw std::runtime_error("Due to errors a context could not be created!");
   }
   spdlog::info("New denoising context created! Input sr {} Output sr {}", input_sample_rate, output_sample_rate);
   return ctx;
