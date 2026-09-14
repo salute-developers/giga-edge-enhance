@@ -51,3 +51,6 @@ runs:
       with:
         path: ${{ steps.cache-keys.outputs.compiler_cache_path }}
         key: ${{ steps.cache-keys.outputs.compiler_cache_key_prefix }}-${{ github.sha }}
+        restore-keys: |
+          ${{ steps.cache-keys.outputs.compiler_cache_key_prefix }}-
+          ${{ steps.cache-keys.outputs.compiler_cache_restore_key }}
