@@ -65,6 +65,30 @@ class WorkflowsTest(unittest.TestCase):
         self.assertEqual(run.call_args_list[2].args[0][0:2], ["cmake", "--build"])
         self.assertIn("LD_LIBRARY_PATH", run.call_args_list[3].kwargs["environment"])
 
+    def test_native_package_keeps_only_the_final_archive(self):
+        for preset in ("native-release-onnx", "native-release-tflite"):
+            with self.subTest(preset=preset), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "out/build" / preset).mkdir(parents=True)
+                package_dir = root / "out/artifacts" / preset
+                package_dir.mkdir(parents=True)
+                (package_dir / "stale-file").touch()
+
+                def create_package(command, **_kwargs):
+                    output_dir = Path(command[command.index("-B") + 1])
+                    (output_dir / "_CPack_Packages").mkdir(parents=True)
+                    (output_dir / "spench-0.0.1-Linux.tar.gz").touch()
+
+                with mock.patch.object(workflows, "ROOT", root), \
+                     mock.patch.object(workflows, "compiler_cache_environment", return_value={}), \
+                     mock.patch.object(workflows, "run", side_effect=create_package):
+                    workflows.cmake_workflow("package", preset, True)
+
+                self.assertEqual(
+                    [path.name for path in package_dir.iterdir()],
+                    ["spench-0.0.1-Linux.tar.gz"])
+                self.assertFalse((root / "out/build/package" / preset).exists())
+
     def test_macos_x86_install_verifies_matching_consumer_architecture(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

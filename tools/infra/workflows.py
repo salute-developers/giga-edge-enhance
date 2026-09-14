@@ -89,9 +89,15 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
         if preset not in {"native-release-onnx", "native-release-tflite"}:
             raise SystemExit(f"Packaging is not supported for {preset}.")
         package_dir = ROOT / "out" / "artifacts" / preset
+        package_work_dir = ROOT / "out" / "build" / "package" / preset
+        if package_dir.exists():
+            shutil.rmtree(package_dir)
+        if package_work_dir.exists():
+            shutil.rmtree(package_work_dir)
         package_dir.mkdir(parents=True, exist_ok=True)
-        package_output_dir = (str(package_dir) if stage is None
-                              else f"/workspace/out/artifacts/{preset}")
+        package_work_dir.mkdir(parents=True, exist_ok=True)
+        package_output_dir = (str(package_work_dir) if stage is None
+                              else f"/workspace/{package_work_dir.relative_to(ROOT)}")
         package_command = ["cpack", "--preset", preset, "-G", "TGZ", "-B", package_output_dir]
         if not use_host:
             package_command = [
@@ -99,6 +105,12 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
                 "-B", package_output_dir,
             ]
         run(package_command, container_stage=stage, environment=environment)
+        archives = list(package_work_dir.glob("*.tar.gz"))
+        if len(archives) != 1:
+            raise SystemExit(
+                f"Packaging {preset} produced {len(archives)} top-level .tar.gz archives; expected exactly one.")
+        shutil.copy2(archives[0], package_dir / archives[0].name)
+        shutil.rmtree(package_work_dir)
     elif action == "install":
         install_dir = ROOT / "out" / "artifacts" / "install" / preset
         if install_dir.exists():
