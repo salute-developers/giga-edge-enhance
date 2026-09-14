@@ -97,7 +97,7 @@ class SpenchProcessor {
   bool should_render_output_locked(double now_seconds, std::size_t available_frames);
   std::optional<SpenchLowPerformanceEventNative> handle_output_underrun_locked(double now_seconds, std::size_t popped,
                                                                                std::size_t requested);
-  void worker_loop();
+  void worker_loop() noexcept;
   static void validate_settings(const SpenchProcessorSettings& settings);
   static std::size_t ring_capacity_for_sample_rate(
         std::uint32_t sample_rate_hz,

@@ -386,8 +386,9 @@ std::vector<SpenchLowPerformanceEventNative> SpenchProcessor::drain_low_performa
   return events;
 }
 
-void SpenchProcessor::worker_loop() {
-  while (true) {
+void SpenchProcessor::worker_loop() noexcept {
+  try {
+    while (true) {
     {
       std::unique_lock<std::mutex> lock(state_mutex_);
       worker_condition_.wait(lock, [this] {
@@ -416,7 +417,7 @@ void SpenchProcessor::worker_loop() {
       }
     }
 
-    while (input_ring_buffer_.available_to_read() >= worker_block_frames_) {
+      while (input_ring_buffer_.available_to_read() >= worker_block_frames_) {
       std::size_t frames_to_process = 0U;
       {
         std::lock_guard<std::mutex> io_lock(io_mutex_);
@@ -509,7 +510,15 @@ void SpenchProcessor::worker_loop() {
         std::lock_guard<std::mutex> io_lock(io_mutex_);
         output_ring_buffer_.push(worker_output_buffer_.data(), frames_to_process);
       }
+      }
     }
+  } catch (...) {
+    {
+      std::lock_guard<std::mutex> lock(state_mutex_);
+      stopping_ = true;
+      completed_reset_generation_ = reset_generation_;
+    }
+    worker_condition_.notify_all();
   }
 }
 
