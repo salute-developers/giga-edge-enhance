@@ -475,7 +475,7 @@ jobs:
           name: spench-web-sdk-${{ github.sha }}
           path: out/artifacts/web/*.tgz
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
       - name: Upload Web site
         uses: actions/upload-artifact@v7
         with:
@@ -676,7 +676,7 @@ jobs:
             platform_wrappers/android/spench-sdk/build/outputs/aar/*-release.aar
             platform_wrappers/android/spench-model-quality48/build/outputs/aar/*-release.aar
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
   deps-macos-arm64-onnx:
     name: Build macOS arm64 ONNX Release dependency OCI
@@ -1014,4 +1014,4 @@ jobs:
             platform_wrappers/ios/build/xcframework/SpenchModelFast8.bundle
             platform_wrappers/ios/build/xcframework/SpenchModelQuality48.bundle
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7

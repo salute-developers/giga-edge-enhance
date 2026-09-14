@@ -81,7 +81,7 @@ runs:
         name: spench-install-${{ inputs.preset }}-${{ github.sha }}
         path: out/artifacts/install/${{ inputs.preset }}
         if-no-files-found: error
-        retention-days: 1
+        retention-days: 7
 
     - name: Package ${{ inputs.preset }}
       if: inputs.package == 'true'
@@ -103,4 +103,17 @@ runs:
         name: spench-package-${{ inputs.preset }}-${{ github.sha }}
         path: out/artifacts/${{ inputs.preset }}
         if-no-files-found: error
-        retention-days: 1
+        retention-days: 7
+
+    - name: Upload CMake and CTest diagnostics
+      if: failure()
+      uses: actions/upload-artifact@v7
+      with:
+        name: cmake-diagnostics-${{ inputs.preset }}-${{ github.sha }}
+        path: |
+          out/build/**/CMakeFiles/CMakeConfigureLog.yaml
+          out/build/**/CMakeFiles/CMakeOutput.log
+          out/build/**/CMakeFiles/CMakeError.log
+          out/build/**/Testing/Temporary/**
+        if-no-files-found: ignore
+        retention-days: 3
