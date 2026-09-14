@@ -389,127 +389,127 @@ std::vector<SpenchLowPerformanceEventNative> SpenchProcessor::drain_low_performa
 void SpenchProcessor::worker_loop() noexcept {
   try {
     while (true) {
-    {
-      std::unique_lock<std::mutex> lock(state_mutex_);
-      worker_condition_.wait(lock, [this] {
-        return stopping_ || completed_reset_generation_ != reset_generation_ ||
-               input_ring_buffer_.available_to_read() >= worker_block_frames_;
-      });
-      if (stopping_) {
-        return;
-      }
-      if (completed_reset_generation_ != reset_generation_) {
-        {
-          // Cheap: flush the ring buffers and congestion state under io_mutex_ so the audio
-          // thread only ever blocks on this short critical section.
-          std::lock_guard<std::mutex> io_lock(io_mutex_);
-          clear_ring_buffers_locked();
-          reset_congestion_locked();
+      {
+        std::unique_lock<std::mutex> lock(state_mutex_);
+        worker_condition_.wait(lock, [this] {
+          return stopping_ || completed_reset_generation_ != reset_generation_ ||
+                 input_ring_buffer_.available_to_read() >= worker_block_frames_;
+        });
+        if (stopping_) {
+          return;
         }
-        // Expensive: rebuilding the normalization chain and recreating the denoiser context is
-        // done under state_mutex_ only (still held via `lock`). The audio thread never takes
-        // state_mutex_, so process() is not stalled by this rebuild.
-        reset_processors_locked();
-        completed_reset_generation_ = reset_generation_;
-        lock.unlock();
-        worker_condition_.notify_all();
-        continue;
+        if (completed_reset_generation_ != reset_generation_) {
+          {
+            // Cheap: flush the ring buffers and congestion state under io_mutex_ so the audio
+            // thread only ever blocks on this short critical section.
+            std::lock_guard<std::mutex> io_lock(io_mutex_);
+            clear_ring_buffers_locked();
+            reset_congestion_locked();
+          }
+          // Expensive: rebuilding the normalization chain and recreating the denoiser context is
+          // done under state_mutex_ only (still held via `lock`). The audio thread never takes
+          // state_mutex_, so process() is not stalled by this rebuild.
+          reset_processors_locked();
+          completed_reset_generation_ = reset_generation_;
+          lock.unlock();
+          worker_condition_.notify_all();
+          continue;
+        }
       }
-    }
 
       while (input_ring_buffer_.available_to_read() >= worker_block_frames_) {
-      std::size_t frames_to_process = 0U;
-      {
-        std::lock_guard<std::mutex> io_lock(io_mutex_);
-        frames_to_process = input_ring_buffer_.pop(worker_input_buffer_.data(), worker_input_buffer_.size());
-      }
-      if (frames_to_process != worker_block_frames_) {
-        break;
-      }
+        std::size_t frames_to_process = 0U;
+        {
+          std::lock_guard<std::mutex> io_lock(io_mutex_);
+          frames_to_process = input_ring_buffer_.pop(worker_input_buffer_.data(), worker_input_buffer_.size());
+        }
+        if (frames_to_process != worker_block_frames_) {
+          break;
+        }
 
-      bool normalization_active = false;
-      bool denoising_active = false;
-      {
-        std::lock_guard<std::mutex> lock(state_mutex_);
-        normalization_active = normalization_active_;
-        denoising_active = denoiser_ != nullptr && denoiser_context_ != nullptr;
-      }
+        bool normalization_active = false;
+        bool denoising_active = false;
+        {
+          std::lock_guard<std::mutex> lock(state_mutex_);
+          normalization_active = normalization_active_;
+          denoising_active = denoiser_ != nullptr && denoiser_context_ != nullptr;
+        }
 
-      const auto chunk_start = std::chrono::steady_clock::now();
+        const auto chunk_start = std::chrono::steady_clock::now();
 
-      if (!normalization_active && !denoising_active) {
-        std::lock_guard<std::mutex> io_lock(io_mutex_);
-        output_ring_buffer_.push(worker_input_buffer_.data(), frames_to_process);
-        record_processing_time_locked(elapsed_milliseconds(chunk_start));
-        continue;
-      }
+        if (!normalization_active && !denoising_active) {
+          std::lock_guard<std::mutex> io_lock(io_mutex_);
+          output_ring_buffer_.push(worker_input_buffer_.data(), frames_to_process);
+          record_processing_time_locked(elapsed_milliseconds(chunk_start));
+          continue;
+        }
 
-      processor_input_buffer_.assign(worker_input_buffer_.begin(),
-                                     worker_input_buffer_.begin() + static_cast<std::ptrdiff_t>(frames_to_process));
-      processor_output_buffer_ = processor_input_buffer_;
-      denoiser_output_buffer_ = processor_input_buffer_;
+        processor_input_buffer_.assign(worker_input_buffer_.begin(),
+                                       worker_input_buffer_.begin() + static_cast<std::ptrdiff_t>(frames_to_process));
+        processor_output_buffer_ = processor_input_buffer_;
+        denoiser_output_buffer_ = processor_input_buffer_;
 
-      SpenchRetCode process_result = SpenchRetCode::SUCCESS;
-      SpenchRetCode denoise_result = SpenchRetCode::SUCCESS;
-      {
-        std::lock_guard<std::mutex> lock(state_mutex_);
-        if (settings_.unstable_reverse_processing_order) {
-          if (denoiser_ != nullptr && denoiser_context_ != nullptr) {
-            denoiser_output_buffer_.clear();
-            const auto start = std::chrono::steady_clock::now();
-            denoise_result =
-                denoiser_->ProcessChunk(processor_input_buffer_, denoiser_output_buffer_, denoiser_context_);
-            record_telemetry(false, elapsed_milliseconds(start));
-            processor_output_buffer_ = denoiser_output_buffer_;
-          }
-          if (denoise_result >= SpenchRetCode::SUCCESS && normalization_active && audio_processor_ != nullptr) {
+        SpenchRetCode process_result = SpenchRetCode::SUCCESS;
+        SpenchRetCode denoise_result = SpenchRetCode::SUCCESS;
+        {
+          std::lock_guard<std::mutex> lock(state_mutex_);
+          if (settings_.unstable_reverse_processing_order) {
+            if (denoiser_ != nullptr && denoiser_context_ != nullptr) {
+              denoiser_output_buffer_.clear();
+              const auto start = std::chrono::steady_clock::now();
+              denoise_result =
+                  denoiser_->ProcessChunk(processor_input_buffer_, denoiser_output_buffer_, denoiser_context_);
+              record_telemetry(false, elapsed_milliseconds(start));
+              processor_output_buffer_ = denoiser_output_buffer_;
+            }
+            if (denoise_result >= SpenchRetCode::SUCCESS && normalization_active && audio_processor_ != nullptr) {
+              denoiser_output_buffer_ = processor_output_buffer_;
+              processor_output_buffer_.clear();
+              const auto start = std::chrono::steady_clock::now();
+              process_result = audio_processor_->ProcessChunk(denoiser_output_buffer_, processor_output_buffer_);
+              record_telemetry(true, elapsed_milliseconds(start));
+            }
             denoiser_output_buffer_ = processor_output_buffer_;
-            processor_output_buffer_.clear();
-            const auto start = std::chrono::steady_clock::now();
-            process_result = audio_processor_->ProcessChunk(denoiser_output_buffer_, processor_output_buffer_);
-            record_telemetry(true, elapsed_milliseconds(start));
-          }
-          denoiser_output_buffer_ = processor_output_buffer_;
-        } else {
-          if (normalization_active && audio_processor_ != nullptr) {
-            processor_output_buffer_.clear();
-            const auto start = std::chrono::steady_clock::now();
-            process_result = audio_processor_->ProcessChunk(processor_input_buffer_, processor_output_buffer_);
-            record_telemetry(true, elapsed_milliseconds(start));
-          }
-          if (process_result >= SpenchRetCode::SUCCESS && denoiser_ != nullptr && denoiser_context_ != nullptr) {
-            denoiser_output_buffer_.clear();
-            const auto start = std::chrono::steady_clock::now();
-            denoise_result =
-                denoiser_->ProcessChunk(processor_output_buffer_, denoiser_output_buffer_, denoiser_context_);
-            record_telemetry(false, elapsed_milliseconds(start));
           } else {
-            denoiser_output_buffer_ = processor_output_buffer_;
+            if (normalization_active && audio_processor_ != nullptr) {
+              processor_output_buffer_.clear();
+              const auto start = std::chrono::steady_clock::now();
+              process_result = audio_processor_->ProcessChunk(processor_input_buffer_, processor_output_buffer_);
+              record_telemetry(true, elapsed_milliseconds(start));
+            }
+            if (process_result >= SpenchRetCode::SUCCESS && denoiser_ != nullptr && denoiser_context_ != nullptr) {
+              denoiser_output_buffer_.clear();
+              const auto start = std::chrono::steady_clock::now();
+              denoise_result =
+                  denoiser_->ProcessChunk(processor_output_buffer_, denoiser_output_buffer_, denoiser_context_);
+              record_telemetry(false, elapsed_milliseconds(start));
+            } else {
+              denoiser_output_buffer_ = processor_output_buffer_;
+            }
           }
         }
-      }
-      {
-        std::lock_guard<std::mutex> io_lock(io_mutex_);
-        record_processing_time_locked(elapsed_milliseconds(chunk_start));
-      }
+        {
+          std::lock_guard<std::mutex> io_lock(io_mutex_);
+          record_processing_time_locked(elapsed_milliseconds(chunk_start));
+        }
 
-      std::size_t frames_produced = frames_to_process;
-      if (process_result < SpenchRetCode::SUCCESS || denoise_result < SpenchRetCode::SUCCESS) {
-        frames_produced = 0U;
-      } else {
-        frames_produced = std::min(frames_to_process, denoiser_output_buffer_.size());
-      }
+        std::size_t frames_produced = frames_to_process;
+        if (process_result < SpenchRetCode::SUCCESS || denoise_result < SpenchRetCode::SUCCESS) {
+          frames_produced = 0U;
+        } else {
+          frames_produced = std::min(frames_to_process, denoiser_output_buffer_.size());
+        }
 
-      for (std::size_t i = 0; i < frames_produced; ++i) {
-        worker_output_buffer_[i] = denoiser_output_buffer_[i];
-      }
-      for (std::size_t i = frames_produced; i < frames_to_process; ++i) {
-        worker_output_buffer_[i] = 0.0f;
-      }
-      {
-        std::lock_guard<std::mutex> io_lock(io_mutex_);
-        output_ring_buffer_.push(worker_output_buffer_.data(), frames_to_process);
-      }
+        for (std::size_t i = 0; i < frames_produced; ++i) {
+          worker_output_buffer_[i] = denoiser_output_buffer_[i];
+        }
+        for (std::size_t i = frames_produced; i < frames_to_process; ++i) {
+          worker_output_buffer_[i] = 0.0f;
+        }
+        {
+          std::lock_guard<std::mutex> io_lock(io_mutex_);
+          output_ring_buffer_.push(worker_output_buffer_.data(), frames_to_process);
+        }
       }
     }
   } catch (...) {
