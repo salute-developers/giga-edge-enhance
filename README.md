@@ -31,25 +31,24 @@ symbols and public C++ methods are not renamed for style.
 - Visual Studio 2022 for Windows builds.
 - Node.js from `platform_wrappers/web/.nvmrc` for host web development.
 
-Clone submodules and restore LFS objects before building:
+Restore LFS objects after cloning:
 
 ```bash
-git submodule update --init --recursive
 git lfs install
 git lfs checkout
 ```
 
 ## Models
 
-Model binaries are not ordinary Git source files. Repository contributors retrieve authorized model
-artifacts through DVC:
+Model binaries are not ordinary Git source files. Repository contributors restore the model and test
+assets tracked by this repository through Git LFS:
 
 ```bash
-dvc pull
+git lfs checkout
 ```
 
-Do not commit `.dvc/config`, model credentials, private artifact URLs, or downloaded model binaries.
-Platform SDK consumers should use the model packages documented for that platform.
+Do not commit model credentials, private artifact URLs, or downloaded model binaries. Platform SDK
+consumers should use the model packages documented for that platform.
 
 ## Build and test
 
@@ -133,10 +132,10 @@ classes from `spench/src/`.
 Command-line examples are available through the installed tools:
 
 ```bash
-spench-tool --help
-spench-tool denoise --help
-spench-tool norm --help
-spench-tool echo --help
+spench --help
+spench denoise --help
+spench norm --help
+spench echo --help
 ```
 
 ## Web SDK

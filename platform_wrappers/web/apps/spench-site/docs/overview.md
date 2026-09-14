@@ -19,5 +19,5 @@ and acoustic echo cancellation. Choose a platform guide or start with the intera
 
 ## Before you begin
 
-Models are distributed separately from the source tree. Repository contributors retrieve the test
-models through DVC; SDK consumers should use the model package documented for their platform.
+Repository model and test assets are tracked through Git LFS. SDK consumers should use the model
+package documented for their platform.
