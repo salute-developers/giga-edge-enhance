@@ -205,8 +205,9 @@ See [`CHANGELOG.md`](CHANGELOG.md) for release history.
 
 ## Security
 
-Report suspected vulnerabilities privately as described in [`SECURITY.md`](SECURITY.md). Do not
-disclose security issues in a public GitHub issue.
+Report suspected vulnerabilities privately as described in the
+[security policy](https://github.com/akhdrv/spench/blob/master/SECURITY.md). Do not disclose security
+issues in a public GitHub issue.
 
 ## License
 
