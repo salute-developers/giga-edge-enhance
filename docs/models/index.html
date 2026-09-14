@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.2">
 <title data-rh="true">Models | Spench</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://gigaedge.github.io/spench/docs/models/"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Models | Spench"><meta data-rh="true" name="description" content="Spench model files are runtime assets, not source dependencies. Keep model selection explicit and"><meta data-rh="true" property="og:description" content="Spench model files are runtime assets, not source dependencies. Keep model selection explicit and"><link data-rh="true" rel="icon" href="/spench/img/favicon.svg"><link data-rh="true" rel="canonical" href="https://gigaedge.github.io/spench/docs/models/"><link data-rh="true" rel="alternate" href="https://gigaedge.github.io/spench/docs/models/" hreflang="en"><link data-rh="true" rel="alternate" href="https://gigaedge.github.io/spench/docs/models/" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Models","item":"https://gigaedge.github.io/spench/docs/models"}]}</script><script src="/spench/coi-serviceworker.min.js"></script><link rel="stylesheet" href="/spench/assets/css/styles.7e8fe835.css">
-<script src="/spench/assets/js/runtime~main.c119f31d.js" defer="defer"></script>
-<script src="/spench/assets/js/main.4b50f208.js" defer="defer"></script>
+<script src="/spench/assets/js/runtime~main.aad5ba7c.js" defer="defer"></script>
+<script src="/spench/assets/js/main.e5f603d8.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -15,10 +15,10 @@
 <p>Spench model files are runtime assets, not source dependencies. Keep model selection explicit and
 match the model&#x27;s expected sample rate to the audio pipeline.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="repository-contributors">Repository contributors<a href="#repository-contributors" class="hash-link" aria-label="Direct link to Repository contributors" title="Direct link to Repository contributors" translate="no">​</a></h2>
-<p>Authorized contributors restore development and test models through DVC:</p>
-<div class="language-bash codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#F8F8F2;--prism-background-color:#282A36"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-bash codeBlock_TAPP thin-scrollbar" style="color:#F8F8F2;background-color:#282A36"><code class="codeBlockLines_AdAo"><div class="token-line" style="color:#F8F8F2"><span class="token plain">dvc pull</span><br></div></code></pre></div></div>
-<p>Never commit <code>.dvc/config</code>, credentials, private storage URLs, or downloaded <code>.onnx</code>, <code>.tflite</code>, and
-packed model binaries outside the repository&#x27;s established LFS/DVC rules.</p>
+<p>Contributors restore the model and test assets tracked by this repository through Git LFS:</p>
+<div class="language-bash codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#F8F8F2;--prism-background-color:#282A36"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-bash codeBlock_TAPP thin-scrollbar" style="color:#F8F8F2;background-color:#282A36"><code class="codeBlockLines_AdAo"><div class="token-line" style="color:#F8F8F2"><span class="token plain">git lfs checkout</span><br></div></code></pre></div></div>
+<p>Never commit credentials, private storage URLs, or downloaded <code>.onnx</code>, <code>.tflite</code>, and packed model
+binaries outside the repository&#x27;s established LFS rules.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="platform-packaging">Platform packaging<a href="#platform-packaging" class="hash-link" aria-label="Direct link to Platform packaging" title="Direct link to Platform packaging" translate="no">​</a></h2>
 <ul>
 <li class="">Native applications provide a model path or packed model through the public pipeline configuration.</li>
