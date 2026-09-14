@@ -227,10 +227,13 @@ uploaded and downloaded between runners.
 
 - On failure, upload CTest logs, CMake configure logs, compiler-cache statistics,
   Playwright reports/traces, Gradle reports, and Xcode result bundles when they
-  exist. Keep failure artifacts for a limited debugging retention period.
+  exist. Keep CMake/CTest failure artifacts for three days.
 - On success, upload only deliberate products from `out/artifacts/`, together
   with a manifest and SHA-256 checksums. Never upload the entire workspace,
   dependency caches, credentials, or private artifact configuration.
+- Retain tested artifacts that can feed a release for seven days so the
+  asynchronous release workflow is not constrained to a one-day promotion
+  window.
 - Put a compact matrix and cache summary in `GITHUB_STEP_SUMMARY`; job logs
   remain the detailed source of truth.
 
