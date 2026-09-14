@@ -12,11 +12,11 @@ TOOLCHAIN_DOCKERFILES = {
     "android": ROOT / "dockerfiles/Dockerfile.android",
     "android-ui": ROOT / "dockerfiles/Dockerfile.android-ui",
 }
-WEB_PACKAGE_LOCK = ROOT / "platform_wrappers/web/package-lock.json"
+WEB_PACKAGE_LOCK = ROOT / "web/package-lock.json"
 WEB_IMAGE_INPUTS = (
-    ROOT / "platform_wrappers/web/.nvmrc",
-    ROOT / "platform_wrappers/web/apps/spench-site/mos_install.sh",
-    ROOT / "platform_wrappers/web/apps/spench-site/requirements-mos.txt",
+    ROOT / "web/.nvmrc",
+    ROOT / "web/apps/spench-site/mos_install.sh",
+    ROOT / "web/apps/spench-site/requirements-mos.txt",
 )
 PRESET_STAGES = {
     "native-debug-onnx": "native",

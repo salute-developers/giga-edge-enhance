@@ -50,7 +50,7 @@ else()
 
   if(EMSCRIPTEN)
     message(STATUS "Building spench for WebAssembly")
-    add_subdirectory(platform_wrappers/web/packages/web-sdk/wasm)
+    add_subdirectory(web/packages/web-sdk/wasm)
   endif()
 endif()
 

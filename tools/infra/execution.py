@@ -81,13 +81,13 @@ def run(command: list[str], *, container_stage: str | None = None,
         container_command.extend(("--device", device))
     if isolate_web_node_modules:
         dependency_hash = hashlib.sha256(
-            (ROOT / "platform_wrappers/web/package-lock.json").read_bytes()
-            + (ROOT / "platform_wrappers/web/.nvmrc").read_bytes()
+            (ROOT / "web/package-lock.json").read_bytes()
+            + (ROOT / "web/.nvmrc").read_bytes()
         ).hexdigest()[:12]
         cache_root = ROOT / "out/cache/container-node-modules/linux-amd64" / dependency_hash
         for cache_name, container_path in (
-            ("web", "/workspace/platform_wrappers/web/node_modules"),
-            ("spench-site", "/workspace/platform_wrappers/web/apps/spench-site/node_modules"),
+            ("web", "/workspace/web/node_modules"),
+            ("spench-site", "/workspace/web/apps/spench-site/node_modules"),
         ):
             cache_path = cache_root / cache_name
             cache_path.mkdir(parents=True, exist_ok=True)
