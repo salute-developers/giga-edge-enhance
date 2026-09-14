@@ -203,6 +203,11 @@ artifact with the same hash but must not overwrite a published version with diff
 
 See [`CHANGELOG.md`](CHANGELOG.md) for release history.
 
+## Security
+
+Report suspected vulnerabilities privately as described in [`SECURITY.md`](SECURITY.md). Do not
+disclose security issues in a public GitHub issue.
+
 ## License
 
 Spench is licensed under the [MIT License](LICENSE).
