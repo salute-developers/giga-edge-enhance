@@ -1,6 +1,8 @@
 #import "PipelineElements.h"
 
+#include <array>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <memory>
 #include <stdexcept>
@@ -16,9 +18,9 @@ NSErrorDomain const SpenchErrorDomain = @"com.gigaedge.SpenchAudioKit.SpenchErro
 
 namespace spench_ios {
 
-// Reused chunk size for `reserve`; matches a typical render-buffer size at
-// 48 kHz/16 ms and lets the first calls avoid allocations.
-constexpr size_t kInitialScratchCapacity = 1024;
+// Matches SpenchAUAudioUnit.maximumFramesToRender so render calls do not grow
+// the wrapper's scratch vectors.
+constexpr size_t kMaximumRenderFrames = 4096;
 
 class PipelineElementCore {
    protected:
@@ -28,8 +30,8 @@ class PipelineElementCore {
 
    public:
     explicit PipelineElementCore(uint32_t sampleRate) noexcept : sampleRate_(sampleRate) {
-        input_.reserve(kInitialScratchCapacity);
-        output_.reserve(kInitialScratchCapacity);
+        input_.reserve(kMaximumRenderFrames);
+        output_.reserve(kMaximumRenderFrames);
     }
     virtual ~PipelineElementCore() = default;
 
@@ -49,34 +51,58 @@ class PipelineElementCore {
 
 class AudioProcessPipelineElementCore final : public PipelineElementCore {
    private:
-    spench::SpenchAudioProcess processor_;
+    std::string yamlConfig_;
+    std::unique_ptr<spench::SpenchAudioProcess> processor_;
 
    public:
     AudioProcessPipelineElementCore(const std::string& yamlConfig, uint32_t sampleRate)
-        : PipelineElementCore(sampleRate), processor_(yamlConfig) {
-        processor_.AddLC().AddNG().AddLim();
+        : PipelineElementCore(sampleRate),
+          yamlConfig_(yamlConfig),
+          processor_(std::make_unique<spench::SpenchAudioProcess>(yamlConfig)) {
+        processor_->AddLC().AddNG().AddLim();
     }
 
     uint32_t process(const float* __restrict src, float* __restrict dst, uint32_t frameCount) noexcept final {
-        input_.assign(src, src + frameCount);
-        output_.resize(frameCount);
-        processor_.ProcessChunk(input_, output_);
-
-        if (!output_.empty()) {
-            std::memcpy(dst, output_.data(), output_.size() * sizeof(float));
+        try {
+            input_.assign(src, src + frameCount);
+            output_.clear();
+            if (processor_->ProcessChunk(input_, output_) < SUCCESS || output_.size() > frameCount) {
+                output_.clear();
+                return 0;
+            }
+            if (!output_.empty()) {
+                std::memcpy(dst, output_.data(), output_.size() * sizeof(float));
+            }
+            return static_cast<uint32_t>(output_.size());
+        } catch (...) {
+            output_.clear();
+            return 0;
         }
-
-        return static_cast<uint32_t>(output_.size());
     }
 
-    void resetContext() noexcept final {}
+    void resetContext() noexcept final {
+        try {
+            auto processor = std::make_unique<spench::SpenchAudioProcess>(yamlConfig_);
+            processor->AddLC().AddNG().AddLim();
+            processor_ = std::move(processor);
+            input_.clear();
+            output_.clear();
+        } catch (...) {}
+    }
 };
 
 class DenoisePipelineElementCore final : public PipelineElementCore {
    private:
     spench::SpenchDenoise denoiser_;
     spench::SpenchContext<float>* context_ = nullptr;
-    std::string lastProcessingError_;
+    std::array<char, 256> lastProcessingError_{};
+
+    void setProcessingError(const char* message) noexcept {
+        std::snprintf(lastProcessingError_.data(),
+                      lastProcessingError_.size(),
+                      "%s",
+                      message != nullptr ? message : "Unknown denoising error.");
+    }
 
    public:
     DenoisePipelineElementCore(const std::string& modelPath, uint32_t sampleRate)
@@ -85,45 +111,71 @@ class DenoisePipelineElementCore final : public PipelineElementCore {
     }
 
     ~DenoisePipelineElementCore() override {
-        if (context_ != nullptr) {
-            denoiser_.DestroyContext(&context_);
-        }
+        try {
+            if (context_ != nullptr) {
+                denoiser_.DestroyContext(&context_);
+            }
+        } catch (...) {}
     }
 
     uint32_t process(const float* __restrict src, float* __restrict dst, uint32_t frameCount) noexcept final {
-        input_.assign(src, src + frameCount);
-        lastProcessingError_.clear();
+        lastProcessingError_[0] = '\0';
+        try {
+            input_.assign(src, src + frameCount);
+            output_.clear();
 
-        const SpenchRetCode retCode = denoiser_.ProcessChunk(input_, output_, context_);
-        if (retCode < SUCCESS) {
-            lastProcessingError_ = "Denoising failed with native error code " +
-                                   std::to_string(static_cast<int32_t>(retCode)) + ".";
+            const SpenchRetCode retCode = denoiser_.ProcessChunk(input_, output_, context_);
+            if (retCode < SUCCESS) {
+                std::snprintf(lastProcessingError_.data(),
+                              lastProcessingError_.size(),
+                              "Denoising failed with native error code %d.",
+                              static_cast<int32_t>(retCode));
+                return 0;
+            }
+
+            if (output_.size() > frameCount) {
+                setProcessingError(
+                    "Denoising produced more samples than the equal-rate output buffer can hold.");
+                output_.clear();
+                return 0;
+            }
+
+            if (!output_.empty()) {
+                std::memcpy(dst, output_.data(), output_.size() * sizeof(float));
+            }
+
+            return static_cast<uint32_t>(output_.size());
+        } catch (const std::exception& exception) {
+            setProcessingError(exception.what());
+            output_.clear();
+            return 0;
+        } catch (...) {
+            setProcessingError("Unknown denoising error.");
+            output_.clear();
             return 0;
         }
-
-        if (output_.size() > frameCount) {
-            lastProcessingError_ =
-                "Denoising produced more samples than the equal-rate output buffer can hold.";
-            return 0;
-        }
-
-        if (!output_.empty()) {
-            std::memcpy(dst, output_.data(), output_.size() * sizeof(float));
-        }
-
-        return static_cast<uint32_t>(output_.size());
     }
 
     void resetContext() noexcept final {
-        if (context_ != nullptr) {
-            denoiser_.DestroyContext(&context_);
+        lastProcessingError_[0] = '\0';
+        try {
+            if (context_ != nullptr) {
+                denoiser_.DestroyContext(&context_);
+            }
+            context_ = denoiser_.CreateContext(sampleRate_, sampleRate_);
+            input_.clear();
+            output_.clear();
+        } catch (const std::exception& exception) {
+            context_ = nullptr;
+            setProcessingError(exception.what());
+        } catch (...) {
+            context_ = nullptr;
+            setProcessingError("Unknown denoising reset error.");
         }
-        context_ = denoiser_.CreateContext(sampleRate_, sampleRate_);
-        lastProcessingError_.clear();
     }
 
-    const std::string& lastProcessingError() const noexcept {
-        return lastProcessingError_;
+    const char* lastProcessingError() const noexcept {
+        return lastProcessingError_.data();
     }
 };
 
@@ -213,10 +265,10 @@ NSError* SpenchErrorFromException(const std::exception& exception) {
 
 - (nullable NSString*)lastProcessingError {
     const auto* core = dynamic_cast<const spench_ios::DenoisePipelineElementCore*>(_core.get());
-    if (core == nullptr || core->lastProcessingError().empty()) {
+    if (core == nullptr || core->lastProcessingError()[0] == '\0') {
         return nil;
     }
-    return [NSString stringWithUTF8String:core->lastProcessingError().c_str()];
+    return [NSString stringWithUTF8String:core->lastProcessingError()];
 }
 
 - (nullable instancetype)initWithModelPath:(NSString*)modelPath
