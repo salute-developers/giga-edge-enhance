@@ -271,14 +271,19 @@ def web_workflow(action: str, host: bool) -> None:
         browser_cache = (str(browser_cache_host) if host else
                          f"/workspace/{browser_cache_host.relative_to(ROOT)}")
         playwright_environment = {"PLAYWRIGHT_BROWSERS_PATH": browser_cache}
-        run_web_node(["npx", "playwright", "install", "chromium", "firefox", "webkit"],
+        supported_browsers = {"chromium", "firefox", "webkit"}
+        configured_browsers = os.environ.get("SPENCH_PLAYWRIGHT_BROWSERS")
+        browsers = configured_browsers.split(",") if configured_browsers else ["chromium", "firefox", "webkit"]
+        if not browsers or any(browser not in supported_browsers for browser in browsers):
+            raise SystemExit(
+                "SPENCH_PLAYWRIGHT_BROWSERS must be a comma-separated list of chromium, firefox, and webkit.")
+        run_web_node(["npx", "playwright", "install", *browsers],
                      container_stage=stage, environment=playwright_environment,
                      workdir=web_dir, isolate_node_modules=False)
         run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-site"],
                      container_stage=stage,
                      environment={**playwright_environment, "SPENCH_SITE_BASE": "/"},
                      workdir=web_dir, isolate_node_modules=False)
-        browsers = ["chromium", "firefox", "webkit"]
         playwright_command = [
             "npm", "run", "pw:test", "--workspace=@gigaedge/spench-site", "--",
             *(f"--project={browser}" for browser in browsers),

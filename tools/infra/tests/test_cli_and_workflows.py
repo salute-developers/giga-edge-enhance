@@ -156,6 +156,21 @@ class WorkflowsTest(unittest.TestCase):
         self.assertEqual(test_command[-3:], ["--project=chromium", "--project=firefox", "--project=webkit"])
         self.assertEqual(run_web_node.call_args_list[2].kwargs["container_stage"], "web")
 
+    def test_container_playwright_honors_ci_browser_selection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            installed_sdk = (root / "platform_wrappers/web/apps/spench-site/node_modules" /
+                             "@gigaedge/spench-web-sdk/package.json")
+            installed_sdk.parent.mkdir(parents=True)
+            installed_sdk.touch()
+            with mock.patch.object(workflows, "ROOT", root), \
+                 mock.patch.dict(workflows.os.environ, {"SPENCH_PLAYWRIGHT_BROWSERS": "chromium"}), \
+                 mock.patch.object(workflows, "run_web_node") as run_web_node:
+                workflows.web_workflow("playwright", False)
+
+        self.assertEqual(run_web_node.call_args_list[0].args[0][-1:], ["chromium"])
+        self.assertEqual(run_web_node.call_args_list[2].args[0][-1:], ["--project=chromium"])
+
 
 if __name__ == "__main__":
     unittest.main()
