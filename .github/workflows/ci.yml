@@ -527,6 +527,7 @@ jobs:
         env:
           SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
           SPENCH_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
+          SPENCH_PLAYWRIGHT_BROWSERS: chromium
         run: tools/spench test web-playwright
       - name: Upload Playwright diagnostics
         if: failure()
