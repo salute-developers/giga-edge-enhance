@@ -53,7 +53,8 @@ class DenoiserAudioHandler : public NeuralNetworkAudioHandler {
                                  uint32_t output_sample_rate);
   SpenchRetCode destroy_audio_streams(SpenchContext<float>* ctx);
   SpenchRetCode infer_frame(std::unique_ptr<spench::SpenchTask>& task_ptr) override;
-  void          fill_in_data_for_processing(std::unique_ptr<spench::SpenchTask>& task_ptr,
-                                        std::vector<float>& input) override;
+  SpenchRetCode process_frame_internal(SpenchContext<float>* ctx, const std::vector<float>& input_audio_frame,
+                                       std::vector<float>& enhanced_audio_frame, bool allow_zero_shortcut);
+  void fill_in_data_for_processing(std::unique_ptr<spench::SpenchTask>& task_ptr, std::vector<float>& input) override;
 };
 }  // namespace spench

@@ -152,18 +152,23 @@ void DenoiserAudioHandler::fill_in_data_for_processing(std::unique_ptr<spench::S
 SpenchRetCode DenoiserAudioHandler::process_frame(struct spench::SpenchContext<float>* ctx,
                                     const std::vector<float>& input_audio_frame,
                                     std::vector<float>& enhanced_audio_frame) {
+  return process_frame_internal(ctx, input_audio_frame, enhanced_audio_frame, true);
+}
+
+SpenchRetCode DenoiserAudioHandler::process_frame_internal(SpenchContext<float>* ctx,
+                                                           const std::vector<float>& input_audio_frame,
+                                                           std::vector<float>& enhanced_audio_frame,
+                                                           bool allow_zero_shortcut) {
+  enhanced_audio_frame.clear();
   SpenchRetCode ret_code = SpenchRetCode::SUCCESS;
   std::unique_ptr<spench::SpenchTask> task_ptr(new spench::SpenchTask());
   task_ptr->data.context = ctx;
   static constexpr double delay_warn_ms = 300.0;
   static constexpr double warn_interval_ms = 30000.0;  // 30 seconds
   if (input_audio_frame.empty()) {
-    enhanced_audio_frame.clear();
-    return ret_code;
-  } else if (skip_zero_chunk_ && is_zeroed_vector(input_audio_frame)) {
-    enhanced_audio_frame = input_audio_frame;
     return ret_code;
   }
+  const bool skip_inference = allow_zero_shortcut && skip_zero_chunk_ && is_zeroed_vector(input_audio_frame);
 
   std::vector<float> resampled_input_result;
   try {
@@ -225,7 +230,11 @@ SpenchRetCode DenoiserAudioHandler::process_frame(struct spench::SpenchContext<f
 
   task_ptr->stage = PipelineStage::orig_chunk;
   if (ret_code == SpenchRetCode::SUCCESS) {
+    if (skip_inference) {
+      task_ptr->data.enhanced_wav = resampled_input_result;
+    } else {
       ret_code = infer_frame(task_ptr);
+    }
   }
 
   if (ret_code >= SpenchRetCode::SUCCESS) {
@@ -266,7 +275,7 @@ SpenchRetCode DenoiserAudioHandler::finalize_inference(struct spench::SpenchCont
   // flush model context
   for (uint32_t i = 0; i < number_of_zero_contexts; ++i) {
     std::vector<float> output_audio;
-    ret_code = process_frame(ctx, zero_input_audio_frame, output_audio);
+    ret_code = process_frame_internal(ctx, zero_input_audio_frame, output_audio, false);
     if (ret_code != SpenchRetCode::SUCCESS && ret_code != SpenchRetCode::CONTEXT_ACCUMULATION) {
       break;
     }
