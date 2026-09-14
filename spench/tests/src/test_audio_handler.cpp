@@ -106,10 +106,11 @@ TEST_CASE("FAIL Run denoiser handler with error for small input length [denoiser
   spench::SpenchContext<float>* ctx = scheduler_test_env.handler->create_context();
 
   const std::vector<float> input(128, 0.5);
-  std::vector<float> output;
+  std::vector<float> output{42.0F};
 
   SpenchRetCode ret_code = scheduler_test_env.handler->process_frame(ctx, input, output);
   CHECK(ret_code == SpenchRetCode::ERR_INVALID_FRAME_SIZE);
+  CHECK(output.empty());
   scheduler_test_env.handler->destroy_context(&ctx);
 }
 
@@ -127,10 +128,11 @@ TEST_CASE("FAIL Run denoiser handler with error for incorrect input length [deno
   spench::SpenchContext<float>* ctx = scheduler_test_env.handler->create_context();
 
   const std::vector<float> input(800, 0.5);
-  std::vector<float> output;
+  std::vector<float> output{42.0F};
 
   SpenchRetCode ret_code = scheduler_test_env.handler->process_frame(ctx, input, output);
   CHECK(ret_code == SpenchRetCode::ERR_INVALID_FRAME_SIZE);
+  CHECK(output.empty());
   scheduler_test_env.handler->destroy_context(&ctx);
 }
 
