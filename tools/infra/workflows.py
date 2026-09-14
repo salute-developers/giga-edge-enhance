@@ -83,7 +83,7 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
                 test_command = ["ctest", "--test-dir", build_dir, "--output-on-failure"]
             run(test_command, container_stage=stage, environment=environment)
         else:
-            run(["bash", "platform_wrappers/web/packages/web-sdk/wasm/scripts/test.sh", preset],
+            run(["bash", "web/packages/web-sdk/wasm/scripts/test.sh", preset],
                 container_stage=stage, environment=environment)
     elif action == "package":
         if preset not in {"native-release-onnx", "native-release-tflite"}:
@@ -191,7 +191,7 @@ def android_workflow(action: str, host: bool) -> None:
             "-Dorg.gradle.vfs.watch=false -Dorg.gradle.workers.max=2 "
             "-Dorg.gradle.jvmargs=-Xmx3g"
         )
-    run([f"platform_wrappers/android/scripts/{script}"], container_stage=stage,
+    run([f"android/scripts/{script}"], container_stage=stage,
         environment=environment)
 
 
@@ -202,7 +202,7 @@ def android_ui_workflow() -> None:
         "-Dorg.gradle.vfs.watch=false -Dorg.gradle.workers.max=2 "
         "-Dorg.gradle.jvmargs=-Xmx3g"
     )
-    run(["platform_wrappers/android/scripts/test-release-ui.sh"],
+    run(["android/scripts/test-release-ui.sh"],
         container_stage="android-ui", environment=environment,
         devices=("/dev/kvm",))
 
@@ -221,11 +221,11 @@ def ios_workflow(action: str) -> None:
             "SPENCH_PREBUILT_ORT_DEVICE_ROOT": str(device_root),
             "SPENCH_PREBUILT_ORT_SIMULATOR_ROOT": str(simulator_root),
         })
-    run([f"platform_wrappers/ios/scripts/{scripts[action]}"], environment=environment)
+    run([f"ios/scripts/{scripts[action]}"], environment=environment)
 
 
 def web_workflow(action: str, host: bool) -> None:
-    web_dir = ROOT / "platform_wrappers/web"
+    web_dir = ROOT / "web"
     environment = compiler_cache_environment(not host)
     if site_base := os.environ.get("SPENCH_SITE_BASE"):
         environment["SPENCH_SITE_BASE"] = site_base

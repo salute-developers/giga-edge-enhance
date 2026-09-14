@@ -11,15 +11,15 @@
       "extra-files": [
         {
           "type": "json",
-          "path": "platform_wrappers/web/packages/web-sdk/package.json",
+          "path": "web/packages/web-sdk/package.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
-          "path": "platform_wrappers/web/package-lock.json",
+          "path": "web/package-lock.json",
           "jsonpath": "$.packages['packages/web-sdk'].version"
         },
-        "platform_wrappers/ios/project.yml"
+        "ios/project.yml"
       ]
     }
   }

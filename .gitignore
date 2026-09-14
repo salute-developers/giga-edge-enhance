@@ -97,7 +97,6 @@ fabric.properties
 _CPack_Packages/
 .distrib/
 build_shared_tflite_pocketfft/
-platform_wrappers/jazz_ios/include/
 ios_device/
 ios_simulator/
 SpenchCore.xcframework/

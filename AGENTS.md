@@ -13,8 +13,8 @@ added later, follow the more specific instructions for files in that subtree.
   their generated source cache. Do not edit cached dependency sources.
 - `cmake/` and `CMakePresets.json`: build profiles, dependencies, packaging,
   platform selection, and compiler settings.
-- `platform_wrappers/android/`, `platform_wrappers/ios/`, and
-  `platform_wrappers/web/`: platform SDKs, demos, and platform-specific tests.
+- `android/`, `ios/`, and `web/`: platform SDKs, demos, and platform-specific
+  tests.
 - `tools/spench`: canonical entry point for supported builds, tests, and
   packages. Prefer it to ad hoc CMake, Docker, Gradle, or npm command chains.
 - `README.md`: setup, supported configurations, model retrieval, and user-facing
@@ -100,7 +100,7 @@ crosses engines, platforms, ABI boundaries, or memory ownership.
   test `native-asan-onnx`.
 - WASM C++ or glue change: build and test the matching `wasm-release` target.
   Also build and test `wasm-dsp-release` when DSP-only behavior can be affected.
-- Web SDK TypeScript-only change: from `platform_wrappers/web`, run
+- Web SDK TypeScript-only change: from `web`, run
   `npm test --workspace=@gigaedge/spench-web-sdk` and the relevant build or
   lint script. Run `tools/spench build web` when generated WASM, staging,
   bundling, or the native/web boundary changes.
@@ -136,7 +136,7 @@ blocker. Do not silently substitute a weaker check.
 
 ## Web rules
 
-- Treat `platform_wrappers/web` as an npm workspace. Run workspace commands
+- Treat `web` as an npm workspace. Run workspace commands
   from that directory unless an existing script says otherwise.
 - Use `npm ci` for reproducible dependency installation; do not hand-edit
   `package-lock.json`.
