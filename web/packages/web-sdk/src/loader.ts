@@ -1,4 +1,4 @@
-import SpenchError from './utils/error';
+import GigaDenoiserError from './utils/error';
 import {
     downloadFileAsBuffer,
     retry,
@@ -13,11 +13,11 @@ import {
 } from './utils/common';
 import { Logger } from './utils/logger';
 import { Telemetry } from './utils/telemetry';
-import SpenchWorker from './worker';
+import GigaDenoiserWorker from './worker';
 import { WASM_DSP_URL, WASM_URL } from './utils/resources';
 import { WORKLET_DSP_URL, WORKLET_URL } from './utils/jsResources';
 
-export class LoadError extends SpenchError {
+export class LoadError extends GigaDenoiserError {
     override get name() {
         return 'LoadError';
     }
@@ -42,7 +42,7 @@ class Loader<M extends ModelsTmpl> {
 
     protected static modelsLoadPromiseMap: Map<string, Promise<void>> = new Map();
 
-    preloadedWorker: SpenchWorker | LoadError | undefined;
+    preloadedWorker: GigaDenoiserWorker | LoadError | undefined;
 
     protected preloadedWorkerSettings: Settings | undefined;
 
@@ -120,7 +120,7 @@ class Loader<M extends ModelsTmpl> {
     }
 
     preload(features: Partial<Features<M>>, settings: Settings = this.settings): void {
-        this.loadSpenchWorklet(settings);
+        this.loadGigaDenoiserWorklet(settings);
 
         if (Object.values(getDspFeatures(features)).some(Boolean)) {
             if (settings.dspOnAudioThread) {
@@ -168,7 +168,7 @@ class Loader<M extends ModelsTmpl> {
         return res as LoadError;
     }
 
-    async loadWorker(settings: Settings = this.settings, preload = false): Promise<SpenchWorker | LoadError> {
+    async loadWorker(settings: Settings = this.settings, preload = false): Promise<GigaDenoiserWorker | LoadError> {
         if (
             this.preloadedWorker instanceof Worker &&
             JSON.stringify(this.preloadedWorkerSettings) === JSON.stringify(settings)
@@ -184,7 +184,7 @@ class Loader<M extends ModelsTmpl> {
 
         const load = () => {
             try {
-                return new SpenchWorker(this.logger, this.telemetry, settings, this.models);
+                return new GigaDenoiserWorker(this.logger, this.telemetry, settings, this.models);
             } catch (e) {
                 return new LoadError(e);
             }
@@ -195,22 +195,22 @@ class Loader<M extends ModelsTmpl> {
             this.preloadedWorkerSettings = settings;
             return this.preloadedWorker;
         }, preload ? 0 : settings.fetchRetries) as Promise<
-            SpenchWorker | LoadError
+            GigaDenoiserWorker | LoadError
         >;
     }
 
-    loadSpenchWorklet(settings: Settings): Promise<void | LoadError> {
+    loadGigaDenoiserWorklet(settings: Settings): Promise<void | LoadError> {
         if (settings.dspOnAudioThread) {
-            return this.#loadSpenchDspWorklet();
+            return this.#loadGigaDenoiserDspWorklet();
         }
 
-        return this.#loadSpenchWorklet();
+        return this.#loadGigaDenoiserWorklet();
     }
 
-    #loadSpenchWorklet(preload = false): Promise<void | LoadError> {
+    #loadGigaDenoiserWorklet(preload = false): Promise<void | LoadError> {
         const load = async (): Promise<void | LoadError> => {
             try {
-                this.logger.debug('loading Spench worklet');
+                this.logger.debug('loading GigaDenoiser worklet');
                 await this.ctx.audioWorklet.addModule(WORKLET_URL);
             } catch (e) {
                 this.workletLoadPromise = undefined;
@@ -219,7 +219,7 @@ class Loader<M extends ModelsTmpl> {
                 return new LoadError(e);
             }
 
-            this.logger.debug('loading Spench worklet finished');
+            this.logger.debug('loading GigaDenoiser worklet finished');
         };
 
         return retry(
@@ -228,10 +228,10 @@ class Loader<M extends ModelsTmpl> {
         ) as Promise<void | LoadError>;
     }
 
-    #loadSpenchDspWorklet(): Promise<void | LoadError> {
+    #loadGigaDenoiserDspWorklet(): Promise<void | LoadError> {
         const load = async (): Promise<void | LoadError> => {
             try {
-                this.logger.debug('loading Spench DSP worklet');
+                this.logger.debug('loading GigaDenoiser DSP worklet');
                 await this.ctx.audioWorklet.addModule(WORKLET_DSP_URL);
             } catch (e) {
                 this.dspWorkletLoadPromise = undefined;
@@ -239,7 +239,7 @@ class Loader<M extends ModelsTmpl> {
                 return new LoadError(e);
             }
 
-            this.logger.debug('loading Spench DSP worklet finished');
+            this.logger.debug('loading GigaDenoiser DSP worklet finished');
         };
 
         return retry(

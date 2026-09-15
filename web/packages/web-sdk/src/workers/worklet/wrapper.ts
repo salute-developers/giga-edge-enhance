@@ -1,4 +1,4 @@
-import SpenchDsp, { MainModule as SpenchDSPCore } from '../../../generated/wasm/spench.dsp';
+import GigaDenoiserDsp, { MainModule as GigaDenoiserDSPCore } from '../../../generated/wasm/giga-denoiser.dsp';
 import {
     FEATURE_SWITCH_CACHE_MILLISECONDS,
     getDefaultAECConfig,
@@ -7,11 +7,11 @@ import {
 } from '../../utils/constants';
 import { Logger } from '../../utils/logger';
 import getHashCode from '../../utils/hash';
-import { AbstractSpenchWrapper } from '../../utils/wrapper';
+import { AbstractGigaDenoiserWrapper } from '../../utils/wrapper';
 import { Settings } from '../../utils/common';
 
-export class SpenchDspWorkletWrapper extends AbstractSpenchWrapper {
-    protected bridge: SpenchDSPCore;
+export class GigaDenoiserDspWorkletWrapper extends AbstractGigaDenoiserWrapper {
+    protected bridge: GigaDenoiserDSPCore;
 
     protected timeouts: Map<string, number> = new Map();
 
@@ -23,7 +23,7 @@ export class SpenchDspWorkletWrapper extends AbstractSpenchWrapper {
     ) {
         super();
 
-        this.bridge = SpenchDsp({ wasmBinary: wasm, print: logger.debug, printErr: logger.error });
+        this.bridge = GigaDenoiserDsp({ wasmBinary: wasm, print: logger.debug, printErr: logger.error });
         this.dataPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
         this.lbPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
     }
@@ -38,7 +38,7 @@ export class SpenchDspWorkletWrapper extends AbstractSpenchWrapper {
         const cached = this.tryGetFromCache(key);
 
         this.logger.debug(
-            'add normalizer to SpenchDSP Pipeline.',
+            'add normalizer to GigaDenoiserDSP Pipeline.',
             config ? `using custom config:\n${config}` : 'using default config',
         );
         this.pipeline.push([
@@ -56,7 +56,7 @@ export class SpenchDspWorkletWrapper extends AbstractSpenchWrapper {
         const cached = this.tryGetFromCache(key);
 
         this.logger.debug(
-            'add aec to SpenchDSP Pipeline',
+            'add aec to GigaDenoiserDSP Pipeline',
             config ? `using custom config:\n${config}` : 'using default config',
         );
         this.pipeline.push([
@@ -81,7 +81,7 @@ export class SpenchDspWorkletWrapper extends AbstractSpenchWrapper {
     tick() {
         for (const [key, time] of this.timeouts) {
             if ((currentTime - time) * 1000 > FEATURE_SWITCH_CACHE_MILLISECONDS) {
-                this.logger.debug(`Cleared ${key} from SpenchDSP cache`);
+                this.logger.debug(`Cleared ${key} from GigaDenoiserDSP cache`);
 
                 try {
                     this.cache.get(key)?.[1].delete();

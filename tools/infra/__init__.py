@@ -1,1 +1,1 @@
-"""Implementation modules for the tools/spench developer command."""
+"""Implementation modules for the tools developer command."""

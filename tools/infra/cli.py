@@ -1,4 +1,4 @@
-"""Command-line interface for supported Spench development workflows."""
+"""Command-line interfaces for supported development and CI workflows."""
 
 import argparse
 from pathlib import Path
@@ -23,111 +23,139 @@ from .workflows import (
 )
 
 
-ACTIONS = (
-    "build", "test", "package", "install", "core", "shell", "cache-key",
-    "prepare-deps", "image-key", "recipe-key", "dependency-key",
-    "dependency-archive", "restore-deps",
+CMAKE_PRESETS = (*PRESET_STAGES, *HOST_ONLY_PRESETS)
+NATIVE_PRESETS = tuple(preset for preset in PRESET_STAGES if preset.startswith("native-"))
+WASM_PRESETS = tuple(preset for preset in PRESET_STAGES if preset.startswith("wasm-"))
+DESKTOP_PRESETS = tuple(
+    preset for preset in HOST_ONLY_PRESETS if preset.startswith(("macos-", "windows-")))
+IOS_PRESETS = tuple(preset for preset in HOST_ONLY_PRESETS if preset.startswith("ios-"))
+
+BUILD_TARGETS = (*CMAKE_PRESETS, "android", "ios", "web")
+TEST_TARGETS = (
+    *(preset for preset in NATIVE_PRESETS if preset != "native-model-packer"),
+    *WASM_PRESETS,
+    *DESKTOP_PRESETS,
+    "android", "android-ui", "ios", "web", "web-playwright",
 )
-TARGETS = (
-    *PRESET_STAGES,
-    *HOST_ONLY_PRESETS,
+PACKAGE_TARGETS = ("native-release-onnx", "native-release-tflite", "web")
+INSTALL_TARGETS = (
+    *(preset for preset in NATIVE_PRESETS if preset != "native-model-packer"),
+    *DESKTOP_PRESETS,
+)
+
+DEPENDENCY_TARGETS = (
+    *(preset for preset in NATIVE_PRESETS if preset != "native-model-packer"),
+    *(preset for preset in WASM_PRESETS if not preset.startswith("wasm-dsp-")),
+    *DESKTOP_PRESETS,
+    *IOS_PRESETS,
     *ANDROID_DEPENDENCY_TARGETS,
-    "android",
-    "android-ui",
-    "ios",
-    "web",
-    "web-playwright",
-    "macos",
-    "windows",
-    "native",
 )
+DEPENDENCY_GROUPS = ("android", "web", "ios", "macos", "windows")
+CACHE_TARGETS = (*CMAKE_PRESETS, *ANDROID_DEPENDENCY_TARGETS, "android", "ios")
 
 
-def create_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Run supported local and containerized Spench development workflows.")
-    parser.add_argument("action", choices=ACTIONS)
-    parser.add_argument("target", choices=TARGETS,
-                        help="CMake preset or platform workflow")
-    parser.add_argument("artifact", nargs="?", help="Archive path used by restore-deps.")
+def _workflow_parser(command: str, targets: tuple[str, ...]) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=f"{command.capitalize()} a supported GigaDenoiser target.")
+    parser.add_argument("target", choices=targets)
     parser.add_argument("--host", action="store_true",
-                        help="Use local tools instead of Docker for Native, Web, or Android.")
+                        help="Use local tools instead of Docker where supported.")
     return parser
 
 
-def main(argv: list[str] | None = None) -> None:
-    args = create_parser().parse_args(argv)
+def _validate_host(target: str, host: bool) -> None:
+    if host and target not in {
+            *PRESET_STAGES, *ANDROID_DEPENDENCY_TARGETS, "android", "web", "web-playwright"}:
+        raise SystemExit(f"{target} already uses its required host toolchain; --host is not supported.")
 
-    if args.action == "shell":
-        if args.target != "native":
-            raise SystemExit("shell expects the native target.")
-        if args.host:
-            raise SystemExit("shell always uses the native Linux container; --host is not supported.")
-        if args.artifact:
-            raise SystemExit("shell does not accept an artifact argument.")
-        shell_environment = compiler_cache_environment(True)
-        shell_environment["PS1"] = r"spench:\w\$ "
-        run(["bash", "--noprofile", "--norc"], container_stage="native",
-            environment=shell_environment, interactive=True, mount_host_home=True)
-        return
+
+def _run_workflow(action: str, target: str, host: bool) -> None:
+    _validate_host(target, host)
+    if target in CMAKE_PRESETS:
+        cmake_workflow(action, target, host)
+    elif target == "android":
+        android_workflow(action, host)
+    elif target == "android-ui":
+        android_ui_workflow()
+    elif target == "ios":
+        ios_workflow(action)
+    elif target == "web":
+        web_workflow(action, host)
+    elif target == "web-playwright":
+        web_workflow("playwright", host)
+
+
+def build_main(argv: list[str] | None = None) -> None:
+    args = _workflow_parser("build", BUILD_TARGETS).parse_args(argv)
+    _run_workflow("build", args.target, args.host)
+
+
+def test_main(argv: list[str] | None = None) -> None:
+    args = _workflow_parser("test", TEST_TARGETS).parse_args(argv)
+    _run_workflow("test", args.target, args.host)
+
+
+def package_main(argv: list[str] | None = None) -> None:
+    args = _workflow_parser("package", PACKAGE_TARGETS).parse_args(argv)
+    _run_workflow("package", args.target, args.host)
+
+
+def install_main(argv: list[str] | None = None) -> None:
+    args = _workflow_parser("install", INSTALL_TARGETS).parse_args(argv)
+    _run_workflow("install", args.target, args.host)
+
+
+def shell_main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Open the native Linux development container.")
+    parser.parse_args(argv)
+    environment = compiler_cache_environment(True)
+    environment["PS1"] = r"giga-denoiser:\w\$ "
+    run(["bash", "--noprofile", "--norc"], container_stage="native",
+        environment=environment, interactive=True, mount_host_home=True)
+
+
+def _add_ci_target(subparsers, action: str, targets: tuple[str, ...], *, artifact: bool = False,
+                   host: bool = False) -> None:
+    parser = subparsers.add_parser(action)
+    parser.add_argument("target", choices=targets)
+    if artifact:
+        parser.add_argument("artifact")
+    if host:
+        parser.add_argument("--host", action="store_true")
+
+
+def ci_main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Run CI infrastructure operations.")
+    subparsers = parser.add_subparsers(dest="action", required=True)
+    _add_ci_target(subparsers, "image-key", ("native", "web", "android", "android-ui"))
+    _add_ci_target(subparsers, "recipe-key", ("native", "web", "android"))
+    _add_ci_target(subparsers, "cache-key", CACHE_TARGETS, host=True)
+    _add_ci_target(subparsers, "prepare-deps", (*DEPENDENCY_TARGETS, *DEPENDENCY_GROUPS), host=True)
+    _add_ci_target(subparsers, "dependency-key", DEPENDENCY_TARGETS, host=True)
+    _add_ci_target(subparsers, "dependency-archive", DEPENDENCY_TARGETS, host=True)
+    _add_ci_target(subparsers, "restore-deps", DEPENDENCY_TARGETS, artifact=True, host=True)
+    args = parser.parse_args(argv)
+    host = getattr(args, "host", False)
 
     if args.action == "image-key":
-        if args.target not in {"native", "web", "android", "android-ui"}:
-            raise SystemExit("image-key expects native, web, android, or android-ui.")
         print(container_image_digest(args.target))
-        return
-    if args.action == "recipe-key":
-        if args.target not in {"native", "web", "android"}:
-            raise SystemExit("recipe-key expects native, web, or android.")
+    elif args.action == "recipe-key":
         print(toolchain_recipe_digest(args.target))
-        return
-    if args.action == "dependency-key":
-        print(dependency_tag(args.target, args.host))
-        return
-    if args.action == "dependency-archive":
-        archive = dependency_archive_for_target(args.target, args.host)
+    elif args.action == "cache-key":
+        _validate_host(args.target, host)
+        print_cache_keys(args.target, host)
+    elif args.action == "prepare-deps":
+        _validate_host(args.target, host)
+        prepare_platform_dependencies(args.target, host)
+    elif args.action == "dependency-key":
+        _validate_host(args.target, host)
+        print(dependency_tag(args.target, host))
+    elif args.action == "dependency-archive":
+        _validate_host(args.target, host)
+        archive = dependency_archive_for_target(args.target, host)
         if not archive.is_file() or not Path(f"{archive}.sha256").is_file():
             raise SystemExit(
                 f"Dependency archive for {args.target} is missing. Run prepare-deps first.")
         print(archive)
-        return
-    if args.action == "restore-deps":
-        if not args.artifact:
-            raise SystemExit("restore-deps requires an archive path.")
-        restore_dependency_bundle(args.target, args.host, Path(args.artifact))
-        return
-    if args.action == "cache-key":
-        print_cache_keys(args.target, args.host)
-        return
-    if args.action == "prepare-deps":
-        if args.target in {"native", "web"}:
-            raise SystemExit("prepare-deps expects a preset or platform workflow, not a Docker stage.")
-        prepare_platform_dependencies(args.target, args.host)
-        return
-
-    if args.target in PRESET_STAGES or args.target in HOST_ONLY_PRESETS:
-        if args.action == "core":
-            raise SystemExit("The core action is only valid for the iOS workflow.")
-        cmake_workflow(args.action, args.target, args.host)
-    elif args.target == "android":
-        if args.action not in {"build", "test"}:
-            raise SystemExit("Android supports build and test.")
-        android_workflow(args.action, args.host)
-    elif args.target == "android-ui":
-        if args.action != "test":
-            raise SystemExit("Android UI supports test only.")
-        android_ui_workflow()
-    elif args.target == "ios":
-        if args.action not in {"build", "test", "core"}:
-            raise SystemExit("iOS supports build, core, and test.")
-        ios_workflow(args.action)
-    elif args.target == "web":
-        if args.action not in {"build", "test", "package"}:
-            raise SystemExit("The web SDK supports build, test, and package.")
-        web_workflow(args.action, args.host)
-    elif args.target == "web-playwright":
-        if args.action != "test":
-            raise SystemExit("The Web Playwright target supports test only.")
-        web_workflow("playwright", args.host)
-    else:
-        raise SystemExit(f"{args.target} is only valid with a metadata or prepare-deps action.")
+    elif args.action == "restore-deps":
+        _validate_host(args.target, host)
+        restore_dependency_bundle(args.target, host, Path(args.artifact))

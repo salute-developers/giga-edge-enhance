@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
-FROM spench-base AS android
+FROM giga-denoiser-base AS android
 
 ARG ANDROID_COMMAND_LINE_TOOLS=11076708
 ARG ANDROID_NDK_VERSION=29.0.14206865

@@ -7,7 +7,7 @@ index d90a2a3550..9a2f6cc11e 100644
  endif()
  
 -if(TARGET onnxruntime)
-+if(TARGET onnxruntime AND NOT SPENCH_ENGINE_BUNDLE_LINKAGE)
++if(TARGET onnxruntime AND NOT GDN_ENGINE_BUNDLE_LINKAGE)
  # Install
    include(GNUInstallDirs)
    include(CMakePackageConfigHelpers)

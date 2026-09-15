@@ -1,6 +1,6 @@
-# Spench Android SDK documentation
+# GigaDenoiser Android SDK documentation
 
-Integrator-facing guides for the Spench Android Audio SDK. Start with the top-level
+Integrator-facing guides for the GigaDenoiser Android Audio SDK. Start with the top-level
 [README](../README.md) for the quickstart, then dive into the topic you need.
 
 ## Guides

@@ -1,4 +1,4 @@
-# Spench WebAssembly
+# GigaDenoiser WebAssembly
 
 ## Model packing
 
@@ -6,12 +6,12 @@ Place the inference model at the path referenced by its configuration file, then
 pack the configuration and model with the native `model_packer` executable:
 
 ```shell
-<build-dir>/spench/cli/model_packer/model_packer \
-  --pack path/to/config.yaml path/to/output/model.spench
+<build-dir>/core/cli/model_packer/model_packer \
+  --pack path/to/config.yaml path/to/output/model.gdn
 ```
 
 Build `<build-dir>` with the `native-model-packer` preset. Put the resulting
-`.spench` file in the web SDK's `models/` directory or distribute it with the
+`.gdn` file in the web SDK's `models/` directory or distribute it with the
 application.
 
 ## Builds
@@ -20,14 +20,14 @@ Use the repository [build and test guide](../../../../README.md#build-and-test) 
 WASM workflows:
 
 ```shell
-tools/spench test wasm-release
-tools/spench test wasm-dsp-release
-tools/spench build web
+tools/test wasm-release
+tools/test wasm-dsp-release
+tools/build web
 ```
 
 ## Emscripten
 
-`tools/spench` is the supported WASM workflow. Its Docker image provides the
+`tools` is the supported WASM workflow. Its Docker image provides the
 pinned Emscripten SDK version and requires no host Emscripten installation.
 
 For a manual host build or IDE configuration, install the same pinned SDK

@@ -1,5 +1,5 @@
 import { SELF_WORKER_MESSAGES } from '../utils/ipc';
-import SpenchWorker, { getTransferableModelRepresentation } from '../worker';
+import GigaDenoiserWorker, { getTransferableModelRepresentation } from '../worker';
 import { Logger } from '../utils/logger';
 import { Telemetry } from '../utils/telemetry';
 import { Settings, ModelsTmpl } from '../utils/common';
@@ -124,8 +124,8 @@ describe('getTransferableModelRepresentation', () => {
         const raw = {
             noiseCancellation: {
                 fast24: new ArrayBuffer(4),
-                quality24: new URL('https://example.com/quality24.spench'),
-                custom: 'https://example.com/custom.spench',
+                quality24: new URL('https://example.com/quality24.gdn'),
+                custom: 'https://example.com/custom.gdn',
             },
         } as unknown as ModelsTmpl<string | ArrayBuffer>;
 
@@ -141,8 +141,8 @@ describe('getTransferableModelRepresentation', () => {
         expect(models).toMatchObject({
             noiseCancellation: {
                 fast24: trans[0],
-                quality24: 'https://example.com/quality24.spench',
-                custom: 'https://example.com/custom.spench',
+                quality24: 'https://example.com/quality24.gdn',
+                custom: 'https://example.com/custom.gdn',
             },
         });
     });
@@ -150,10 +150,10 @@ describe('getTransferableModelRepresentation', () => {
 });
 
 /* -------------------------------------------------------------------------- */
-/*  Tests for SpenchWorker                                                    */
+/*  Tests for GigaDenoiserWorker                                                    */
 /* -------------------------------------------------------------------------- */
 
-describe('SpenchWorker', () => {
+describe('GigaDenoiserWorker', () => {
     const dummyLogger = { debug: jest.fn(), verbosity: 'verbose' } as any as Logger;
     const dummyTelemetry = {} as Telemetry;
 
@@ -161,11 +161,11 @@ describe('SpenchWorker', () => {
         const rawModels = {
             noiseCancellation: {
                 fast24: new ArrayBuffer(4),
-                quality24: new URL('https://example.com/model.spench'),
+                quality24: new URL('https://example.com/model.gdn'),
             },
         } as unknown as ModelsTmpl<string | ArrayBuffer>;
 
-        const worker = new SpenchWorker(dummyLogger, dummyTelemetry, dummySettings, rawModels);
+        const worker = new GigaDenoiserWorker(dummyLogger, dummyTelemetry, dummySettings, rawModels);
 
         // The mock Worker instance lives on the `worker` field of the class.
         const mockWorker = worker as unknown as MockWorker;
@@ -185,7 +185,7 @@ describe('SpenchWorker', () => {
         expect(msg.resources.models).toMatchObject({
             noiseCancellation: {
                 fast24: transfer[0],
-                quality24: 'https://example.com/model.spench',
+                quality24: 'https://example.com/model.gdn',
             },
         });
 
@@ -196,7 +196,7 @@ describe('SpenchWorker', () => {
     });
 
     test('createPort returns a port that is destroyed when the last client closes', async () => {
-        const worker = new SpenchWorker(dummyLogger, dummyTelemetry, dummySettings, undefined);
+        const worker = new GigaDenoiserWorker(dummyLogger, dummyTelemetry, dummySettings, undefined);
 
         // Spy on the worker's destroy method.
         const destroySpy = jest.spyOn(worker, 'destroy');

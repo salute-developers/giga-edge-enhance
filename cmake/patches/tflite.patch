@@ -7,7 +7,7 @@ index 0476170e075..2e2144aabfd 100644
  # Build a list of source files to compile into the TF Lite library.
  populate_tflite_source_vars("." TFLITE_SRCS)
 +if(CMAKE_SYSTEM_NAME MATCHES "Windows" AND
-+   (BUILD_SHARED_LIBS OR SPENCH_TFLITE_LIBRARY_TYPE STREQUAL "SHARED"))
++   (BUILD_SHARED_LIBS OR GDN_TFLITE_LIBRARY_TYPE STREQUAL "SHARED"))
 +  # MSVC has no weak symbols, so compiling both implementations produces a
 +  # duplicate DumpArenaInfo definition in a shared tensorflow-lite target.
 +  list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*simple_memory_arena_debug_dump\\.cc$")
@@ -20,7 +20,7 @@ index 0476170e075..2e2144aabfd 100644
    ${TFLITE_SOURCE_DIR}/schema/schema_generated.h
  )
 -add_library(tensorflow-lite
-+add_library(tensorflow-lite ${SPENCH_TFLITE_LIBRARY_TYPE}
++add_library(tensorflow-lite ${GDN_TFLITE_LIBRARY_TYPE}
    ${_ALL_TFLITE_SRCS}
  )
  set(_ALL_TFLITE_HDRS ${_ALL_TFLITE_SRCS})

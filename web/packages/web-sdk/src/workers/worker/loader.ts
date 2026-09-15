@@ -1,15 +1,15 @@
 import { downloadFileAsBuffer, ModelKey, retry, Settings } from '../../utils/common';
 import { WorkerTelemetry } from '../../utils/telemetry';
 import { ResourceUrls } from '../../utils/ipc';
-import SpenchError from '../../utils/error';
+import GigaDenoiserError from '../../utils/error';
 
-export class LoadError extends SpenchError {
+export class LoadError extends GigaDenoiserError {
     override get name() {
         return 'LoadError';
     }
 }
 
-export class ModelNotFoundError extends SpenchError {
+export class ModelNotFoundError extends GigaDenoiserError {
     override get name() {
         return 'ModelNotFoundError';
     }

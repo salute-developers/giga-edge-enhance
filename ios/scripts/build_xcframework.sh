@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$ROOT_DIR/build/xcframework"
 BUNDLE_BUILD_DIR="$BUILD_DIR/bundle-products"
 TEST_BUILD_DIR="$BUILD_DIR/test-derived-data"
-PROJECT="$ROOT_DIR/SpenchSDK.xcodeproj"
-SCHEME="SpenchAudioKit"
+PROJECT="$ROOT_DIR/GigaDenoiserSDK.xcodeproj"
+SCHEME="GigaDenoiserAudioKit"
 
 "$ROOT_DIR/scripts/build_core.sh"
 "$ROOT_DIR/scripts/generate_project.sh"
@@ -35,17 +35,17 @@ xcodebuild archive \
   BUILD_LIBRARY_FOR_DISTRIBUTION=YES
 
 xcodebuild -create-xcframework \
-  -framework "$BUILD_DIR/ios.xcarchive/Products/Library/Frameworks/SpenchAudioKit.framework" \
-  -framework "$BUILD_DIR/simulator.xcarchive/Products/Library/Frameworks/SpenchAudioKit.framework" \
-  -output "$BUILD_DIR/SpenchAudioKit.xcframework"
+  -framework "$BUILD_DIR/ios.xcarchive/Products/Library/Frameworks/GigaDenoiserAudioKit.framework" \
+  -framework "$BUILD_DIR/simulator.xcarchive/Products/Library/Frameworks/GigaDenoiserAudioKit.framework" \
+  -output "$BUILD_DIR/GigaDenoiserAudioKit.xcframework"
 
 # Strip internal-only artifacts from the distributed xcframework. The
-# `SpenchAudioKit_Private` module is needed only inside the framework's
+# `GigaDenoiserAudioKit_Private` module is needed only inside the framework's
 # own implementation; consumers must not see the headers or modulemap.
 while IFS= read -r -d '' fw; do
   rm -rf "$fw/PrivateHeaders"
   rm -f "$fw/Modules/module.private.modulemap"
-done < <(find "$BUILD_DIR/SpenchAudioKit.xcframework" -type d -name "*.framework" -print0)
+done < <(find "$BUILD_DIR/GigaDenoiserAudioKit.xcframework" -type d -name "*.framework" -print0)
 
 xcodebuild build \
   -project "$PROJECT" \
@@ -55,10 +55,10 @@ xcodebuild build \
   -derivedDataPath "$BUNDLE_BUILD_DIR" \
   CODE_SIGNING_ALLOWED=NO
 
-cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/SpenchModelFast8.bundle" "$BUILD_DIR"
-cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/SpenchModelQuality48.bundle" "$BUILD_DIR"
+cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/GigaDenoiserModelFast8.bundle" "$BUILD_DIR"
+cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/GigaDenoiserModelQuality48.bundle" "$BUILD_DIR"
 
-for test_scheme in SpenchAudioKit AudioDemoApp; do
+for test_scheme in GigaDenoiserAudioKit AudioDemoApp; do
   xcodebuild build-for-testing \
     -project "$PROJECT" \
     -scheme "$test_scheme" \
@@ -69,4 +69,4 @@ for test_scheme in SpenchAudioKit AudioDemoApp; do
     CODE_SIGNING_ALLOWED=NO
 done
 
-echo "Built XCFramework at $BUILD_DIR/SpenchAudioKit.xcframework"
+echo "Built XCFramework at $BUILD_DIR/GigaDenoiserAudioKit.xcframework"

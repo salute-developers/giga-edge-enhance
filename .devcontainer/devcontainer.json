@@ -1,12 +1,12 @@
 {
-  "name": "Spench Native",
+  "name": "GigaDenoiser Native",
   "build": {
     "dockerfile": "../dockerfiles/Dockerfile.base",
     "context": ".."
   },
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "mounts": [
-    "source=spench-cpm,target=/workspaces/${localWorkspaceFolderBasename}/out/cache/cpm,type=volume"
+    "source=giga-denoiser-cpm,target=/workspaces/${localWorkspaceFolderBasename}/out/cache/cpm,type=volume"
   ],
   "customizations": {
     "vscode": {

@@ -1,5 +1,0 @@
-function(string_option name value)
-    if (NOT DEFINED ${name})
-        set(${name} ${value} PARENT_SCOPE)
-    endif()
-endfunction(string_option)

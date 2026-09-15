@@ -51,7 +51,7 @@ Example that keeps callback work off the audio thread by using the main executor
 ```kotlin
 import androidx.core.content.ContextCompat
 
-val processor = SpenchProcessor(
+val processor = Processor(
     context = context,
     sampleRateHz = 48_000,
     callbackExecutor = ContextCompat.getMainExecutor(context),

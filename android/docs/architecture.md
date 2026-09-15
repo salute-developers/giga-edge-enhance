@@ -1,26 +1,26 @@
 # Architecture
 
 This describes how audio flows through the SDK and where responsibilities live. It reflects the
-implementation in `spench-sdk/src/main/cpp` and the Kotlin API.
+implementation in `sdk/src/main/cpp` and the Kotlin API.
 
 ## Layers
 
-1. **Kotlin API** (`com.gigaedge.spench.SpenchProcessor`) — the public surface. It validates
+1. **Kotlin API** (`com.gigaedge.denoiser.Processor`) — the public surface. It validates
    arguments and lifecycle state, holds a read/write lock for the native handle, and marshals
    results (telemetry, low-performance events) into Kotlin types.
-2. **Thin JNI bridge** (`spench_jni.cpp`) — maps each `nativeXxx` call to the matching native
+2. **Thin JNI bridge** (`jni.cpp`) — maps each `nativeXxx` call to the matching native
    instance, converts arguments, translates C++ exceptions into Java exceptions, and constructs the
-   `SpenchNativeTelemetry` and `SpenchLowPerformanceEvent` objects. It holds no long-lived state.
-3. **Native processor** (`spench_processor.cpp` / `spench_processor.h`) — owns the DSP, a dedicated
-   worker thread, the ring buffers, and the adaptive-latency monitor. The Spench C++ core is linked
-   **statically** into `libspench-sdk.so`.
+   `NativeTelemetry` and `LowPerformanceEvent` objects. It holds no long-lived state.
+3. **Native processor** (`processor.cpp` / `processor.h`) — owns the DSP, a dedicated
+   worker thread, the ring buffers, and the adaptive-latency monitor. The GigaDenoiser C++ core is linked
+   **statically** into `libgiga-denoiser-sdk.so`.
 
-There is **one native instance per `SpenchProcessor`** (one worker thread, one pair of ring
+There is **one native instance per `Processor`** (one worker thread, one pair of ring
 buffers). The native handle is never exposed to app code.
 
 ## Data flow through `process(...)`
 
-1. The app passes a mono `FloatArray` input buffer to `SpenchProcessor.process(...)`.
+1. The app passes a mono `FloatArray` input buffer to `Processor.process(...)`.
 2. Kotlin validates `numFrames` and buffer sizes and checks the processor is open.
 3. JNI forwards the call to the native instance for the handle.
 4. Native `process(...)` pushes the input into a lock-free single-producer / single-consumer (SPSC)
@@ -60,21 +60,21 @@ swaps that. With no stage enabled, the worker copies input straight to output (p
 
 The native processor tracks output underruns ("refills") over a sliding window and raises the output
 latency in steps to stabilize playback. When refills in the window reach the configured threshold, it
-enqueues a `SpenchLowPerformanceEvent`. See
+enqueues a `LowPerformanceEvent`. See
 [telemetry-and-performance.md](telemetry-and-performance.md).
 
 ## Where validation lives
 
 Argument validation (sample rate, frame count, buffer sizes, model-name format) lives primarily in
-the Kotlin layer (`SpenchValidation`, and `SpenchSettings.init` for settings). The native layer
+the Kotlin layer (`Validation`, and `Settings.init` for settings). The native layer
 re-checks its own invariants and reports failures as exceptions that JNI maps to
-`IllegalArgumentException` or `IllegalStateException`. `SpenchSettings` is the single source of truth
+`IllegalArgumentException` or `IllegalStateException`. `Settings` is the single source of truth
 for settings validity — an invalid instance cannot be constructed.
 
 ## Source map
 
-- `spench-sdk/src/main/java/com/gigaedge/spench/SpenchProcessor.kt` — public API and lock.
-- `spench-sdk/src/main/cpp/spench_jni.cpp` — JNI bridge and exception mapping.
-- `spench-sdk/src/main/cpp/spench_processor.cpp` — worker thread, stages, adaptive latency.
-- `spench-sdk/src/main/cpp/ring_buffer.cpp` — lock-free SPSC ring buffer.
-- `spench-sdk/CMakeLists.txt` — native build; links the Spench core statically.
+- `sdk/src/main/java/com/gigaedge/denoiser/Processor.kt` — public API and lock.
+- `sdk/src/main/cpp/jni.cpp` — JNI bridge and exception mapping.
+- `sdk/src/main/cpp/processor.cpp` — worker thread, stages, adaptive latency.
+- `sdk/src/main/cpp/ring_buffer.cpp` — lock-free SPSC ring buffer.
+- `sdk/CMakeLists.txt` — native build; links the GigaDenoiser core statically.

@@ -1,1 +1,1 @@
-"""Unit tests for the Spench infrastructure command."""
+"""Unit tests for the GigaDenoiser infrastructure command."""

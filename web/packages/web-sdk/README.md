@@ -1,9 +1,9 @@
-# Spench Web SDK
+# GigaDenoiser Web SDK
 
-**Spench** is a real‑time audio‑processing library that runs in the browser using
+**GigaDenoiser** is a real‑time audio‑processing library that runs in the browser using
 Web Audio, Web Workers and, optionally, a WebAssembly‑backed DSP worklet.
-The SDK exposes a single class – `SpenchSDK` – that lets you create a
-`SpenchAudioNode` and enable any combination of the following features:
+The SDK exposes a single class – `GigaDenoiserSDK` – that lets you create a
+`GigaDenoiserAudioNode` and enable any combination of the following features:
 
 | Feature | Description |
 |---------|-------------|
@@ -15,7 +15,7 @@ The SDK also exposes a tiny telemetry API for measuring performance, a pluggable
 logger and an optional “shared‑memory” transport that reduces message‑passing
 overhead.
 
-> ⚡ **Tip** – The workbench in `apps/spench-site` shows how to wire the
+> ⚡ **Tip** – The workbench in `apps/site` shows how to wire the
 > node into a media graph, measure performance and even run a live demo using the
 > browser microphone.
 
@@ -23,10 +23,10 @@ overhead.
 
 ```bash
 # Yarn
-yarn add @gigaedge/spench-web-sdk
+yarn add @gigaedge/denoiser-web-sdk
 
 # NPM
-npm i @gigaedge/spench-web-sdk
+npm i @gigaedge/denoiser-web-sdk
 ```
 
 > The SDK uses native ES modules. If you target older browsers, bundle with
@@ -35,13 +35,13 @@ npm i @gigaedge/spench-web-sdk
 ## Quickstart
 
 ```ts
-import { SpenchSDK, type Features } from '@gigaedge/spench-web-sdk';
+import { GigaDenoiserSDK, type Features } from '@gigaedge/denoiser-web-sdk';
 
 // 1️⃣ Create an AudioContext
 const audioCtx = new AudioContext();
 
 // 2️⃣ Create an SDK instance
-const sdk = SpenchSDK.create(audioCtx);
+const sdk = GigaDenoiserSDK.create(audioCtx);
 
 // 3️⃣ Define the feature set
 const features: Features = {
@@ -51,29 +51,29 @@ const features: Features = {
 };
 
 // 4️⃣ Create a node
-const spenchNode = await sdk.createAudioNode(features);
+const gigaDenoiserNode = await sdk.createAudioNode(features);
 
 // 5️⃣ Hook it into a graph
 const source = audioCtx.createMediaStreamSource(stream);
-source.connect(spenchNode);
-spenchNode.connect(audioCtx.destination);
+source.connect(gigaDenoiserNode);
+gigaDenoiserNode.connect(audioCtx.destination);
 ```
 
 ## API Reference
 
-### `SpenchSDK`
+### `GigaDenoiserSDK`
 
 | Method | Description |
 |--------|-------------|
 | `static isEnvironmentSupported(): boolean` | Quick check if the browser has the required Web Audio APIs. |
-| `static create(ctx, params?): SpenchSDK` | Factory – returns a new SDK instance. |
-| `createAudioNode(features?, settings?): Promise<SpenchAudioNode \| LoadError \| SetFeaturesFailedError>` | Create and configure a node. |
+| `static create(ctx, params?): GigaDenoiserSDK` | Factory – returns a new SDK instance. |
+| `createAudioNode(features?, settings?): Promise<GigaDenoiserAudioNode \| LoadError \| SetFeaturesFailedError>` | Create and configure a node. |
 
 > The SDK internally preloads the worklet module, the optional DSP WASM and the
 > requested model files.  The returned node already emits a `destroyed` event
 > when the underlying worker or worklet terminates.
 
-### `SpenchSDK.create(ctx: AudioContext, params?: CreateSpenchParams<M>)`
+### `GigaDenoiserSDK.create(ctx: AudioContext, params?: CreateGigaDenoiserParams<M>)`
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
@@ -85,7 +85,7 @@ spenchNode.connect(audioCtx.destination);
 | `params.models` | `Partial<M>` | Custom model URLs or ArrayBuffers that will override the default model map (`DEFAULT_MODELS`).  Useful for loading locally hosted or user‑provided models. | `undefined` |
 | `params.settings` | `Partial<Settings>` | User‑supplied overrides for the SDK configuration.  All other settings use the built‑in defaults defined in `utils/common.ts`. | `undefined` |
 
-### `SpenchSDK.createAudioNode(features?: Partial<Features<M>>, settings?: Partial<Settings>)`
+### `GigaDenoiserSDK.createAudioNode(features?: Partial<Features<M>>, settings?: Partial<Settings>)`
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
@@ -119,7 +119,7 @@ All settings can be overridden per‑node via the `settings` argument to
 `createAudioNode`.  Settings that are not overridden simply inherit the SDK
 defaults.
 
-### `SpenchAudioNode`
+### `GigaDenoiserAudioNode`
 
 This is a subclass of the native `AudioWorkletNode` and has the following
 additions:
@@ -144,7 +144,7 @@ audio processing is lagging.  The event contains the most probable cause
 | `echoCancellation` | `boolean` | `false` |
 | `noiseCancellation` | `boolean \| "fast8" \| "quality48"` | `false` |
 
-The SDK bundles `fast8.spench` as `fast8` and `quality48.spench` as `quality48`. Supply other model keys through
+The SDK bundles `fast8.gdn` as `fast8` and `quality48.gdn` as `quality48`. Supply other model keys through
 `params.models` when using custom model files.
 
 ## Testing
@@ -163,17 +163,17 @@ The tests use Jest and run in both the browser and Node
 
 Run integration tests with:
 
-`cd apps/spench-site && npm start`
+`cd apps/site && npm start`
 
 ```bash
 # From the repo root
-cd apps/spench-site
+cd apps/site
 npm start & npm run pw:open
 ```
 
 ## Demo App
 
-The folder `apps/spench-site` contains a React workbench that demonstrates
+The folder `apps/site` contains a React workbench that demonstrates
 all SDK capabilities:
 
 1. **Feature toggles** – noise cancellation, normalization and echo cancellation.
@@ -185,16 +185,16 @@ all SDK capabilities:
 5. **Multiple normalizer nodes test** – stress‑tests the SDK by creating
    and destroying 10 000 nodes.
 
-> **Running the workbench** – `cd apps/spench-site && npm start`
+> **Running the workbench** – `cd apps/site && npm start`
 
 ## Example – Custom Models
 
 If you have a custom model you can load it directly:
 
 ```ts
-const customModel = await fetch('/path/to/my/denoise.spench').arrayBuffer();
+const customModel = await fetch('/path/to/my/denoise.gdn').arrayBuffer();
 
-const sdk = SpenchSDK.create(audioCtx, {
+const sdk = GigaDenoiserSDK.create(audioCtx, {
   models: {
     noiseCancellation: { fast48: customModel },
   },
@@ -206,7 +206,7 @@ The node will use the supplied ArrayBuffer instead of downloading the default mo
 ## Example — In Details
 
 ```ts
-import { SpenchAudioNode, SpenchError, SpenchSDK } from '@gigaedge/spench-web-sdk';
+import { GigaDenoiserAudioNode, GigaDenoiserError, GigaDenoiserSDK } from '@gigaedge/denoiser-web-sdk';
 
 // Define the sample rate (SR) for the incoming stream, or leave undefined to use the device's default SR.
 const sampleRate: number | undefined = 48000;
@@ -224,7 +224,7 @@ const features = {
 
 // Create the SDK instance.
 // Set to 'verbose' for detailed debugging output.
-const sdk = SpenchSDK.create(ctx, {
+const sdk = GigaDenoiserSDK.create(ctx, {
   loggerVerbosity: 'verbose',
   // Provide an external logger implementation if desired.
   logger: { info: ..., debug: ..., ... },
@@ -237,35 +237,35 @@ const sdk = SpenchSDK.create(ctx, {
 // Features can be set during creation or later with setFeatures.
 // Setting features after creation integrates the node into the graph more quickly,
 // even if noise‑cancellation resources aren't yet available.
-const spenchNode: SpenchAudioNode | SpenchError = await sdk.createAudioNode();
-if (spenchNode instanceof SpenchError) {
-  throw spenchNode;
+const gigaDenoiserNode: GigaDenoiserAudioNode | GigaDenoiserError = await sdk.createAudioNode();
+if (gigaDenoiserNode instanceof GigaDenoiserError) {
+  throw gigaDenoiserNode;
 }
 
 // Triggered when the system is under heavy load; disable effects to prevent audio artifacts.
-spenchNode.addEventListener('low_performance', () => {});
+gigaDenoiserNode.addEventListener('low_performance', () => {});
 
 // Triggered when an unexpected worker error occurs; disable the node.
-spenchNode.addEventListener('destroyed', () => {});
+gigaDenoiserNode.addEventListener('destroyed', () => {});
 
 const callStream: MediaStream; // Input stream
 const sourceStreamNode = ctx.createMediaStreamSource(callStream);
 const destinationStreamNode = ctx.createMediaStreamDestination();
-sourceStreamNode.connect(spenchNode).connect(destinationStreamNode);
+sourceStreamNode.connect(gigaDenoiserNode).connect(destinationStreamNode);
 
 // The resulting stream with noise cancelled.
 const outputStream = destinationStreamNode.stream;
 
-const res = await spenchNode.setFeatures(features);
-if (res instanceof SpenchError) {
+const res = await gigaDenoiserNode.setFeatures(features);
+if (res instanceof GigaDenoiserError) {
   throw res;
 }
 
 // The node can be reused across calls; invoke reset() after each call completes.
-spenchNode.reset();
+gigaDenoiserNode.reset();
 
 // Release resources when finished.
-spenchNode.destroy();
+gigaDenoiserNode.destroy();
 await ctx.close();
 ```
 

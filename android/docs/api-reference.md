@@ -1,19 +1,19 @@
 # API reference
 
-The public API lives in the package `com.gigaedge.spench` (SDK) and
-`com.gigaedge.spench.models` (model name constants). Every member carries KDoc in source; this page
+The public API lives in the package `com.gigaedge.denoiser` (SDK) and
+`com.gigaedge.denoiser.models` (model name constants). Every member carries KDoc in source; this page
 mirrors it for quick reference.
 
 Units used throughout: **latencies in seconds**, **telemetry buckets and means in milliseconds**,
 **sample rate in Hz**.
 
-## `SpenchProcessor`
+## `Processor`
 
 ```kotlin
-class SpenchProcessor(
+class Processor(
     context: Context,
     sampleRateHz: Int,
-    settings: SpenchSettings = SpenchSettings(),
+    settings: Settings = Settings(),
     callbackExecutor: Executor? = null,
 ) : Closeable
 ```
@@ -27,18 +27,18 @@ feature stages start disabled.
 | --- | --- | --- | --- |
 | `context` | `Context` | — | The application context and its `AssetManager` are retained for loading model assets. |
 | `sampleRateHz` | `Int` | — | Input sample rate in Hz; must be `> 0`. |
-| `settings` | `SpenchSettings` | `SpenchSettings()` | Immutable configuration; fixed for the processor lifetime. |
+| `settings` | `Settings` | `Settings()` | Immutable configuration; fixed for the processor lifetime. |
 | `callbackExecutor` | `Executor?` | `null` | Dispatches `onLowPerformance`. `null` = run on the `process(...)` caller thread. |
 
 Throws `IllegalArgumentException` if `sampleRateHz <= 0`.
 
 ### Members
 
-- `val settings: SpenchSettings` — the configuration captured at construction.
-- `var onLowPerformance: ((SpenchLowPerformanceEvent) -> Unit)?` — nullable, `@Volatile`. Listener
+- `val settings: Settings` — the configuration captured at construction.
+- `var onLowPerformance: ((LowPerformanceEvent) -> Unit)?` — nullable, `@Volatile`. Listener
   for low-performance events; assignable at any time. See
   [telemetry-and-performance.md](telemetry-and-performance.md).
-- `val telemetry: SpenchTelemetry` — a cumulative snapshot of stage timing histograms. Never blocks
+- `val telemetry: Telemetry` — a cumulative snapshot of stage timing histograms. Never blocks
   on an in-progress chunk. Throws `IllegalStateException` if closed.
 - `fun process(input: FloatArray, output: FloatArray, numFrames: Int)` — process one chunk.
   - `numFrames` must be `>= 0`; `0` is a no-op.
@@ -50,7 +50,7 @@ Throws `IllegalArgumentException` if `sampleRateHz <= 0`.
     `IllegalStateException` if closed.
 - `fun reset()` — clears buffered audio and streaming state; rebuilds enabled stages but keeps the
   current feature selection. Does **not** clear telemetry. Throws `IllegalStateException` if closed.
-- `fun setFeatures(features: SpenchFeatures)` — enable/disable stages at runtime; only changed
+- `fun setFeatures(features: Features)` — enable/disable stages at runtime; only changed
   stages are rebuilt. Enabling noise suppression loads the model asset. Throws
   `IllegalArgumentException` for an invalid or missing model; `IllegalStateException` if closed.
 - `override fun close()` — releases native resources; waits for in-flight calls; idempotent. Any
@@ -58,10 +58,10 @@ Throws `IllegalArgumentException` if `sampleRateHz <= 0`.
 
 See [threading.md](threading.md) for concurrency guarantees across these members.
 
-## `SpenchSettings`
+## `Settings`
 
 ```kotlin
-data class SpenchSettings(
+data class Settings(
     val lowPerformanceWindowSeconds: Double = 1.0,
     val lowPerformanceMaxRefillTimes: Int = 4,
     val lowPerformanceMaxRefillTimeFactor: Double = 3.0,
@@ -92,10 +92,10 @@ single source of truth for settings validity: a held instance is always valid.
 | `unstableReverseProcessingOrder` | `Boolean` | `false` | — | experimental |
 | `unstableCustomNormalizationConfig` | `String?` | `null` | — | experimental; overrides built-in normalization config |
 
-## `SpenchFeatures`
+## `Features`
 
 ```kotlin
-data class SpenchFeatures(
+data class Features(
     val normalization: Boolean = false,
     val noiseSuppression: String? = null,
 )
@@ -105,12 +105,12 @@ The set of stages to run. The default disables both, matching a fresh processor.
 
 - `normalization` — enables the normalization stage.
 - `noiseSuppression` — model name, or `null` to disable. Must resolve to a merged asset
-  `spench/models/{name}.spench` and may contain only letters, digits, `.`, `_`, and `-`.
+  `gigadenoiser/models/{name}.gdn` and may contain only letters, digits, `.`, `_`, and `-`.
 
-## `SpenchTelemetry`
+## `Telemetry`
 
 ```kotlin
-data class SpenchTelemetry(
+data class Telemetry(
     val normalizationCounters: Map<Double, Int>,
     val noiseSuppressionCounters: Map<Double, Int>,
 )
@@ -122,13 +122,13 @@ the processor's `telemetryRoundingMilliseconds`); values are chunk counts.
 - `val normalizationMeanMilliseconds: Double?` — count-weighted mean in ms, or `null` if no samples.
 - `val noiseSuppressionMeanMilliseconds: Double?` — count-weighted mean in ms, or `null` if no
   samples.
-- `operator fun minus(other: SpenchTelemetry): SpenchTelemetry` — per-bucket delta `this - other`,
+- `operator fun minus(other: Telemetry): Telemetry` — per-bucket delta `this - other`,
   keeping only strictly positive counts. Use it to measure work between two snapshots.
 
-## `SpenchLowPerformanceEvent`
+## `LowPerformanceEvent`
 
 ```kotlin
-data class SpenchLowPerformanceEvent(
+data class LowPerformanceEvent(
     val sampleRateHz: Int,
     val currentLatencySeconds: Double,
     val meanProcessingTimeMilliseconds: Double?,
@@ -136,30 +136,30 @@ data class SpenchLowPerformanceEvent(
 )
 ```
 
-Emitted when refills within the window reach `SpenchSettings.lowPerformanceMaxRefillTimes`.
+Emitted when refills within the window reach `Settings.lowPerformanceMaxRefillTimes`.
 
 - `sampleRateHz` — processor input sample rate in Hz.
 - `currentLatencySeconds` — current adaptive output latency in seconds.
 - `meanProcessingTimeMilliseconds` — recent mean chunk time in ms, or `null` when unavailable.
 - `refillCount` — refills observed in the window when the event fired.
 
-## `SpenchModels`
+## `Models`
 
 ```kotlin
-object SpenchModels {
+object Models {
     fun available(context: Context): List<String>
 }
 ```
 
-- `available(context)` — returns the packaged model names, **sorted**, with the `.spench` suffix
+- `available(context)` — returns the packaged model names, **sorted**, with the `.gdn` suffix
   stripped. Returns an empty list when no model assets are present. A returned name can be used as
-  `SpenchFeatures.noiseSuppression`.
+  `Features.noiseSuppression`.
 
-## Model name constants (`com.gigaedge.spench.models`)
+## Model name constants (`com.gigaedge.denoiser.models`)
 
-- `SpenchQuality48Model.NAME` == `"quality48"` (from `:spench-model-quality48`).
+- `Quality48Model.NAME` == `"quality48"` (from `:giga-denoiser-model-quality48`).
 
 ## Internal (not public API)
 
-`SpenchValidation` and `SpenchNativeTelemetry` are `internal` and not part of the supported surface;
+`Validation` and `NativeTelemetry` are `internal` and not part of the supported surface;
 do not depend on them.

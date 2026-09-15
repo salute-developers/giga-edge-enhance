@@ -1,17 +1,17 @@
-# SpenchSDK
+# GigaDenoiserSDK
 
-iOS wrapper and demo app for GigaEdge Spench audio processing, with:
+iOS wrapper and demo app for Giga Edge GigaDenoiser audio processing, with:
 
-- C++20 `Spench` core (CMake static library)
+- C++20 `GigaDenoiser` core (CMake static library)
 - Objective-C++ exception-safe wrapper with private framework module
 - Swift API + custom `AUAudioUnit`/`AVAudioUnit` factory
-- Unified `SpenchError` Swift error type (bridged to `NSError`)
+- Unified `DenoiserError` Swift error type (bridged to `NSError`)
 - DocC documentation catalog with static-site generation
 - XCFramework packaging
 - Demo app (`AVAudioEngine`) for live mic + realtime file processing
 - Unit tests + XCUITest
 
-The SDK version comes from `SPENCH_VERSION` at the repository root and is applied to the
+The SDK version comes from `VERSION_NUMBER` at the repository root and is applied to the
 framework as `MARKETING_VERSION` in `project.yml`.
 
 ## Stack
@@ -25,10 +25,10 @@ framework as `MARKETING_VERSION` in `project.yml`.
 
 ## Project structure
 
-- `../spench/` C++ core library used by `scripts/build_core.sh`
-- `Sources/SpenchAudioKit/` framework source (ObjC++ wrapper + Swift API + Audio Unit)
+- `../gigadenoiser/` C++ core library used by `scripts/build_core.sh`
+- `Sources/GigaDenoiserAudioKit/` framework source (ObjC++ wrapper + Swift API + Audio Unit)
 - `Sources/AudioDemoApp/` demo app (single-screen UI)
-- `Tests/SpenchAudioKitTests/` unit tests for wrappers and audio unit factory
+- `Tests/GigaDenoiserAudioKitTests/` unit tests for wrappers and audio unit factory
 - `Tests/AudioDemoAppUITests/` UI test + fixture wav
 - `scripts/` build/test/lint helpers
 - `project.yml` XcodeGen spec
@@ -54,7 +54,7 @@ brew install swiftlint
 ./scripts/generate_project.sh
 ```
 
-This creates `SpenchSDK.xcodeproj`.
+This creates `GigaDenoiserSDK.xcodeproj`.
 
 ## Build each part
 
@@ -67,9 +67,9 @@ This creates `SpenchSDK.xcodeproj`.
 Outputs:
 
 - Simulator fat static library (`arm64 + x86_64`):
-  `build/core/simulator/libspench.a`
+  `build/core/simulator/libgiga-denoiser.a`
 - Device static library (`arm64`):
-  `build/core/device/libspench.a`
+  `build/core/device/libgiga-denoiser.a`
 
 ### 2) Build XCFramework
 
@@ -79,7 +79,7 @@ Outputs:
 
 Output:
 
-- `build/xcframework/SpenchAudioKit.xcframework`
+- `build/xcframework/GigaDenoiserAudioKit.xcframework`
 
 ### 3) Build demo app (simulator)
 
@@ -95,7 +95,7 @@ Output:
 
 Outputs:
 
-- `build/docs/.../SpenchAudioKit.doccarchive` — open in Xcode for the
+- `build/docs/.../GigaDenoiserAudioKit.doccarchive` — open in Xcode for the
   Quick Help-style browsable archive.
 - `build/docs/static-site/` — static HTML site ready for any web host.
 
@@ -103,7 +103,7 @@ To host under a sub-path (e.g. GitHub Pages project site), set
 `DOCC_HOSTING_BASE_PATH`:
 
 ```bash
-DOCC_HOSTING_BASE_PATH=spench-ios ./scripts/build_docs.sh
+DOCC_HOSTING_BASE_PATH=giga-denoiser-ios ./scripts/build_docs.sh
 ```
 
 Preview locally:
@@ -115,7 +115,7 @@ python3 -m http.server --directory build/docs/static-site 8000
 ## Run app in Xcode
 
 1. Generate project: `./scripts/generate_project.sh`
-2. Open `SpenchSDK.xcodeproj`
+2. Open `GigaDenoiserSDK.xcodeproj`
 3. Select `AudioDemoApp` scheme
 4. Select simulator (e.g. iPhone 17)
 5. Run
@@ -129,7 +129,7 @@ python3 -m http.server --directory build/docs/static-site 8000
 
 ## SDK settings
 
-`SpenchSettings` configures the iOS wrapper at audio-unit creation time.
+`Settings` configures the iOS wrapper at audio-unit creation time.
 
 Available fields:
 
@@ -147,60 +147,60 @@ Available fields:
 Usage example:
 
 ```swift
-let settings = SpenchSettings(minLatency: 0.08,
+let settings = Settings(minLatency: 0.08,
                                latencyIncreaseStep: 0.04,
                                telemetryRoundingMilliseconds: 0.25,
                                useVadNormalization: true,
                                maxProcessingChunkSeconds: 0.032)
 
-let unit = try SpenchAVAudioUnit(features: .standard, settings: settings)
+let unit = try DenoiserAVAudioUnit(features: .standard, settings: settings)
 ```
 
 Notes:
 
-- Settings are init-time only for a given `SpenchAUAudioUnit` / `SpenchAVAudioUnit` instance.
+- Settings are init-time only for a given `DenoiserAUAudioUnit` / `DenoiserAVAudioUnit` instance.
 - To apply different settings, create a new audio unit or restart the processing flow that owns it.
 - `maxProcessingChunkSeconds` defaults to 16 ms. The AU worker floors it to 16 ms steps, caps it by
   `minLatency` and 256 ms, and never processes less than 16 ms. It does not change direct
-  `SpenchProcessor` buffer processing.
+  `Processor` buffer processing.
 
 ## Models
 
 Built-in model descriptors:
 
-- `SpenchModelDescriptor.fast8`
-- `SpenchModelDescriptor.quality48`
+- `ModelDescriptor.fast8`
+- `ModelDescriptor.quality48`
 
 ```swift
-let features = SpenchFeatures(normalization: true,
+let features = Features(normalization: true,
                                noiseSuppression: .quality48)
 ```
 
-`SpenchModelCatalog.availableModels()` discovers every bundle whose
-`Info.plist` declares a `SpenchModelID`. Discovery is cached for the
-process lifetime; call `SpenchModelCatalog.invalidateCache()` if your
+`ModelCatalog.availableModels()` discovers every bundle whose
+`Info.plist` declares a `GigaDenoiserModelID`. Discovery is cached for the
+process lifetime; call `ModelCatalog.invalidateCache()` if your
 app loads new bundles dynamically.
 
 ## Errors
 
-All Swift APIs throw `SpenchError`:
+All Swift APIs throw `DenoiserError`:
 
 ```swift
 do {
-    let unit = try SpenchAVAudioUnit(features: features, settings: settings)
-} catch SpenchError.invalidArgument(let message) {
-    log.warning("Invalid Spench configuration: \(message)")
+    let unit = try DenoiserAVAudioUnit(features: features, settings: settings)
+} catch DenoiserError.invalidArgument(let message) {
+    log.warning("Invalid GigaDenoiser configuration: \(message)")
 } catch {
-    log.error("Spench failed to start: \(error)")
+    log.error("GigaDenoiser failed to start: \(error)")
 }
 ```
 
-Bridged `NSError` instances use the domain `SpenchError.errorDomain` and
-match the C `SpenchErrorCode` values.
+Bridged `NSError` instances use the domain `DenoiserError.errorDomain` and
+match the C `DenoiserErrorCode` values.
 
 ## Telemetry
 
-`SpenchAVAudioUnit` and `SpenchAUAudioUnit` expose cumulative processing telemetry snapshots via `telemetry`.
+`DenoiserAVAudioUnit` and `DenoiserAUAudioUnit` expose cumulative processing telemetry snapshots via `telemetry`.
 
 Telemetry contains two histograms:
 
@@ -208,9 +208,9 @@ Telemetry contains two histograms:
 - `denoiserCounters: [Double: Int]`
 
 Each key is a rounded processing time in milliseconds, and each value is the number of observed calls in that bucket.
-Rounding granularity is controlled by `SpenchSettings.telemetryRoundingMilliseconds`.
+Rounding granularity is controlled by `Settings.telemetryRoundingMilliseconds`.
 
-`SpenchTelemetry` also provides:
+`Telemetry` also provides:
 
 - histogram subtraction with `-`, clamped at zero for bucket counts
 - `audioProcessingMeanMilliseconds`
@@ -233,10 +233,10 @@ The custom audio unit emits a low-performance event when repeated output underru
 
 Delivery options:
 
-- Direct callback via `SpenchAVAudioUnit.onLowPerformance` / `SpenchAUAudioUnit.onLowPerformance`
-- `NotificationCenter` notification: `Notification.Name.spenchLowPerformance`
+- Direct callback via `DenoiserAVAudioUnit.onLowPerformance` / `DenoiserAUAudioUnit.onLowPerformance`
+- `NotificationCenter` notification: `Notification.Name.gigaDenoiserLowPerformance`
 
-Event payload (`SpenchLowPerformanceEvent`):
+Event payload (`LowPerformanceEvent`):
 
 - `sampleRate`
 - `currentLatency`
@@ -254,10 +254,10 @@ unit.onLowPerformance = { event in
 Notification example:
 
 ```swift
-NotificationCenter.default.addObserver(forName: .spenchLowPerformance,
+NotificationCenter.default.addObserver(forName: .gigaDenoiserLowPerformance,
                                        object: unit.auAudioUnit,
                                        queue: .main) { notification in
-    let event = notification.userInfo?[SpenchNotificationUserInfoKey.lowPerformanceEvent] as? SpenchLowPerformanceEvent
+    let event = notification.userInfo?[NotificationUserInfoKey.lowPerformanceEvent] as? LowPerformanceEvent
     print(event?.refillCount as Any)
 }
 ```
@@ -267,7 +267,7 @@ NotificationCenter.default.addObserver(forName: .spenchLowPerformance,
 ### Unit tests (framework wrappers)
 
 ```bash
-xcodebuild -project SpenchSDK.xcodeproj -scheme SpenchAudioKit -destination "platform=iOS Simulator,name=iPhone 17" test
+xcodebuild -project GigaDenoiserSDK.xcodeproj -scheme GigaDenoiserAudioKit -destination "platform=iOS Simulator,name=iPhone 17" test
 ```
 
 Covers:
@@ -281,7 +281,7 @@ Covers:
 Yes, `XCUITest` is the correct tool here.
 
 ```bash
-xcodebuild -project SpenchSDK.xcodeproj -scheme AudioDemoApp -destination "platform=iOS Simulator,name=iPhone 17" test
+xcodebuild -project GigaDenoiserSDK.xcodeproj -scheme AudioDemoApp -destination "platform=iOS Simulator,name=iPhone 17" test
 ```
 
 `AudioDemoAppUITests` validates:
@@ -305,7 +305,7 @@ Environment variables to customize test execution:
 |----------|---------|-------------|
 | `TEST_DEVICE_NAME` | `iPhone 17` | Simulator device name to use for tests |
 | `ERASE_SIMULATOR` | `1` | Erase simulator before tests (`1` = erase, `0` = skip erase) |
-| `SPENCH_TEST_RETRIES` | `1` | Retry count for `SpenchAudioKit` unit tests |
+| `GDN_TEST_RETRIES` | `1` | Retry count for `GigaDenoiserAudioKit` unit tests |
 | `APP_TEST_RETRIES` | `3` | Retry count for `AudioDemoApp` UI tests |
 
 Examples:
@@ -315,7 +315,7 @@ Examples:
 TEST_DEVICE_NAME="iPhone 15" ERASE_SIMULATOR=0 ./scripts/test.sh
 
 # Increase retries for flaky CI environment
-SPENCH_TEST_RETRIES=3 APP_TEST_RETRIES=5 ./scripts/test.sh
+GDN_TEST_RETRIES=3 APP_TEST_RETRIES=5 ./scripts/test.sh
 ```
 
 ## UI test fixture audio

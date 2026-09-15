@@ -1,18 +1,18 @@
 # ProGuard / R8
 
-**You do not need to add any manual keep rules for the Spench SDK.** The SDK ships consumer ProGuard
-rules that are applied automatically to your app when you depend on `spench-sdk`.
+**You do not need to add any manual keep rules for the GigaDenoiser SDK.** The SDK ships consumer ProGuard
+rules that are applied automatically to your app when you depend on `giga-denoiser-sdk`.
 
 ## What ships
 
-`spench-sdk` declares `consumerProguardFiles("consumer-rules.pro")` in its Gradle config, so R8/
-ProGuard in the consuming app automatically honors `spench-sdk/consumer-rules.pro`:
+`giga-denoiser-sdk` declares `consumerProguardFiles("consumer-rules.pro")` in its Gradle config, so R8/
+ProGuard in the consuming app automatically honors `sdk/consumer-rules.pro`:
 
 ```proguard
--keep class com.gigaedge.spench.SpenchNativeTelemetry { *; }
--keep class com.gigaedge.spench.SpenchLowPerformanceEvent { *; }
+-keep class com.gigaedge.denoiser.NativeTelemetry { *; }
+-keep class com.gigaedge.denoiser.LowPerformanceEvent { *; }
 
--keepclasseswithmembers class com.gigaedge.spench.SpenchProcessor {
+-keepclasseswithmembers class com.gigaedge.denoiser.Processor {
     native <methods>;
 }
 ```
@@ -21,10 +21,10 @@ ProGuard in the consuming app automatically honors `spench-sdk/consumer-rules.pr
 
 The native (JNI) layer reaches several Kotlin members reflectively, by name and signature:
 
-- `SpenchNativeTelemetry` is constructed from native code via its `<init>([D[I[D[I)V` constructor.
-- `SpenchLowPerformanceEvent` is constructed from native code via its
+- `NativeTelemetry` is constructed from native code via its `<init>([D[I[D[I)V` constructor.
+- `LowPerformanceEvent` is constructed from native code via its
   `<init>(IDLjava/lang/Double;I)V` constructor.
-- The `nativeXxx` methods on `SpenchProcessor` are bound to their mangled JNI symbol names.
+- The `nativeXxx` methods on `Processor` are bound to their mangled JNI symbol names.
 
 Without these keeps, a **minified** consumer app could rename or strip these members, and the JNI
 lookups (`FindClass` / `GetMethodID`) would fail at runtime — for example telemetry or

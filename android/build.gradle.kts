@@ -5,14 +5,14 @@ plugins {
     alias(libs.plugins.detekt) apply false
 }
 
-// SPENCH_VERSION at the repository root is the authoritative release version for every Spench
+// VERSION_NUMBER at the repository root is the authoritative release version for every GigaDenoiser
 // SDK, so the Android modules read it instead of duplicating the literal. CI overrides it with
-// SPENCH_ARTIFACT_VERSION when an artifact name needs a SemVer prerelease suffix, matching the
-// behaviour of cmake/SpenchInstall.cmake.
-val spenchVersion: String = System.getenv("SPENCH_ARTIFACT_VERSION")
+// GDN_ARTIFACT_VERSION when an artifact name needs a SemVer prerelease suffix, matching the
+// behaviour of cmake/Install.cmake.
+val gigaDenoiserVersion: String = System.getenv("GDN_ARTIFACT_VERSION")
     ?.takeIf(String::isNotBlank)
-    ?: rootDir.resolve("../SPENCH_VERSION").normalize().readText().trim()
+    ?: rootDir.resolve("../VERSION_NUMBER").normalize().readText().trim()
 
 allprojects {
-    version = spenchVersion
+    version = gigaDenoiserVersion
 }

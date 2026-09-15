@@ -1,28 +1,28 @@
 import AVFoundation
-import SpenchAudioKit
+import GigaDenoiserAudioKit
 
 final class LiveAudioController {
     private var engine: AVAudioEngine?
-    private var spenchUnit: SpenchAVAudioUnit?
+    private var gigaDenoiserUnit: DenoiserAVAudioUnit?
     private var delayNode: AVAudioUnitDelay?
 
-    var telemetry: SpenchTelemetry {
-        spenchUnit?.telemetry ?? .empty
+    var telemetry: Telemetry {
+        gigaDenoiserUnit?.telemetry ?? .empty
     }
     var onProcessingFailure: ((String) -> Void)?
 
-    func start(features: SpenchFeatures,
-               settings: SpenchSettings,
-               onLowPerformance: @escaping (SpenchLowPerformanceEvent) -> Void,
+    func start(features: Features,
+               settings: Settings,
+               onLowPerformance: @escaping (LowPerformanceEvent) -> Void,
                completion: @escaping (Error?) -> Void) {
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
             try session.setActive(true)
-            let spenchUnit = try SpenchAVAudioUnit(features: features, settings: settings)
-            spenchUnit.onLowPerformance = onLowPerformance
-            spenchUnit.onProcessingFailure = onProcessingFailure
-            try configureEngine(spenchUnit: spenchUnit)
+            let gigaDenoiserUnit = try DenoiserAVAudioUnit(features: features, settings: settings)
+            gigaDenoiserUnit.onLowPerformance = onLowPerformance
+            gigaDenoiserUnit.onProcessingFailure = onProcessingFailure
+            try configureEngine(gigaDenoiserUnit: gigaDenoiserUnit)
             completion(nil)
         } catch {
             completion(error)
@@ -34,15 +34,15 @@ final class LiveAudioController {
             engine.stop()
             engine.pause()
 
-            if let spenchUnit {
-                spenchUnit.onLowPerformance = nil
-                spenchUnit.onProcessingFailure = nil
-                spenchUnit.reset()
-                if let audioUnit = spenchUnit.auAudioUnit as? SpenchAUAudioUnit,
+            if let gigaDenoiserUnit {
+                gigaDenoiserUnit.onLowPerformance = nil
+                gigaDenoiserUnit.onProcessingFailure = nil
+                gigaDenoiserUnit.reset()
+                if let audioUnit = gigaDenoiserUnit.auAudioUnit as? DenoiserAUAudioUnit,
                    audioUnit.renderResourcesAllocated {
                     audioUnit.deallocateRenderResources()
                 }
-                engine.disconnectAndDetachIfNeeded(spenchUnit)
+                engine.disconnectAndDetachIfNeeded(gigaDenoiserUnit)
             }
 
             if let delayNode {
@@ -53,34 +53,34 @@ final class LiveAudioController {
         }
 
         engine = nil
-        spenchUnit = nil
+        gigaDenoiserUnit = nil
         delayNode = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
-    private func configureEngine(spenchUnit: SpenchAVAudioUnit) throws {
+    private func configureEngine(gigaDenoiserUnit: DenoiserAVAudioUnit) throws {
         let engine = AVAudioEngine()
         let delayNode = AVAudioUnitDelay()
         delayNode.delayTime = 1.0
         delayNode.feedback = 0
         delayNode.wetDryMix = 100
 
-        engine.attach(spenchUnit)
+        engine.attach(gigaDenoiserUnit)
         engine.attach(delayNode)
 
         let inputFormat = engine.inputNode.outputFormat(forBus: 0)
-        engine.connect(engine.inputNode, to: spenchUnit, format: inputFormat)
-        engine.connect(spenchUnit, to: delayNode, format: inputFormat)
+        engine.connect(engine.inputNode, to: gigaDenoiserUnit, format: inputFormat)
+        engine.connect(gigaDenoiserUnit, to: delayNode, format: inputFormat)
         engine.connect(delayNode, to: engine.mainMixerNode, format: inputFormat)
 
         try engine.start()
 
         self.engine = engine
-        self.spenchUnit = spenchUnit
+        self.gigaDenoiserUnit = gigaDenoiserUnit
         self.delayNode = delayNode
     }
 
-    func setFeatures(_ features: SpenchFeatures) throws {
-        try spenchUnit?.setFeatures(features)
+    func setFeatures(_ features: Features) throws {
+        try gigaDenoiserUnit?.setFeatures(features)
     }
 }
