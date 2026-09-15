@@ -1,0 +1,56 @@
+name: Set up GigaDenoiser build caches
+description: Restore dependency sources and compiler outputs for one GigaDenoiser preset.
+
+inputs:
+  preset:
+    description: Preset passed to tools.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Compute cache keys
+      id: cache-keys
+      shell: bash
+      run: |
+        python_command=python3
+        if [[ "${RUNNER_OS}" == "Windows" ]]; then
+          python_command=python
+        fi
+        $python_command tools/ci cache-key "${{ inputs.preset }}" >> "$GITHUB_OUTPUT"
+
+    - name: Restore CPM sources
+      uses: actions/cache/restore@v6
+      if: github.event_name == 'pull_request'
+      with:
+        path: ${{ steps.cache-keys.outputs.source_cache_path }}
+        key: ${{ steps.cache-keys.outputs.source_cache_key }}
+        restore-keys: |
+          ${{ steps.cache-keys.outputs.source_cache_restore_key }}
+
+    - name: Restore local compiler cache
+      uses: actions/cache/restore@v6
+      if: github.event_name == 'pull_request'
+      with:
+        path: ${{ steps.cache-keys.outputs.compiler_cache_path }}
+        key: ${{ steps.cache-keys.outputs.compiler_cache_key_prefix }}-${{ github.sha }}
+        restore-keys: |
+          ${{ steps.cache-keys.outputs.compiler_cache_key_prefix }}-
+          ${{ steps.cache-keys.outputs.compiler_cache_restore_key }}
+
+    - name: Restore and save CPM sources from trusted branches
+      if: github.event_name != 'pull_request'
+      uses: actions/cache@v6
+      with:
+        path: ${{ steps.cache-keys.outputs.source_cache_path }}
+        key: ${{ steps.cache-keys.outputs.source_cache_key }}
+
+    - name: Restore and save compiler cache from trusted branches
+      if: github.event_name != 'pull_request'
+      uses: actions/cache@v6
+      with:
+        path: ${{ steps.cache-keys.outputs.compiler_cache_path }}
+        key: ${{ steps.cache-keys.outputs.compiler_cache_key_prefix }}-${{ github.sha }}
+        restore-keys: |
+          ${{ steps.cache-keys.outputs.compiler_cache_key_prefix }}-
+          ${{ steps.cache-keys.outputs.compiler_cache_restore_key }}

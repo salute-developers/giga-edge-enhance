@@ -1,11 +1,11 @@
 # Telemetry and performance
 
-The SDK exposes two performance signals: cumulative **timing telemetry** (`SpenchTelemetry`) and an
-adaptive-latency **low-performance event** (`SpenchLowPerformanceEvent`).
+The SDK exposes two performance signals: cumulative **timing telemetry** (`Telemetry`) and an
+adaptive-latency **low-performance event** (`LowPerformanceEvent`).
 
 ## Telemetry histograms
 
-`SpenchProcessor.telemetry` returns a `SpenchTelemetry` snapshot with two histograms:
+`Processor.telemetry` returns a `Telemetry` snapshot with two histograms:
 
 - `normalizationCounters: Map<Double, Int>`
 - `noiseSuppressionCounters: Map<Double, Int>`
@@ -29,7 +29,7 @@ repeat(100) { processor.process(input, output, input.size) }
 val delta = processor.telemetry - before
 ```
 
-`SpenchTelemetry.minus` computes a per-bucket difference and keeps **only strictly positive counts**,
+`Telemetry.minus` computes a per-bucket difference and keeps **only strictly positive counts**,
 so the result is a clean "what happened during this interval" histogram.
 
 ## Mean helpers
@@ -52,10 +52,10 @@ safe and will not stall the audio thread (see [threading.md](threading.md)).
 When the native worker cannot keep up, the output ring buffer underruns and must be "refilled". The
 processor tracks refills over `lowPerformanceWindowSeconds` and **raises output latency** in steps of
 `latencyIncreaseStep` (starting from `minLatency`) to stabilize playback. When the number of refills
-in the window reaches `lowPerformanceMaxRefillTimes`, it emits a `SpenchLowPerformanceEvent`:
+in the window reaches `lowPerformanceMaxRefillTimes`, it emits a `LowPerformanceEvent`:
 
 ```kotlin
-data class SpenchLowPerformanceEvent(
+data class LowPerformanceEvent(
     val sampleRateHz: Int,
     val currentLatencySeconds: Double,
     val meanProcessingTimeMilliseconds: Double?,
@@ -77,7 +77,7 @@ Set `onLowPerformance`. Delivery follows the [threading contract](threading.md):
 
 ```kotlin
 processor.onLowPerformance = { event ->
-    Log.i("Spench", "latency=${event.currentLatencySeconds}s refills=${event.refillCount}")
+    Log.i("GigaDenoiser", "latency=${event.currentLatencySeconds}s refills=${event.refillCount}")
 }
 ```
 

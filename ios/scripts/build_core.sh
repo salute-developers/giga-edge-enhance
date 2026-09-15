@@ -9,7 +9,7 @@ CORE_INPUTS=(
   "$REPO_DIR/CMakeLists.txt"
   "$REPO_DIR/CMakePresets.json"
   "$REPO_DIR/cmake"
-  "$REPO_DIR/spench"
+  "$REPO_DIR/core"
   "$ROOT_DIR/cmake/ios.toolchain.cmake"
 )
 
@@ -20,16 +20,16 @@ archive_contains_onnxruntime() {
 }
 
 core_is_current() {
-  [[ -f "$ARTIFACT_DIR/device/libspench.a" ]] || return 1
-  [[ -f "$ARTIFACT_DIR/simulator/libspench.a" ]] || return 1
+  [[ -f "$ARTIFACT_DIR/device/libgiga-denoiser.a" ]] || return 1
+  [[ -f "$ARTIFACT_DIR/simulator/libgiga-denoiser.a" ]] || return 1
   [[ -d "$REPO_DIR/out/build/ios-device-release" ]] || return 1
   [[ -d "$REPO_DIR/out/build/ios-simulator-release" ]] || return 1
-  archive_contains_onnxruntime "$ARTIFACT_DIR/device/libspench.a" || return 1
-  archive_contains_onnxruntime "$ARTIFACT_DIR/simulator/libspench.a" || return 1
+  archive_contains_onnxruntime "$ARTIFACT_DIR/device/libgiga-denoiser.a" || return 1
+  archive_contains_onnxruntime "$ARTIFACT_DIR/simulator/libgiga-denoiser.a" || return 1
 
   local reference="$CORE_STAMP"
   if [[ ! -f "$reference" ]]; then
-    reference="$ARTIFACT_DIR/device/libspench.a"
+    reference="$ARTIFACT_DIR/device/libgiga-denoiser.a"
   fi
 
   [[ -z "$(find "${CORE_INPUTS[@]}" -newer "$reference" -print -quit)" ]]
@@ -39,11 +39,11 @@ build_target() {
   local preset="$1"
   local prebuilt_root=""
   case "$preset" in
-    ios-device-*) prebuilt_root="${SPENCH_PREBUILT_ORT_DEVICE_ROOT:-}" ;;
-    ios-simulator-*) prebuilt_root="${SPENCH_PREBUILT_ORT_SIMULATOR_ROOT:-}" ;;
+    ios-device-*) prebuilt_root="${GDN_PREBUILT_ORT_DEVICE_ROOT:-}" ;;
+    ios-simulator-*) prebuilt_root="${GDN_PREBUILT_ORT_SIMULATOR_ROOT:-}" ;;
   esac
   if [[ -n "$prebuilt_root" ]]; then
-    cmake --preset "$preset" "-DSPENCH_PREBUILT_ORT_ROOT=$prebuilt_root"
+    cmake --preset "$preset" "-DGDN_PREBUILT_ORT_ROOT=$prebuilt_root"
   else
     cmake --preset "$preset"
   fi
@@ -89,15 +89,15 @@ build_target ios-simulator-release
 
 merge_archives \
   "$REPO_DIR/out/build/ios-device-release" \
-  "$ARTIFACT_DIR/device/libspench.a" \
-  "${SPENCH_PREBUILT_ORT_DEVICE_ROOT:-}"
+  "$ARTIFACT_DIR/device/libgiga-denoiser.a" \
+  "${GDN_PREBUILT_ORT_DEVICE_ROOT:-}"
 merge_archives \
   "$REPO_DIR/out/build/ios-simulator-release" \
-  "$ARTIFACT_DIR/simulator/libspench.a" \
-  "${SPENCH_PREBUILT_ORT_SIMULATOR_ROOT:-}"
+  "$ARTIFACT_DIR/simulator/libgiga-denoiser.a" \
+  "${GDN_PREBUILT_ORT_SIMULATOR_ROOT:-}"
 touch "$CORE_STAMP"
 
-echo "Built device static library: $ARTIFACT_DIR/device/libspench.a"
-echo "Built simulator static library: $ARTIFACT_DIR/simulator/libspench.a"
-lipo -info "$ARTIFACT_DIR/device/libspench.a"
-lipo -info "$ARTIFACT_DIR/simulator/libspench.a"
+echo "Built device static library: $ARTIFACT_DIR/device/libgiga-denoiser.a"
+echo "Built simulator static library: $ARTIFACT_DIR/simulator/libgiga-denoiser.a"
+lipo -info "$ARTIFACT_DIR/device/libgiga-denoiser.a"
+lipo -info "$ARTIFACT_DIR/simulator/libgiga-denoiser.a"

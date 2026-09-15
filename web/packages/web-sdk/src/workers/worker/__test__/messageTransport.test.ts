@@ -3,7 +3,7 @@
 import { MessageChannel } from 'node:worker_threads';
 
 import { getSettingsWithDefaults } from '../../../utils/common';
-import { getBufferSize, SPENCH_FRAME_SIZE_SECONDS, TRANSPORT_SIZE_SECONDS } from '../../../utils/constants';
+import { getBufferSize, GDN_FRAME_SIZE_SECONDS, TRANSPORT_SIZE_SECONDS } from '../../../utils/constants';
 import { CustomPort, WORKER_MESSAGES, WORKLET_MESSAGES } from '../../../utils/ipc';
 import { MessageTransport, Payload } from '../transport';
 
@@ -78,7 +78,7 @@ describe('MessageTransport', () => {
         const transport = new MessageTransport(port1 as any, SAMPLE_RATE, SETTINGS, onFrameReceived);
         port2.start();
 
-        const frameSize = getBufferSize(SAMPLE_RATE, SPENCH_FRAME_SIZE_SECONDS);
+        const frameSize = getBufferSize(SAMPLE_RATE, GDN_FRAME_SIZE_SECONDS);
         const input = new Float32Array(frameSize).fill(0.5);
         const loopback = new Float32Array(frameSize).fill(-0.5);
 
@@ -140,7 +140,7 @@ describe('MessageTransport', () => {
         const transport = new MessageTransport(port1 as any, SAMPLE_RATE, SETTINGS, onFrameReceived);
         port2.start();
 
-        const frameSize = getBufferSize(SAMPLE_RATE, SPENCH_FRAME_SIZE_SECONDS);
+        const frameSize = getBufferSize(SAMPLE_RATE, GDN_FRAME_SIZE_SECONDS);
         const input = new Float32Array(frameSize).fill(0.5);
         const loopback = new Float32Array(frameSize).fill(-0.5);
 

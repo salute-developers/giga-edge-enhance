@@ -1,7 +1,7 @@
 /* eslint-disable no-var */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getSettingsWithDefaults } from '../../../utils/common';
-import { getBufferSize, getOutputBufferSeconds, SPENCH_FRAME_SIZE_SECONDS } from '../../../utils/constants';
+import { getBufferSize, getOutputBufferSeconds, GDN_FRAME_SIZE_SECONDS } from '../../../utils/constants';
 import { RingBuffer } from '../../../utils/ringBuffer';
 import { SharedMemoryTransport } from '../transport';
 
@@ -24,7 +24,7 @@ describe('SharedMemoryTransport', () => {
     });
 
     const createTransport = () => {
-        const inputSize = getBufferSize(sampleRate, SPENCH_FRAME_SIZE_SECONDS * 2);
+        const inputSize = getBufferSize(sampleRate, GDN_FRAME_SIZE_SECONDS * 2);
         const inputABSize = RingBuffer.getInternalBufferSize(inputSize);
 
         const outputSize = getBufferSize(sampleRate, getOutputBufferSeconds(settings));
@@ -45,7 +45,7 @@ describe('SharedMemoryTransport', () => {
     it('push writes to buffers even when full', async () => {
         const { transport } = createTransport();
 
-        const inputSize = getBufferSize(sampleRate, SPENCH_FRAME_SIZE_SECONDS * 2);
+        const inputSize = getBufferSize(sampleRate, GDN_FRAME_SIZE_SECONDS * 2);
         const inputData = new Float32Array(inputSize).fill(0.1);
         const loopbackData = new Float32Array(inputSize).fill(0.2);
 
@@ -87,7 +87,7 @@ describe('SharedMemoryTransport', () => {
     it('reset clears all buffers', () => {
         const { transport } = createTransport();
 
-        const inputSize = getBufferSize(sampleRate, SPENCH_FRAME_SIZE_SECONDS * 2);
+        const inputSize = getBufferSize(sampleRate, GDN_FRAME_SIZE_SECONDS * 2);
         const inputData = new Float32Array(inputSize).fill(0.5);
         const loopbackData = new Float32Array(inputSize).fill(0.6);
 

@@ -1,11 +1,11 @@
 // packages/web-sdk/src/utils/__tests__/wrapper.test.ts
-import { AbstractSpenchWrapper } from '../wrapper';
+import { AbstractGigaDenoiserWrapper } from '../wrapper';
 
 /**
  * Concrete test implementation that exposes the protected members
- * of AbstractSpenchWrapper for the test harness.
+ * of AbstractGigaDenoiserWrapper for the test harness.
  */
-class TestWrapper extends AbstractSpenchWrapper {
+class TestWrapper extends AbstractGigaDenoiserWrapper {
     /* ──────────────────────────────────────────────────────────────────────
      *  Required abstract members.
      * ────────────────────────────────────────────────────────────────────── */
@@ -45,7 +45,7 @@ class TestWrapper extends AbstractSpenchWrapper {
     }
 }
 
-describe('AbstractSpenchWrapper', () => {
+describe('AbstractGigaDenoiserWrapper', () => {
     let wrapper: TestWrapper;
 
     beforeEach(() => {

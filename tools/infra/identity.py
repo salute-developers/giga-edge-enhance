@@ -78,7 +78,7 @@ def container_image_digest(container_stage: str) -> str:
 
 def container_image_name(container_stage: str) -> str:
     """Return the immutable local image name for a toolchain stage."""
-    return f"spench-dev:{container_stage}-{container_image_digest(container_stage)}"
+    return f"gdn-dev:{container_stage}-{container_image_digest(container_stage)}"
 
 
 def dependency_cache_digest() -> str:
@@ -116,7 +116,7 @@ def dependency_bundle_digest(engine: str) -> str:
     digest = hashlib.sha256()
     digest.update(f"format={DEPENDENCY_BUNDLE_FORMAT}".encode())
     digest.update(b"\0")
-    digest.update(os.environ.get("SPENCH_TOOLCHAIN_IDENTITY", "local-host").encode())
+    digest.update(os.environ.get("GDN_TOOLCHAIN_IDENTITY", "local-host").encode())
     digest.update(b"\0")
     digest.update(engine.encode())
     digest.update(b"\0")
@@ -167,16 +167,16 @@ def print_cache_keys(preset: str, host: bool) -> None:
     if source_system == "darwin":
         source_system = "macos"
     compiler_prefix = (
-        f"spench-compiler-v1-{target_system}-{target_arch}-{preset}-{dependency_digest}"
+        f"gdn-compiler-v1-{target_system}-{target_arch}-{preset}-{dependency_digest}"
     )
     print("source_cache_path=out/cache/cpm")
-    print(f"source_cache_key=spench-sources-v2-{source_system}-{dependency_digest}")
-    print(f"source_cache_restore_key=spench-sources-v2-{source_system}-")
+    print(f"source_cache_key=gdn-sources-v2-{source_system}-{dependency_digest}")
+    print(f"source_cache_restore_key=gdn-sources-v2-{source_system}-")
     print("compiler_cache_path=out/cache/compiler")
     print(f"compiler_cache_key_prefix={compiler_prefix}")
     print(
         "compiler_cache_restore_key="
-        f"spench-compiler-v1-{target_system}-{target_arch}-{preset}-"
+        f"gdn-compiler-v1-{target_system}-{target_arch}-{preset}-"
     )
 
 
@@ -270,6 +270,6 @@ def dependency_manifest(preset: str, host: bool, prefix: Path) -> dict[str, obje
         "target_system": target_system,
         "target_architecture": target_arch,
         "dependency_digest": dependency_bundle_digest(engine),
-        "toolchain_identity": os.environ.get("SPENCH_TOOLCHAIN_IDENTITY", "local-host"),
+        "toolchain_identity": os.environ.get("GDN_TOOLCHAIN_IDENTITY", "local-host"),
         "prefix": str(prefix.relative_to(ROOT)),
     }

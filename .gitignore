@@ -13,6 +13,7 @@
 !.vscode/launch.json
 CMakeUserPresets.json
 build
+!tools/build
 .cache
 .cpm
 .venv
@@ -99,7 +100,7 @@ _CPack_Packages/
 build_shared_tflite_pocketfft/
 ios_device/
 ios_simulator/
-SpenchCore.xcframework/
+GigaDenoiserCore.xcframework/
 out-xcframework/
 DerivedData/
 target/

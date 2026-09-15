@@ -1,20 +1,20 @@
 /**
- * Base error type used throughout the Spench SDK.
+ * Base error type used throughout the GigaDenoiser SDK.
  *
  * @extends Error
  *
  * @remarks
  * The constructor can be called in two ways:
- * 1. `new SpenchError(error: Error)` – wraps an existing error,
+ * 1. `new GigaDenoiserError(error: Error)` – wraps an existing error,
  *    preserving its stack trace and setting `cause` to the original error.
- * 2. `new SpenchError(message: string)` – creates a new error with the
+ * 2. `new GigaDenoiserError(message: string)` – creates a new error with the
  *    supplied message.
  *
- * The `name` getter returns the actual constructor name (`SpenchError`
+ * The `name` getter returns the actual constructor name (`GigaDenoiserError`
  * or any subclass) and the `message` getter guarantees a non‑empty
  * string by falling back to `'Unknown error'`.
  */
-class SpenchError extends Error {
+class GigaDenoiserError extends Error {
     /** @type {Error | undefined} */
     cause: Error | undefined;
 
@@ -37,7 +37,7 @@ class SpenchError extends Error {
 
     /** @override */
     override get name() {
-        return 'SpenchError';
+        return 'GigaDenoiserError';
     }
 
     /** @override */
@@ -46,8 +46,8 @@ class SpenchError extends Error {
     }
 }
 
-/** @extends SpenchError */
-class AssertionError extends SpenchError {
+/** @extends GigaDenoiserError */
+class AssertionError extends GigaDenoiserError {
     override get name() {
         return 'AssertionError';
     }
@@ -68,4 +68,4 @@ export function assert(condition: any, message?: string): asserts condition {
     }
 }
 
-export default SpenchError;
+export default GigaDenoiserError;

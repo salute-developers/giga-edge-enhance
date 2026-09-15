@@ -1,19 +1,19 @@
 #include <emscripten/bind.h>
 
+#include "core/src/logger.h"
 #include "elements.h"
-#include "spench/src/spench_logger.h"
-  /**
-   *    trace = 0,
-   *    debug = 1,
-   *    info = 2,
-   *    warn = 3,
-   *    err = 4,
-   *    critical = 5,
-   *    off = 6,
-   *    n_levels
-   */
+/**
+ *    trace = 0,
+ *    debug = 1,
+ *    info = 2,
+ *    warn = 3,
+ *    err = 4,
+ *    critical = 5,
+ *    off = 6,
+ *    n_levels
+ */
 
-EMSCRIPTEN_BINDINGS(spench) {
+EMSCRIPTEN_BINDINGS(gigadenoiser) {
 #ifdef BUILD_DSP
   emscripten::class_<AudioProcessPipelineElement>("AudioProcessPipelineElement")
     .constructor<std::string>()
@@ -24,13 +24,14 @@ EMSCRIPTEN_BINDINGS(spench) {
     .function("process", &EchoCancellationElement::processMono)
     .function("resetContext", &EchoCancellationElement::resetContext);
 #else
-  emscripten::class_<spench::PackedModelReader>("PackedModelReader")
-    .smart_ptr_constructor("PackedModelReader", &std::make_shared<spench::PackedModelReader, const uintptr_t, uint32_t>);
+  emscripten::class_<gigaedge::denoiser::PackedModelReader>("PackedModelReader")
+      .smart_ptr_constructor("PackedModelReader",
+                             &std::make_shared<gigaedge::denoiser::PackedModelReader, const uintptr_t, uint32_t>);
   emscripten::class_<DenoisePipelineElement>("DenoisePipelineElement")
-    .constructor<uint32_t, std::shared_ptr<spench::PackedModelReader>>()
-    .function("process", &DenoisePipelineElement::process)
-    .function("resetContext", &DenoisePipelineElement::resetContext);
+      .constructor<uint32_t, std::shared_ptr<gigaedge::denoiser::PackedModelReader> >()
+      .function("process", &DenoisePipelineElement::process)
+      .function("resetContext", &DenoisePipelineElement::resetContext);
 #endif
-  emscripten::function("SetLogLevel", &spench::set_log_level);
-  emscripten::function("InitLogger", &spench::init_logger);
+  emscripten::function("SetLogLevel", &gigaedge::denoiser::set_log_level);
+  emscripten::function("InitLogger", &gigaedge::denoiser::init_logger);
 }

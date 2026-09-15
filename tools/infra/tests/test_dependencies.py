@@ -61,7 +61,7 @@ class DependenciesTest(unittest.TestCase):
             dependencies.write_engine_package_config(prefix, "onnx", library, "shared")
             config = (prefix / "lib/cmake/onnxruntime/onnxruntimeConfig.cmake").read_text()
             self.assertIn("onnxruntime::onnxruntime", config)
-            self.assertIn("${_spench_ort_prefix}/lib/libonnxruntime.so", config)
+            self.assertIn("${_gdn_ort_prefix}/lib/libonnxruntime.so", config)
             self.assertNotIn(str(prefix), config)
 
     def test_prebuilt_arguments_use_container_path(self):
@@ -71,8 +71,35 @@ class DependenciesTest(unittest.TestCase):
             arguments = dependencies.prebuilt_cmake_arguments(
                 "native-release-tflite", False, prefix, True)
         self.assertEqual(arguments, [
-            "-DSPENCH_PREBUILT_TFLITE_ROOT=/workspace/out/artifacts/dependencies/test/prefix"
+            "-DGDN_PREBUILT_TFLITE_ROOT=/workspace/out/artifacts/dependencies/test/prefix"
         ])
+
+    def test_prepare_dependency_builds_renamed_bundle_target(self):
+        with tempfile.TemporaryDirectory(dir=dependencies.ROOT) as directory:
+            artifact_root = Path(directory) / "artifact"
+            with (
+                mock.patch.object(dependencies, "engine_requirement",
+                                  return_value=("onnx", "Release")),
+                mock.patch.object(dependencies, "dependency_artifact_root",
+                                  return_value=artifact_root),
+                mock.patch.object(dependencies, "dependency_manifest", return_value={}),
+                mock.patch.object(dependencies, "compiler_cache_environment", return_value={}),
+                mock.patch.object(dependencies, "cache_target", return_value=("linux", "x86_64")),
+                mock.patch.object(dependencies, "bundle_linkage", return_value="shared"),
+                mock.patch.object(dependencies, "artifact_preset",
+                                  return_value="native-release-onnx"),
+                mock.patch.object(dependencies, "copy_engine_library",
+                                  return_value=Path("libonnxruntime.so")),
+                mock.patch.object(dependencies, "write_engine_package_config"),
+                mock.patch.object(dependencies, "copy_onnx_headers"),
+                mock.patch.object(dependencies, "write_dependency_bundle"),
+                mock.patch.object(dependencies, "run") as run_mock,
+            ):
+                dependencies.prepare_dependency("native-release-onnx", False)
+
+            build_command = run_mock.call_args_list[1].args[0]
+            self.assertIn("gdn_dependency_bundle", build_command)
+            self.assertNotIn("gigadenoiser_dependency_bundle", build_command)
 
 
 if __name__ == "__main__":

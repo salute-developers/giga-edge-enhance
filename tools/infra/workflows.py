@@ -52,7 +52,7 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
     build_dir = str(build_dir_host) if use_host else f"/workspace/{build_dir_host.relative_to(ROOT)}"
     environment = compiler_cache_environment(stage is not None)
     if not use_host:
-        environment["SPENCH_BUILD_DIR"] = build_dir
+        environment["GDN_BUILD_DIR"] = build_dir
 
     if action == "build":
         prebuilt_prefix = find_prebuilt_dependency(preset, host)
@@ -74,7 +74,7 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
     if not build_dir_host.is_dir():
         raise SystemExit(
             f"Build output for {preset} does not exist at {build_dir_host.relative_to(ROOT)}. "
-            f"Run 'tools/spench build {preset}{' --host' if host else ''}' first.")
+            f"Run 'tools/build {preset}{' --host' if host else ''}' first.")
 
     if action == "test":
         if preset in NATIVE_PRESETS:
@@ -140,7 +140,7 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
         consumer_build_dir_host = ROOT / "out" / "build" / "package-consumer" / preset
         if consumer_build_dir_host.exists():
             shutil.rmtree(consumer_build_dir_host)
-        consumer_source = ROOT / "spench" / "tests" / "package_consumer"
+        consumer_source = ROOT / "core" / "tests" / "package_consumer"
         consumer_build = (str(consumer_build_dir_host) if use_host else
                           f"/workspace/{consumer_build_dir_host.relative_to(ROOT)}")
         consumer_source_path = (str(consumer_source) if use_host else
@@ -171,7 +171,7 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
                             "DYLD_LIBRARY_PATH" if target_is_macos else "LD_LIBRARY_PATH")
         library_dir = f"{install_output}/{'bin' if target_is_windows else 'lib'}"
         consumer_environment[library_variable] = library_dir
-        executable = f"{executable_directory}/spench_package_consumer"
+        executable = f"{executable_directory}/gigadenoiser_package_consumer"
         if target_is_windows:
             executable += ".exe"
         run([executable], container_stage=stage, environment=consumer_environment)
@@ -181,11 +181,11 @@ def android_workflow(action: str, host: bool) -> None:
     stage = None if host else "android"
     script = "test-all.sh" if action == "test" else "build.sh"
     environment = compiler_cache_environment(stage is not None)
-    if artifact_version := os.environ.get("SPENCH_ARTIFACT_VERSION"):
-        environment["SPENCH_ARTIFACT_VERSION"] = artifact_version
+    if artifact_version := os.environ.get("GDN_ARTIFACT_VERSION"):
+        environment["GDN_ARTIFACT_VERSION"] = artifact_version
     dependency_root = "/workspace/out/artifacts/dependencies" if not host else str(
         ROOT / "out" / "artifacts" / "dependencies")
-    environment["SPENCH_PREBUILT_DEPENDENCIES_ROOT"] = dependency_root
+    environment["GDN_PREBUILT_DEPENDENCIES_ROOT"] = dependency_root
     if not host:
         environment["GRADLE_OPTS"] = (
             "-Dorg.gradle.vfs.watch=false -Dorg.gradle.workers.max=2 "
@@ -197,7 +197,7 @@ def android_workflow(action: str, host: bool) -> None:
 
 def android_ui_workflow() -> None:
     environment = compiler_cache_environment(True)
-    environment["SPENCH_PREBUILT_DEPENDENCIES_ROOT"] = "/workspace/out/artifacts/dependencies"
+    environment["GDN_PREBUILT_DEPENDENCIES_ROOT"] = "/workspace/out/artifacts/dependencies"
     environment["GRADLE_OPTS"] = (
         "-Dorg.gradle.vfs.watch=false -Dorg.gradle.workers.max=2 "
         "-Dorg.gradle.jvmargs=-Xmx3g"
@@ -211,15 +211,14 @@ def ios_workflow(action: str) -> None:
     scripts = {
         "build": "build_xcframework.sh",
         "test": "test.sh",
-        "core": "build_core.sh",
     }
     device_root = find_prebuilt_dependency("ios-device-release", True)
     simulator_root = find_prebuilt_dependency("ios-simulator-release", True)
     environment = compiler_cache_environment(False)
     if device_root and simulator_root:
         environment.update({
-            "SPENCH_PREBUILT_ORT_DEVICE_ROOT": str(device_root),
-            "SPENCH_PREBUILT_ORT_SIMULATOR_ROOT": str(simulator_root),
+            "GDN_PREBUILT_ORT_DEVICE_ROOT": str(device_root),
+            "GDN_PREBUILT_ORT_SIMULATOR_ROOT": str(simulator_root),
         })
     run([f"ios/scripts/{scripts[action]}"], environment=environment)
 
@@ -227,8 +226,8 @@ def ios_workflow(action: str) -> None:
 def web_workflow(action: str, host: bool) -> None:
     web_dir = ROOT / "web"
     environment = compiler_cache_environment(not host)
-    if site_base := os.environ.get("SPENCH_SITE_BASE"):
-        environment["SPENCH_SITE_BASE"] = site_base
+    if site_base := os.environ.get("GDN_SITE_BASE"):
+        environment["GDN_SITE_BASE"] = site_base
 
     if action == "test":
         required_outputs = (
@@ -239,11 +238,11 @@ def web_workflow(action: str, host: bool) -> None:
         if missing:
             raise SystemExit(
                 "Web build output is missing: " + ", ".join(map(str, missing)) +
-                ". Run 'tools/spench build web' first.")
+                ". Run 'tools/build web' first.")
         test_stage = None if host else "web"
         run_web_node(["npm", "ci"], container_stage=test_stage,
                      environment=environment, workdir=web_dir)
-        run_web_node(["npm", "test", "--workspace=@gigaedge/spench-web-sdk"],
+        run_web_node(["npm", "test", "--workspace=@gigaedge/denoiser-web-sdk"],
                      container_stage=test_stage, environment=environment, workdir=web_dir)
         return
 
@@ -252,17 +251,17 @@ def web_workflow(action: str, host: bool) -> None:
         package_dir.mkdir(parents=True, exist_ok=True)
         stage = None if host else "web"
         run_web_node([
-            "npm", "pack", "--workspace=@gigaedge/spench-web-sdk",
+            "npm", "pack", "--workspace=@gigaedge/denoiser-web-sdk",
             "--pack-destination", "../out/artifacts/web",
         ], container_stage=stage, environment=environment, workdir=web_dir)
         return
 
     if action == "playwright":
-        installed_sdk = web_dir / "apps/spench-site/node_modules/@gigaedge/spench-web-sdk/package.json"
+        installed_sdk = web_dir / "apps/site/node_modules/@gigaedge/denoiser-web-sdk/package.json"
         if not installed_sdk.is_file():
             raise SystemExit(
                 "The packed Web SDK is not installed. Install the downloaded package into "
-                "@gigaedge/spench-site before running Playwright.")
+                "@gigaedge/denoiser-site before running Playwright.")
         stage = None if host else "web"
         browser_platform = (f"{platform.system().lower()}-{platform.machine().lower()}"
                             if host else "linux-amd64")
@@ -272,20 +271,20 @@ def web_workflow(action: str, host: bool) -> None:
                          f"/workspace/{browser_cache_host.relative_to(ROOT)}")
         playwright_environment = {"PLAYWRIGHT_BROWSERS_PATH": browser_cache}
         supported_browsers = {"chromium", "firefox", "webkit"}
-        configured_browsers = os.environ.get("SPENCH_PLAYWRIGHT_BROWSERS")
+        configured_browsers = os.environ.get("GDN_PLAYWRIGHT_BROWSERS")
         browsers = configured_browsers.split(",") if configured_browsers else ["chromium", "firefox", "webkit"]
         if not browsers or any(browser not in supported_browsers for browser in browsers):
             raise SystemExit(
-                "SPENCH_PLAYWRIGHT_BROWSERS must be a comma-separated list of chromium, firefox, and webkit.")
+                "GDN_PLAYWRIGHT_BROWSERS must be a comma-separated list of chromium, firefox, and webkit.")
         run_web_node(["npx", "playwright", "install", *browsers],
                      container_stage=stage, environment=playwright_environment,
                      workdir=web_dir, isolate_node_modules=False)
-        run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-site"],
+        run_web_node(["npm", "run", "build", "--workspace=@gigaedge/denoiser-site"],
                      container_stage=stage,
-                     environment={**playwright_environment, "SPENCH_SITE_BASE": "/"},
+                     environment={**playwright_environment, "GDN_SITE_BASE": "/"},
                      workdir=web_dir, isolate_node_modules=False)
         playwright_command = [
-            "npm", "run", "pw:test", "--workspace=@gigaedge/spench-site", "--",
+            "npm", "run", "pw:test", "--workspace=@gigaedge/denoiser-site", "--",
             *(f"--project={browser}" for browser in browsers),
         ]
         if stage is not None:
@@ -303,7 +302,7 @@ def web_workflow(action: str, host: bool) -> None:
     prebuilt_prefix = find_prebuilt_dependency("wasm-release", host)
     build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-release"
     if build_dir is not None:
-        environment["SPENCH_BUILD_DIR"] = build_dir
+        environment["GDN_BUILD_DIR"] = build_dir
     run_web_node(["npm", "ci"], container_stage=stage, environment=environment, workdir=web_dir)
     configure_command = ["cmake", "--preset", "wasm-release"]
     configure_command.extend(prebuilt_cmake_arguments(
@@ -323,7 +322,7 @@ def web_workflow(action: str, host: bool) -> None:
     dsp_build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-dsp-release"
     dsp_environment = compiler_cache_environment(stage is not None)
     if dsp_build_dir is not None:
-        dsp_environment["SPENCH_BUILD_DIR"] = dsp_build_dir
+        dsp_environment["GDN_BUILD_DIR"] = dsp_build_dir
     dsp_configure_command = ["cmake", "--preset", "wasm-dsp-release"]
     dsp_build_command = ["cmake", "--build", "out/build/wasm-dsp-release"]
     if dsp_build_dir is not None:
@@ -338,14 +337,14 @@ def web_workflow(action: str, host: bool) -> None:
     run(dsp_build_command, container_stage=stage, environment=dsp_environment)
 
     stage_environment = {
-        "SPENCH_WASM_FULL_BUILD_DIR": build_dir or str(ROOT / "out/build/wasm-release"),
-        "SPENCH_WASM_DSP_BUILD_DIR": dsp_build_dir or str(ROOT / "out/build/wasm-dsp-release"),
+        "GDN_WASM_FULL_BUILD_DIR": build_dir or str(ROOT / "out/build/wasm-release"),
+        "GDN_WASM_DSP_BUILD_DIR": dsp_build_dir or str(ROOT / "out/build/wasm-dsp-release"),
     }
     run_web_node(["npm", "run", "stage:wasm:release"], container_stage=stage,
                  environment=stage_environment, workdir=web_dir)
-    run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-web-sdk"],
+    run_web_node(["npm", "run", "build", "--workspace=@gigaedge/denoiser-web-sdk"],
                  container_stage=stage, environment=environment, workdir=web_dir)
-    run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-site"],
+    run_web_node(["npm", "run", "build", "--workspace=@gigaedge/denoiser-site"],
                  container_stage=stage, environment=environment, workdir=web_dir)
 
 

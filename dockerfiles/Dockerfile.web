@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
-FROM spench-base AS web
+FROM giga-denoiser-base AS web
 
 ARG EMSDK_VERSION=3.1.64
 
@@ -14,18 +14,18 @@ RUN git clone --depth 1 --branch "${EMSDK_VERSION}" \
 ENV EMSDK=/opt/emsdk
 ENV PATH=/opt/emsdk:/opt/emsdk/upstream/emscripten:${PATH}
 
-ENV MOS_VENV_DIR=/opt/spench-mos-venv
-ENV NISQA_WEIGHTS_HOME=/opt/spench-nisqa-home
+ENV MOS_VENV_DIR=/opt/giga-denoiser-mos-venv
+ENV NISQA_WEIGHTS_HOME=/opt/giga-denoiser-nisqa-home
 ENV NUMBA_CACHE_DIR=/tmp/numba-cache
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
-ENV PATH=/opt/spench-mos-venv/bin:${PATH}
+ENV PATH=/opt/giga-denoiser-mos-venv/bin:${PATH}
 
-COPY web/.nvmrc /tmp/spench-web/.nvmrc
-COPY web/package.json web/package-lock.json /tmp/spench-web/
-COPY web/packages/web-sdk/package.json /tmp/spench-web/packages/web-sdk/package.json
-COPY web/apps/spench-site/package.json /tmp/spench-web/apps/spench-site/package.json
-COPY web/apps/spench-site/mos_install.sh \
-    web/apps/spench-site/requirements-mos.txt /tmp/mos/
+COPY web/.nvmrc /tmp/giga-denoiser-web/.nvmrc
+COPY web/package.json web/package-lock.json /tmp/giga-denoiser-web/
+COPY web/packages/web-sdk/package.json /tmp/giga-denoiser-web/packages/web-sdk/package.json
+COPY web/apps/site/package.json /tmp/giga-denoiser-web/apps/site/package.json
+COPY web/apps/site/mos_install.sh \
+    web/apps/site/requirements-mos.txt /tmp/mos/
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y ffmpeg pulseaudio python3-venv && \
@@ -33,8 +33,8 @@ RUN apt-get update && \
     MOS_VENV_DIR="${MOS_VENV_DIR}" /tmp/mos/mos_install.sh
 
 RUN /bin/bash -c 'source /usr/local/lib/nvm/nvm.sh && \
-        nvm install "$(cat /tmp/spench-web/.nvmrc)" && \
-        cd /tmp/spench-web && npm ci --ignore-scripts && \
+        nvm install "$(cat /tmp/giga-denoiser-web/.nvmrc)" && \
+        cd /tmp/giga-denoiser-web && npm ci --ignore-scripts && \
         PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH}" \
         npx playwright install --with-deps chromium firefox webkit'
 
@@ -52,4 +52,4 @@ PY
 RUN rm -rf "${NUMBA_CACHE_DIR}" && \
     mkdir -p "${NUMBA_CACHE_DIR}" && \
     chmod 1777 "${NUMBA_CACHE_DIR}" && \
-    rm -rf /root/.cache /root/.npm /tmp/spench-web/node_modules
+    rm -rf /root/.cache /root/.npm /tmp/giga-denoiser-web/node_modules

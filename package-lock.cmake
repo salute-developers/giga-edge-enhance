@@ -1,7 +1,11 @@
 # CPM Package Lock
 # This file should be committed to version control
 
-include(cmake/string_option.cmake)
+function(string_option name value)
+  if(NOT DEFINED ${name})
+    set(${name} ${value} PARENT_SCOPE)
+  endif()
+endfunction()
 
 # base dependencies
 
@@ -29,8 +33,8 @@ CPMDeclarePackage(rnnoise
 )
 
 string_option(SPEEXDSP_URL "https://github.com/xiph/speexdsp.git")
-CPMDeclarePackage(speexdsp_spench
-  NAME speexdsp_spench
+CPMDeclarePackage(speexdsp_gdn_core
+  NAME speexdsp_gdn_core
   PATCHES "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/speex.patch"
   GIT_TAG "SpeexDSP-1.2.1"
   GIT_REPOSITORY ${SPEEXDSP_URL}

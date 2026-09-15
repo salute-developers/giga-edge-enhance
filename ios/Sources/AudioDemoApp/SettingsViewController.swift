@@ -1,5 +1,5 @@
 import UIKit
-import SpenchAudioKit
+import GigaDenoiserAudioKit
 
 final class SettingsViewController: UIViewController {
     private let scrollView = UIScrollView()
@@ -17,9 +17,9 @@ final class SettingsViewController: UIViewController {
     private let useVadNormalizationSwitch = UISwitch()
     private let reverseProcessingOrderSwitch = UISwitch()
 
-    private let onSave: (SpenchSettings) -> Void
+    private let onSave: (Settings) -> Void
 
-    init(settings: SpenchSettings, onSave: @escaping (SpenchSettings) -> Void) {
+    init(settings: Settings, onSave: @escaping (Settings) -> Void) {
         self.onSave = onSave
         super.init(nibName: nil, bundle: nil)
         apply(settings: settings)
@@ -128,7 +128,7 @@ final class SettingsViewController: UIViewController {
         ])
     }
 
-    private func apply(settings: SpenchSettings) {
+    private func apply(settings: Settings) {
         lowPerformanceWindowField.text = Self.string(from: settings.lowPerformanceWindowSeconds)
         lowPerformanceMaxRefillTimesField.text = String(settings.lowPerformanceMaxRefillTimes)
         lowPerformanceMaxRefillTimeFactorField.text = Self.string(from: settings.lowPerformanceMaxRefillTimeFactor)
@@ -151,10 +151,10 @@ final class SettingsViewController: UIViewController {
         }
     }
 
-    private func buildSettings() throws -> SpenchSettings {
+    private func buildSettings() throws -> Settings {
         let customConfig = customConfigView.text.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let settings = SpenchSettings(
+        let settings = Settings(
             lowPerformanceWindowSeconds: try requiredDouble(from: lowPerformanceWindowField, name: "Window seconds"),
             lowPerformanceMaxRefillTimes: try requiredInt(from: lowPerformanceMaxRefillTimesField, name: "Max refill times"),
             lowPerformanceMaxRefillTimeFactor: try requiredDouble(from: lowPerformanceMaxRefillTimeFactorField,

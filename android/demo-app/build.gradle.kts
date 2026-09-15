@@ -5,14 +5,14 @@ plugins {
 }
 
 android {
-    namespace = "com.gigaedge.spench.demo"
+    namespace = "com.gigaedge.denoiser.demo"
     compileSdk = 35
-    val androidTestBuildType = providers.gradleProperty("spenchAndroidTestBuildType")
+    val androidTestBuildType = providers.gradleProperty("gigaDenoiserAndroidTestBuildType")
         .getOrElse("debug")
     testBuildType = androidTestBuildType
 
     defaultConfig {
-        applicationId = "com.gigaedge.spench.demo"
+        applicationId = "com.gigaedge.denoiser.demo"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -50,8 +50,8 @@ detekt {
 }
 
 dependencies {
-    implementation(project(":spench-sdk"))
-    implementation(project(":spench-model-quality48"))
+    implementation(project(":giga-denoiser-sdk"))
+    implementation(project(":giga-denoiser-model-quality48"))
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

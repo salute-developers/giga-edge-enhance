@@ -14,8 +14,8 @@
         "dist/*",
         "generated/*",
         "wasm/*",
-        "lib/spench.js",
-        "lib/spench.dsp.js"
+        "lib/giga-denoiser.js",
+        "lib/giga-denoiser.dsp.js"
     ],
     "settings": {
         "import/resolver": {

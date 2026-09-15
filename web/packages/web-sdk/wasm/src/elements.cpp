@@ -10,7 +10,7 @@ PipelineElement:: PipelineElement(uint32_t sample_rate) noexcept
 AudioProcessPipelineElement::AudioProcessPipelineElement(const std::string& yaml_config, uint32_t sample_rate)
     : PipelineElement(sample_rate),
       m_yaml_config(yaml_config),
-      m_normalizer(std::make_unique<spench::SpenchAudioProcess>(yaml_config)) {
+      m_normalizer(std::make_unique<gigaedge::denoiser::AudioProcessor>(yaml_config)) {
   m_normalizer->AddLC().AddNG().AddLim();
 }
 
@@ -19,7 +19,7 @@ uint32_t AudioProcessPipelineElement::process(uintptr_t src_ptr, const uint32_t 
     float* src_ptr_ = reinterpret_cast<float*>(src_ptr);
     this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
     this->m_normalized.clear();
-    if (m_normalizer->ProcessChunk(this->m_input, this->m_normalized) < SpenchRetCode::SUCCESS ||
+    if (m_normalizer->ProcessChunk(this->m_input, this->m_normalized) < GigaDenoiserRetCode::SUCCESS ||
         this->m_normalized.size() > chunk_size) {
       this->m_normalized.clear();
       return 0;
@@ -36,7 +36,7 @@ uint32_t AudioProcessPipelineElement::process(uintptr_t src_ptr, const uint32_t 
 
 void AudioProcessPipelineElement::resetContext() noexcept {
   try {
-    auto normalizer = std::make_unique<spench::SpenchAudioProcess>(m_yaml_config);
+    auto normalizer = std::make_unique<gigaedge::denoiser::AudioProcessor>(m_yaml_config);
     normalizer->AddLC().AddNG().AddLim();
     m_normalizer = std::move(normalizer);
     m_input.clear();
@@ -48,14 +48,14 @@ void AudioProcessPipelineElement::resetContext() noexcept {
 EchoCancellationElement::EchoCancellationElement(const std::string& yaml_config)
     : PipelineElement(0),
       m_yaml_config(yaml_config),
-      m_aec(std::make_unique<spench::SpenchAudioEchoCancelation>(yaml_config)) {}
+      m_aec(std::make_unique<gigaedge::denoiser::EchoCanceller>(yaml_config)) {}
 
 uint32_t EchoCancellationElement::process(uintptr_t src_ptr, const uint32_t chunk_size) noexcept {
   try {
     float* src_ptr_ = reinterpret_cast<float*>(src_ptr);
     this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
     this->m_result.clear();
-    if (m_aec->ProcessChunk(this->m_input, this->m_result) < SpenchRetCode::SUCCESS ||
+    if (m_aec->ProcessChunk(this->m_input, this->m_result) < GigaDenoiserRetCode::SUCCESS ||
         this->m_result.size() > chunk_size) {
       this->m_result.clear();
       return 0;
@@ -79,7 +79,7 @@ uint32_t EchoCancellationElement::processMono(uintptr_t src_ptr,
     this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
     this->m_loopback.assign(lbk_ptr_, lbk_ptr_ + chunk_size);
     this->m_result.clear();
-    if (m_aec->ProcessChunk(this->m_input, this->m_loopback, this->m_result) < SpenchRetCode::SUCCESS ||
+    if (m_aec->ProcessChunk(this->m_input, this->m_loopback, this->m_result) < GigaDenoiserRetCode::SUCCESS ||
         this->m_result.size() > chunk_size) {
       this->m_result.clear();
       return 0;
@@ -96,7 +96,7 @@ uint32_t EchoCancellationElement::processMono(uintptr_t src_ptr,
 
 void EchoCancellationElement::resetContext() noexcept {
   try {
-    auto aec = std::make_unique<spench::SpenchAudioEchoCancelation>(m_yaml_config);
+    auto aec = std::make_unique<gigaedge::denoiser::EchoCanceller>(m_yaml_config);
     m_aec = std::move(aec);
     m_input.clear();
     m_loopback.clear();
@@ -109,9 +109,9 @@ void EchoCancellationElement::resetContext() noexcept {
 
 #ifndef BUILD_DSP
 
-DenoisePipelineElement::DenoisePipelineElement(uint32_t sample_rate, std::shared_ptr<spench::PackedModelReader> model)
-  : PipelineElement(sample_rate),
-    m_denoiser(model) {
+DenoisePipelineElement::DenoisePipelineElement(uint32_t sample_rate,
+                                               std::shared_ptr<gigaedge::denoiser::PackedModelReader> model)
+    : PipelineElement(sample_rate), m_denoiser(model) {
   ctx = m_denoiser.CreateContext(sample_rate, sample_rate);
 }
 
@@ -129,8 +129,8 @@ uint32_t DenoisePipelineElement::process(uintptr_t src_ptr, const uint32_t chunk
     float* src_ptr_ = reinterpret_cast<float*>(src_ptr);
     this->m_input.assign(src_ptr_, src_ptr_ + chunk_size);
     this->m_result.clear();
-    const SpenchRetCode ret_code = m_denoiser.ProcessChunk(this->m_input, this->m_result, ctx);
-    if (ret_code < SpenchRetCode::SUCCESS || this->m_result.size() > chunk_size) {
+    const GigaDenoiserRetCode ret_code = m_denoiser.ProcessChunk(this->m_input, this->m_result, ctx);
+    if (ret_code < GigaDenoiserRetCode::SUCCESS || this->m_result.size() > chunk_size) {
       this->m_result.clear();
       return 0;
     }

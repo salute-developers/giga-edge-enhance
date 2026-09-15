@@ -2,10 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT="$ROOT_DIR/SpenchSDK.xcodeproj"
+PROJECT="$ROOT_DIR/GigaDenoiserSDK.xcodeproj"
 TEST_BUILD_DIR="$ROOT_DIR/build/xcframework/test-derived-data"
 DEVICE_NAME="${TEST_DEVICE_NAME:-iPhone 17}"
-SPENCH_RETRIES="${SPENCH_TEST_RETRIES:-2}"
+GDN_RETRIES="${GDN_TEST_RETRIES:-2}"
 APP_RETRIES="${APP_TEST_RETRIES:-3}"
 ERASE_SIMULATOR="${ERASE_SIMULATOR:-1}"
 
@@ -99,12 +99,12 @@ run_tests_with_retry() {
 }
 
 if [[ ! -d "$PROJECT" ]] || ! find "$TEST_BUILD_DIR" -name '*.xctestrun' -print -quit | grep -q .; then
-  echo "error: iOS test products are missing; run tools/spench build ios first" >&2
+  echo "error: iOS test products are missing; run tools/build ios first" >&2
   exit 1
 fi
 
 DESTINATION=""
 prepare_simulator
 
-run_tests_with_retry "SpenchAudioKit" "$SPENCH_RETRIES" "$DESTINATION"
+run_tests_with_retry "GigaDenoiserAudioKit" "$GDN_RETRIES" "$DESTINATION"
 run_tests_with_retry "AudioDemoApp" "$APP_RETRIES" "$DESTINATION"

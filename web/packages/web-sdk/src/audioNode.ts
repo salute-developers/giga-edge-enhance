@@ -2,7 +2,7 @@ import { deserializeError } from 'serialize-error';
 
 import { Logger } from './utils/logger';
 import { Telemetry } from './utils/telemetry';
-import SpenchError, { assert } from './utils/error';
+import GigaDenoiserError, { assert } from './utils/error';
 import {
     CONTROLLER_MESSAGES,
     ControllerMessage,
@@ -31,10 +31,10 @@ import {
     getInputBufferSeconds,
     getOutputBufferSeconds,
     LP_CAUSE_THRESHOLD,
-    SPENCH_DSP_WORKLET_NAME,
-    SPENCH_WORKLET_NAME,
+    GDN_DSP_WORKLET_NAME,
+    GDN_WORKLET_NAME,
 } from './utils/constants';
-import SpenchWorker from './worker';
+import GigaDenoiserWorker from './worker';
 import Loader, { LoadError } from './loader';
 import Deferred from './utils/deferred';
 import { RingBuffer } from './utils/ringBuffer';
@@ -42,10 +42,10 @@ import { BinarySemaphore } from './utils/semaphore';
 
 /**
  * Represents an error that occurs when changing feature configuration fails in the
- * {@link SpenchAudioNode}. This error is a thin wrapper around {@link SpenchError}
+ * {@link GigaDenoiserAudioNode}. This error is a thin wrapper around {@link GigaDenoiserError}
  * that can be distinguished in the error handling logic.
  */
-export class SetFeaturesFailedError extends SpenchError {
+export class SetFeaturesFailedError extends GigaDenoiserError {
     override get name() {
         return 'SetFeaturesFailedError';
     }
@@ -82,9 +82,9 @@ class LowPerformanceEvent extends Event {
 
 /**
  * Map of event names to their corresponding event objects for
- * {@link SpenchAudioNode}. Used for type‑safe event handling.
+ * {@link GigaDenoiserAudioNode}. Used for type‑safe event handling.
  */
-interface SpenchAudioNodeEventMap {
+interface GigaDenoiserAudioNodeEventMap {
     low_performance: LowPerformanceEvent;
     destroyed: Event;
 }
@@ -102,13 +102,13 @@ type WorkletPort = CustomPort<ControllerMessage, WorkletMessage>;
 type WorkerPort = CustomPort<ControllerMessage, WorkerMessage>;
 
 /**
- * Public API surface of the Spench audio node.  Extends the native
- * {@link AudioWorkletNode} with Spench‑specific control methods and
+ * Public API surface of the GigaDenoiser audio node.  Extends the native
+ * {@link AudioWorkletNode} with GigaDenoiser‑specific control methods and
  * custom events.
  *
- * @template M - Template for the available Spench models.
+ * @template M - Template for the available GigaDenoiser models.
  */
-export interface SpenchAudioNode<M extends ModelsTmpl> extends AudioWorkletNode {
+export interface GigaDenoiserAudioNode<M extends ModelsTmpl> extends AudioWorkletNode {
     /**
      * Configures the node with the specified features.
      *
@@ -129,12 +129,12 @@ export interface SpenchAudioNode<M extends ModelsTmpl> extends AudioWorkletNode 
      *
      * @template K - Key of the event map.
      * @param {K} type - Name of the event.
-     * @param {(this: SpenchAudioNode<M>, ev: SpenchAudioNodeEventMap[K]) => any} listener - Callback.
+     * @param {(this: GigaDenoiserAudioNode<M>, ev: GigaDenoiserAudioNodeEventMap[K]) => any} listener - Callback.
      * @param {boolean|AddEventListenerOptions} [options] - Listener options.
      */
-    addEventListener<K extends keyof SpenchAudioNodeEventMap>(
+    addEventListener<K extends keyof GigaDenoiserAudioNodeEventMap>(
         type: K,
-        listener: (this: SpenchAudioNode<M>, ev: SpenchAudioNodeEventMap[K]) => any,
+        listener: (this: GigaDenoiserAudioNode<M>, ev: GigaDenoiserAudioNodeEventMap[K]) => any,
         options?: boolean | AddEventListenerOptions,
     ): void;
 
@@ -143,22 +143,22 @@ export interface SpenchAudioNode<M extends ModelsTmpl> extends AudioWorkletNode 
      *
      * @template K - Key of the event map.
      * @param {K} type - Name of the event.
-     * @param {(this: SpenchAudioNode<M>, ev: SpenchAudioNodeEventMap[K]) => any} listener - Callback.
+     * @param {(this: GigaDenoiserAudioNode<M>, ev: GigaDenoiserAudioNodeEventMap[K]) => any} listener - Callback.
      * @param {boolean|EventListenerOptions} [options] - Listener options.
      */
-    removeEventListener<K extends keyof SpenchAudioNodeEventMap>(
+    removeEventListener<K extends keyof GigaDenoiserAudioNodeEventMap>(
         type: K,
-        listener: (this: SpenchAudioNode<M>, ev: SpenchAudioNodeEventMap[K]) => any,
+        listener: (this: GigaDenoiserAudioNode<M>, ev: GigaDenoiserAudioNodeEventMap[K]) => any,
         options?: boolean | EventListenerOptions,
     ): void;
 }
 
 /**
- * Parameters required to construct a {@link SpenchAudioNodeImpl}.
+ * Parameters required to construct a {@link GigaDenoiserAudioNodeImpl}.
  *
- * @template M - Template for the available Spench models.
+ * @template M - Template for the available GigaDenoiser models.
  */
-interface SpenchAudioNodeCtorParams<M extends ModelsTmpl> {
+interface GigaDenoiserAudioNodeCtorParams<M extends ModelsTmpl> {
     logger: Logger;
     ctx: AudioContext;
     loader: Loader<M>;
@@ -167,14 +167,14 @@ interface SpenchAudioNodeCtorParams<M extends ModelsTmpl> {
 }
 
 /**
- * Implementation of the Spench audio node.  It orchestrates communication
+ * Implementation of the GigaDenoiser audio node.  It orchestrates communication
  * with the AudioWorkletProcessor, a Web Worker, and the optional
  * DSP‑WASM module.  The class handles feature loading, dynamic re‑configuration,
  * error reporting, and state synchronization with the audio context.
  *
- * @template M - Template for the available Spench models.
+ * @template M - Template for the available GigaDenoiser models.
  */
-export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode implements SpenchAudioNode<M> {
+export class GigaDenoiserAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode implements GigaDenoiserAudioNode<M> {
     /** Logger instance scoped to this node. */
     readonly #logger: Logger;
 
@@ -195,7 +195,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
     };
 
     /** Reference to the worker thread, if running. */
-    #worker: SpenchWorker | undefined;
+    #worker: GigaDenoiserWorker | undefined;
 
     /** Message channel port used to talk to the worker. */
     #workerPort: WorkerPort | undefined;
@@ -217,10 +217,10 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
     /**
      * Creates a new instance.
      *
-     * @param {SpenchAudioNodeCtorParams<M>} params - Constructor parameters.
+     * @param {GigaDenoiserAudioNodeCtorParams<M>} params - Constructor parameters.
      */
-    constructor({ ctx, logger, telemetry, loader, settings }: SpenchAudioNodeCtorParams<M>) {
-        super(ctx, settings.dspOnAudioThread ? SPENCH_DSP_WORKLET_NAME : SPENCH_WORKLET_NAME, {
+    constructor({ ctx, logger, telemetry, loader, settings }: GigaDenoiserAudioNodeCtorParams<M>) {
+        super(ctx, settings.dspOnAudioThread ? GDN_DSP_WORKLET_NAME : GDN_WORKLET_NAME, {
             numberOfInputs: 2,
             numberOfOutputs: 1,
             outputChannelCount: [1],
@@ -278,7 +278,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
                           ) as keyof M['noiseCancellation'])
                         : features.noiseCancellation || false,
             };
-            this.#logger.info('Setting Spench features:', enrichedFeatures);
+            this.#logger.info('Setting GigaDenoiser features:', enrichedFeatures);
 
             let res;
 
@@ -299,7 +299,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
 
                 res = await this.#setFeatures({ ...workletFeatures, ...getMainFeatures() });
 
-                if (!(res instanceof SpenchError)) {
+                if (!(res instanceof GigaDenoiserError)) {
                     res = await this.#setFeatures(enrichedFeatures);
                 }
             } else {
@@ -320,7 +320,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
     destroy(): void {
         if (this.#destroyed) return;
         this.#destroyed = true;
-        this.#logger.debug('Destroying Spench AudioNode');
+        this.#logger.debug('Destroying GigaDenoiser AudioNode');
 
         this.#workerPort?.removeEventListener('message', this.#handleWorkerMessage);
         this.#workerPort?.close();
@@ -341,7 +341,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
 
     /** Resets the internal state of the node and forwards the reset to the worker. */
     reset() {
-        this.#logger.debug('Resetting Spench AudioNode');
+        this.#logger.debug('Resetting GigaDenoiser AudioNode');
 
         this.#port.postMessage({ type: WORKLET_MESSAGES.RESET });
         this.#workerPort?.postMessage({ type: WORKER_MESSAGES.RESET });
@@ -359,7 +359,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
         const workerFeaturesEnabled = areMainFeaturesEnabled(features) || areDspFeaturesEnabled(features);
         const workerSetResult = await this.#setWorkerFeatures(features);
 
-        if (workerSetResult instanceof SpenchError) {
+        if (workerSetResult instanceof GigaDenoiserError) {
             return workerSetResult;
         }
 
@@ -539,7 +539,7 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
                 return true;
             case CONTROLLER_MESSAGES.ERROR:
                 const { error } = event.data;
-                this.#handleError(new SpenchError(deserializeError(error)), origin);
+                this.#handleError(new GigaDenoiserError(deserializeError(error)), origin);
 
                 return true;
             default:
@@ -677,23 +677,23 @@ export class SpenchAudioNodeImpl<M extends ModelsTmpl> extends AudioWorkletNode 
     }
 
     /** Central error handler that logs and destroys the node. */
-    #handleError = (error: SpenchError, origin: 'Worker' | 'AudioWorkletProcessor') => {
-        this.#logger.error(`${error} at SpenchAudioNode (${origin})`);
+    #handleError = (error: GigaDenoiserError, origin: 'Worker' | 'AudioWorkletProcessor') => {
+        this.#logger.error(`${error} at GigaDenoiserAudioNode (${origin})`);
 
         this.destroy();
     };
 
     /** Handles processor‑level errors. */
     #handleProcessorError = () =>
-        this.#handleError(new SpenchError('Error in AudioWorkletProcessor'), 'AudioWorkletProcessor');
+        this.#handleError(new GigaDenoiserError('Error in AudioWorkletProcessor'), 'AudioWorkletProcessor');
 
     /** Handles worker errors. */
     #handleWorkerError = (event: ErrorEvent) =>
-        this.#handleError(new SpenchError(event.error || event.message), 'Worker');
+        this.#handleError(new GigaDenoiserError(event.error || event.message), 'Worker');
 
     /** Handles message‑serialization errors. */
     #handleMessageError = () =>
-        this.#handleError(new SpenchError('Error serializing AudioWorkletProcessor message'), 'AudioWorkletProcessor');
+        this.#handleError(new GigaDenoiserError('Error serializing AudioWorkletProcessor message'), 'AudioWorkletProcessor');
 
     /** Responds to changes in the audio context state. */
     #handleContextStateChange = () => {

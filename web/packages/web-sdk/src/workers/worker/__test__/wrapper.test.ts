@@ -2,13 +2,13 @@
 /**
  * @jest-environment node
  */
-import { SpenchWrapper, SpenchDspWrapper } from '../wrapper';
+import { GigaDenoiserWrapper, GigaDenoiserDspWrapper } from '../wrapper';
 import { LoadError } from '../loader';
 import getHashCode from '../../../utils/hash';
 import { getDefaultAECConfig, getDefaultNormalizationConfig } from '../../../utils/constants';
 import { Settings } from '../../../utils/common';
 
-jest.mock('../../../../generated/wasm/spench', () => {
+jest.mock('../../../../generated/wasm/giga-denoiser', () => {
     const bridge = {
         _malloc: jest.fn((size: number) => size / Float32Array.BYTES_PER_ELEMENT),
         _free: jest.fn(),
@@ -21,7 +21,7 @@ jest.mock('../../../../generated/wasm/spench', () => {
     return () => bridge;
 }, { virtual: true });
 
-jest.mock('../../../../generated/wasm/spench.dsp', () => {
+jest.mock('../../../../generated/wasm/giga-denoiser.dsp', () => {
     const bridge = {
         _malloc: jest.fn((size: number) => size / Float32Array.BYTES_PER_ELEMENT),
         _free: jest.fn(),
@@ -77,8 +77,8 @@ class DummyLoader {
 
 }
 
-describe('SpenchWrapper', () => {
-    let wrapper: SpenchWrapper;
+describe('GigaDenoiserWrapper', () => {
+    let wrapper: GigaDenoiserWrapper;
     const loader = new DummyLoader() as any;
     const logger = new DummyLogger() as any;
     const heavyStart = jest.fn();
@@ -87,30 +87,30 @@ describe('SpenchWrapper', () => {
     beforeEach(async () => {
         heavyStart.mockClear();
         heavyEnd.mockClear();
-        wrapper = (await SpenchWrapper.create({
+        wrapper = (await GigaDenoiserWrapper.create({
             sampleRate: 48000,
             logger,
             loader,
             onHeavyLoadStart: heavyStart,
             onHeavyLoadEnd: heavyEnd,
-        })) as SpenchWrapper;
+        })) as GigaDenoiserWrapper;
     });
 
     test('create succeeds with wasm', async () => {
-        const instance = await SpenchWrapper.create({
+        const instance = await GigaDenoiserWrapper.create({
             sampleRate: 48000,
             logger,
             loader,
             onHeavyLoadStart: heavyStart,
             onHeavyLoadEnd: heavyEnd,
         });
-        expect(instance).toBeInstanceOf(SpenchWrapper);
+        expect(instance).toBeInstanceOf(GigaDenoiserWrapper);
     });
 
     test('create fails with LoadError', async () => {
         const badLoader = new DummyLoader() as any;
         badLoader.loadWasm = jest.fn(() => Promise.resolve(new LoadError('bad')));
-        const result = await SpenchWrapper.create({
+        const result = await GigaDenoiserWrapper.create({
             sampleRate: 48000,
             logger,
             loader: badLoader,
@@ -189,7 +189,7 @@ describe('SpenchWrapper', () => {
     test('addNoiseCanceller propagates Loader errors', async () => {
         const badLoader = new DummyLoader() as any;
         badLoader.loadNoiseCancellationModel = jest.fn(() => Promise.resolve(new LoadError('bad model')));
-        const res = await SpenchWrapper.create({
+        const res = await GigaDenoiserWrapper.create({
             sampleRate: 48000,
             logger,
             loader: badLoader,
@@ -204,35 +204,35 @@ describe('SpenchWrapper', () => {
     });
 });
 
-describe('SpenchDspWrapper', () => {
-    let wrapper: SpenchDspWrapper;
+describe('GigaDenoiserDspWrapper', () => {
+    let wrapper: GigaDenoiserDspWrapper;
     const settings = {} as Settings;
     const loader = new DummyLoader() as any;
     const logger = new DummyLogger() as any;
 
     beforeEach(async () => {
-        wrapper = (await SpenchDspWrapper.create({
+        wrapper = (await GigaDenoiserDspWrapper.create({
             sampleRate: 48000,
             logger,
             loader,
             settings,
-        })) as SpenchDspWrapper;
+        })) as GigaDenoiserDspWrapper;
     });
 
     test('create succeeds with DSP wasm', async () => {
-        const instance = await SpenchDspWrapper.create({
+        const instance = await GigaDenoiserDspWrapper.create({
             sampleRate: 48000,
             logger,
             loader,
             settings,
         });
-        expect(instance).toBeInstanceOf(SpenchDspWrapper);
+        expect(instance).toBeInstanceOf(GigaDenoiserDspWrapper);
     });
 
     test('create fails with LoadError', async () => {
         const badLoader = new DummyLoader() as any;
         badLoader.loadDSPWasm = jest.fn(() => Promise.resolve(new LoadError('bad')));
-        const result = await SpenchDspWrapper.create({
+        const result = await GigaDenoiserDspWrapper.create({
             sampleRate: 48000,
             logger,
             loader: badLoader,

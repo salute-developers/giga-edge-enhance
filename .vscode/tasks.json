@@ -2,17 +2,17 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "spench: native debug",
+      "label": "giga-denoiser: native debug",
       "type": "shell",
-      "command": "${workspaceFolder}/tools/spench",
+      "command": "${workspaceFolder}/tools",
       "args": ["build", "native-debug-onnx", "--host"],
       "problemMatcher": "$gcc",
       "group": "build"
     },
     {
-      "label": "spench: native tests",
+      "label": "giga-denoiser: native tests",
       "type": "shell",
-      "command": "${workspaceFolder}/tools/spench",
+      "command": "${workspaceFolder}/tools",
       "args": ["test", "native-debug-onnx", "--host"],
       "problemMatcher": "$gcc",
       "group": "test"

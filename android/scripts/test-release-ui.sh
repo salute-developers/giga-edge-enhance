@@ -2,10 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-AVD_NAME="spench-ci-api35"
+AVD_NAME="giga-denoiser-ci-api35"
 export ANDROID_AVD_HOME="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
 AVD_DIR="$ANDROID_AVD_HOME"
-SYSTEM_IMAGE="${SPENCH_ANDROID_SYSTEM_IMAGE:?Android emulator system image is not configured}"
+SYSTEM_IMAGE="${GDN_ANDROID_SYSTEM_IMAGE:?Android emulator system image is not configured}"
 EMULATOR_LOG="$ROOT_DIR/../out/artifacts/android-emulator.log"
 
 mkdir -p "$AVD_DIR" "$(dirname "$EMULATOR_LOG")"
@@ -72,6 +72,6 @@ adb shell settings put global animator_duration_scale 0
 
 "$ROOT_DIR/gradlew" \
   -p "$ROOT_DIR" \
-  -PspenchAndroidTestBuildType=release \
-  :spench-sdk:connectedReleaseAndroidTest \
+  -PgigaDenoiserAndroidTestBuildType=release \
+  :giga-denoiser-sdk:connectedReleaseAndroidTest \
   :demo-app:connectedReleaseAndroidTest

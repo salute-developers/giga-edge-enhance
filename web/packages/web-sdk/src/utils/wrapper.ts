@@ -15,7 +15,7 @@ type PipelineElement = CommonPipelineElement | AECElement;
 
 type Element = [cacheKey: string, PipelineElement];
 
-export abstract class AbstractSpenchWrapper {
+export abstract class AbstractGigaDenoiserWrapper {
     protected readonly pipeline: Element[] = [];
 
     protected dataPtr = 0;

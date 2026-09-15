@@ -116,8 +116,8 @@ if (verifyOnly) {
         throw new Error('Usage: stage-wasm.mjs <debug|release|asan> | --verify [debug|release|asan]');
     }
 
-    const fullBuildDir = await resolveBuildDirectory('SPENCH_WASM_FULL_BUILD_DIR', `wasm-${flavor}`, 'spench');
-    const dspBuildDir = await resolveBuildDirectory('SPENCH_WASM_DSP_BUILD_DIR', `wasm-dsp-${flavor}`, 'spench.dsp');
+    const fullBuildDir = await resolveBuildDirectory('GDN_WASM_FULL_BUILD_DIR', `wasm-${flavor}`, 'giga-denoiser');
+    const dspBuildDir = await resolveBuildDirectory('GDN_WASM_DSP_BUILD_DIR', `wasm-dsp-${flavor}`, 'giga-denoiser.dsp');
     const tempDir = `${destinationDir}.tmp-${process.pid}`;
 
     await rm(tempDir, { recursive: true, force: true });
@@ -125,8 +125,8 @@ if (verifyOnly) {
 
     try {
         const artifacts = [
-            await stageArtifact(tempDir, 'spench', fullBuildDir),
-            await stageArtifact(tempDir, 'spench.dsp', dspBuildDir),
+            await stageArtifact(tempDir, 'giga-denoiser', fullBuildDir),
+            await stageArtifact(tempDir, 'giga-denoiser.dsp', dspBuildDir),
         ];
         const dockerfile = await readFile(resolve(rootDir, 'dockerfiles/Dockerfile.web'), 'utf8');
         const emsdkVersion = dockerfile.match(/^ARG EMSDK_VERSION=(.+)$/m)?.[1] || 'unknown';

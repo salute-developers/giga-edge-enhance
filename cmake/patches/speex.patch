@@ -6,7 +6,7 @@ index 0000000..a185db5
 @@ -0,0 +1,61 @@
 +cmake_minimum_required(VERSION 3.15)
 +
-+project(speexdsp_spench LANGUAGES C)
++project(speexdsp_gdn LANGUAGES C)
 +
 +set(CMAKE_C_STANDARD 99)
 +

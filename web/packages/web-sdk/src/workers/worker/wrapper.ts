@@ -1,5 +1,5 @@
-import Spench, { type PackedModelReader, type MainModule as SpenchCore } from '../../../generated/wasm/spench';
-import SpenchDsp, { type MainModule as SpenchDSPCore } from '../../../generated/wasm/spench.dsp';
+import GigaDenoiser, { type PackedModelReader, type MainModule as GigaDenoiserCore } from '../../../generated/wasm/giga-denoiser';
+import GigaDenoiserDsp, { type MainModule as GigaDenoiserDSPCore } from '../../../generated/wasm/giga-denoiser.dsp';
 import {
     FEATURE_SWITCH_CACHE_MILLISECONDS,
     getDefaultAECConfig,
@@ -7,20 +7,20 @@ import {
     HEAP_SIZE,
 } from '../../utils/constants';
 import { Logger } from '../../utils/logger';
-import { AbstractSpenchWrapper } from '../../utils/wrapper';
+import { AbstractGigaDenoiserWrapper } from '../../utils/wrapper';
 import getHashCode from '../../utils/hash';
 import { ModelKey, Settings } from '../../utils/common';
-import SpenchError from '../../utils/error';
+import GigaDenoiserError from '../../utils/error';
 
 import Loader, { LoadError, ModelNotFoundError } from './loader';
 
-export class InternalError extends SpenchError {
+export class InternalError extends GigaDenoiserError {
     override get name() {
         return 'InternalError';
     }
 }
 
-interface CreateSpenchWrapperParams {
+interface CreateGigaDenoiserWrapperParams {
     sampleRate: number;
     logger: Logger;
     loader: Loader;
@@ -29,8 +29,8 @@ interface CreateSpenchWrapperParams {
     onHeavyLoadEnd?: () => void;
 }
 
-export class SpenchDspWrapper extends AbstractSpenchWrapper {
-    protected bridge: SpenchDSPCore;
+export class GigaDenoiserDspWrapper extends AbstractGigaDenoiserWrapper {
+    protected bridge: GigaDenoiserDSPCore;
 
     protected dataCapacity = HEAP_SIZE;
 
@@ -44,7 +44,7 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
     ) {
         super();
 
-        this.bridge = SpenchDsp({ wasmBinary: wasm, print: logger.debug, printErr: logger.error });
+        this.bridge = GigaDenoiserDsp({ wasmBinary: wasm, print: logger.debug, printErr: logger.error });
         this.dataPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
         if (!this.dataPtr) throw new InternalError('Could not allocate the WASM input buffer');
         try {
@@ -82,7 +82,7 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
         logger,
         loader,
         settings,
-    }: CreateSpenchWrapperParams): Promise<SpenchDspWrapper | InternalError | LoadError> {
+    }: CreateGigaDenoiserWrapperParams): Promise<GigaDenoiserDspWrapper | InternalError | LoadError> {
         const wasm = await loader.loadDSPWasm();
 
         if (wasm instanceof LoadError) {
@@ -90,7 +90,7 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
         }
 
         try {
-            return new SpenchDspWrapper(wasm, sampleRate, logger, settings!);
+            return new GigaDenoiserDspWrapper(wasm, sampleRate, logger, settings!);
         } catch (e) {
             return new InternalError(e);
         }
@@ -102,7 +102,7 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
         const cached = this.tryGetFromCache(key);
 
         this.logger.debug(
-            'Add normalizer to SpenchDSP Pipeline.',
+            'Add normalizer to GigaDenoiserDSP Pipeline.',
             config ? `Using custom config:\n${config}.` : 'Using default config.',
         );
 
@@ -125,7 +125,7 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
         const cached = this.tryGetFromCache(key);
 
         this.logger.debug(
-            'Add aec to SpenchDSP Pipeline',
+            'Add aec to GigaDenoiserDSP Pipeline',
             config ? `Using custom config:\n${config}.` : 'Using default config.',
         );
 
@@ -164,8 +164,8 @@ export class SpenchDspWrapper extends AbstractSpenchWrapper {
     }
 }
 
-export class SpenchWrapper extends AbstractSpenchWrapper {
-    protected bridge: SpenchCore;
+export class GigaDenoiserWrapper extends AbstractGigaDenoiserWrapper {
+    protected bridge: GigaDenoiserCore;
 
     protected dataCapacity = HEAP_SIZE;
 
@@ -180,7 +180,7 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
         super();
         onHeavyLoadStart();
         try {
-            this.bridge = Spench({
+            this.bridge = GigaDenoiser({
                 wasmBinary: wasm,
                 print: logger.debug,
                 printErr: logger.error,
@@ -212,7 +212,7 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
         loader,
         onHeavyLoadStart,
         onHeavyLoadEnd,
-    }: CreateSpenchWrapperParams): Promise<SpenchWrapper | InternalError | LoadError> {
+    }: CreateGigaDenoiserWrapperParams): Promise<GigaDenoiserWrapper | InternalError | LoadError> {
         const wasm = await loader.loadWasm();
 
         if (wasm instanceof LoadError) {
@@ -220,7 +220,7 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
         }
 
         try {
-            return new SpenchWrapper(wasm, sampleRate, logger, loader, onHeavyLoadStart!, onHeavyLoadEnd!);
+            return new GigaDenoiserWrapper(wasm, sampleRate, logger, loader, onHeavyLoadStart!, onHeavyLoadEnd!);
         } catch (e) {
             return new InternalError(e);
         }
@@ -253,7 +253,7 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
             this.logger.debug('model loading');
             const loadedModel = await this.loader.loadNoiseCancellationModel(type);
 
-            if (loadedModel instanceof SpenchError) {
+            if (loadedModel instanceof GigaDenoiserError) {
                 return loadedModel;
             }
             this.logger.debug('model loaded');
@@ -262,7 +262,7 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
             try {
                 const model = this.loadModel(loadedModel);
 
-                if (model instanceof SpenchError) {
+                if (model instanceof GigaDenoiserError) {
                     return model;
                 }
                 this.logger.debug('model created');
@@ -280,7 +280,7 @@ export class SpenchWrapper extends AbstractSpenchWrapper {
             }
         }
 
-        this.logger.debug(`Add noise canceller to Spench Pipeline. Model type: ${type}${cached ? ' (cached)' : ''}.`);
+        this.logger.debug(`Add noise canceller to GigaDenoiser Pipeline. Model type: ${type}${cached ? ' (cached)' : ''}.`);
     }
 
     destroy() {
