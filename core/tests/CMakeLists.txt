@@ -4,6 +4,7 @@ set(TEST_SRC
     src/test_dsplib_features_and_metrics.cpp
     src/test_fe.cpp
     src/test_fe_runner.cpp
+    src/test_hybrid.cpp
     src/test_cpp_api.cpp
     src/test_c_api.cpp
     src/test_config_reader.cpp

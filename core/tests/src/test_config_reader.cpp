@@ -179,7 +179,7 @@ feature_params:
 inference:
   gpu:                true
   engine_num_threads: 7
-  model_type:        "best_quality"
+  model_type:        "denoiser_discr_hq_model"
 )";
 
   auto base = gigaedge::denoiser::StringConfigReader("");
@@ -193,7 +193,7 @@ inference:
   REQUIRE(cfg.window_type() == "hamming");
   REQUIRE(cfg.use_gpu() == true);
   REQUIRE(cfg.num_threads() == 7u);
-  REQUIRE(cfg.model_type() == "best_quality");
+  REQUIRE(cfg.model_type() == "denoiser_discr_hq_model");
 }
 
 TEST_CASE("SUCCESS DenoiserConfig uses defaults when fields are missing [denoiser config reader]") {
@@ -207,13 +207,13 @@ model:
   gigaedge::denoiser::DenoiserConfig cfg(base);
 
   REQUIRE(cfg.model_path() == "onlypath.onnx");
-  REQUIRE(cfg.sampling_freq() == 24000u);
+  REQUIRE(cfg.sampling_freq() == 48000u);
   REQUIRE(cfg.frame_size_ms() == 32u);
   REQUIRE(cfg.frame_stride_ms() == 16u);
   REQUIRE(cfg.window_type() == "hanning");
   REQUIRE(cfg.use_gpu() == false);
   REQUIRE(cfg.num_threads() == 1u);
-  REQUIRE(cfg.model_type() == "best_speed");
+  REQUIRE(cfg.model_type() == "denoiser_discr_web_model");
 }
 
 TEST_CASE("SUCCESS DenoiserConfig throws if model_path is missing [denoiser config reader]") {

@@ -15,7 +15,7 @@
 
 namespace util {
 namespace onnx {
-class DenoiserQOnnxRunner : public BaseOnnxRunner {
+class DenoiserDiscriminativeHqOnnxRunner : public BaseOnnxRunner {
   void init_output_tensors(gigaedge::denoiser::TaskData& data, uint32_t num_frames = 2);
 
   template <typename T>
@@ -27,8 +27,8 @@ class DenoiserQOnnxRunner : public BaseOnnxRunner {
       throw std::runtime_error("Context is not allocated!");
     }
 
-    gigaedge::denoiser::DenoiseContextQ<T>* context =
-        dynamic_cast<gigaedge::denoiser::DenoiseContextQ<T>*>(data.context);
+    gigaedge::denoiser::DenoiseContextDiscriminativeHq<T>* context =
+        dynamic_cast<gigaedge::denoiser::DenoiseContextDiscriminativeHq<T>*>(data.context);
     T* probabilities = network_output[0].GetTensorMutableData<T>();
     context->fullband_hidden.assign(probabilities, probabilities + context->fullband_hidden.size());
     probabilities = network_output[1].GetTensorMutableData<T>();
@@ -68,17 +68,18 @@ class DenoiserQOnnxRunner : public BaseOnnxRunner {
   }
 
  public:
-  DenoiserQOnnxRunner() = delete;
-  virtual ~DenoiserQOnnxRunner() = default;
-  explicit DenoiserQOnnxRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
-                               uint32_t inference_engine_threads = 1, bool on_gpu = false);
+  DenoiserDiscriminativeHqOnnxRunner() = delete;
+  virtual ~DenoiserDiscriminativeHqOnnxRunner() = default;
+  explicit DenoiserDiscriminativeHqOnnxRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
+                                              uint32_t inference_engine_threads = 1, bool on_gpu = false);
   void prepare_input_in_place(std::vector<float>& mag, std::vector<std::vector<float>*>& inputs,
                               gigaedge::denoiser::Context<float>* denoise_context) override;
 
   template <typename T>
   void warm_up() {
     gigaedge::denoiser::Task dummy_task;
-    std::unique_ptr<gigaedge::denoiser::DenoiseContextQ<float>> ctx(new gigaedge::denoiser::DenoiseContextQ<float>());
+    std::unique_ptr<gigaedge::denoiser::DenoiseContextDiscriminativeHq<float>> ctx(
+        new gigaedge::denoiser::DenoiseContextDiscriminativeHq<float>());
     dummy_task.data.context = ctx.get();
     std::vector<std::vector<T>*> inputs;
     init_output_tensors(dummy_task.data);
@@ -94,69 +95,7 @@ class DenoiserQOnnxRunner : public BaseOnnxRunner {
   void infer(gigaedge::denoiser::Task* denoise_task) override;
 };
 
-class DenoiserFOnnxRunner : public BaseOnnxRunner {
-  void init_output_tensors(gigaedge::denoiser::TaskData& data);
-
-  template <typename T>
-  void parse_results(std::vector<Ort::Value>& network_output, gigaedge::denoiser::TaskData& data) {
-    if (model_output_names_.size() != network_output.size()) {
-      throw std::runtime_error("Model output error");
-    }
-    if (data.context == nullptr) {
-      throw std::runtime_error("Context is not allocated!");
-    }
-
-    gigaedge::denoiser::DenoiseContextF<T>* context =
-        dynamic_cast<gigaedge::denoiser::DenoiseContextF<T>*>(data.context);
-    // fb_h
-    T* probabilities = network_output[0].GetTensorMutableData<T>();
-    context->fullband_hidden.assign(probabilities, probabilities + context->fullband_hidden.size());
-
-    // fb_c
-    probabilities = network_output[1].GetTensorMutableData<T>();
-    context->fullband_cell_state.assign(probabilities, probabilities + context->fullband_cell_state.size());
-
-    // new_fb_out_5
-    probabilities = network_output[2].GetTensorMutableData<T>();
-    context->prev_fb_out.assign(probabilities, probabilities + context->prev_fb_out.size());
-
-    // network_output
-    probabilities = network_output[3].GetTensorMutableData<T>();
-    for (uint64_t i = 0; i < 2 * data.new_spectrogram.real.size(); i += 2) {
-      data.new_spectrogram.real[i / 2] = probabilities[i];
-      data.new_spectrogram.imag[i / 2] = probabilities[i + 1];
-    }
-  }
-
- public:
-  DenoiserFOnnxRunner() = delete;
-  virtual ~DenoiserFOnnxRunner() = default;
-  explicit DenoiserFOnnxRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
-                               uint32_t inference_engine_threads = 1, bool on_gpu = false);
-
-  // change two last arguments
-  void prepare_input_in_place(std::vector<float>& mag, std::vector<std::vector<float>*>& inputs,
-                              gigaedge::denoiser::Context<float>* denoise_context) override;
-  void infer(gigaedge::denoiser::Task* denoise_task) override;
-
-  template <typename T>
-  void warm_up() {
-    gigaedge::denoiser::Task dummy_task;
-    std::unique_ptr<gigaedge::denoiser::DenoiseContextF<float>> ctx(new gigaedge::denoiser::DenoiseContextF<float>());
-    dummy_task.data.context = ctx.get();
-
-    std::vector<std::vector<T>*> inputs;
-    // batch_size * num_features (for example 1 * 385)
-    uint64_t multi = model_input_shapes_[0][0] * model_input_shapes_[0][1];
-
-    std::vector<T> dummy_mag(multi, 1e-4);
-    prepare_input_in_place(dummy_mag, inputs, dummy_task.data.context);
-    init_output_tensors(dummy_task.data);
-    BaseOnnxRunner::warm_up<T>(inputs);
-  }
-};
-
-class DenoiserSFOnnxRunner : public BaseOnnxRunner {
+class DenoiserDiscriminativeNbOnnxRunner : public BaseOnnxRunner {
   void init_output_tensors(gigaedge::denoiser::TaskData& data, uint32_t out_shape = 2);
 
   template <typename T>
@@ -168,10 +107,10 @@ class DenoiserSFOnnxRunner : public BaseOnnxRunner {
       throw std::runtime_error("Context is not allocated!");
     }
 
-    gigaedge::denoiser::DenoiseContextSF<T>* context =
-        dynamic_cast<gigaedge::denoiser::DenoiseContextSF<T>*>(data.context);
+    gigaedge::denoiser::DenoiseContextDiscriminativeNb<T>* context =
+        dynamic_cast<gigaedge::denoiser::DenoiseContextDiscriminativeNb<T>*>(data.context);
     if (!context) {
-      throw std::runtime_error("Invalid context type for DenoiserSFOnnxRunner");
+      throw std::runtime_error("Invalid context type for DenoiserDiscriminativeNbOnnxRunner");
     }
 
     // fb_h
@@ -216,10 +155,10 @@ class DenoiserSFOnnxRunner : public BaseOnnxRunner {
   }
 
  public:
-  DenoiserSFOnnxRunner() = delete;
-  virtual ~DenoiserSFOnnxRunner() = default;
-  explicit DenoiserSFOnnxRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
-                                uint32_t inference_engine_threads = 1, bool on_gpu = false);
+  DenoiserDiscriminativeNbOnnxRunner() = delete;
+  virtual ~DenoiserDiscriminativeNbOnnxRunner() = default;
+  explicit DenoiserDiscriminativeNbOnnxRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
+                                              uint32_t inference_engine_threads = 1, bool on_gpu = false);
 
   void prepare_input_in_place(std::vector<float>& mag, std::vector<std::vector<float>*>& inputs,
                               gigaedge::denoiser::Context<float>* denoise_context) override;
@@ -229,7 +168,8 @@ class DenoiserSFOnnxRunner : public BaseOnnxRunner {
   template <typename T>
   void warm_up() {
     gigaedge::denoiser::Task dummy_task;
-    std::unique_ptr<gigaedge::denoiser::DenoiseContextSF<float>> ctx(new gigaedge::denoiser::DenoiseContextSF<float>());
+    std::unique_ptr<gigaedge::denoiser::DenoiseContextDiscriminativeNb<float>> ctx(
+        new gigaedge::denoiser::DenoiseContextDiscriminativeNb<float>());
     dummy_task.data.context = ctx.get();
 
     std::vector<std::vector<T>*> inputs;
@@ -246,6 +186,82 @@ class DenoiserSFOnnxRunner : public BaseOnnxRunner {
 
     BaseOnnxRunner::warm_up<T>(inputs);
   }
+};
+
+class DenoiserHybridOnnxRunner : public BaseOnnxRunner {
+  template <typename T>
+  void parse_results(std::vector<Ort::Value>& network_output, gigaedge::denoiser::TaskData& data) {
+    if (model_output_names_.size() != network_output.size()) {
+      throw std::runtime_error("Model output error");
+    }
+    if (data.context == nullptr) {
+      throw std::runtime_error("Context is not allocated!");
+    }
+
+    gigaedge::denoiser::DenoiseContextHybrid<T>* context =
+        dynamic_cast<gigaedge::denoiser::DenoiseContextHybrid<T>*>(data.context);
+    if (context == nullptr || network_output.size() != 9) {
+      throw std::runtime_error("Invalid hybrid context or output count");
+    }
+    std::vector<std::vector<T>*> states = {
+        &context->fullband_hidden, &context->fb_snr_noise_psd, &context->fb_snr_noise_pg, &context->sb_snr_noise_psd,
+        &context->sb_snr_noise_pg, &context->fb_conv1_buf,     &context->fb_conv3_buf,    &context->stage2_hidden};
+    for (size_t i = 0; i < states.size(); ++i) {
+      if (network_output[i].GetTensorTypeAndShapeInfo().GetElementCount() != states[i]->size()) {
+        throw std::runtime_error("Hybrid recurrent output size mismatch");
+      }
+      const T* values = network_output[i].GetTensorData<T>();
+      states[i]->assign(values, values + states[i]->size());
+    }
+    const T* probabilities = network_output[8].GetTensorData<T>();
+    auto info = network_output[8].GetTensorTypeAndShapeInfo();
+    auto shape = info.GetShape();
+    if (shape.size() != 4 || shape[0] != 1 || shape[1] != model_input_shapes_[0][1] || shape[2] <= 0 ||
+        static_cast<size_t>(shape[2]) != data.input_spectrogram.size() || shape[3] != 2) {
+      throw std::runtime_error("Invalid hybrid spectrum shape: expected [1, F, T, 2]");
+    }
+
+    const size_t num_feats = static_cast<size_t>(shape.at(1));
+    const size_t total_elems = static_cast<size_t>(info.GetElementCount());
+
+    if (total_elems % 2 != 0) {
+      throw std::runtime_error("Invalid output buffer: element count is not divisible by 2");
+    }
+
+    const size_t complex_pairs = total_elems / 2;
+    if (complex_pairs % num_feats != 0) {
+      throw std::runtime_error("Invalid output buffer: complex pairs not divisible by num_feats");
+    }
+
+    const size_t num_frames = complex_pairs / num_feats;
+    unpack_complex_mask(probabilities, num_feats, num_frames, data.new_spectrogram);
+  }
+
+ public:
+  DenoiserHybridOnnxRunner() = delete;
+  virtual ~DenoiserHybridOnnxRunner() = default;
+  explicit DenoiserHybridOnnxRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
+                                    uint32_t inference_engine_threads = 1, bool on_gpu = false);
+
+  void prepare_input_in_place(std::vector<float>& noisy_ri, std::vector<std::vector<float>*>& inputs,
+                              gigaedge::denoiser::Context<float>* denoise_context) override;
+
+  template <typename T>
+  void warm_up() {
+    gigaedge::denoiser::Task dummy_task;
+    std::unique_ptr<gigaedge::denoiser::DenoiseContextHybrid<float>> ctx(
+        new gigaedge::denoiser::DenoiseContextHybrid<float>());
+    dummy_task.data.context = ctx.get();
+
+    std::vector<std::vector<T>*> inputs;
+    const size_t frames = model_input_shapes_[0][2] > 0 ? model_input_shapes_[0][2] : 1;
+    std::vector<T> noisy_ri(static_cast<size_t>(model_input_shapes_[0][1]) * frames * 2, 1e-4);
+    prepare_input_in_place(noisy_ri, inputs, dummy_task.data.context);
+
+    BaseOnnxRunner::warm_up<T>(inputs);
+  }
+
+  void infer(gigaedge::denoiser::Task* denoise_task) override;
 };
 
 }  // namespace onnx

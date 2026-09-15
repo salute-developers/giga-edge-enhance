@@ -64,6 +64,7 @@ class FeatureExtractorRunner {
                                         const gigaedge::denoiser::ComplexNumber<float>& new_spec,
                                         uint32_t input_chunk_num, uint32_t feat_num);
 
+  bool model_output_is_spectrum_ = false;
   gigaedge::denoiser::fe::FeatureParams params_;
   std::unique_ptr<gigaedge::denoiser::fe::FeatureExtractor<float>> feature_extractor_ptr_;
 };

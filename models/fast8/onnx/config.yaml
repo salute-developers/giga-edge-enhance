@@ -11,4 +11,4 @@ inference:
   gpu: false
   engine_num_threads: 1
   skip_zeroed_chunks: true
-  model_type: best_speed_new
+  model_type: denoiser_discr_hq_model

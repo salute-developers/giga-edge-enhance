@@ -89,16 +89,16 @@ struct TestOnnxRunner {
     std::string file_path = data_root + "config/" + yaml_config_name;
     auto reader = gigaedge::denoiser::FileConfigReader(file_path);
     bool on_gpu = reader.params()["inference"]["gpu"].as<bool>(false);
-    std::string model_type = reader.params()["inference"]["model_type"].as<std::string>("best_speed");
+    std::string model_type = reader.params()["inference"]["model_type"].as<std::string>("denoiser_discr_web_model");
 
-    if (model_type == "best_quality") {
+    if (model_type == "denoiser_discr_hq_model") {
       auto config = std::make_shared<gigaedge::denoiser::DenoiserConfig>(reader);
-      gigadenoiser_model_runner =
-          std::unique_ptr<util::onnx::BaseOnnxRunner>(new util::onnx::DenoiserQOnnxRunner(config, 1, on_gpu));
-    } else if (model_type == "best_speed") {
+      gigadenoiser_model_runner = std::unique_ptr<util::onnx::BaseOnnxRunner>(
+          new util::onnx::DenoiserDiscriminativeNbOnnxRunner(config, 1, on_gpu));
+    } else if (model_type == "denoiser_discr_web_model") {
       auto config = std::make_shared<gigaedge::denoiser::DenoiserConfig>(reader);
-      gigadenoiser_model_runner =
-          std::unique_ptr<util::onnx::BaseOnnxRunner>(new util::onnx::DenoiserFOnnxRunner(config, 1, on_gpu));
+      gigadenoiser_model_runner = std::unique_ptr<util::onnx::BaseOnnxRunner>(
+          new util::onnx::DenoiserDiscriminativeHqOnnxRunner(config, 1, on_gpu));
     }
     frame_size_ms = reader.params()["feature_params"]["frame_size_ms"].as<uint16_t>(16);
     sample_rate = reader.params()["feature_params"]["sampling_freq"].as<uint64_t>(16000);

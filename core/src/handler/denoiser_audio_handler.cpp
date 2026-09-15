@@ -22,12 +22,14 @@ DenoiserAudioHandler::~DenoiserAudioHandler() = default;
 
 Context<float>* DenoiserAudioHandler::create_context(uint32_t input_sample_rate, uint32_t output_sample_rate) {
   Context<float>* ctx = nullptr;
-  if (inference_runner_ptr_->get_model_type() == InferenceRunner::ModelType::denoiser_best_quality) {
-    ctx = dynamic_cast<Context<float>*>(new DenoiseContextQ<float>());
-  } else if (inference_runner_ptr_->get_model_type() == InferenceRunner::ModelType::denoiser_best_speed) {
-    ctx = dynamic_cast<Context<float>*>(new DenoiseContextF<float>());
+  if (inference_runner_ptr_->get_model_type() == InferenceRunner::ModelType::denoiser_discr_web_model) {
+    ctx = dynamic_cast<Context<float>*>(new DenoiseContextDiscriminativeHq<float>());
+  } else if (inference_runner_ptr_->get_model_type() == InferenceRunner::ModelType::denoiser_hybrid_web_model) {
+    ctx = new DenoiseContextHybrid<float>();
+  } else if (inference_runner_ptr_->get_model_type() == InferenceRunner::ModelType::denoiser_discr_hq_model) {
+    ctx = dynamic_cast<Context<float>*>(new DenoiseContextDiscriminativeNb<float>());
   } else {
-    ctx = dynamic_cast<Context<float>*>(new DenoiseContextSF<float>());
+    throw std::invalid_argument("Unsupported denoiser model type");
   }
 
   ctx->snr_adviser = std::make_unique<DenoiserModelAdviser<float>>(*adviser_);
