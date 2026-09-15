@@ -138,6 +138,19 @@ class WorkflowsTest(unittest.TestCase):
                 "android-release-tflite-x86_64", False)
         prepare.assert_called_once_with("x86_64", "Release", False)
 
+    def test_web_package_destination_is_relative_to_root_web_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with mock.patch.object(workflows, "ROOT", root), \
+                 mock.patch.object(workflows, "compiler_cache_environment", return_value={}), \
+                 mock.patch.object(workflows, "run_web_node") as run_web_node:
+                workflows.web_workflow("package", False)
+
+        self.assertEqual(
+            run_web_node.call_args.args[0][-2:],
+            ["--pack-destination", "../out/artifacts/web"])
+        self.assertEqual(run_web_node.call_args.kwargs["workdir"], root / "web")
+
     def test_container_playwright_runs_all_browsers_with_audio(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

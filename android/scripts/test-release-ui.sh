@@ -24,6 +24,7 @@ emulator \
   -no-boot-anim \
   -no-metrics \
   -no-snapshot \
+  -partition-size 2048 \
   -gpu swiftshader_indirect \
   -wipe-data >"$EMULATOR_LOG" 2>&1 &
 emulator_pid=$!

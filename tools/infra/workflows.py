@@ -253,7 +253,7 @@ def web_workflow(action: str, host: bool) -> None:
         stage = None if host else "web"
         run_web_node([
             "npm", "pack", "--workspace=@gigaedge/spench-web-sdk",
-            "--pack-destination", "../../out/artifacts/web",
+            "--pack-destination", "../out/artifacts/web",
         ], container_stage=stage, environment=environment, workdir=web_dir)
         return
 
