@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/akhdrv/spench/compare/v1.0.0...v1.0.1) (2026-09-15)
+
+
+### Bug Fixes
+
+* **ci:** correct relocated platform job paths ([d33aab4](https://github.com/akhdrv/spench/commit/d33aab43c84d481b38d25320a229ae5296add8f2))
+
 ## [1.0.0](https://github.com/akhdrv/spench/compare/v0.0.1...v1.0.0) (2026-09-14)
 
 
