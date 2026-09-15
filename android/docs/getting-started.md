@@ -1,6 +1,6 @@
 # Getting started
 
-This guide gets the Spench Android Audio SDK running in your app.
+This guide gets the GigaDenoiser Android Audio SDK running in your app.
 
 ## What the SDK does
 
@@ -31,8 +31,8 @@ Add the SDK plus every model package your app needs to your app module's `build.
 
 ```kotlin
 dependencies {
-    implementation(project(":spench-sdk"))
-    implementation(project(":spench-model-quality48"))
+    implementation(project(":giga-denoiser-sdk"))
+    implementation(project(":giga-denoiser-model-quality48"))
 }
 ```
 
@@ -41,16 +41,16 @@ packaging and runtime discovery.
 
 ## Minimal end-to-end example
 
-Create a processor, enable features, process a chunk, and close it. `SpenchProcessor` is
+Create a processor, enable features, process a chunk, and close it. `Processor` is
 `Closeable`, so `use { }` guarantees native resources are released.
 
 ```kotlin
-import com.gigaedge.spench.SpenchFeatures
-import com.gigaedge.spench.SpenchProcessor
+import com.gigaedge.denoiser.Features
+import com.gigaedge.denoiser.Processor
 
 fun processOneChunk(context: Context, sampleRateHz: Int, input: FloatArray) {
-    SpenchProcessor(context, sampleRateHz).use { processor ->
-        processor.setFeatures(SpenchFeatures(normalization = true, noiseSuppression = "quality48"))
+    Processor(context, sampleRateHz).use { processor ->
+        processor.setFeatures(Features(normalization = true, noiseSuppression = "quality48"))
         val output = FloatArray(input.size)
         processor.process(input, output, input.size)
         // `output` holds processed samples; early samples may be zero until the worker warms up.
@@ -79,19 +79,19 @@ See [Telemetry and performance](telemetry-and-performance.md).
 ## Discovering models at runtime
 
 ```kotlin
-import com.gigaedge.spench.SpenchModels
+import com.gigaedge.denoiser.Models
 
-val modelIds = SpenchModels.available(context) // sorted, e.g. ["quality48"]
-processor.setFeatures(SpenchFeatures(noiseSuppression = modelIds.firstOrNull()))
+val modelIds = Models.available(context) // sorted, e.g. ["quality48"]
+processor.setFeatures(Features(noiseSuppression = modelIds.firstOrNull()))
 ```
 
 ## First-run checklist
 
-1. The SDK and at least one `:spench-model-*` module are on your app's `implementation` classpath.
-2. You construct `SpenchProcessor` with the **actual input sample rate** in Hz (`> 0`).
+1. The SDK and at least one `:giga-denoiser-model-*` module are on your app's `implementation` classpath.
+2. You construct `Processor` with the **actual input sample rate** in Hz (`> 0`).
 3. You call `setFeatures(...)` — a fresh processor has all stages **disabled**.
-4. Noise-suppression names come from [`SpenchModels.available(context)`](models.md) (or the
-   `SpenchQuality48Model.NAME` constant).
+4. Noise-suppression names come from [`Models.available(context)`](models.md) (or the
+   `Quality48Model.NAME` constant).
 5. Input/output buffers are at least `numFrames` long, and audio is **mono**.
 6. You `close()` the processor (or use `use { }`) when done.
 7. No manual ProGuard/R8 rules are needed; the SDK ships [consumer rules](proguard-r8.md).
@@ -101,7 +101,7 @@ processor.setFeatures(SpenchFeatures(noiseSuppression = modelIds.firstOrNull()))
 Use the Gradle wrapper for reproducible builds:
 
 ```bash
-./gradlew :spench-sdk:assembleDebug
+./gradlew :giga-denoiser-sdk:assembleDebug
 ./gradlew :demo-app:assembleDebug
 ```
 

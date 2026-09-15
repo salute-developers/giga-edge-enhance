@@ -22,7 +22,7 @@ ffmpeg -i input.ext -ac 1 -ar 48000 -c:a pcm_s16le output.wav
 
 ## `UnsatisfiedLinkError`
 
-The native library `libspench-sdk.so` failed to load or a JNI method could not be resolved. Check:
+The native library `libgiga-denoiser-sdk.so` failed to load or a JNI method could not be resolved. Check:
 
 - Your device/emulator ABI is one of `arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86` (all are built by
   default).
@@ -34,25 +34,25 @@ The native library `libspench-sdk.so` failed to load or a JNI method could not b
 
 ## `IllegalStateException` after `close()`
 
-Using a processor after `close()` throws `IllegalStateException` ("SpenchProcessor is already
+Using a processor after `close()` throws `IllegalStateException` ("Processor is already
 closed"). `close()` is idempotent, but any `process` / `setFeatures` / `reset` / `telemetry` call
 after it fails. Manage the lifecycle with `use { }` or construct a new processor. See
 [threading.md](threading.md).
 
 ## `IllegalArgumentException` for invalid settings
 
-`SpenchSettings` validates its invariants in `init`, so constructing (or `copy(...)`-ing) invalid
+`Settings` validates its invariants in `init`, so constructing (or `copy(...)`-ing) invalid
 values throws `IllegalArgumentException` before you ever reach a processor. Check the message for the
 offending field (for example `telemetryRoundingMilliseconds must be greater than zero`). Common
 mistakes: non-positive window/rounding values, negative latency, or `NaN`/infinite doubles. See the
-[API reference](api-reference.md#spenchsettings) for the exact constraints.
+[API reference](api-reference.md#settings) for the exact constraints.
 
 ## `IllegalArgumentException` for a missing or invalid model
 
 `setFeatures(...)` throws `IllegalArgumentException` when the requested noise-suppression model asset
 is not packaged ("model asset not found"), or when the name contains characters outside letters,
-digits, `.`, `_`, and `-`. Ensure the matching `:spench-model-*` module is an `implementation`
-dependency and select names from `SpenchModels.available(context)`. See [models.md](models.md).
+digits, `.`, `_`, and `-`. Ensure the matching `:giga-denoiser-model-*` module is an `implementation`
+dependency and select names from `Models.available(context)`. See [models.md](models.md).
 
 ## `IllegalArgumentException` for buffers or frame count
 

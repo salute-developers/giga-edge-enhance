@@ -53,13 +53,13 @@ const baseConfigFactory = (mode = 'development') => {
     };
 };
 
-const spenchWorkerConfigFactory = (mode) => {
+const gigaDenoiserWorkerConfigFactory = (mode) => {
     const baseConfig = baseConfigFactory(mode);
 
     return {
         ...baseConfig,
         entry: {
-            'spench-worker': './src/workers/worker/index.ts',
+            'giga-denoiser-worker': './src/workers/worker/index.ts',
         },
         output: {
             ...baseConfig.output,
@@ -68,13 +68,13 @@ const spenchWorkerConfigFactory = (mode) => {
     };
 };
 
-const spenchWorkletConfigFactory = (mode) => {
+const gigaDenoiserWorkletConfigFactory = (mode) => {
     const baseConfig = baseConfigFactory(mode);
 
     return {
         ...baseConfig,
         entry: {
-            'spench-worklet': './src/workers/worklet/index.ts',
+            'giga-denoiser-worklet': './src/workers/worklet/index.ts',
         },
         output: {
             ...baseConfig.output,
@@ -83,13 +83,13 @@ const spenchWorkletConfigFactory = (mode) => {
     };
 };
 
-const spenchWorkletDspConfigFactory = (mode) => {
+const gigaDenoiserWorkletDspConfigFactory = (mode) => {
     const baseConfig = baseConfigFactory(mode);
 
     return {
         ...baseConfig,
         entry: {
-            'spench-worklet-dsp': './src/workers/worklet/dsp.ts',
+            'giga-denoiser-worklet-dsp': './src/workers/worklet/dsp.ts',
         },
         output: {
             ...baseConfig.output,
@@ -101,5 +101,5 @@ const spenchWorkletDspConfigFactory = (mode) => {
 module.exports = (env, argv) => {
     const { mode } = argv;
 
-    return [spenchWorkletConfigFactory(mode), spenchWorkerConfigFactory(mode), spenchWorkletDspConfigFactory(mode)];
+    return [gigaDenoiserWorkletConfigFactory(mode), gigaDenoiserWorkerConfigFactory(mode), gigaDenoiserWorkletDspConfigFactory(mode)];
 };

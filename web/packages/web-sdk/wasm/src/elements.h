@@ -1,11 +1,11 @@
 #pragma once
 
-#include <vector>
-#include <string>
 #include <memory>
+#include <string>
+#include <vector>
 
-#include "spench.h"
-#include "spench/packed_model.h"
+#include "gigadenoiser.h"
+#include "gigadenoiser/packed_model.h"
 
 class PipelineElement {
  protected:
@@ -28,7 +28,7 @@ class PipelineElement {
 class AudioProcessPipelineElement : public PipelineElement {
  private:
   std::string m_yaml_config;
-  std::unique_ptr<spench::SpenchAudioProcess> m_normalizer;
+  std::unique_ptr<gigaedge::denoiser::AudioProcessor> m_normalizer;
 
  public:
   AudioProcessPipelineElement(const std::string& yaml_config, uint32_t sample_rate = 0);
@@ -41,7 +41,7 @@ class AudioProcessPipelineElement : public PipelineElement {
 class EchoCancellationElement : public PipelineElement {
  private:
   std::string m_yaml_config;
-  std::unique_ptr<spench::SpenchAudioEchoCancelation> m_aec;
+  std::unique_ptr<gigaedge::denoiser::EchoCanceller> m_aec;
   std::vector<float> m_loopback;
 
  public:
@@ -59,15 +59,15 @@ class EchoCancellationElement : public PipelineElement {
 
 class DenoisePipelineElement : public PipelineElement {
  private:
-  spench::SpenchDenoise m_denoiser;
-  spench::SpenchContext<float>* ctx;
+  gigaedge::denoiser::Denoiser m_denoiser;
+  gigaedge::denoiser::Context<float>* ctx;
 
-  public:
-   DenoisePipelineElement(uint32_t sample_rate, std::shared_ptr<spench::PackedModelReader> model);
-   ~DenoisePipelineElement() override;
-   uint32_t process(uintptr_t src_ptr, const uint32_t chunk_size) noexcept final;
+ public:
+  DenoisePipelineElement(uint32_t sample_rate, std::shared_ptr<gigaedge::denoiser::PackedModelReader> model);
+  ~DenoisePipelineElement() override;
+  uint32_t process(uintptr_t src_ptr, const uint32_t chunk_size) noexcept final;
 
-   void resetContext() noexcept final;
+  void resetContext() noexcept final;
 };
 
 #endif

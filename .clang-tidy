@@ -1,6 +1,6 @@
 ---
-# Naming checks for migrated Spench code (see STYLE.md).
-# Spench deltas vs Google: snake_case functions/methods; no k constant prefix.
+# Naming checks for migrated GigaDenoiser code (see STYLE.md).
+# GigaDenoiser deltas vs Google: snake_case functions/methods; no k constant prefix.
 # Only run on paths listed in container_internals/style_naming_enforced.txt.
 
 Checks: '-*,

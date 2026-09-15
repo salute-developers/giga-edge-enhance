@@ -23,8 +23,8 @@ run_clang_format() {
 
   local cmd="$1"
   local files
-  files=$(find "$ROOT_DIR/Sources/SpenchAudioKit/ObjC" \
-                "$ROOT_DIR/Sources/SpenchAudioKit/include" \
+  files=$(find "$ROOT_DIR/Sources/GigaDenoiserAudioKit/ObjC" \
+                "$ROOT_DIR/Sources/GigaDenoiserAudioKit/include" \
                 -type f \( -name "*.mm" -o -name "*.h" \) 2>/dev/null || true)
 
   if [[ -z "$files" ]]; then

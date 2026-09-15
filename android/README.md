@@ -1,6 +1,6 @@
-# Spench Android Audio SDK
+# GigaDenoiser Android Audio SDK
 
-Spench is an Android audio SDK for real-time speech processing. It wraps a native Spench C++ core
+GigaDenoiser is an Android audio SDK for real-time speech processing. It wraps a native GigaDenoiser C++ core
 behind a small Kotlin API: you feed it **mono `FloatArray` PCM**, and it runs optional
 **normalization** (loudness control, noise gate, limiter) and **neural noise-suppression** stages on
 a background worker thread. Audio capture, playback, and file I/O stay in your app — the SDK does the
@@ -18,14 +18,14 @@ DSP.
 ## Quickstart
 
 ```kotlin
-import com.gigaedge.spench.SpenchFeatures
-import com.gigaedge.spench.SpenchProcessor
-import com.gigaedge.spench.SpenchModels
+import com.gigaedge.denoiser.Features
+import com.gigaedge.denoiser.Processor
+import com.gigaedge.denoiser.Models
 
 // sampleRateHz is your input rate in Hz; audio must be mono.
-SpenchProcessor(context, sampleRateHz).use { processor ->
-    val model = SpenchModels.available(context).firstOrNull() // e.g. "quality48", or null
-    processor.setFeatures(SpenchFeatures(normalization = true, noiseSuppression = model))
+Processor(context, sampleRateHz).use { processor ->
+    val model = Models.available(context).firstOrNull() // e.g. "quality48", or null
+    processor.setFeatures(Features(normalization = true, noiseSuppression = model))
 
     val output = FloatArray(input.size)
     processor.process(input, output, input.size)       // non-blocking; warms up asynchronously
@@ -39,8 +39,8 @@ Add the SDK and the model modules to your app's dependencies:
 
 ```kotlin
 dependencies {
-    implementation(project(":spench-sdk"))
-    implementation(project(":spench-model-quality48"))
+    implementation(project(":giga-denoiser-sdk"))
+    implementation(project(":giga-denoiser-model-quality48"))
 }
 ```
 
@@ -69,7 +69,7 @@ Requires JDK 17, Android SDK API 35, and (to build the native library) NDK 29.0.
 3.22.1. Use the Gradle wrapper:
 
 ```bash
-./gradlew :spench-sdk:assembleDebug
+./gradlew :giga-denoiser-sdk:assembleDebug
 ./scripts/build.sh          # SDK + models + demo
 ```
 

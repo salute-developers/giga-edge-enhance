@@ -15,8 +15,8 @@ TOOLCHAIN_DOCKERFILES = {
 WEB_PACKAGE_LOCK = ROOT / "web/package-lock.json"
 WEB_IMAGE_INPUTS = (
     ROOT / "web/.nvmrc",
-    ROOT / "web/apps/spench-site/mos_install.sh",
-    ROOT / "web/apps/spench-site/requirements-mos.txt",
+    ROOT / "web/apps/site/mos_install.sh",
+    ROOT / "web/apps/site/requirements-mos.txt",
 )
 PRESET_STAGES = {
     "native-debug-onnx": "native",
@@ -59,12 +59,12 @@ HOST_ONLY_PRESETS = (
 CACHE_INPUTS = (
     ROOT / "package-lock.cmake",
     ROOT / "cmake/CPM.cmake",
-    ROOT / "cmake/SpenchDependencies.cmake",
+    ROOT / "cmake/Dependencies.cmake",
 )
 DEPENDENCY_RECIPE_INPUTS = (
     ROOT / "package-lock.cmake",
-    ROOT / "cmake/SpenchDependencies.cmake",
-    ROOT / "cmake/SpenchPlatform.cmake",
+    ROOT / "cmake/Dependencies.cmake",
+    ROOT / "cmake/Platform.cmake",
 )
 DEPENDENCY_BUNDLE_FORMAT = 5
 ENGINE_PACKAGE = {"onnx": "onnxruntime", "tflite": "tflite"}

@@ -1,10 +1,10 @@
-# Spench C++ style guide
+# GigaDenoiser C++ style guide
 
-Spench uses **clang-format** with `BasedOnStyle: Google` (see `.clang-format`) for **layout**.
+GigaDenoiser uses **clang-format** with `BasedOnStyle: Google` (see `.clang-format`) for **layout**.
 
 **Naming** follows the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) with these **project-specific differences**:
 
-| Topic | Google | Spench |
+| Topic | Google | GigaDenoiser |
 |-------|--------|--------|
 | Functions / methods | `PascalCase` | **`snake_case`** |
 | Constants (`constexpr`, `const` at namespace scope) | `k` + `PascalCase` | **`snake_case`**, no `k` prefix |
@@ -22,7 +22,7 @@ so tree-wide cleanup belongs in a dedicated change rather than feature pull requ
 | Classes, structs, type aliases | `PascalCase` | `PackedModelReader`, `EchoCancelerConfig` |
 | `enum class` enumerators | `snake_case` | `VadType::rnnoise` |
 | Template parameters | `PascalCase` or single letter | `T`, `SampleType` |
-| Namespaces | `snake_case` | `util::sound`, `spench` |
+| Namespaces | `snake_case` | `util::sound`, `gigadenoiser` |
 
 ### Functions and methods
 
@@ -49,7 +49,7 @@ Do **not** use the `m_` prefix for members; use `foo_` instead.
 
 Do **not** use the `k` prefix for constants.
 
-Use fixed-width integers (`int32_t`, `uint32_t`, and optionally `int16_t` / `uint16_t` from `<cstdint>`) instead of plain `int` / `unsigned` in Spench code. Exceptions: C API signatures you cannot change (e.g. Speex), and third-party callback types that require `int`. Mark a one-off exception with `// spench-allow-int` on that line.
+Use fixed-width integers (`int32_t`, `uint32_t`, and optionally `int16_t` / `uint16_t` from `<cstdint>`) instead of plain `int` / `unsigned` in GigaDenoiser code. Exceptions: C API signatures you cannot change (e.g. Speex), and third-party callback types that require `int`. Mark a one-off exception with `// giga-denoiser-allow-int` on that line.
 
 `clang-tidy` `google-runtime-int` and cpplint `runtime/int` only flag `short` / `long` / `long long`, not plain `int`. Review plain `int` and `unsigned` uses against this rule when touching legacy code.
 
@@ -59,20 +59,20 @@ Avoid `const` on non-static data members when possible — clang-tidy treats the
 
 ### C API (stable, do not rename)
 
-Exported C symbols in `spench/include/spench/spench_c.h` keep the existing `Spench` + `PascalCase` convention (`SpenchDenoiseInit`). **No style-driven renames** — breaking the C API requires a major version and explicit deprecation.
+Exported C symbols in `core/include/gigadenoiser/c_api.h` keep the existing `GigaDenoiser` + `PascalCase` convention (`GigaDenoiserDenoiseInit`). **No style-driven renames** — breaking the C API requires a major version and explicit deprecation.
 
 ### C++ public API (stable surface)
 
-Headers under `spench/include/spench/` that define **`SPENCH_API`** types (e.g. `SpenchDenoise`, `SpenchAudioProcess`, `ISpenchSequencer`) are the **supported C++ SDK**. They use **PascalCase** methods (`ProcessChunk`, `GetFinalChunk`, `ReloadConfig`).
+Headers under `core/include/gigadenoiser/` that define **`GDN_API`** types (e.g. `Denoiser`, `AudioProcessor`, and `Sequencer`) are the **supported C++ SDK** in the `gigaedge::denoiser` namespace. They use **PascalCase** methods (`ProcessChunk`, `GetFinalChunk`, `ReloadConfig`).
 
 **Do not rename public C++ methods for style** without a compatibility plan. Renaming breaks source compatibility and often **ABI** (exported symbol names on Windows/Linux shared libs).
 
 | Layer | Location | Naming |
 |-------|----------|--------|
-| **C API** | `spench_c.h` | Frozen (`Spench*` names) |
-| **C++ public API** | `SPENCH_API` in `spench/include/spench/*.h` | Frozen (`PascalCase` methods) until an explicit API version bump; new *additive* APIs may use `snake_case` if documented |
-| **C++ implementation** | `spench/src/`, handlers, runners | `snake_case` per this guide |
-| **Utilities** | `spench/util/` | `snake_case` per this guide unless types leak into public headers |
+| **C API** | `c_api.h` | Frozen (`GigaDenoiser*` names) |
+| **C++ public API** | `GDN_API` in `core/include/gigadenoiser/*.h` | Frozen (`PascalCase` methods) until an explicit API version bump; new *additive* APIs may use `snake_case` if documented |
+| **C++ implementation** | `core/src/`, handlers, runners | `snake_case` per this guide |
+| **Utilities** | `core/util/` | `snake_case` per this guide unless types leak into public headers |
 | **Semi-public headers** | e.g. `packed_model.h` in `include/` | Prefer stable names once released |
 
 ## Out of scope
@@ -97,7 +97,7 @@ Headers under `spench/include/spench/` that define **`SPENCH_API`** types (e.g. 
 Check the C and C++ lines changed relative to the current commit:
 
 ```bash
-git-clang-format --diff HEAD --extensions c,cc,cpp,h,hpp -- spench
+git-clang-format --diff HEAD --extensions c,cc,cpp,h,hpp -- gigadenoiser
 ```
 
 Naming checks require `clang-tidy` and `compile_commands.json`
@@ -113,5 +113,5 @@ Member:    model_params_, bundle_
 Struct:    sample_rate, frame_len
 Parameter: input_audio_frame
 Constant:  max_frame_ms
-C API:     SpenchDenoiseInit
+C API:     GigaDenoiserDenoiseInit
 ```

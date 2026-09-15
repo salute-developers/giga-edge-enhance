@@ -1,10 +1,10 @@
-name: Build and test Spench CMake target
+name: Build and test GigaDenoiser CMake target
 description: Restore one dependency bundle, then build and test one existing CMake preset.
 
 inputs:
   preset:
     required: true
-    description: CMake preset accepted by tools/spench.
+    description: CMake preset accepted by tools.
   toolchain-identity:
     required: true
     description: Immutable toolchain identity used by the dependency bundle.
@@ -23,11 +23,11 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: ./.github/actions/setup-spench-cache
+    - uses: ./.github/actions/setup-cache
       with:
         preset: ${{ inputs.preset }}
 
-    - uses: ./.github/actions/setup-spench-dependency
+    - uses: ./.github/actions/setup-dependency
       with:
         target: ${{ inputs.preset }}
         toolchain-identity: ${{ inputs.toolchain-identity }}
@@ -37,48 +37,48 @@ runs:
       shell: bash
       env:
         PRESET: ${{ inputs.preset }}
-        SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
-        SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
-        SPENCH_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
+        GDN_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        GDN_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        GDN_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
       run: |
         python_command=python3
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
           python_command=python
         fi
-        $python_command tools/spench build "$PRESET"
+        $python_command tools/build "$PRESET"
 
     - name: Test ${{ inputs.preset }}
       shell: bash
       env:
         PRESET: ${{ inputs.preset }}
-        SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
-        SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
-        SPENCH_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
+        GDN_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        GDN_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        GDN_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
       run: |
         python_command=python3
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
           python_command=python
         fi
-        $python_command tools/spench test "$PRESET"
+        $python_command tools/test "$PRESET"
 
     - name: Install ${{ inputs.preset }}
       shell: bash
       env:
         PRESET: ${{ inputs.preset }}
-        SPENCH_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
-        SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
-        SPENCH_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
+        GDN_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        GDN_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        GDN_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
       run: |
         python_command=python3
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
           python_command=python
         fi
-        $python_command tools/spench install "$PRESET"
+        $python_command tools/install "$PRESET"
 
     - name: Upload installed ${{ inputs.preset }} SDK
       uses: actions/upload-artifact@v7
       with:
-        name: spench-install-${{ inputs.preset }}-${{ github.sha }}
+        name: gdn-install-${{ inputs.preset }}-${{ github.sha }}
         path: out/artifacts/install/${{ inputs.preset }}
         if-no-files-found: error
         retention-days: 7
@@ -88,19 +88,19 @@ runs:
       shell: bash
       env:
         PRESET: ${{ inputs.preset }}
-        SPENCH_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        GDN_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
       run: |
         python_command=python3
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
           python_command=python
         fi
-        $python_command tools/spench package "$PRESET"
+        $python_command tools/package "$PRESET"
 
     - name: Upload packaged ${{ inputs.preset }} SDK
       if: inputs.package == 'true'
       uses: actions/upload-artifact@v7
       with:
-        name: spench-package-${{ inputs.preset }}-${{ github.sha }}
+        name: gdn-package-${{ inputs.preset }}-${{ github.sha }}
         path: out/artifacts/${{ inputs.preset }}
         if-no-files-found: error
         retention-days: 7

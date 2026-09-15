@@ -1,13 +1,13 @@
-# Spench repository guidance
+# GigaDenoiser repository guidance
 
 These instructions apply to the whole repository. If a nested `AGENTS.md` is
 added later, follow the more specific instructions for files in that subtree.
 
 ## Repository map
 
-- `spench/`: C and C++ library sources, public headers, utilities, CLI tools,
+- `core/`: C and C++ library sources, public headers, utilities, CLI tools,
   demos, and Catch2 tests.
-- `spench/include/spench/`: supported public C and C++ SDK surface. Treat API
+- `core/include/gigadenoiser/`: supported public C and C++ SDK surface. Treat API
   and ABI compatibility here as intentional product constraints.
 - `package-lock.cmake` and `out/cache/cpm/`: pinned dependency declarations and
   their generated source cache. Do not edit cached dependency sources.
@@ -15,8 +15,8 @@ added later, follow the more specific instructions for files in that subtree.
   platform selection, and compiler settings.
 - `android/`, `ios/`, and `web/`: platform SDKs, demos, and platform-specific
   tests.
-- `tools/spench`: canonical entry point for supported builds, tests, and
-  packages. Prefer it to ad hoc CMake, Docker, Gradle, or npm command chains.
+- `tools/`: canonical command suite for supported builds, tests, installs, and
+  packages. See `tools/README.md`; prefer it to ad hoc toolchain command chains.
 - `README.md`: setup, supported configurations, model retrieval, and user-facing
   examples.
 - `STYLE.md`: authoritative C++ naming, formatting, API-stability, and lint
@@ -45,46 +45,50 @@ added later, follow the more specific instructions for files in that subtree.
 
 ## Canonical build and test interface
 
-Run commands from the repository root. Docker is the default for native, WASM,
-Android, and web targets; use `--host` only when the required local toolchain is
-already installed. iOS workflows use the host Xcode toolchain.
+Run commands from the repository root. Docker is the required default for
+native, WASM, Android, and web builds and tests. Do not pass `--host` during
+routine development or validation; host mode is retained only for explicit
+manual troubleshooting. CI and reported validation must use the commands
+without `--host` so toolchain versions remain reproducible. iOS workflows and
+platform-specific macOS and Windows presets use their required host toolchains
+implicitly.
 
 ```bash
 # Fast native development validation
-tools/spench build native-debug-onnx
-tools/spench test native-debug-onnx
+tools/build native-debug-onnx
+tools/test native-debug-onnx
 
 # Release engine coverage
-tools/spench build native-release-onnx
-tools/spench test native-release-onnx
-tools/spench build native-release-tflite
-tools/spench test native-release-tflite
+tools/build native-release-onnx
+tools/test native-release-onnx
+tools/build native-release-tflite
+tools/test native-release-tflite
 
 # Memory-safety validation
-tools/spench build native-asan-onnx
-tools/spench test native-asan-onnx
+tools/build native-asan-onnx
+tools/test native-asan-onnx
 
 # WebAssembly wrappers
-tools/spench build wasm-release
-tools/spench test wasm-release
-tools/spench build wasm-dsp-release
-tools/spench test wasm-dsp-release
+tools/build wasm-release
+tools/test wasm-release
+tools/build wasm-dsp-release
+tools/test wasm-dsp-release
 
 # Full web SDK build, unit tests, and bundle
-tools/spench build web
-tools/spench test web
+tools/build web
+tools/test web
 
 # Platform wrappers
-tools/spench build android
-tools/spench test android
-tools/spench build ios
-tools/spench test ios
+tools/build android
+tools/test android
+tools/build ios
+tools/test ios
 
 # Release packages
-tools/spench build native-release-onnx
-tools/spench package native-release-onnx
-tools/spench build native-release-tflite
-tools/spench package native-release-tflite
+tools/build native-release-onnx
+tools/package native-release-onnx
+tools/build native-release-tflite
+tools/package native-release-tflite
 ```
 
 Dependency downloads and first-time container builds can be expensive. Start
@@ -101,14 +105,14 @@ crosses engines, platforms, ABI boundaries, or memory ownership.
 - WASM C++ or glue change: build and test the matching `wasm-release` target.
   Also build and test `wasm-dsp-release` when DSP-only behavior can be affected.
 - Web SDK TypeScript-only change: from `web`, run
-  `npm test --workspace=@gigaedge/spench-web-sdk` and the relevant build or
-  lint script. Run `tools/spench build web` when generated WASM, staging,
+  `npm test --workspace=@gigaedge/denoiser-web-sdk` and the relevant build or
+  lint script. Run `tools/build web` when generated WASM, staging,
   bundling, or the native/web boundary changes.
 - Android or iOS wrapper change: run the matching platform workflow. Some
   Android instrumented tests require a device or emulator; document that
   limitation instead of claiming they ran.
 - CMake, Docker, preset, packaging, or workflow change: exercise the exact
-  affected preset or `tools/spench` action, not merely a source-level test.
+  affected preset or `tools` action, not merely a source-level test.
 - Documentation-only change: verify commands, links, and examples against the
   current repository; a full binary build is normally unnecessary.
 
@@ -120,15 +124,15 @@ blocker. Do not silently substitute a weaker check.
 
 - Follow `STYLE.md` and `.clang-format`. Internal functions and methods use
   `snake_case`; types use `PascalCase`; class members use a trailing underscore.
-- Prefer fixed-width integer types in Spench code as documented in `STYLE.md`.
+- Prefer fixed-width integer types in GigaDenoiser code as documented in `STYLE.md`.
 - Do not rename exported C symbols or existing public C++ API methods for style.
-  Changes under `spench/include/spench/` require explicit compatibility review.
-- Keep tests close to the affected behavior under `spench/tests/`. Add a
+  Changes under `core/include/gigadenoiser/` require explicit compatibility review.
+- Keep tests close to the affected behavior under `core/tests/`. Add a
   regression test when fixing a reproducible bug.
 - Check changed C/C++ lines against `.clang-format`:
 
   ```bash
-  git-clang-format --diff HEAD --extensions c,cc,cpp,h,hpp -- spench
+  git-clang-format --diff HEAD --extensions c,cc,cpp,h,hpp -- core
   ```
 
   The required CI lint uses the same changed-line check. Broader legacy style
@@ -143,12 +147,12 @@ blocker. Do not silently substitute a weaker check.
 - Keep Web SDK unit tests and demo Playwright tests distinct. A placeholder demo
   `npm test` is not evidence that browser behavior passed.
 - Do not manually edit staged/generated WASM artifacts when the staging scripts
-  or `tools/spench build web` can produce them.
+  or `tools/build web` can produce them.
 
 ## GitHub CI/CD design
 
 Keep workflow YAML thin: setup belongs in composite actions and build behavior
-belongs in `tools/spench`, so local and CI commands remain identical.
+belongs in `tools`, so local and CI commands remain identical.
 
 ### Workflow boundaries
 
@@ -180,14 +184,14 @@ remain separate named steps in one job so large build trees do not have to be
 uploaded and downloaded between runners.
 
 - Linux CI validates ONNX Runtime and TensorFlow Lite shared Release targets.
-  Debug, ASAN, and static presets remain local `tools/spench` workflows rather
+  Debug, ASAN, and static presets remain local `tools` workflows rather
   than manually dispatched GitHub Actions jobs.
 - Web owns both full and DSP-only WASM builds. Web SDK unit tests and Chromium
   Playwright coverage run in the Linux combined Web toolchain image. The
   required CI gate is intentionally Chromium-only to keep browser validation
-  on one reproducible engine. Local `tools/spench test web-playwright` runs the
+  on one reproducible engine. Local `tools/test web-playwright` runs the
   Chromium, Firefox, and WebKit projects by default; set
-  `SPENCH_PLAYWRIGHT_BROWSERS` to a comma-separated subset for a focused run.
+  `GDN_PLAYWRIGHT_BROWSERS` to a comma-separated subset for a focused run.
   Playwright consumes the packed SDK from the Web build job and runs against
   the local COOP/COEP server. Linux MOS results remain authoritative because
   scores vary by host media stack.
@@ -201,12 +205,12 @@ uploaded and downloaded between runners.
 ### Cache and dependency-bundle policy
 
 - Immediately after checkout, call
-  `./.github/actions/setup-spench-cache` once per build job with that job's
+  `./.github/actions/setup-cache` once per build job with that job's
   exact preset. Do not duplicate cache-key logic in workflow YAML.
 - Treat CPM and compiler caches only as accelerators. A cache miss must remain a
   correct build, and release artifacts must never be published directly from a
   mutable cache.
-- Build one dependency bundle with `tools/spench prepare-deps <concrete-target>`.
+- Build one dependency bundle with `tools/ci prepare-deps <concrete-target>`.
   Package it as a checksummed tar archive and push it to GHCR as an OCI artifact
   with ORAS. Do not wrap dependency files in a runnable Docker image.
 - Tag toolchain images by Dockerfile/toolchain content, never by commit SHA.
@@ -257,7 +261,7 @@ A rerun must be idempotent: it may verify an already published artifact with
 the same hash, but it must fail rather than overwrite an existing version with
 different bytes.
 
-`SPENCH_VERSION` is the authoritative release version source. Its name must not
+`VERSION_NUMBER` is the authoritative release version source. Its name must not
 be shortened to `VERSION`: on case-insensitive filesystems that filename shadows
 libc++'s standard `<version>` header when the source root is an include path.
 

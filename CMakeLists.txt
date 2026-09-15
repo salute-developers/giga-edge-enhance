@@ -5,15 +5,13 @@ cmake_minimum_required(VERSION 3.17)
 # projects still carry those old declarations.
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/SPENCH_VERSION" SPENCH_VERSION
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION_NUMBER" VERSION_NUMBER
      LIMIT_COUNT 1 REGEX "^[0-9]+\\.[0-9]+\\.[0-9]+$")
-if(NOT SPENCH_VERSION)
-  message(FATAL_ERROR "SPENCH_VERSION must contain a SemVer core version (for example 1.0.0).")
+if(NOT VERSION_NUMBER)
+  message(FATAL_ERROR "VERSION_NUMBER must contain a SemVer core version (for example 1.0.0).")
 endif()
 
-project(spench VERSION "${SPENCH_VERSION}" LANGUAGES C CXX)
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+project(giga-denoiser VERSION "${VERSION_NUMBER}" LANGUAGES C CXX)
 
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0115 OLD)
@@ -23,39 +21,39 @@ set(CMAKE_POLICY_DEFAULT_CMP0135 NEW)
 
 find_package(Git QUIET)
 
-include(SpenchOptions)
-include(SpenchCompilerSettings)
-include(SpenchPlatform)
-include(SpenchProfile)
-include(SpenchCompilerCache)
-include(SpenchBuildConfig)
-include(SpenchDependencies)
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompilerSettings.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Platform.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Profile.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompilerCache.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildConfig.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Dependencies.cmake")
 
-if(SPENCH_PROFILE STREQUAL "model-packer")
-  add_subdirectory(spench/util/packed_model)
-  add_subdirectory(spench/cli/model_packer)
+if(GDN_PROFILE STREQUAL "model-packer")
+  add_subdirectory(core/util/packed_model)
+  add_subdirectory(core/cli/model_packer)
 else()
-  add_subdirectory(spench)
+  add_subdirectory(core)
 
   include(CTest)
   enable_testing()
 
   if(BUILD_TESTING)
-    add_subdirectory(spench/tests)
+    add_subdirectory(core/tests)
   endif()
 
   if(BUILD_CLI)
-    add_subdirectory(spench/cli)
+    add_subdirectory(core/cli)
   endif()
 
   if(EMSCRIPTEN)
-    message(STATUS "Building spench for WebAssembly")
+    message(STATUS "Building giga-denoiser for WebAssembly")
     add_subdirectory(web/packages/web-sdk/wasm)
   endif()
 endif()
 
-if(NOT SPENCH_PROFILE STREQUAL "model-packer")
-  include(SpenchInstall)
+if(NOT GDN_PROFILE STREQUAL "model-packer")
+  include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Install.cmake")
 endif()
 
-include(SpenchSummary)
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Summary.cmake")

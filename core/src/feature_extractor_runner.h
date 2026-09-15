@@ -1,0 +1,69 @@
+#pragma once
+#include <ctpl_stl.h>
+
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "src/feature_extractor.h"
+#include "src/feature_params.h"
+#include "src/task.h"
+
+namespace gigaedge::denoiser {
+
+class FeatureExtractorRunner {
+ public:
+  FeatureExtractorRunner() = delete;
+  FeatureExtractorRunner& operator=(const FeatureExtractorRunner&) = delete;
+  FeatureExtractorRunner(const FeatureExtractorRunner&) = delete;
+
+  explicit FeatureExtractorRunner(std::shared_ptr<gigaedge::denoiser::NetworkConfig> config) {
+    read_config(config);
+    feature_extractor_ptr_ = std::unique_ptr<gigaedge::denoiser::fe::FeatureExtractor<float>>(
+        new gigaedge::denoiser::fe::FeatureExtractor<float>(params_));
+    warm_up();
+  }
+  void read_config(std::shared_ptr<gigaedge::denoiser::NetworkConfig> config);
+
+  ~FeatureExtractorRunner() /*override*/ = default;
+
+  void run(gigaedge::denoiser::Task* denoise_task) /*override*/;
+  void warm_up();
+
+  [[nodiscard]] uint64_t get_frame_size_ms() const;
+  [[nodiscard]] uint64_t get_sampling_freq() const;
+  [[nodiscard]] uint64_t get_frame_size_samples() const;
+  [[nodiscard]] uint64_t get_frame_hop_size_samples() const;
+  [[nodiscard]] uint64_t get_pow_spec_feat_size_samples() const;
+
+ private:
+  // Handles PipelineStage::predicted_mask.
+  void handle_predicted_mask(gigaedge::denoiser::Task* task);
+
+  // Concatenates frames from input_spectrogram into a single ComplexNumber (frames laid out sequentially).
+  static gigaedge::denoiser::ComplexNumber<float> merge_input_spectrogram(
+      const std::vector<gigaedge::denoiser::ComplexNumber<float>>& frames);
+
+  // Applies the predicted mask / enhancement in place.
+  void calc_enhanced_spectrogram(const gigaedge::denoiser::ComplexNumber<float>& merged_spec,
+                                 gigaedge::denoiser::ComplexNumber<float>& out_new_spec);
+
+  // Validates new_spectrogram dimensions and returns feat_num (bins per frame).
+  static uint32_t validate_and_get_feat_num(uint32_t input_chunk_num,
+                                            const gigaedge::denoiser::ComplexNumber<float>& new_spec);
+
+  static bool has_prev_spectrogram(const gigaedge::denoiser::Context<float>& ctx);
+
+  // Builds concat spectrogram: [prev][new_0..new_{n-1}]
+  static gigaedge::denoiser::ComplexNumber<float> build_concat_with_prev(
+      const gigaedge::denoiser::ComplexNumber<float>& prev_spec,
+      const gigaedge::denoiser::ComplexNumber<float>& new_spec, uint32_t input_chunk_num, uint32_t feat_num);
+
+  static void update_prev_from_new_spec(gigaedge::denoiser::Context<float>& ctx,
+                                        const gigaedge::denoiser::ComplexNumber<float>& new_spec,
+                                        uint32_t input_chunk_num, uint32_t feat_num);
+
+  gigaedge::denoiser::fe::FeatureParams params_;
+  std::unique_ptr<gigaedge::denoiser::fe::FeatureExtractor<float>> feature_extractor_ptr_;
+};
+}  // namespace gigaedge::denoiser

@@ -1,6 +1,6 @@
 import UIKit
 import UniformTypeIdentifiers
-import SpenchAudioKit
+import GigaDenoiserAudioKit
 
 final class MainViewController: UIViewController {
     private let titleLabel = UILabel()
@@ -23,15 +23,15 @@ final class MainViewController: UIViewController {
     private var liveRunning = false
     private var fileProcessing = false
     private var processedFileURL: URL?
-    private var availableModels: [SpenchModelDescriptor] = []
-    private var selectedModel: SpenchModelDescriptor?
-    private var currentSettings = SpenchSettings.default
+    private var availableModels: [ModelDescriptor] = []
+    private var selectedModel: ModelDescriptor?
+    private var currentSettings = Settings.default
     private var processingFailureMessage: String?
     private var telemetryTimer: Timer?
-    private var previousTelemetry = SpenchTelemetry.empty
+    private var previousTelemetry = Telemetry.empty
 
-    private var currentFeatures: SpenchFeatures {
-        SpenchFeatures(normalization: processingSwitch.isOn,
+    private var currentFeatures: Features {
+        Features(normalization: processingSwitch.isOn,
                        noiseSuppression: selectedModel)
     }
 
@@ -65,7 +65,7 @@ final class MainViewController: UIViewController {
 
     private func configureUI() {
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.text = "Realtime Spench Processor"
+        titleLabel.text = "Realtime GigaDenoiser Processor"
         titleLabel.font = .preferredFont(forTextStyle: .title2)
         titleLabel.textAlignment = .center
 
@@ -78,7 +78,7 @@ final class MainViewController: UIViewController {
         modelButton.showsMenuAsPrimaryAction = true
 
         processingLabel.translatesAutoresizingMaskIntoConstraints = false
-        processingLabel.text = "Spench audio processing"
+        processingLabel.text = "GigaDenoiser audio processing"
         processingLabel.font = .preferredFont(forTextStyle: .body)
 
         processingSwitch.translatesAutoresizingMaskIntoConstraints = false
@@ -266,7 +266,7 @@ final class MainViewController: UIViewController {
         navigationController?.pushViewController(controller, animated: true)
     }
 
-    private func startFileProcessing(url: URL, features: SpenchFeatures) {
+    private func startFileProcessing(url: URL, features: Features) {
         fileProcessing = true
         fileButton.setTitle("Cancel Processing", for: .normal)
         saveButton.isHidden = true
@@ -342,7 +342,7 @@ final class MainViewController: UIViewController {
         updateTelemetryLabels(with: delta)
     }
 
-    private var activeTelemetry: SpenchTelemetry {
+    private var activeTelemetry: Telemetry {
         if liveRunning {
             return liveController.telemetry
         }
@@ -352,7 +352,7 @@ final class MainViewController: UIViewController {
         return .empty
     }
 
-    private func updateTelemetryLabels(with telemetry: SpenchTelemetry) {
+    private func updateTelemetryLabels(with telemetry: Telemetry) {
         audioProcessingTelemetryLabel.text = makeTelemetryText(title: "Audio processing mean",
                                                                value: telemetry.audioProcessingMeanMilliseconds)
         denoiserTelemetryLabel.text = makeTelemetryText(title: "Denoising mean",
@@ -377,7 +377,7 @@ final class MainViewController: UIViewController {
 
     private func loadModels() {
         do {
-            availableModels = try SpenchModelCatalog.availableModels()
+            availableModels = try ModelCatalog.availableModels()
             refreshModelMenu()
             applyModelSelection(nil)
         } catch {
@@ -403,7 +403,7 @@ final class MainViewController: UIViewController {
         modelButton.setTitle(selectedModel?.rawValue ?? "Off", for: .normal)
     }
 
-    private func applyModelSelection(_ model: SpenchModelDescriptor?) {
+    private func applyModelSelection(_ model: ModelDescriptor?) {
         selectedModel = model
         refreshModelMenu()
         applyCurrentFeatures()

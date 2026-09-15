@@ -6,8 +6,8 @@
   "force-tag-creation": true,
   "packages": {
     ".": {
-      "component": "spench",
-      "version-file": "SPENCH_VERSION",
+      "component": "giga-denoiser",
+      "version-file": "VERSION_NUMBER",
       "extra-files": [
         {
           "type": "json",

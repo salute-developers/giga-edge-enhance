@@ -131,7 +131,7 @@ def write_engine_package_config(prefix: Path, engine: str, library: Path | None,
                              else "tensorflow-lite::tensorflow-lite")
     config_dir = prefix / "lib" / "cmake" / package
     config_dir.mkdir(parents=True, exist_ok=True)
-    prefix_variable = "_spench_ort_prefix" if engine == "onnx" else "_spench_tflite_prefix"
+    prefix_variable = "_gdn_ort_prefix" if engine == "onnx" else "_gdn_tflite_prefix"
     if linkage == "static":
         if not static_archives:
             raise ValueError("Static engine package configuration requires copied archives.")
@@ -142,18 +142,18 @@ def write_engine_package_config(prefix: Path, engine: str, library: Path | None,
             "include(CMakeFindDependencyMacro)\n"
             f"get_filename_component({prefix_variable} \"${{CMAKE_CURRENT_LIST_DIR}}/../../..\" ABSOLUTE)\n"
             "find_dependency(Threads)\n"
-            f"set(_spench_engine_archives\n{archive_entries}\n)\n"
+            f"set(_gdn_engine_archives\n{archive_entries}\n)\n"
             "if(CMAKE_SYSTEM_NAME STREQUAL \"Linux\")\n"
-            "  string(JOIN \",\" _spench_engine_archive_group ${_spench_engine_archives})\n"
-            "  set(_spench_engine_link_libraries \"$<LINK_GROUP:RESCAN,${_spench_engine_archive_group}>\")\n"
+            "  string(JOIN \",\" _gdn_engine_archive_group ${_gdn_engine_archives})\n"
+            "  set(_gdn_engine_link_libraries \"$<LINK_GROUP:RESCAN,${_gdn_engine_archive_group}>\")\n"
             "else()\n"
-            "  set(_spench_engine_link_libraries \"${_spench_engine_archives}\")\n"
+            "  set(_gdn_engine_link_libraries \"${_gdn_engine_archives}\")\n"
             "endif()\n"
             f"if(NOT TARGET {target})\n"
             f"  add_library({target} INTERFACE IMPORTED GLOBAL)\n"
             f"  set_target_properties({target} PROPERTIES\n"
             f"    INTERFACE_INCLUDE_DIRECTORIES \"${{{prefix_variable}}}/include\"\n"
-            "    INTERFACE_LINK_LIBRARIES \"${_spench_engine_link_libraries};Threads::Threads;${CMAKE_DL_LIBS};m\"\n"
+            "    INTERFACE_LINK_LIBRARIES \"${_gdn_engine_link_libraries};Threads::Threads;${CMAKE_DL_LIBS};m\"\n"
             "  )\n"
             "endif()\n")
     else:
@@ -265,7 +265,7 @@ def restore_dependency_bundle(target: str, host: bool, archive: Path) -> None:
         "linkage": bundle_linkage(target),
         "target_system": target_system,
         "target_architecture": target_arch,
-        "toolchain_identity": os.environ.get("SPENCH_TOOLCHAIN_IDENTITY", "local-host"),
+        "toolchain_identity": os.environ.get("GDN_TOOLCHAIN_IDENTITY", "local-host"),
     }
     mismatches = {
         key: (manifest.get(key), value)
@@ -294,12 +294,12 @@ def write_tflite_package_config(prefix: Path) -> None:
     config_dir = prefix / "lib" / "cmake" / "tensorflow-lite"
     config_dir.mkdir(parents=True, exist_ok=True)
     (config_dir / "tensorflow-liteConfig.cmake").write_text(
-        "get_filename_component(_spench_tflite_prefix \"${CMAKE_CURRENT_LIST_DIR}/../../..\" ABSOLUTE)\n"
+        "get_filename_component(_gdn_tflite_prefix \"${CMAKE_CURRENT_LIST_DIR}/../../..\" ABSOLUTE)\n"
         "if(NOT TARGET tensorflow-lite::tensorflow-lite)\n"
         "  add_library(tensorflow-lite::tensorflow-lite UNKNOWN IMPORTED)\n"
         "  set_target_properties(tensorflow-lite::tensorflow-lite PROPERTIES\n"
-        f"    IMPORTED_LOCATION \"${{_spench_tflite_prefix}}/lib/{library_name}\"\n"
-        "    INTERFACE_INCLUDE_DIRECTORIES \"${_spench_tflite_prefix}/include\")\n"
+        f"    IMPORTED_LOCATION \"${{_gdn_tflite_prefix}}/lib/{library_name}\"\n"
+        "    INTERFACE_INCLUDE_DIRECTORIES \"${_gdn_tflite_prefix}/include\")\n"
         "endif()\n")
 
 
@@ -317,12 +317,12 @@ def write_wasm_onnx_package_config(prefix: Path, build_dir: Path) -> None:
     config_dir = library_dir / "cmake" / "onnxruntime"
     config_dir.mkdir(parents=True, exist_ok=True)
     (config_dir / "onnxruntimeConfig.cmake").write_text(
-        "get_filename_component(_spench_ort_prefix \"${CMAKE_CURRENT_LIST_DIR}/../../..\" ABSOLUTE)\n"
+        "get_filename_component(_gdn_ort_prefix \"${CMAKE_CURRENT_LIST_DIR}/../../..\" ABSOLUTE)\n"
         "if(NOT TARGET onnxruntime_webassembly)\n"
         "  add_library(onnxruntime_webassembly STATIC IMPORTED GLOBAL)\n"
         "  set_target_properties(onnxruntime_webassembly PROPERTIES\n"
-        f"    IMPORTED_LOCATION \"${{_spench_ort_prefix}}/lib/{library_name}\"\n"
-        "    INTERFACE_INCLUDE_DIRECTORIES \"${_spench_ort_prefix}/include\")\n"
+        f"    IMPORTED_LOCATION \"${{_gdn_ort_prefix}}/lib/{library_name}\"\n"
+        "    INTERFACE_INCLUDE_DIRECTORIES \"${_gdn_ort_prefix}/include\")\n"
         "endif()\n")
 
 
@@ -365,8 +365,8 @@ def prepare_dependency(preset: str, host: bool) -> Path | None:
                      if container else str(build_dir_host))
         configure_command = [
             "cmake", "--preset", artifact_preset(preset), "-B", build_dir,
-            f"-DSPENCH_ENGINE_BUNDLE_LINKAGE={linkage}",
-            "-DSPENCH_PREPARE_DEPENDENCY_BUNDLE=ON",
+            f"-DGDN_ENGINE_BUNDLE_LINKAGE={linkage}",
+            "-DGDN_PREPARE_DEPENDENCY_BUNDLE=ON",
         ]
         if container and stage in {"native", "web"}:
             configure_command.extend(("-DCMAKE_AR=/usr/bin/llvm-ar",
@@ -374,7 +374,7 @@ def prepare_dependency(preset: str, host: bool) -> Path | None:
         print(f"Preparing {engine} {build_type} dependency bundle for {target_system}/{target_arch}.")
         run(configure_command, container_stage=stage, environment=environment)
         targets = (["libonnxruntime_webassembly.a"]
-                   if preset.startswith("wasm-") else ["spench_dependency_bundle"])
+                   if preset.startswith("wasm-") else ["gdn_dependency_bundle"])
         build_command = ["cmake", "--build", build_dir, "--target", *targets, "--parallel"]
         build_command.extend(("--config", build_type))
         run(build_command, container_stage=stage, environment=environment)
@@ -426,8 +426,8 @@ def prebuilt_cmake_arguments(preset: str, host: bool, prefix: Path | None,
     root = str(prefix)
     if container:
         root = f"/workspace/{prefix.relative_to(ROOT)}"
-    variable = ("SPENCH_PREBUILT_ORT_ROOT" if requirement[0] == "onnx"
-                else "SPENCH_PREBUILT_TFLITE_ROOT")
+    variable = ("GDN_PREBUILT_ORT_ROOT" if requirement[0] == "onnx"
+                else "GDN_PREBUILT_TFLITE_ROOT")
     return [f"-D{variable}={root}"]
 
 
@@ -447,7 +447,7 @@ def prepare_android_tflite(abi: str, build_type: str, host: bool) -> Path:
         "target_system": "android",
         "target_architecture": abi,
         "dependency_digest": dependency_bundle_digest("tflite"),
-        "toolchain_identity": os.environ.get("SPENCH_TOOLCHAIN_IDENTITY", "local-host"),
+        "toolchain_identity": os.environ.get("GDN_TOOLCHAIN_IDENTITY", "local-host"),
         "prefix": str(prefix.relative_to(ROOT)),
     }
     if manifest_path.is_file() and prefix.is_dir():
@@ -487,13 +487,13 @@ def prepare_android_tflite(abi: str, build_type: str, host: bool) -> Path:
             f"-DANDROID_ABI={abi}",
             "-DANDROID_PLATFORM=android-26",
             f"-DCMAKE_BUILD_TYPE={build_type}",
-            "-DSPENCH_PROFILE=android-tflite",
+            "-DGDN_PROFILE=android-tflite",
             "-DBUILD_TFLITE_ENGINE=ON",
             "-DBUILD_ONNX_ENGINE=OFF",
             "-DBUILD_SHARED_LIBS=OFF",
             "-DBUILD_CLI=OFF",
             "-DBUILD_TESTING=OFF",
-            "-DSPENCH_ENGINE_BUNDLE_LINKAGE=shared",
+            "-DGDN_ENGINE_BUNDLE_LINKAGE=shared",
         ]
         run(configure_command, container_stage=stage, environment=environment)
         run(["cmake", "--build", build_dir, "--target", "tensorflow-lite", "--parallel", "2"],

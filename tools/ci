@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+
+from infra.cli import ci_main
+
+
+if __name__ == "__main__":
+    ci_main()

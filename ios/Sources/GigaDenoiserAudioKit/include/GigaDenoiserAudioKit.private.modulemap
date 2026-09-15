@@ -1,0 +1,12 @@
+// Private framework module exposing internal ObjC++ bridge types to Swift code
+// inside GigaDenoiserAudioKit. Public clients must not import this module.
+
+framework module GigaDenoiserAudioKit_Private {
+    header "PipelineElements.h"
+    header "RingBuffer.h"
+    header "AtomicOptionalDouble.h"
+    header "WorkerThreadEvent.h"
+    header "LowPerformanceEventMailbox.h"
+
+    export *
+}

@@ -1,27 +1,25 @@
-# Spench
+# GigaDenoiser
 
-![Spench signal logo](spench_logo.svg "Speech Enhancement Channel")
-
-Spench is a cross-platform speech-enhancement SDK for real-time noise suppression, loudness
+GigaDenoiser is a cross-platform speech-enhancement SDK for real-time noise suppression, loudness
 normalization, and acoustic echo cancellation. The repository contains the native C and C++ engine,
 WebAssembly and Web Audio integration, Android and iOS SDKs, command-line tools, demos, tests, and
 release packaging.
 
 The interactive Web SDK demo and complete documentation are published together as a static GitHub
-Pages website. When working in the repository, use `tools/spench` as the supported build and test
-entry point.
+Pages website. When working in the repository, use the scripts documented in
+[`tools/README.md`](tools/README.md) as the supported build and test interface.
 
 ## SDKs
 
 | Surface | Location | Intended use |
 | --- | --- | --- |
-| C and C++ | `spench/include/spench/` | Native applications and direct buffer processing |
+| C and C++ | `core/include/gigadenoiser/` | Native applications and direct buffer processing |
 | Web | `web/packages/web-sdk/` | Web Audio, AudioWorklet, workers, and WebAssembly |
 | Android | `android/` | Kotlin applications over the JNI/native pipeline |
 | iOS | `ios/` | AVAudioEngine and direct Swift buffer processing |
 
-Public headers under `spench/include/spench/` are compatibility-sensitive. Existing exported C
-symbols and public C++ methods are not renamed for style.
+Public headers under `core/include/gigadenoiser/` are compatibility-sensitive. Exported C symbols retain
+their global `GigaDenoiser*` prefix; public C++ types live in `gigaedge::denoiser`.
 
 ## Requirements
 
@@ -54,9 +52,7 @@ consumers should use the model packages documented for that platform.
 
 Run commands from the repository root:
 
-```bash
-tools/spench <build|test|package|install|core|cache-key|prepare-deps> <target> [--host]
-```
+The complete command and target matrix is in [`tools/README.md`](tools/README.md).
 
 Docker is the default for Native, Web, and Android. Use `--host` for those targets only when the
 matching local toolchain is already installed. macOS, iOS, and Windows always use their host
@@ -67,33 +63,33 @@ Common validation commands:
 
 ```bash
 # Fast native development check
-tools/spench build native-debug-onnx
-tools/spench test native-debug-onnx
+tools/build native-debug-onnx
+tools/test native-debug-onnx
 
 # Open the native Linux container to run built command-line tools
-tools/spench shell native
+tools/shell
 
 # Release engine coverage
-tools/spench build native-release-onnx
-tools/spench test native-release-onnx
-tools/spench build native-release-tflite
-tools/spench test native-release-tflite
+tools/build native-release-onnx
+tools/test native-release-onnx
+tools/build native-release-tflite
+tools/test native-release-tflite
 
 # Memory-safety coverage
-tools/spench build native-asan-onnx
-tools/spench test native-asan-onnx
+tools/build native-asan-onnx
+tools/test native-asan-onnx
 
 # Web SDK, including its full and DSP WebAssembly modules
-tools/spench build web
-tools/spench test web
-tools/spench package web
-tools/spench test web-playwright
+tools/build web
+tools/test web
+tools/package web
+tools/test web-playwright
 
 # Platform wrappers
-tools/spench build android
-tools/spench test android
-tools/spench build ios
-tools/spench test ios
+tools/build android
+tools/test android
+tools/build ios
+tools/test ios
 ```
 
 The shell starts in `/workspace`, where the repository and Linux build outputs are mounted. The host
@@ -121,21 +117,21 @@ Artifacts are written under `out/artifacts/`. Generated build trees and dependen
 
 ## Native integration
 
-Link against an installed or packaged Spench build and include the supported public headers. A
+Link against an installed or packaged GigaDenoiser build and include the supported public headers. A
 minimal C++ pipeline creates the processor with a model/configuration, processes mono floating-point
 frames, and keeps all allocation and pipeline rebuild work off the real-time callback.
 
 The exact constructor and configuration types vary by pipeline and inference-engine build. Use the
 public headers and the documentation generated from the same revision rather than copying internal
-classes from `spench/src/`.
+classes from `core/src/`.
 
 Command-line examples are available through the installed tools:
 
 ```bash
-spench --help
-spench denoise --help
-spench norm --help
-spench echo --help
+giga-denoiser --help
+giga-denoiser denoise --help
+giga-denoiser norm --help
+giga-denoiser echo --help
 ```
 
 ## Web SDK
@@ -143,7 +139,7 @@ spench echo --help
 The Web SDK is an npm workspace package with a separate demo service:
 
 ```bash
-tools/spench build web
+tools/build web
 
 cd web
 npm run test:web-sdk
@@ -158,7 +154,7 @@ For local demo development:
 ```bash
 cd web
 npm ci
-npm start --workspace=@gigaedge/spench-site
+npm start --workspace=@gigaedge/denoiser-site
 ```
 
 The static site installs a same-origin COI service worker so GitHub Pages can expose the isolated
@@ -167,22 +163,22 @@ control; unsupported environments fall back to MessageChannel.
 
 ## Documentation
 
-The documentation website is built by the `@gigaedge/spench-site` workspace. Its staging script collects all
+The documentation website is built by the `@gigaedge/denoiser-site` workspace. Its staging script collects all
 user-facing repository Markdown while excluding generated, vendored, cached, and internal agent
 files. Platform READMEs and iOS DocC articles remain canonical in their existing locations.
 
 ```bash
 cd web
-npm run build --workspace=@gigaedge/spench-site
+npm run build --workspace=@gigaedge/denoiser-site
 ```
 
-The static output is written to `web/apps/spench-site/build/` and is suitable
+The static output is written to `web/apps/site/build/` and is suitable
 for GitHub Pages.
 
 ## Development
 
 - Follow [`STYLE.md`](STYLE.md) and `.clang-format` for C and C++ changes.
-- Keep tests close to affected behavior under `spench/tests/` or the matching platform wrapper.
+- Keep tests close to affected behavior under `core/tests/` or the matching platform wrapper.
 - Run the narrowest relevant check first, then broaden coverage for cross-platform, ABI, model,
   memory-ownership, or packaging changes.
 - Do not edit dependency sources under `out/cache/cpm/`; update `package-lock.cmake` or the
@@ -192,12 +188,12 @@ for GitHub Pages.
 For C and C++ style validation:
 
 ```bash
-git-clang-format --diff HEAD --extensions c,cc,cpp,h,hpp -- spench
+git-clang-format --diff HEAD --extensions c,cc,cpp,h,hpp -- gigadenoiser
 ```
 
 ## Releases
 
-`SPENCH_VERSION` is the release version source. Release Please manages version and changelog updates, while
+`VERSION_NUMBER` is the release version source. Release Please manages version and changelog updates, while
 GitHub Actions builds and attaches validated platform artifacts. A rerun may verify an existing
 artifact with the same hash but must not overwrite a published version with different bytes.
 
@@ -206,9 +202,9 @@ See [`CHANGELOG.md`](CHANGELOG.md) for release history.
 ## Security
 
 Report suspected vulnerabilities privately as described in the
-[security policy](https://github.com/akhdrv/spench/blob/master/SECURITY.md). Do not disclose security
+[security policy](https://github.com/salute-developers/gigadenoiser/blob/master/SECURITY.md). Do not disclose security
 issues in a public GitHub issue.
 
 ## License
 
-Spench is licensed under the [MIT License](LICENSE).
+GigaDenoiser is licensed under the [MIT License](LICENSE).

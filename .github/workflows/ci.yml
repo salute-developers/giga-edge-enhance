@@ -46,9 +46,9 @@ jobs:
       - id: metadata
         name: Resolve native toolchain image
         run: |
-          image="ghcr.io/${GITHUB_REPOSITORY}/toolchain:native-$(tools/spench image-key native)"
+          image="ghcr.io/${GITHUB_REPOSITORY}/toolchain:native-$(tools/ci image-key native)"
           echo "image=$image" >> "$GITHUB_OUTPUT"
-          echo "identity=$(tools/spench recipe-key native)" >> "$GITHUB_OUTPUT"
+          echo "identity=$(tools/ci recipe-key native)" >> "$GITHUB_OUTPUT"
           if docker manifest inspect "$image" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "Reusing $image"
@@ -95,9 +95,9 @@ jobs:
       - id: metadata
         name: Resolve Web toolchain image
         run: |
-          image="ghcr.io/${GITHUB_REPOSITORY}/toolchain:web-$(tools/spench image-key web)"
+          image="ghcr.io/${GITHUB_REPOSITORY}/toolchain:web-$(tools/ci image-key web)"
           echo "image=$image" >> "$GITHUB_OUTPUT"
-          echo "identity=$(tools/spench recipe-key web)" >> "$GITHUB_OUTPUT"
+          echo "identity=$(tools/ci recipe-key web)" >> "$GITHUB_OUTPUT"
           if docker manifest inspect "$image" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "Reusing $image"
@@ -145,12 +145,12 @@ jobs:
       - id: metadata
         name: Resolve Android toolchain image
         run: |
-          image="ghcr.io/${GITHUB_REPOSITORY}/toolchain:android-$(tools/spench image-key android)"
-          ui_image="ghcr.io/${GITHUB_REPOSITORY}/toolchain:android-ui-$(tools/spench image-key android-ui)"
+          image="ghcr.io/${GITHUB_REPOSITORY}/toolchain:android-$(tools/ci image-key android)"
+          ui_image="ghcr.io/${GITHUB_REPOSITORY}/toolchain:android-ui-$(tools/ci image-key android-ui)"
           {
             echo "image=$image"
             echo "ui_image=$ui_image"
-            echo "identity=$(tools/spench recipe-key android)"
+            echo "identity=$(tools/ci recipe-key android)"
           } >> "$GITHUB_OUTPUT"
           if docker manifest inspect "$image" >/dev/null 2>&1 &&
              docker manifest inspect "$ui_image" >/dev/null 2>&1; then
@@ -219,7 +219,7 @@ jobs:
             --env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=safe.directory --env GIT_CONFIG_VALUE_0=/workspace \
             --volume "$PWD:/workspace" --workdir /workspace "$IMAGE" \
             bash -lc '
-              format_diff="$(git-clang-format --diff "$BASE_SHA" HEAD --extensions c,cc,cpp,h,hpp -- spench android ios web)"
+              format_diff="$(git-clang-format --diff "$BASE_SHA" HEAD --extensions c,cc,cpp,h,hpp -- core android ios web)"
               printf "%s\n" "$format_diff"
               if grep -q "^diff --git " <<< "$format_diff"; then
                 exit 1
@@ -241,10 +241,10 @@ jobs:
       - run: npm ci
         working-directory: web
       - name: Lint Web SDK
-        run: npm run lint --workspace=@gigaedge/spench-web-sdk
+        run: npm run lint --workspace=@gigaedge/denoiser-web-sdk
         working-directory: web
       - name: Lint documentation and demo
-        run: npm run lint --workspace=@gigaedge/spench-site
+        run: npm run lint --workspace=@gigaedge/denoiser-site
         working-directory: web
 
   android-lint:
@@ -315,10 +315,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: native-release-onnx
-      - uses: ./.github/actions/build-spench-dependency
+      - uses: ./.github/actions/build-dependency
         with:
           target: native-release-onnx
           toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
@@ -344,10 +344,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: native-release-tflite
-      - uses: ./.github/actions/build-spench-dependency
+      - uses: ./.github/actions/build-dependency
         with:
           target: native-release-tflite
           toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
@@ -419,10 +419,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: wasm-release
-      - uses: ./.github/actions/build-spench-dependency
+      - uses: ./.github/actions/build-dependency
         with:
           target: wasm-release
           toolchain-identity: ${{ needs.toolchain-web.outputs.identity }}
@@ -445,42 +445,42 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: wasm-release
-      - uses: ./.github/actions/setup-spench-dependency
+      - uses: ./.github/actions/setup-dependency
         with:
           target: wasm-release
           toolchain-identity: ${{ needs.toolchain-web.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build Web
         env:
-          SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
-          SPENCH_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
-          SPENCH_SITE_BASE: ${{ github.event_name == 'pull_request' && format('/spench/pr/{0}/', github.event.number) || '/spench/' }}
-        run: tools/spench build web
+          GDN_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
+          GDN_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
+          GDN_SITE_BASE: ${{ github.event_name == 'pull_request' && format('/gigadenoiser/pr/{0}/', github.event.number) || '/gigadenoiser/' }}
+        run: tools/build web
       - name: Test Web SDK unit
         env:
-          SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
-          SPENCH_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
-        run: tools/spench test web
+          GDN_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
+          GDN_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
+        run: tools/test web
       - name: Package Web SDK
         env:
-          SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
-          SPENCH_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
-        run: tools/spench package web
+          GDN_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
+          GDN_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
+        run: tools/package web
       - name: Upload Web SDK package
         uses: actions/upload-artifact@v7
         with:
-          name: spench-web-sdk-${{ github.sha }}
+          name: gdn-web-sdk-${{ github.sha }}
           path: out/artifacts/web/*.tgz
           if-no-files-found: error
           retention-days: 7
       - name: Upload Web site
         uses: actions/upload-artifact@v7
         with:
-          name: spench-web-site-${{ github.sha }}
-          path: web/apps/spench-site/build
+          name: gdn-web-site-${{ github.sha }}
+          path: web/apps/site/build
           if-no-files-found: error
           retention-days: 1
 
@@ -501,7 +501,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/download-artifact@v8
         with:
-          name: spench-web-sdk-${{ github.sha }}
+          name: gdn-web-sdk-${{ github.sha }}
           path: out/artifacts/web
       - uses: actions/setup-node@v6
         with:
@@ -521,22 +521,22 @@ jobs:
         run: |
           package="$(find "$GITHUB_WORKSPACE/out/artifacts/web" -maxdepth 1 -name '*.tgz' -print -quit)"
           test -n "$package"
-          npm install --no-save --package-lock=false --workspaces=false --prefix apps/spench-site "$package"
-          test -f apps/spench-site/node_modules/@gigaedge/spench-web-sdk/dist/index.d.ts
+          npm install --no-save --package-lock=false --workspaces=false --prefix apps/site "$package"
+          test -f apps/site/node_modules/@gigaedge/denoiser-web-sdk/dist/index.d.ts
       - name: Test Web Playwright
         env:
-          SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
-          SPENCH_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
-          SPENCH_PLAYWRIGHT_BROWSERS: chromium
-        run: tools/spench test web-playwright
+          GDN_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
+          GDN_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
+          GDN_PLAYWRIGHT_BROWSERS: chromium
+        run: tools/test web-playwright
       - name: Upload Playwright diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: playwright-${{ github.sha }}
           path: |
-            web/apps/spench-site/playwright-report
-            web/apps/spench-site/test-results
+            web/apps/site/playwright-report
+            web/apps/site/test-results
           if-no-files-found: ignore
           retention-days: 1
 
@@ -554,7 +554,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: spench-web-site-${{ github.sha }}
+          name: gdn-web-site-${{ github.sha }}
           path: web-preview
       - name: Publish PR preview
         uses: peaceiris/actions-gh-pages@v4
@@ -587,10 +587,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: android-release-tflite-${{ matrix.abi }}
-      - uses: ./.github/actions/build-spench-dependency
+      - uses: ./.github/actions/build-dependency
         with:
           target: android-release-tflite-${{ matrix.abi }}
           toolchain-identity: ${{ needs.toolchain-android.outputs.identity }}
@@ -618,46 +618,46 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: android
-      - uses: ./.github/actions/setup-spench-dependency
+      - uses: ./.github/actions/setup-dependency
         with:
           target: android-release-tflite-arm64-v8a
           toolchain-identity: ${{ needs.toolchain-android.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/setup-spench-dependency
+      - uses: ./.github/actions/setup-dependency
         with:
           target: android-release-tflite-armeabi-v7a
           toolchain-identity: ${{ needs.toolchain-android.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/setup-spench-dependency
+      - uses: ./.github/actions/setup-dependency
         with:
           target: android-release-tflite-x86_64
           toolchain-identity: ${{ needs.toolchain-android.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/setup-spench-dependency
+      - uses: ./.github/actions/setup-dependency
         with:
           target: android-release-tflite-x86
           toolchain-identity: ${{ needs.toolchain-android.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build Android Release
         env:
-          SPENCH_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-android.outputs.identity }}
-          SPENCH_CONTAINER_IMAGE_ANDROID: ${{ needs.toolchain-android.outputs.image }}
-        run: tools/spench build android
+          GDN_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-android.outputs.identity }}
+          GDN_CONTAINER_IMAGE_ANDROID: ${{ needs.toolchain-android.outputs.image }}
+        run: tools/build android
       - name: Test Android Release
         env:
-          SPENCH_CONTAINER_IMAGE_ANDROID: ${{ needs.toolchain-android.outputs.image }}
-        run: tools/spench test android
+          GDN_CONTAINER_IMAGE_ANDROID: ${{ needs.toolchain-android.outputs.image }}
+        run: tools/test android
       - name: Enable KVM access
         run: |
           test -e /dev/kvm
           sudo chmod 666 /dev/kvm
       - name: Test Android Release UI
         env:
-          SPENCH_CONTAINER_IMAGE_ANDROID_UI: ${{ needs.toolchain-android.outputs.ui_image }}
-        run: tools/spench test android-ui
+          GDN_CONTAINER_IMAGE_ANDROID_UI: ${{ needs.toolchain-android.outputs.ui_image }}
+        run: tools/test android-ui
       - name: Upload Android UI test diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
@@ -672,10 +672,10 @@ jobs:
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: spench-android-${{ github.sha }}
+          name: gdn-android-${{ github.sha }}
           path: |
-            android/spench-sdk/build/outputs/aar/*-release.aar
-            android/spench-model-quality48/build/outputs/aar/*-release.aar
+            android/sdk/build/outputs/aar/*-release.aar
+            android/model-quality48/build/outputs/aar/*-release.aar
           if-no-files-found: error
           retention-days: 7
 
@@ -695,10 +695,10 @@ jobs:
       - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: macos-arm64-release-onnx
-      - uses: ./.github/actions/build-spench-dependency
+      - uses: ./.github/actions/build-dependency
         with:
           target: macos-arm64-release-onnx
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
@@ -721,10 +721,10 @@ jobs:
       - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: macos-arm64-release-tflite
-      - uses: ./.github/actions/build-spench-dependency
+      - uses: ./.github/actions/build-dependency
         with:
           target: macos-arm64-release-tflite
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
@@ -783,10 +783,10 @@ jobs:
       - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: macos-x86_64-release-onnx
-      - uses: ./.github/actions/build-spench-dependency
+      - uses: ./.github/actions/build-dependency
         with:
           target: macos-x86_64-release-onnx
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
@@ -809,10 +809,10 @@ jobs:
       - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: macos-x86_64-release-tflite
-      - uses: ./.github/actions/build-spench-dependency
+      - uses: ./.github/actions/build-dependency
         with:
           target: macos-x86_64-release-tflite
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
@@ -871,10 +871,10 @@ jobs:
       - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: windows-x64-release-onnx
-      - uses: ./.github/actions/build-spench-dependency
+      - uses: ./.github/actions/build-dependency
         with:
           target: windows-x64-release-onnx
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
@@ -897,10 +897,10 @@ jobs:
       - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: windows-x64-release-tflite
-      - uses: ./.github/actions/build-spench-dependency
+      - uses: ./.github/actions/build-dependency
         with:
           target: windows-x64-release-tflite
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
@@ -963,10 +963,10 @@ jobs:
       - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: ios-${{ matrix.slice }}-release
-      - uses: ./.github/actions/build-spench-dependency
+      - uses: ./.github/actions/build-dependency
         with:
           target: ios-${{ matrix.slice }}-release
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
@@ -985,34 +985,34 @@ jobs:
       - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
-      - uses: ./.github/actions/setup-spench-cache
+      - uses: ./.github/actions/setup-cache
         with:
           preset: ios-simulator-release
-      - uses: ./.github/actions/setup-spench-dependency
+      - uses: ./.github/actions/setup-dependency
         with:
           target: ios-device-release
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./.github/actions/setup-spench-dependency
+      - uses: ./.github/actions/setup-dependency
         with:
           target: ios-simulator-release
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build iOS Release
         env:
-          SPENCH_TOOLCHAIN_IDENTITY: ${{ steps.toolchain.outputs.identity }}
-        run: tools/spench build ios
+          GDN_TOOLCHAIN_IDENTITY: ${{ steps.toolchain.outputs.identity }}
+        run: tools/build ios
       - name: Test iOS Release
         env:
-          SPENCH_TOOLCHAIN_IDENTITY: ${{ steps.toolchain.outputs.identity }}
-        run: tools/spench test ios
+          GDN_TOOLCHAIN_IDENTITY: ${{ steps.toolchain.outputs.identity }}
+        run: tools/test ios
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: spench-ios-${{ github.sha }}
+          name: gdn-ios-${{ github.sha }}
           path: |
-            ios/build/xcframework/SpenchAudioKit.xcframework
-            ios/build/xcframework/SpenchModelFast8.bundle
-            ios/build/xcframework/SpenchModelQuality48.bundle
+            ios/build/xcframework/GigaDenoiserAudioKit.xcframework
+            ios/build/xcframework/GigaDenoiserModelFast8.bundle
+            ios/build/xcframework/GigaDenoiserModelQuality48.bundle
           if-no-files-found: error
           retention-days: 7
