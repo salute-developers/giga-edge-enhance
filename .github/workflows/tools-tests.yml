@@ -21,6 +21,10 @@ jobs:
             infra:
               - 'tools/spench'
               - 'tools/infra/**'
+            release:
+              - '.github/scripts/promote-release-assets.js'
+              - '.github/scripts/promote-release-assets.test.js'
+              - '.github/workflows/release-assets.yml'
       - name: Run infrastructure unit tests
         if: steps.changes.outputs.infra == 'true'
         env:
@@ -29,3 +33,6 @@ jobs:
       - name: Validate infrastructure Python syntax
         if: steps.changes.outputs.infra == 'true'
         run: python3 -m compileall -q tools/infra tools/spench
+      - name: Test release asset promotion
+        if: steps.changes.outputs.release == 'true'
+        run: node --test .github/scripts/promote-release-assets.test.js
