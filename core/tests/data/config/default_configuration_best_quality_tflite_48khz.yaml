@@ -15,8 +15,8 @@ feature_params:
 inference:
  gpu: false
  engine_num_threads: 1
- # best_speed or best_quality
- model_type: best_quality
+ # Discriminative HQ model
+ model_type: denoiser_discr_web_model
 
 
 sound_processing:

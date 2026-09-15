@@ -817,7 +817,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
 // inference:
 //   gpu: false
 //   engine_num_threads: 1
-//   model_type: best_speed_new)";
+//   model_type: denoiser_discr_hq_model)";
 
 //   auto test_data = std::move(TestFixture().
 //                               InitDenoiser(std::string(yaml)).
@@ -886,7 +886,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
 // inference:
 //   gpu: false
 //   engine_num_threads: 1
-//   model_type: best_speed_new)";
+//   model_type: denoiser_discr_hq_model)";
 
 //   auto test_data = std::move(TestFixture().
 //                               InitDenoiser(std::string(yaml)).
@@ -932,7 +932,7 @@ TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and outpu
 // inference:
 //   gpu: false
 //   engine_num_threads: 1
-//   model_type: best_speed_new)";
+//   model_type: denoiser_discr_hq_model)";
 
 //   auto test_data = std::move(TestFixture().
 //                               InitDenoiser(std::string(yaml)).
@@ -1000,7 +1000,7 @@ feature_params:
 inference:
   gpu: false
   engine_num_threads: 1
-  model_type: best_speed_new)";
+  model_type: denoiser_discr_hq_model)";
 
   auto test_data = std::move(TestFixture().InitDenoiser(std::string(yaml)).SetWav("test1_24_noised.wav"));
 

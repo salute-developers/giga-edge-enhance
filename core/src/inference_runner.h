@@ -18,9 +18,11 @@ namespace gigaedge::denoiser {
 class InferenceRunner {
  public:
   typedef enum class ModelType {
-    denoiser_best_quality = 0,
-    denoiser_best_speed = 1,
-    denoiser_best_speed_new = 2
+    // Half-band quantized discriminative model.
+    denoiser_discr_hq_model = 0,
+    // 48 kHz quality discriminative model.
+    denoiser_discr_web_model = 1,
+    denoiser_hybrid_web_model = 2
   } ModelTypeEnum;
   InferenceRunner() = delete;
   InferenceRunner& operator=(const InferenceRunner&) = delete;
@@ -45,14 +47,16 @@ class InferenceRunner {
 
  private:
   ModelType string_to_model_type_enum(const std::string& type) {
-    if (type == "best_quality") {
-      return ModelType::denoiser_best_quality;
-    } else if (type == "best_speed") {
-      return ModelType::denoiser_best_speed;
-    } else if (type == "best_speed_new") {
-      return ModelType::denoiser_best_speed_new;
+    if (type == "denoiser_discr_hq_model") {
+      return ModelType::denoiser_discr_hq_model;
+    } else if (type == "denoiser_discr_web_model") {
+      return ModelType::denoiser_discr_web_model;
+    } else if (type == "denoiser_hybrid_web_model") {
+      return ModelType::denoiser_hybrid_web_model;
     }
-    throw std::invalid_argument("Model type must be in [\"best_quality\", \"best_speed\", \"best_speed_new\"]");
+    throw std::invalid_argument(
+        "Model type must be in [\"denoiser_discr_hq_model\", "
+        "\"denoiser_discr_web_model\", \"denoiser_hybrid_web_model\"]");
   }
 };
 

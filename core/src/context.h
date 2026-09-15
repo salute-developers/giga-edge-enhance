@@ -214,7 +214,7 @@ struct Context {
 };
 
 template <typename T>
-struct DenoiseContextQ : public Context<T> {
+struct DenoiseContextDiscriminativeHq : public Context<T> {
   std::vector<T> fullband_hidden;
   std::vector<T> fb_snr_noise_psd;
   std::vector<T> fb_snr_noise_pg;
@@ -226,15 +226,13 @@ struct DenoiseContextQ : public Context<T> {
 };
 
 template <typename T>
-struct DenoiseContextF : public Context<T> {
-  std::vector<T> fullband_hidden;
-  std::vector<T> fullband_cell_state;
-  std::vector<T> noisy_mag;
-  std::vector<T> prev_fb_out;
+struct DenoiseContextHybrid : public DenoiseContextDiscriminativeHq<T> {
+  std::vector<T> stage2_hidden;
+  std::vector<T> noisy_ri;
 };
 
 template <typename T>
-struct DenoiseContextSF : public Context<T> {
+struct DenoiseContextDiscriminativeNb : public Context<T> {
   std::vector<T> fullband_hidden_state;
   std::vector<T> fullband_cell_state;
   std::vector<T> fb_conv1_buf;

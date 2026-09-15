@@ -25,6 +25,8 @@ uint64_t FeatureExtractorRunner::get_pow_spec_feat_size_samples() const { return
 
 void FeatureExtractorRunner::read_config(std::shared_ptr<gigaedge::denoiser::NetworkConfig> config) {
   params_.read_feature_params_node(config);
+  model_output_is_spectrum_ =
+      config->params()["inference"]["model_type"].as<std::string>("") == "denoiser_hybrid_web_model";
 }
 
 gigaedge::denoiser::ComplexNumber<float> FeatureExtractorRunner::merge_input_spectrogram(
@@ -106,11 +108,11 @@ void FeatureExtractorRunner::handle_model_output(gigaedge::denoiser::Task* task)
   auto& d = task->data;
   auto& ctx = *d.context;
 
-  // 1) Merge input frames into a single spectrogram.
-  const auto merged_spec = merge_input_spectrogram(d.input_spectrogram);
-
-  // 2) Apply enhancement/mask to build new_spectrogram.
-  calc_enhanced_spectrogram(merged_spec, d.new_spectrogram);
+  // Hybrid models already return the enhanced spectrum. Other models return a mask.
+  if (!model_output_is_spectrum_) {
+    const auto merged_spec = merge_input_spectrogram(d.input_spectrogram);
+    calc_enhanced_spectrogram(merged_spec, d.new_spectrogram);
+  }
 
   // 3) Validate and compute feat_num.
   const uint32_t input_chunk_num = static_cast<uint32_t>(d.input_spectrogram.size());

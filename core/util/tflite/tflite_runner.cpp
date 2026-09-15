@@ -291,146 +291,8 @@ void BaseTfliteRunner::resize_inputs_if_needed(const std::vector<std::vector<int
   refresh_tensor_metadata();
 }
 
-DenoiserFTfliteRunner::DenoiserFTfliteRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
-                                             uint32_t inference_engine_threads, bool on_gpu)
-    : BaseTfliteRunner::BaseTfliteRunner() {
-  read_config(config->params()["model"]);
-  init_model(config, inference_engine_threads, on_gpu);
-  set_model_io_order({"noisy_mag", "fb_h", "fb_c", "prev_fb_out"}, {"fb_h", "fb_c", "updated_fb_out", "out_mask"});
-  warm_up<float>();
-}
-
-template <typename T>
-void DenoiserFTfliteRunner::warm_up() {
-  gigaedge::denoiser::Task dummy_task;
-  std::unique_ptr<gigaedge::denoiser::DenoiseContextF<float>> ctx(new gigaedge::denoiser::DenoiseContextF<float>());
-  dummy_task.data.context = ctx.get();
-
-  std::vector<T> dummy_mag(input_tensor_sizes[0], 0.0);
-  std::vector<T> dummy_fb_h(input_tensor_sizes[1], 0.0);
-  std::vector<T> dummy_fb_c(input_tensor_sizes[2], 0.0);
-  std::vector<T> dummy_prev_fb_out(input_tensor_sizes[3], 0.0);
-
-  std::vector<std::vector<T>*> inputs;
-  inputs.push_back(&dummy_mag);
-  inputs.push_back(&dummy_fb_h);
-  inputs.push_back(&dummy_fb_c);
-  inputs.push_back(&dummy_prev_fb_out);
-
-  BaseTfliteRunner::warm_up<T>(inputs);
-}
-
-void DenoiserFTfliteRunner::prepare_input_in_place(std::vector<float>& mag, std::vector<std::vector<float>*>& inputs,
-                                                   gigaedge::denoiser::Context<float>* context) {
-  if (context == nullptr) {
-    throw std::runtime_error("Context is not allocated!");
-  }
-  gigaedge::denoiser::DenoiseContextF<float>* denoise_context =
-      dynamic_cast<gigaedge::denoiser::DenoiseContextF<float>*>(context);
-
-  uint32_t from, to;
-  uint32_t num_feats = static_cast<uint32_t>(model_input_shapes_[0][1]);
-  uint32_t num_frames = static_cast<uint32_t>(model_input_shapes_[0][2]);
-
-  if (denoise_context->noisy_mag.size() == 0) {
-    // for the first frame of wav only
-    denoise_context->noisy_mag.resize(input_tensor_sizes[0]);
-  } else {
-    // for the next frames forget 1 frame out of num_frames (5) and move remaining to the left
-    for (uint32_t frame_i = 1; frame_i < num_frames; ++frame_i) {
-      for (uint32_t feat_i = 0; feat_i < num_feats; ++feat_i) {
-        from = frame_i + feat_i * num_frames;
-        to = (frame_i - 1) + feat_i * num_frames;
-        denoise_context->noisy_mag[to] = denoise_context->noisy_mag[from];
-      }
-    }
-  }
-
-  // add new noisy_mag to the input
-  for (uint32_t feat_i = 0; feat_i < num_feats; ++feat_i) {
-    to = num_frames - 1 + feat_i * num_frames;
-    denoise_context->noisy_mag[to] = mag[feat_i];
-  }
-
-  resize_if_needed_in_place(denoise_context->noisy_mag, input_tensor_sizes[0]);            // noisy_mag_5
-  resize_if_needed_in_place(denoise_context->fullband_hidden, input_tensor_sizes[1]);      // fb_h
-  resize_if_needed_in_place(denoise_context->fullband_cell_state, input_tensor_sizes[2]);  // fb_c
-  resize_if_needed_in_place(denoise_context->prev_fb_out, input_tensor_sizes[3]);          // new_fb_out_5
-
-  inputs.push_back(&denoise_context->noisy_mag);
-  inputs.push_back(&denoise_context->fullband_hidden);
-  inputs.push_back(&denoise_context->fullband_cell_state);
-  inputs.push_back(&denoise_context->prev_fb_out);
-}
-
-template <typename T>
-void DenoiserFTfliteRunner::parse_results(gigaedge::denoiser::TaskData& data) {
-  if (data.context == nullptr) {
-    throw std::runtime_error("Context is not allocated!");
-  }
-  gigaedge::denoiser::DenoiseContextF<T>* context = dynamic_cast<gigaedge::denoiser::DenoiseContextF<T>*>(data.context);
-
-  const T* const_output_ptr;
-  for (uint16_t output_idx = 0; output_idx < output_tensor_sizes.size(); output_idx++) {
-    const_output_ptr = tflite::GetTensorData<T>(model_outputs_[output_idx]);
-    switch (output_idx) {
-      case 0:
-        context->fullband_hidden.assign(const_output_ptr, const_output_ptr + context->fullband_hidden.size());
-        break;
-      case 1:
-        context->fullband_cell_state.assign(const_output_ptr, const_output_ptr + context->fullband_cell_state.size());
-        break;
-      case 2:
-        context->prev_fb_out.assign(const_output_ptr, const_output_ptr + context->prev_fb_out.size());
-        break;
-      case 3:
-        for (uint64_t i = 0; i < output_tensor_sizes[3]; i += 2) {
-          data.new_spectrogram.real[i / 2] = const_output_ptr[i];
-          data.new_spectrogram.imag[i / 2] = const_output_ptr[i + 1];
-        }
-        break;
-      default:
-        std::string err_msg = "Error in parsing results. Unknown output_idx: ";
-        err_msg += std::to_string(output_idx);
-        throw std::runtime_error(err_msg);
-    }
-  }
-}
-
-void DenoiserFTfliteRunner::infer(gigaedge::denoiser::Task* denoise_task) {
-  if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
-    throw std::runtime_error("Task data or context are not initialized!");
-  }
-  if (denoise_task->data.input_spectrogram.size() == 0) {
-    throw std::runtime_error("Input spectrogram should be calculated before this step!");
-  }
-  auto& denoise_data = denoise_task->data;
-  auto& denoise_context = denoise_data.context;
-  if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len) {
-    denoise_context->prev_features.pop();
-  }
-  denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
-
-  denoise_task->state.require(gigaedge::denoiser::PipelineStage::input_spectrum_ready);
-
-  std::vector<std::vector<float>*> inputs;
-  std::vector<float> mag = denoise_data.input_spectrogram[0].get_magnitude();
-  {
-    std::lock_guard<std::mutex> lock(model_run_mutex_);
-    DenoiserFTfliteRunner::prepare_input_in_place(mag, inputs, denoise_context);
-    DenoiserFTfliteRunner::init_output_tensors(denoise_data, output_tensor_sizes[3]);
-    run(inputs, model_input_shapes_);
-    parse_results<float>(denoise_data);
-  }
-
-  if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len + 1) {
-    throw std::runtime_error("Incorrect number of previous states!");
-  }
-  denoise_task->state.advance_to(gigaedge::denoiser::PipelineStage::model_output_ready);
-}
-
-DenoiserQTfliteRunner::DenoiserQTfliteRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
-                                             uint32_t inference_engine_threads, bool on_gpu)
+DenoiserDiscriminativeHqTfliteRunner::DenoiserDiscriminativeHqTfliteRunner(
+    const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config, uint32_t inference_engine_threads, bool on_gpu)
     : BaseTfliteRunner::BaseTfliteRunner() {
   read_config(config->params()["model"]);
   init_model(config, inference_engine_threads, on_gpu);
@@ -443,7 +305,7 @@ DenoiserQTfliteRunner::DenoiserQTfliteRunner(const std::shared_ptr<gigaedge::den
 }
 
 template <typename T>
-void DenoiserQTfliteRunner::warm_up() {
+void DenoiserDiscriminativeHqTfliteRunner::warm_up() {
   std::vector<std::vector<int32_t>> resolved_input_shapes = model_input_shapes_;
   set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], 1);
 
@@ -471,15 +333,16 @@ void DenoiserQTfliteRunner::warm_up() {
   }
 }
 
-void DenoiserQTfliteRunner::prepare_input_in_place(std::vector<float>& mag, std::vector<std::vector<float>*>& inputs,
-                                                   gigaedge::denoiser::Context<float>* context) {
+void DenoiserDiscriminativeHqTfliteRunner::prepare_input_in_place(std::vector<float>& mag,
+                                                                  std::vector<std::vector<float>*>& inputs,
+                                                                  gigaedge::denoiser::Context<float>* context) {
   if (context == nullptr) {
     throw std::runtime_error("Context is not allocated!");
   }
-  gigaedge::denoiser::DenoiseContextQ<float>* denoise_context =
-      dynamic_cast<gigaedge::denoiser::DenoiseContextQ<float>*>(context);
+  gigaedge::denoiser::DenoiseContextDiscriminativeHq<float>* denoise_context =
+      dynamic_cast<gigaedge::denoiser::DenoiseContextDiscriminativeHq<float>*>(context);
   if (!denoise_context) {
-    throw std::runtime_error("Invalid context type for DenoiserQTfliteRunner");
+    throw std::runtime_error("Invalid context type for DenoiserDiscriminativeHqTfliteRunner");
   }
 
   inputs.clear();
@@ -522,11 +385,12 @@ void DenoiserQTfliteRunner::prepare_input_in_place(std::vector<float>& mag, std:
 }
 
 template <typename T>
-void DenoiserQTfliteRunner::parse_results(gigaedge::denoiser::TaskData& data) {
+void DenoiserDiscriminativeHqTfliteRunner::parse_results(gigaedge::denoiser::TaskData& data) {
   if (data.context == nullptr) {
     throw std::runtime_error("Context is not allocated!");
   }
-  gigaedge::denoiser::DenoiseContextQ<T>* context = dynamic_cast<gigaedge::denoiser::DenoiseContextQ<T>*>(data.context);
+  gigaedge::denoiser::DenoiseContextDiscriminativeHq<T>* context =
+      dynamic_cast<gigaedge::denoiser::DenoiseContextDiscriminativeHq<T>*>(data.context);
 
   const T* const_output_ptr;
   for (uint16_t output_idx = 0; output_idx < output_tensor_sizes.size(); output_idx++) {
@@ -582,7 +446,7 @@ void DenoiserQTfliteRunner::parse_results(gigaedge::denoiser::TaskData& data) {
   }
 }
 
-void DenoiserQTfliteRunner::infer(gigaedge::denoiser::Task* denoise_task) {
+void DenoiserDiscriminativeHqTfliteRunner::infer(gigaedge::denoiser::Task* denoise_task) {
   if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
     throw std::runtime_error("Task data or context are not initialized!");
   }
@@ -614,9 +478,10 @@ void DenoiserQTfliteRunner::infer(gigaedge::denoiser::Task* denoise_task) {
     std::lock_guard<std::mutex> lock(model_run_mutex_);
     std::vector<std::vector<int32_t>> resolved_input_shapes = model_input_shapes_;
     set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], static_cast<int32_t>(num_frames));
-    DenoiserQTfliteRunner::prepare_input_in_place(mag, inputs, denoise_context);
+    DenoiserDiscriminativeHqTfliteRunner::prepare_input_in_place(mag, inputs, denoise_context);
     run(inputs, resolved_input_shapes);
-    DenoiserQTfliteRunner::init_output_tensors(denoise_data, static_cast<uint32_t>(output_tensor_sizes[7]));
+    DenoiserDiscriminativeHqTfliteRunner::init_output_tensors(denoise_data,
+                                                              static_cast<uint32_t>(output_tensor_sizes[7]));
     parse_results<float>(denoise_data);
   }
 
@@ -625,6 +490,198 @@ void DenoiserQTfliteRunner::infer(gigaedge::denoiser::Task* denoise_task) {
   }
   denoise_task->state.advance_to(gigaedge::denoiser::PipelineStage::model_output_ready);
   denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
+}
+
+DenoiserHybridTfliteRunner::DenoiserHybridTfliteRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
+                                                       uint32_t inference_engine_threads, bool on_gpu)
+    : BaseTfliteRunner::BaseTfliteRunner() {
+  read_config(config->params()["model"]);
+  init_model(config, inference_engine_threads, on_gpu);
+  set_model_io_order({"noisy_ri_in", "prev_fb_hidden_in", "prev_fb_snr_noise_psd_in", "prev_fb_snr_noise_pg_in",
+                      "prev_sb_snr_noise_psd_in", "prev_sb_snr_noise_pg_in", "prev_fb_conv1_buf_in",
+                      "prev_fb_conv3_buf_in", "prev_stage2_hidden_in"},
+                     {"cur_fb_hidden_out", "cur_fb_snr_noise_psd_out", "cur_fb_snr_noise_pg_out",
+                      "cur_sb_snr_noise_psd_out", "cur_sb_snr_noise_pg_out", "cur_fb_conv1_buf_out",
+                      "cur_fb_conv3_buf_out", "cur_stage2_hidden_out", "predicted_ri_out"});
+  if (model_input_shapes_[0].size() != 4 || model_input_shapes_[0][0] != 1 || model_input_shapes_[0][1] <= 0 ||
+      model_input_shapes_[0][3] != 2 || (time_axis_in_[0] != -1 && time_axis_in_[0] != 2)) {
+    throw std::runtime_error("Invalid hybrid input spectrum shape: expected [1, F, T, 2]");
+  }
+  for (size_t i = 0; i < model_inputs_.size(); ++i) {
+    if (model_inputs_[i]->type != kTfLiteFloat32 || model_outputs_[i]->type != kTfLiteFloat32 ||
+        input_tensor_sizes[i] == 0 || input_tensor_sizes[i] > std::numeric_limits<uint32_t>::max() ||
+        (i > 0 && time_axis_in_[i] != -1)) {
+      throw std::runtime_error("Hybrid models require FP32 tensors and fixed recurrent states");
+    }
+  }
+  warm_up<float>();
+}
+
+template <typename T>
+void DenoiserHybridTfliteRunner::warm_up() {
+  std::vector<std::vector<int32_t>> resolved_input_shapes = model_input_shapes_;
+  set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], 1);
+
+  std::vector<T> dummy_noisy_ri(shape_product(resolved_input_shapes[0]), 0.0f);
+  std::vector<T> dummy_fb_hidden(input_tensor_sizes[1], 0.0f);
+  std::vector<T> dummy_fb_snr_psd(input_tensor_sizes[2], -1.0f);
+  std::vector<T> dummy_fb_snr_pg(input_tensor_sizes[3], -1.0f);
+  std::vector<T> dummy_sb_snr_psd(input_tensor_sizes[4], -1.0f);
+  std::vector<T> dummy_sb_snr_pg(input_tensor_sizes[5], -1.0f);
+  std::vector<T> dummy_conv1_buf(input_tensor_sizes[6], 0.0f);
+  std::vector<T> dummy_conv3_buf(input_tensor_sizes[7], 0.0f);
+  std::vector<T> dummy_stage2_hidden(input_tensor_sizes[8], 0.0f);
+
+  std::vector<std::vector<T>*> inputs;
+  inputs.push_back(&dummy_noisy_ri);
+  inputs.push_back(&dummy_fb_hidden);
+  inputs.push_back(&dummy_fb_snr_psd);
+  inputs.push_back(&dummy_fb_snr_pg);
+  inputs.push_back(&dummy_sb_snr_psd);
+  inputs.push_back(&dummy_sb_snr_pg);
+  inputs.push_back(&dummy_conv1_buf);
+  inputs.push_back(&dummy_conv3_buf);
+  inputs.push_back(&dummy_stage2_hidden);
+
+  for (int16_t i = 0; i < 3; ++i) {
+    run(inputs, resolved_input_shapes);
+  }
+}
+
+void DenoiserHybridTfliteRunner::prepare_input_in_place(std::vector<float>& noisy_ri,
+                                                        std::vector<std::vector<float>*>& inputs,
+                                                        gigaedge::denoiser::Context<float>* context) {
+  if (context == nullptr) {
+    throw std::runtime_error("Context is not allocated!");
+  }
+  gigaedge::denoiser::DenoiseContextHybrid<float>* denoise_context =
+      dynamic_cast<gigaedge::denoiser::DenoiseContextHybrid<float>*>(context);
+  if (!denoise_context) {
+    throw std::runtime_error("Invalid context type for DenoiserHybridTfliteRunner");
+  }
+
+  inputs.clear();
+
+  const uint32_t num_feats = static_cast<uint32_t>(model_input_shapes_[0][1]);
+  if (num_feats == 0) {
+    throw std::runtime_error("Invalid model input shape: num_feats is zero");
+  }
+  const size_t complex_frame_size = static_cast<size_t>(num_feats) * 2;
+  if (noisy_ri.size() < complex_frame_size) {
+    throw std::runtime_error("Noisy RI input size is smaller than expected");
+  }
+  if (noisy_ri.size() % complex_frame_size != 0) {
+    throw std::runtime_error("Noisy RI input size is not divisible by num_feats * 2");
+  }
+
+  denoise_context->noisy_ri.resize(noisy_ri.size());
+  resize_if_needed_in_place(denoise_context->fullband_hidden, static_cast<uint32_t>(input_tensor_sizes[1]));
+  resize_if_needed_in_place(denoise_context->fb_snr_noise_psd, static_cast<uint32_t>(input_tensor_sizes[2]));
+  resize_if_needed_in_place(denoise_context->fb_snr_noise_pg, static_cast<uint32_t>(input_tensor_sizes[3]));
+  resize_if_needed_in_place(denoise_context->sb_snr_noise_psd, static_cast<uint32_t>(input_tensor_sizes[4]));
+  resize_if_needed_in_place(denoise_context->sb_snr_noise_pg, static_cast<uint32_t>(input_tensor_sizes[5]));
+  resize_if_needed_in_place(denoise_context->fb_conv1_buf, static_cast<uint32_t>(input_tensor_sizes[6]));
+  resize_if_needed_in_place(denoise_context->fb_conv3_buf, static_cast<uint32_t>(input_tensor_sizes[7]));
+  resize_if_needed_in_place(denoise_context->stage2_hidden, static_cast<uint32_t>(input_tensor_sizes[8]));
+
+  std::copy(noisy_ri.begin(), noisy_ri.end(), denoise_context->noisy_ri.begin());
+
+  inputs.push_back(&denoise_context->noisy_ri);
+  inputs.push_back(&denoise_context->fullband_hidden);
+  inputs.push_back(&denoise_context->fb_snr_noise_psd);
+  inputs.push_back(&denoise_context->fb_snr_noise_pg);
+  inputs.push_back(&denoise_context->sb_snr_noise_psd);
+  inputs.push_back(&denoise_context->sb_snr_noise_pg);
+  inputs.push_back(&denoise_context->fb_conv1_buf);
+  inputs.push_back(&denoise_context->fb_conv3_buf);
+  inputs.push_back(&denoise_context->stage2_hidden);
+}
+
+template <typename T>
+void DenoiserHybridTfliteRunner::parse_results(gigaedge::denoiser::TaskData& data) {
+  if (data.context == nullptr) {
+    throw std::runtime_error("Context is not allocated!");
+  }
+  gigaedge::denoiser::DenoiseContextHybrid<T>* context =
+      dynamic_cast<gigaedge::denoiser::DenoiseContextHybrid<T>*>(data.context);
+
+  if (context == nullptr || model_outputs_.size() != 9) {
+    throw std::runtime_error("Invalid hybrid context or output count");
+  }
+  std::vector<std::vector<T>*> states = {
+      &context->fullband_hidden, &context->fb_snr_noise_psd, &context->fb_snr_noise_pg, &context->sb_snr_noise_psd,
+      &context->sb_snr_noise_pg, &context->fb_conv1_buf,     &context->fb_conv3_buf,    &context->stage2_hidden};
+  for (size_t i = 0; i < states.size(); ++i) {
+    if (output_tensor_sizes[i] != states[i]->size()) {
+      throw std::runtime_error("Hybrid recurrent output size mismatch");
+    }
+    const T* values = tflite::GetTensorData<T>(model_outputs_[i]);
+    states[i]->assign(values, values + states[i]->size());
+  }
+  const auto& shape = model_output_shapes_[8];
+  if (shape.size() != 4 || shape[0] != 1 || shape[1] != model_input_shapes_[0][1] || shape[2] <= 0 ||
+      static_cast<size_t>(shape[2]) != data.input_spectrogram.size() || shape[3] != 2) {
+    throw std::runtime_error("Invalid hybrid spectrum shape: expected [1, F, T, 2]");
+  }
+  unpack_complex_mask(tflite::GetTensorData<T>(model_outputs_[8]), static_cast<size_t>(shape[1]),
+                      static_cast<size_t>(shape[2]), data.new_spectrogram);
+}
+
+void DenoiserHybridTfliteRunner::infer(gigaedge::denoiser::Task* denoise_task) {
+  if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
+    throw std::runtime_error("Task data or context are not initialized!");
+  }
+  if (denoise_task->data.input_spectrogram.empty()) {
+    throw std::runtime_error("Input spectrogram should be calculated before this step!");
+  }
+
+  auto& denoise_data = denoise_task->data;
+  auto& denoise_context = denoise_data.context;
+  if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len) {
+    denoise_context->prev_features.pop();
+  }
+
+  const auto& specs = denoise_data.input_spectrogram;
+  const size_t num_feats = specs.front().size();
+  const size_t num_frames = specs.size();
+  if (num_frames > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
+    throw std::runtime_error("Too many input spectrogram frames");
+  }
+  for (const auto& spec : specs) {
+    if (num_feats == 0 || spec.size() != num_feats || spec.imag.size() != num_feats) {
+      throw std::runtime_error("Input spectrogram frames have different or invalid sizes");
+    }
+  }
+
+  denoise_task->state.require(gigaedge::denoiser::PipelineStage::input_spectrum_ready);
+  std::vector<float> noisy_ri(num_feats * num_frames * 2);
+  for (size_t t = 0; t < num_frames; ++t) {
+    for (size_t f = 0; f < num_feats; ++f) {
+      const size_t offset = (f * num_frames + t) * 2;
+      noisy_ri[offset] = specs[t].real[f];
+      noisy_ri[offset + 1] = specs[t].imag[f];
+    }
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(model_run_mutex_);
+    if (num_feats != static_cast<size_t>(model_input_shapes_[0][1])) {
+      throw std::runtime_error("Input spectrogram feature count does not match the hybrid model");
+    }
+    std::vector<std::vector<float>*> inputs;
+    std::vector<std::vector<int32_t>> resolved_input_shapes = model_input_shapes_;
+    set_time_dim_if_dynamic(resolved_input_shapes[0], time_axis_in_[0], static_cast<int32_t>(num_frames));
+
+    DenoiserHybridTfliteRunner::prepare_input_in_place(noisy_ri, inputs, denoise_context);
+    run(inputs, resolved_input_shapes);
+    parse_results<float>(denoise_data);
+  }
+
+  if (denoise_context->prev_features.size() < model_params_.network_input_ctx_len) {
+    denoise_task->state.set_outcome(gigaedge::denoiser::ChunkOutcome::warming_up);
+  }
+  denoise_task->state.advance_to(gigaedge::denoiser::PipelineStage::model_output_ready);
+  denoise_context->prev_features.push(specs.front());
 }
 
 }  // namespace tf_lite

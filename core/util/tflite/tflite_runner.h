@@ -100,12 +100,12 @@ class BaseTfliteRunner {
 };
 
 
-class DenoiserFTfliteRunner : public BaseTfliteRunner {
+class DenoiserDiscriminativeHqTfliteRunner : public BaseTfliteRunner {
  public:
-  DenoiserFTfliteRunner() = delete;
-  virtual ~DenoiserFTfliteRunner() = default;
-  explicit DenoiserFTfliteRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
-                                 uint32_t inference_engine_threads = 1, bool on_gpu = false);
+  DenoiserDiscriminativeHqTfliteRunner() = delete;
+  virtual ~DenoiserDiscriminativeHqTfliteRunner() = default;
+  explicit DenoiserDiscriminativeHqTfliteRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
+                                                uint32_t inference_engine_threads = 1, bool on_gpu = false);
   void infer(gigaedge::denoiser::Task* denoise_task);
 
  protected:
@@ -117,12 +117,12 @@ class DenoiserFTfliteRunner : public BaseTfliteRunner {
   void parse_results(gigaedge::denoiser::TaskData& data);
 };
 
-class DenoiserQTfliteRunner : public BaseTfliteRunner {
+class DenoiserHybridTfliteRunner : public BaseTfliteRunner {
  public:
-  DenoiserQTfliteRunner() = delete;
-  virtual ~DenoiserQTfliteRunner() = default;
-  explicit DenoiserQTfliteRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
-                                 uint32_t inference_engine_threads = 1, bool on_gpu = false);
+  DenoiserHybridTfliteRunner() = delete;
+  virtual ~DenoiserHybridTfliteRunner() = default;
+  explicit DenoiserHybridTfliteRunner(const std::shared_ptr<gigaedge::denoiser::NetworkConfig> config,
+                                      uint32_t inference_engine_threads = 1, bool on_gpu = false);
   void infer(gigaedge::denoiser::Task* denoise_task);
 
  protected:

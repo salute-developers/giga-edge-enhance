@@ -6,18 +6,22 @@ InferenceRunner::InferenceRunner(std::shared_ptr<gigaedge::denoiser::NetworkConf
                                  uint32_t inference_engine_threads, bool gpu) {
   model_type_ = string_to_model_type_enum(config->params()["inference"]["model_type"].as<std::string>(""));
 #ifdef BUILD_TFLITE_ENGINE
-  if (model_type_ == ModelType::denoiser_best_quality) {
-    engine_runner_ptr_ = std::make_unique<util::tf_lite::DenoiserQTfliteRunner>(config, inference_engine_threads, gpu);
-  } else if (model_type_ == ModelType::denoiser_best_speed) {
-    engine_runner_ptr_ = std::make_unique<util::tf_lite::DenoiserFTfliteRunner>(config, inference_engine_threads, gpu);
+  if (model_type_ == ModelType::denoiser_hybrid_web_model) {
+    engine_runner_ptr_ =
+        std::make_unique<util::tf_lite::DenoiserHybridTfliteRunner>(config, inference_engine_threads, gpu);
+  } else if (model_type_ == ModelType::denoiser_discr_web_model) {
+    engine_runner_ptr_ =
+        std::make_unique<util::tf_lite::DenoiserDiscriminativeHqTfliteRunner>(config, inference_engine_threads, gpu);
   }
 #else
-  if (model_type_ == ModelType::denoiser_best_quality) {
-    engine_runner_ptr_ = std::make_unique<util::onnx::DenoiserQOnnxRunner>(config, inference_engine_threads, gpu);
-  } else if (model_type_ == ModelType::denoiser_best_speed) {
-    engine_runner_ptr_ = std::make_unique<util::onnx::DenoiserFOnnxRunner>(config, inference_engine_threads, gpu);
-  } else if (model_type_ == ModelType::denoiser_best_speed_new) {
-    engine_runner_ptr_ = std::make_unique<util::onnx::DenoiserSFOnnxRunner>(config, inference_engine_threads, gpu);
+  if (model_type_ == ModelType::denoiser_hybrid_web_model) {
+    engine_runner_ptr_ = std::make_unique<util::onnx::DenoiserHybridOnnxRunner>(config, inference_engine_threads, gpu);
+  } else if (model_type_ == ModelType::denoiser_discr_hq_model) {
+    engine_runner_ptr_ =
+        std::make_unique<util::onnx::DenoiserDiscriminativeNbOnnxRunner>(config, inference_engine_threads, gpu);
+  } else if (model_type_ == ModelType::denoiser_discr_web_model) {
+    engine_runner_ptr_ =
+        std::make_unique<util::onnx::DenoiserDiscriminativeHqOnnxRunner>(config, inference_engine_threads, gpu);
   }
 #endif
   if (engine_runner_ptr_ == nullptr) {

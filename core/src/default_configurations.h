@@ -2,12 +2,11 @@
 
 namespace gigaedge::denoiser {
 // Denoiser defaults
-#ifdef BUILD_TFLITE_ENGINE
 static constexpr char default_denoiser_config_yaml[] = R"(
 model:
   model_path: ""
 feature_params:
-  sampling_freq:    24000
+  sampling_freq:    48000
   frame_size_ms:    32
   frame_stride_ms:  16
   window_type:      hanning
@@ -15,26 +14,9 @@ inference:
   gpu:                false
   skip_zeroed_chunks: false
   engine_num_threads: 1
-  model_type:        best_speed
+  model_type:        denoiser_discr_web_model
 )";
 
-#else
-static constexpr char default_denoiser_config_yaml[] = R"(
-model:
-  model_path: ""
-feature_params:
-  sampling_freq:    24000
-  frame_size_ms:    32
-  frame_stride_ms:  16
-  window_type:      hanning
-inference:
-  gpu:                false
-  skip_zeroed_chunks: false
-  engine_num_threads: 1
-  model_type:        best_speed
-)";
-
-#endif
 
 // AEC defaults (as above)
 static constexpr char default_aec_config_yaml[] = R"(

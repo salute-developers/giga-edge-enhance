@@ -22,13 +22,8 @@ struct TestTfliteRunner {
   TestTfliteRunner& InitRunner(const std::string& yaml_config_name, uint16_t num_threads = 1) {
     std::string file_path = data_root + "config/" + yaml_config_name;
     auto config = std::make_shared<gigaedge::denoiser::DenoiserConfig>(gigaedge::denoiser::FileConfigReader(file_path));
-    std::string model_type = config->model_type();
 
-    denoiser_runner = (model_type == "best_quality")
-                          ? std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
-                                new util::tf_lite::DenoiserQTfliteRunner(config, num_threads))
-                          : std::unique_ptr<util::tf_lite::BaseTfliteRunner>(
-                                new util::tf_lite::DenoiserFTfliteRunner(config, num_threads));
+    denoiser_runner = std::make_unique<util::tf_lite::DenoiserDiscriminativeHqTfliteRunner>(config, num_threads);
     frame_size_ms = config->frame_size_ms();
     sample_rate = config->sampling_freq();
     return *this;
@@ -49,7 +44,7 @@ struct TestTfliteRunner {
 TEST_CASE("FAIL TFLite rejects unsupported model type before inference [tflite]") {
   const auto config = std::make_shared<gigaedge::denoiser::DenoiserConfig>(
       gigaedge::denoiser::StringConfigReader("model:\n  model_path: unused.tflite\n"
-                                             "inference:\n  model_type: best_speed_new\n"));
+                                             "inference:\n  model_type: denoiser_discr_hq_model\n"));
   CHECK_THROWS_WITH(gigaedge::denoiser::InferenceRunner(config, 1, false),
                     "Model type is not supported by the selected inference engine.");
 }
@@ -85,7 +80,9 @@ TEST_CASE("SUCCEED Run relu model dummy inference [tflite]") {
 }
 
 TEST_CASE("FAIL Read config with corrupted model [tflite runner]") {
-  CHECK_THROWS_WITH(TestTfliteRunner().InitRunner("test_configuration_with_corrupted_fast_tflite_24khz.yaml"),
+  auto config = std::make_shared<gigaedge::denoiser::DenoiserConfig>(
+      gigaedge::denoiser::StringConfigReader("model:\n  model_path: data/models/invalid_model.tflite\n"));
+  CHECK_THROWS_WITH(util::tf_lite::DenoiserDiscriminativeHqTfliteRunner(config, 1),
                     "Model reading error. There is problem with checkpoint file.");
 }
 
@@ -170,7 +167,8 @@ TEST_CASE("Shared TFLite runner serializes concurrent inference [tflite]") {
 //   data.LoadDataFromBin("1_predicted_sub_band_cell_state_for_zeroed_hiddens_16khz.dump", gt_subband_cell_state);
 
 //   gigaedge::denoiser::Task denoise_task;
-//   std::unique_ptr<gigaedge::denoiser::DenoiseContextQ<float>> ctx(new gigaedge::denoiser::DenoiseContextQ<float>);
+//   std::unique_ptr<gigaedge::denoiser::DenoiseContextDiscriminativeHq<float>> ctx(new
+//   gigaedge::denoiser::DenoiseContextDiscriminativeHq<float>);
 //   ctx.get()->fullband_hidden.resize(data.denoiser_runner->input_tensor_sizes[1], 0);
 //   ctx.get()->fullband_cell_state.resize(data.denoiser_runner->input_tensor_sizes[2], 0);
 //   ctx.get()->subband_hidden.resize(data.denoiser_runner->input_tensor_sizes[3], 0);
@@ -199,7 +197,8 @@ TEST_CASE("Shared TFLite runner serializes concurrent inference [tflite]") {
 //       .InitRunner("default_configuration_best_quality_tflite_16khz.yaml"));
 
 //   gigaedge::denoiser::Task denoise_task;
-//   std::unique_ptr<gigaedge::denoiser::DenoiseContextQ<float>> ctx(new gigaedge::denoiser::DenoiseContextQ<float>);
+//   std::unique_ptr<gigaedge::denoiser::DenoiseContextDiscriminativeHq<float>> ctx(new
+//   gigaedge::denoiser::DenoiseContextDiscriminativeHq<float>);
 //   ctx.get()->fullband_hidden.resize(data.denoiser_runner->input_tensor_sizes[1], 0);
 //   ctx.get()->fullband_cell_state.resize(data.denoiser_runner->input_tensor_sizes[2], 0);
 //   ctx.get()->subband_hidden.resize(data.denoiser_runner->input_tensor_sizes[3], 0);

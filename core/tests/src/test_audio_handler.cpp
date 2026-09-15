@@ -189,7 +189,7 @@ TEST_CASE("SUCCEED Run denoiser 48kHz model with yaml string config [denoiser ha
       "inference:\n"
       " gpu: false\n"
       " engine_num_threads: 1\n"
-      " model_type: best_quality\n";
+      " model_type: denoiser_discr_web_model\n";
 
   TestHandler scheduler_test_env;
   REQUIRE_NOTHROW(scheduler_test_env.InitHandlerFromYaml<gigaedge::denoiser::DenoiserAudioHandler,
@@ -233,7 +233,8 @@ TEST_CASE("SUCCEED Run denoise and check finalize a chunk for the best quality m
 #endif
 
   gigaedge::denoiser::Context<float>* ctx = scheduler_test_env.handler->create_context();
-  gigaedge::denoiser::DenoiseContextQ<float>* ctx_q = dynamic_cast<gigaedge::denoiser::DenoiseContextQ<float>*>(ctx);
+  gigaedge::denoiser::DenoiseContextDiscriminativeHq<float>* ctx_q =
+      dynamic_cast<gigaedge::denoiser::DenoiseContextDiscriminativeHq<float>*>(ctx);
   uint16_t input_frame_size = ctx->input_sound_stream_ptr->input.frame_size_samples();
   const std::vector<float> input1(input_frame_size, 0.5);
   std::vector<float> output;
@@ -323,4 +324,12 @@ TEST_CASE("AEC configuration rejects unsupported canceler types", "[validation]"
   REQUIRE_THROWS_WITH(gigaedge::denoiser::AecConfig(
                           gigaedge::denoiser::StringConfigReader("echo_cancellation:\n  type: unsupported\n")),
                       "Invalid echo canceler type: unsupported");
+}
+
+TEST_CASE("Removed model identifiers are rejected before loading weights", "[validation]") {
+  for (const std::string type : {"best_quality", "best_speed", "best_speed_new"}) {
+    auto config = std::make_shared<gigaedge::denoiser::DenoiserConfig>(
+        gigaedge::denoiser::StringConfigReader("model:\n  model_path: unused.onnx\ninference:\n  model_type: " + type));
+    REQUIRE_THROWS_AS(gigaedge::denoiser::InferenceRunner(config, 1, false), std::invalid_argument);
+  }
 }
