@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-source/README" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.10.2">
+<title data-rh="true">GigaDenoiser</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://salute-developers.github.io/gigadenoiser/pr/8/docs/source/"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="GigaDenoiser"><meta data-rh="true" name="description" content="GigaDenoiser is a cross-platform speech-enhancement SDK for real-time noise suppression, loudness"><meta data-rh="true" property="og:description" content="GigaDenoiser is a cross-platform speech-enhancement SDK for real-time noise suppression, loudness"><link data-rh="true" rel="icon" href="/gigadenoiser/pr/8/img/favicon.svg"><link data-rh="true" rel="canonical" href="https://salute-developers.github.io/gigadenoiser/pr/8/docs/source/"><link data-rh="true" rel="alternate" href="https://salute-developers.github.io/gigadenoiser/pr/8/docs/source/" hreflang="en"><link data-rh="true" rel="alternate" href="https://salute-developers.github.io/gigadenoiser/pr/8/docs/source/" hreflang="x-default"><script src="/gigadenoiser/pr/8/coi-serviceworker.min.js"></script><link rel="stylesheet" href="/gigadenoiser/pr/8/assets/css/styles.08e48c37.css">
+<script src="/gigadenoiser/pr/8/assets/js/runtime~main.f96b1e37.js" defer="defer"></script>
+<script src="/gigadenoiser/pr/8/assets/js/main.079d285e.js" defer="defer"></script>
+</head>
+<body>
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><link rel="preload" as="image" href="/gigadenoiser/pr/8/img/logo.svg"><div role="region" aria-label="Skip to main content"><a class="skipToContent_G6ar" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/gigadenoiser/pr/8/"><div class="navbar__logo"><img src="/gigadenoiser/pr/8/img/logo.svg" alt="GigaDenoiser signal mark" class="themedComponent_DHUr themedComponent--light_DIHH"><img src="/gigadenoiser/pr/8/img/logo.svg" alt="GigaDenoiser signal mark" class="themedComponent_DHUr themedComponent--dark_Bv2M"></div><b class="navbar__title text--truncate">GigaDenoiser</b></a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/gigadenoiser/pr/8/">Demo</a><a class="navbar__item navbar__link" href="/gigadenoiser/pr/8/docs/">Documentation</a><div class="navbar__item dropdown dropdown--hoverable"><a href="#" aria-haspopup="true" aria-expanded="false" role="button" class="navbar__link">SDK reference</a><ul class="dropdown__menu"><li><a aria-current="page" class="dropdown__link dropdown__link--active" href="/gigadenoiser/pr/8/docs/source/">Core repository guide</a></li><li><a class="dropdown__link" href="/gigadenoiser/pr/8/docs/source/web/packages/web-sdk/">Web SDK</a></li><li><a class="dropdown__link" href="/gigadenoiser/pr/8/docs/source/android/">Android SDK</a></li><li><a class="dropdown__link" href="/gigadenoiser/pr/8/docs/source/ios/">iOS SDK</a></li></ul></div></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="toggle_OLSw colorModeToggle_Hg9V"><button class="clean-btn toggleButton_wYmb toggleButtonDisabled_vaDU" type="button" disabled="" title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_KEbZ lightToggleIcon_Sxwe"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_KEbZ darkToggleIcon_Yem1"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_KEbZ systemToggleIcon_txm5"><path fill="currentColor" d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"></path></svg></button></div><div class="navbarSearchContainer_bmvg"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_UyTV"><div class="docsWrapper_XLvK"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_z1FD" type="button"></button><div class="docRoot_HciC"><main class="docMainContainer_namt docMainContainerEnhanced_sRjM"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_YAwJ"><div class="docItemContainer_Rv5Z"><article><div class="tocCollapsible_O_Qc theme-doc-toc-mobile tocMobile_tjDr"><button type="button" class="clean-btn tocCollapsibleButton_htYj">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>GigaDenoiser</h1></header>
+<p>GigaDenoiser is a cross-platform speech-enhancement SDK for real-time noise suppression, loudness
+normalization, and acoustic echo cancellation. The repository contains the native C and C++ engine,
+WebAssembly and Web Audio integration, Android and iOS SDKs, command-line tools, demos, tests, and
+release packaging.</p>
+<p>The interactive Web SDK demo and complete documentation are published together as a static GitHub
+Pages website. When working in the repository, use the scripts documented in
+<a class="" href="/gigadenoiser/pr/8/docs/source/tools/"><code>tools/README.md</code></a> as the supported build and test interface.</p>
+<h2 class="anchor anchorTargetStickyNavbar_SAay" id="sdks">SDKs<a href="#sdks" class="hash-link" aria-label="Direct link to SDKs" title="Direct link to SDKs" translate="no">​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Surface</th><th>Location</th><th>Intended use</th></tr></thead><tbody><tr><td>C and C++</td><td><code>core/include/gigadenoiser/</code></td><td>Native applications and direct buffer processing</td></tr><tr><td>Web</td><td><code>web/packages/web-sdk/</code></td><td>Web Audio, AudioWorklet, workers, and WebAssembly</td></tr><tr><td>Android</td><td><code>android/</code></td><td>Kotlin applications over the JNI/native pipeline</td></tr><tr><td>iOS</td><td><code>ios/</code></td><td>AVAudioEngine and direct Swift buffer processing</td></tr></tbody></table>
+<p>Public headers under <code>core/include/gigadenoiser/</code> are compatibility-sensitive. Exported C symbols retain
+their global <code>GigaDenoiser*</code> prefix; public C++ types live in <code>gigaedge::denoiser</code>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_SAay" id="requirements">Requirements<a href="#requirements" class="hash-link" aria-label="Direct link to Requirements" title="Direct link to Requirements" translate="no">​</a></h2>
+<ul>
+<li class="">Git with Git LFS support.</li>
+<li class="">Docker for the default native, WebAssembly, Android, and web workflows.</li>
+<li class="">Xcode for iOS and host macOS builds.</li>
+<li class="">Visual Studio 2022 for Windows builds.</li>
+<li class="">Node.js from <code>web/.nvmrc</code> for host web development.</li>
+</ul>
+<p>Restore LFS objects after cloning:</p>
+<div class="language-bash codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#F8F8F2;--prism-background-color:#282A36"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-bash codeBlock_TAPP thin-scrollbar" style="color:#F8F8F2;background-color:#282A36"><code class="codeBlockLines_AdAo"><div class="token-line" style="color:#F8F8F2"><span class="token plain">git lfs install</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">git lfs checkout</span><br></div></code></pre></div></div>
+<h2 class="anchor anchorTargetStickyNavbar_SAay" id="models">Models<a href="#models" class="hash-link" aria-label="Direct link to Models" title="Direct link to Models" translate="no">​</a></h2>
+<p>Model binaries are not ordinary Git source files. Repository contributors restore the model and test
+assets tracked by this repository through Git LFS:</p>
+<div class="language-bash codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#F8F8F2;--prism-background-color:#282A36"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-bash codeBlock_TAPP thin-scrollbar" style="color:#F8F8F2;background-color:#282A36"><code class="codeBlockLines_AdAo"><div class="token-line" style="color:#F8F8F2"><span class="token plain">git lfs checkout</span><br></div></code></pre></div></div>
+<p>Do not commit model credentials, private artifact URLs, or downloaded model binaries. Platform SDK
+consumers should use the model packages documented for that platform.</p>
+<h2 class="anchor anchorTargetStickyNavbar_SAay" id="build-and-test">Build and test<a href="#build-and-test" class="hash-link" aria-label="Direct link to Build and test" title="Direct link to Build and test" translate="no">​</a></h2>
+<p>Run commands from the repository root:</p>
+<p>The complete command and target matrix is in <a class="" href="/gigadenoiser/pr/8/docs/source/tools/"><code>tools/README.md</code></a>.</p>
+<p>Docker is the default for Native, Web, and Android. Use <code>--host</code> for those targets only when the
+matching local toolchain is already installed. macOS, iOS, and Windows always use their host
+toolchains. Commands are deliberately composable: <code>build</code>
+creates outputs, while <code>test</code>, <code>package</code>, and <code>install</code> consume an existing build without rebuilding it.</p>
+<p>Common validation commands:</p>
+<div class="language-bash codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#F8F8F2;--prism-background-color:#282A36"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-bash codeBlock_TAPP thin-scrollbar" style="color:#F8F8F2;background-color:#282A36"><code class="codeBlockLines_AdAo"><div class="token-line" style="color:#F8F8F2"><span class="token plain"># Fast native development check</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/build native-debug-onnx</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/test native-debug-onnx</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain"># Open the native Linux container to run built command-line tools</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/shell</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain"># Release engine coverage</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/build native-release-onnx</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/test native-release-onnx</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/build native-release-tflite</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/test native-release-tflite</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain"># Memory-safety coverage</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/build native-asan-onnx</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/test native-asan-onnx</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain"># Web SDK, including its full and DSP WebAssembly modules</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/build web</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/test web</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/package web</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/test web-playwright</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain"># Platform wrappers</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/build android</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/test android</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/build ios</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/test ios</span><br></div></code></pre></div></div>
+<p>The shell starts in <code>/workspace</code>, where the repository and Linux build outputs are mounted. The host
+home directory is mounted read/write at <code>/host-home</code> and becomes the shell&#x27;s home, so <code>cd ~</code> opens
+the host home and files such as <code>~/Music/input.wav</code> are available to Linux command-line tools. Project
+caches remain under <code>/workspace/out/cache</code>. The shell does not build automatically; run a native build
+first, then execute its binaries from <code>out/build/container-clang-llvm-tools/&lt;preset&gt;</code>. Use <code>exit</code> or
+Ctrl-D to leave the disposable container. Only use the shell with code you trust because it can modify
+files in the host home directory.</p>
+<h3 class="anchor anchorTargetStickyNavbar_SAay" id="supported-target-families">Supported target families<a href="#supported-target-families" class="hash-link" aria-label="Direct link to Supported target families" title="Direct link to Supported target families" translate="no">​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Target family</th><th>Examples</th><th>Notes</th></tr></thead><tbody><tr><td>Native Linux</td><td><code>native-debug-onnx</code>, <code>native-release-tflite</code></td><td>Debug, Release, ASAN, and static variants</td></tr><tr><td>macOS</td><td><code>macos-arm64-release-onnx</code></td><td>Architecture-specific host builds</td></tr><tr><td>Windows</td><td><code>windows-x64-release-tflite</code></td><td>Invoke the helper with Python</td></tr><tr><td>WebAssembly</td><td><code>wasm-release</code>, <code>wasm-dsp-release</code></td><td>Full pipeline and DSP-only variants</td></tr><tr><td>Web</td><td><code>web</code></td><td>Stages WASM, tests the SDK, and builds packages</td></tr><tr><td>Android</td><td><code>android</code></td><td>SDK, JNI, unit, and optional device coverage</td></tr><tr><td>iOS</td><td><code>ios</code></td><td>Core, XCFramework, simulator tests, and DocC</td></tr></tbody></table>
+<p>Artifacts are written under <code>out/artifacts/</code>. Generated build trees and dependency caches under
+<code>out/</code>, <code>build/</code>, <code>.cpm/</code>, and <code>.cache/</code> are not source files.</p>
+<h2 class="anchor anchorTargetStickyNavbar_SAay" id="native-integration">Native integration<a href="#native-integration" class="hash-link" aria-label="Direct link to Native integration" title="Direct link to Native integration" translate="no">​</a></h2>
+<p>Link against an installed or packaged GigaDenoiser build and include the supported public headers. A
+minimal C++ pipeline creates the processor with a model/configuration, processes mono floating-point
+frames, and keeps all allocation and pipeline rebuild work off the real-time callback.</p>
+<p>The exact constructor and configuration types vary by pipeline and inference-engine build. Use the
+public headers and the documentation generated from the same revision rather than copying internal
+classes from <code>core/src/</code>.</p>
+<p>Command-line examples are available through the installed tools:</p>
+<div class="language-bash codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#F8F8F2;--prism-background-color:#282A36"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-bash codeBlock_TAPP thin-scrollbar" style="color:#F8F8F2;background-color:#282A36"><code class="codeBlockLines_AdAo"><div class="token-line" style="color:#F8F8F2"><span class="token plain">giga-denoiser --help</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">giga-denoiser denoise --help</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">giga-denoiser norm --help</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">giga-denoiser echo --help</span><br></div></code></pre></div></div>
+<h2 class="anchor anchorTargetStickyNavbar_SAay" id="web-sdk">Web SDK<a href="#web-sdk" class="hash-link" aria-label="Direct link to Web SDK" title="Direct link to Web SDK" translate="no">​</a></h2>
+<p>The Web SDK is an npm workspace package with a separate demo service:</p>
+<div class="language-bash codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#F8F8F2;--prism-background-color:#282A36"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-bash codeBlock_TAPP thin-scrollbar" style="color:#F8F8F2;background-color:#282A36"><code class="codeBlockLines_AdAo"><div class="token-line" style="color:#F8F8F2"><span class="token plain">tools/build web</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">cd web</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">npm run test:web-sdk</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">npm run build:web-sdk</span><br></div></code></pre></div></div>
+<p>The build stages validated WASM, worker, worklet, model, and type-definition assets into the package.
+Do not edit staged or generated WebAssembly artifacts manually.</p>
+<p>For local demo development:</p>
+<div class="language-bash codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#F8F8F2;--prism-background-color:#282A36"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-bash codeBlock_TAPP thin-scrollbar" style="color:#F8F8F2;background-color:#282A36"><code class="codeBlockLines_AdAo"><div class="token-line" style="color:#F8F8F2"><span class="token plain">cd web</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">npm ci</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">npm start --workspace=@gigaedge/denoiser-site</span><br></div></code></pre></div></div>
+<p>The static site installs a same-origin COI service worker so GitHub Pages can expose the isolated
+context required for <code>SharedArrayBuffer</code>. The first visit may reload once while the worker takes
+control; unsupported environments fall back to MessageChannel.</p>
+<h2 class="anchor anchorTargetStickyNavbar_SAay" id="documentation">Documentation<a href="#documentation" class="hash-link" aria-label="Direct link to Documentation" title="Direct link to Documentation" translate="no">​</a></h2>
+<p>The documentation website is built by the <code>@gigaedge/denoiser-site</code> workspace. Its staging script collects all
+user-facing repository Markdown while excluding generated, vendored, cached, and internal agent
+files. Platform READMEs and iOS DocC articles remain canonical in their existing locations.</p>
+<div class="language-bash codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#F8F8F2;--prism-background-color:#282A36"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-bash codeBlock_TAPP thin-scrollbar" style="color:#F8F8F2;background-color:#282A36"><code class="codeBlockLines_AdAo"><div class="token-line" style="color:#F8F8F2"><span class="token plain">cd web</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">npm run build --workspace=@gigaedge/denoiser-site</span><br></div></code></pre></div></div>
+<p>The static output is written to <code>web/apps/site/build/</code> and is suitable
+for GitHub Pages.</p>
+<h2 class="anchor anchorTargetStickyNavbar_SAay" id="development">Development<a href="#development" class="hash-link" aria-label="Direct link to Development" title="Direct link to Development" translate="no">​</a></h2>
+<ul>
+<li class="">Follow <a class="" href="/gigadenoiser/pr/8/docs/source/STYLE/"><code>STYLE.md</code></a> and <code>.clang-format</code> for C and C++ changes.</li>
+<li class="">Keep tests close to affected behavior under <code>core/tests/</code> or the matching platform wrapper.</li>
+<li class="">Run the narrowest relevant check first, then broaden coverage for cross-platform, ABI, model,
+memory-ownership, or packaging changes.</li>
+<li class="">Do not edit dependency sources under <code>out/cache/cpm/</code>; update <code>package-lock.cmake</code> or the
+corresponding patch under <code>cmake/patches/</code> instead.</li>
+<li class="">Preserve generated-file boundaries and keep lockfiles synchronized with manifest changes.</li>
+</ul>
+<p>For C and C++ style validation:</p>
+<div class="language-bash codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#F8F8F2;--prism-background-color:#282A36"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-bash codeBlock_TAPP thin-scrollbar" style="color:#F8F8F2;background-color:#282A36"><code class="codeBlockLines_AdAo"><div class="token-line" style="color:#F8F8F2"><span class="token plain">git-clang-format --diff HEAD --extensions c,cc,cpp,h,hpp -- gigadenoiser</span><br></div></code></pre></div></div>
+<h2 class="anchor anchorTargetStickyNavbar_SAay" id="releases">Releases<a href="#releases" class="hash-link" aria-label="Direct link to Releases" title="Direct link to Releases" translate="no">​</a></h2>
+<p><code>VERSION_NUMBER</code> is the release version source. Release Please manages version and changelog updates, while
+GitHub Actions builds and attaches validated platform artifacts. A rerun may verify an existing
+artifact with the same hash but must not overwrite a published version with different bytes.</p>
+<p>See <a class="" href="/gigadenoiser/pr/8/docs/source/CHANGELOG/"><code>CHANGELOG.md</code></a> for release history.</p>
+<h2 class="anchor anchorTargetStickyNavbar_SAay" id="security">Security<a href="#security" class="hash-link" aria-label="Direct link to Security" title="Direct link to Security" translate="no">​</a></h2>
+<p>Report suspected vulnerabilities privately as described in the
+<a href="https://github.com/salute-developers/gigadenoiser/blob/master/SECURITY.md" target="_blank" rel="noopener noreferrer" class="">security policy</a>. Do not disclose security
+issues in a public GitHub issue.</p>
+<h2 class="anchor anchorTargetStickyNavbar_SAay" id="license">License<a href="#license" class="hash-link" aria-label="Direct link to License" title="Direct link to License" translate="no">​</a></h2>
+<p>GigaDenoiser is licensed under the <a class="" href="/gigadenoiser/pr/8/docs/source/LICENSE/">MIT License</a>.</p></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"></nav></div></div><div class="col col--3"><div class="tableOfContents_TN1Q thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#sdks" class="table-of-contents__link toc-highlight">SDKs</a></li><li><a href="#requirements" class="table-of-contents__link toc-highlight">Requirements</a></li><li><a href="#models" class="table-of-contents__link toc-highlight">Models</a></li><li><a href="#build-and-test" class="table-of-contents__link toc-highlight">Build and test</a><ul><li><a href="#supported-target-families" class="table-of-contents__link toc-highlight">Supported target families</a></li></ul></li><li><a href="#native-integration" class="table-of-contents__link toc-highlight">Native integration</a></li><li><a href="#web-sdk" class="table-of-contents__link toc-highlight">Web SDK</a></li><li><a href="#documentation" class="table-of-contents__link toc-highlight">Documentation</a></li><li><a href="#development" class="table-of-contents__link toc-highlight">Development</a></li><li><a href="#releases" class="table-of-contents__link toc-highlight">Releases</a></li><li><a href="#security" class="table-of-contents__link toc-highlight">Security</a></li><li><a href="#license" class="table-of-contents__link toc-highlight">License</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">SDKs</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/gigadenoiser/pr/8/docs/core/">Core C/C++</a></li><li class="footer__item"><a class="footer__link-item" href="/gigadenoiser/pr/8/docs/web-sdk/">Web</a></li><li class="footer__item"><a class="footer__link-item" href="/gigadenoiser/pr/8/docs/android/">Android</a></li><li class="footer__item"><a class="footer__link-item" href="/gigadenoiser/pr/8/docs/ios/">iOS</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">Develop</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/gigadenoiser/pr/8/docs/development/build-and-test/">Build and test</a></li><li class="footer__item"><a class="footer__link-item" href="/gigadenoiser/pr/8/docs/development/style/">Repository style</a></li><li class="footer__item"><a class="footer__link-item" href="/gigadenoiser/pr/8/docs/license/">MIT License</a></li></ul></div></div></div></footer></div>
+</body>
+</html>
