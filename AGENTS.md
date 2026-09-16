@@ -154,6 +154,11 @@ blocker. Do not silently substitute a weaker check.
 Keep workflow YAML thin: setup belongs in composite actions and build behavior
 belongs in `tools`, so local and CI commands remain identical.
 
+Dependabot checks GitHub Actions, npm, Gradle, Docker, and pip dependencies monthly. Group compatible
+minor and patch updates to limit pull-request noise, while keeping major updates separate for focused
+review. CMake/CPM dependencies remain manual because Dependabot does not support the repository's
+`package-lock.cmake` workflow.
+
 ### Workflow boundaries
 
 Workflows have event-specific responsibilities and narrowly scoped permissions:

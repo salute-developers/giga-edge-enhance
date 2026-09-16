@@ -1,0 +1,58 @@
+name: Feature request
+description: Propose a concrete improvement to GigaDenoiser
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Affected area
+      options:
+        - Core C or C++ SDK
+        - Web SDK or WebAssembly
+        - Android SDK
+        - iOS SDK
+        - Build, packaging, or CI
+        - Documentation or demo
+        - Cross-platform
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the user or developer problem, not only the requested implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the desired behavior, API, or workflow and its expected value.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include current workarounds and why they are insufficient.
+
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and impact
+      description: Note API, ABI, model-format, performance, packaging, or cross-platform implications.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues and discussions for this proposal.
+          required: true
+        - label: I can help test or implement this change.
+          required: false

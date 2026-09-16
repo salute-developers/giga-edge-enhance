@@ -15,6 +15,7 @@ const repositoryDocumentation = [
     'CONTRIBUTING.md',
     'CHANGELOG.md',
     'SECURITY.md',
+    'SUPPORT.md',
     'STYLE.md',
     'tools/README.md',
     'android/README.md',
