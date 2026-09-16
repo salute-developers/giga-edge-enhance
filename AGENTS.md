@@ -261,6 +261,10 @@ A rerun must be idempotent: it may verify an already published artifact with
 the same hash, but it must fail rather than overwrite an existing version with
 different bytes.
 
+Resolve draft releases through the paginated releases list. GitHub's
+release-by-tag endpoint returns published releases only, so it cannot locate the
+draft that must receive all verified assets before publication.
+
 `VERSION_NUMBER` is the authoritative release version source. Its name must not
 be shortened to `VERSION`: on case-insensitive filesystems that filename shadows
 libc++'s standard `<version>` header when the source root is an include path.

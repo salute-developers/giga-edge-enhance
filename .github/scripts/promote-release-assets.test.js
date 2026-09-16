@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { ARTIFACTS, asBuffer, assertReleaseSource } = require('./promote-release-assets');
+const { ARTIFACTS, asBuffer, assertReleaseSource, findReleaseByTag } = require('./promote-release-assets');
 
 test('release source requires a successful default-branch push at the tag commit', () => {
     const run = {
@@ -28,4 +28,11 @@ test('binary API responses are normalized without changing bytes', () => {
 
 test('release artifact names are unique', () => {
     assert.equal(new Set(ARTIFACTS.map(([, destination]) => destination)).size, ARTIFACTS.length);
+});
+
+test('release lookup includes matching draft releases', () => {
+    const draft = { id: 42, tag_name: 'v2.0.0', draft: true, assets: [] };
+
+    assert.equal(findReleaseByTag([draft], 'v2.0.0'), draft);
+    assert.throws(() => findReleaseByTag([draft], 'v2.0.1'), /Release v2\.0\.1 was not found/);
 });
