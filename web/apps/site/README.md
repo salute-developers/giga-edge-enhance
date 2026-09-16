@@ -36,9 +36,10 @@ npm run build --workspace=@gigaedge/denoiser-site
 
 Static files are written to `apps/site/build/`.
 
-The documentation staging step copies user-facing Markdown into an ignored generated directory so
-Docusaurus can compile one coherent site without moving platform READMEs or iOS DocC articles from
-their canonical locations.
+The documentation staging step copies an explicit set of user-facing Markdown into an ignored
+generated directory so Docusaurus can compile one coherent site without moving platform READMEs or
+iOS DocC articles from their canonical locations. Generated, vendored, cached, and internal agent
+files are not staged.
 
 ## Browser tests
 
