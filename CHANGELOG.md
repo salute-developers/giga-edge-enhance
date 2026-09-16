@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.0.0](https://github.com/akhdrv/spench/compare/v1.0.0...v2.0.0) (2026-09-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename Spench to GigaDenoiser
+
+### Features
+
+* rename Spench to GigaDenoiser ([41fb6e0](https://github.com/akhdrv/spench/commit/41fb6e0f3c52e5d682253aaff75b70351f1fb79f))
+
+
+### Bug Fixes
+
+* **ci:** correct relocated platform job paths ([d33aab4](https://github.com/akhdrv/spench/commit/d33aab43c84d481b38d25320a229ae5296add8f2))
+* **release:** safely promote tested release artifacts ([1b3302b](https://github.com/akhdrv/spench/commit/1b3302b3949d10b9ac7693d97709a5065665893d))
+
 ## [1.0.0](https://github.com/salute-developers/gigadenoiser/compare/v0.0.1...v1.0.0) (2026-09-14)
 
 
