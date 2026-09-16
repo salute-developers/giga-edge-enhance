@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.2">
 <title data-rh="true">GigaDenoiser website | GigaDenoiser</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://salute-developers.github.io/gigadenoiser/docs/source/web/apps/site/"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="GigaDenoiser website | GigaDenoiser"><meta data-rh="true" name="description" content="This workspace builds the static Docusaurus website used for the interactive Web SDK workbench and"><meta data-rh="true" property="og:description" content="This workspace builds the static Docusaurus website used for the interactive Web SDK workbench and"><link data-rh="true" rel="icon" href="/gigadenoiser/img/favicon.svg"><link data-rh="true" rel="canonical" href="https://salute-developers.github.io/gigadenoiser/docs/source/web/apps/site/"><link data-rh="true" rel="alternate" href="https://salute-developers.github.io/gigadenoiser/docs/source/web/apps/site/" hreflang="en"><link data-rh="true" rel="alternate" href="https://salute-developers.github.io/gigadenoiser/docs/source/web/apps/site/" hreflang="x-default"><script src="/gigadenoiser/coi-serviceworker.min.js"></script><link rel="stylesheet" href="/gigadenoiser/assets/css/styles.08e48c37.css">
-<script src="/gigadenoiser/assets/js/runtime~main.f881a97b.js" defer="defer"></script>
-<script src="/gigadenoiser/assets/js/main.ecdd18a3.js" defer="defer"></script>
+<script src="/gigadenoiser/assets/js/runtime~main.e02dfd9a.js" defer="defer"></script>
+<script src="/gigadenoiser/assets/js/main.89361951.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -27,9 +27,10 @@ website:</p>
 <p>To build only the website after validated Web SDK assets already exist:</p>
 <div class="language-bash codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#F8F8F2;--prism-background-color:#282A36"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-bash codeBlock_TAPP thin-scrollbar" style="color:#F8F8F2;background-color:#282A36"><code class="codeBlockLines_AdAo"><div class="token-line" style="color:#F8F8F2"><span class="token plain">cd web</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">npm run build --workspace=@gigaedge/denoiser-site</span><br></div></code></pre></div></div>
 <p>Static files are written to <code>apps/site/build/</code>.</p>
-<p>The documentation staging step copies user-facing Markdown into an ignored generated directory so
-Docusaurus can compile one coherent site without moving platform READMEs or iOS DocC articles from
-their canonical locations.</p>
+<p>The documentation staging step copies an explicit set of user-facing Markdown into an ignored
+generated directory so Docusaurus can compile one coherent site without moving platform READMEs or
+iOS DocC articles from their canonical locations. Generated, vendored, cached, and internal agent
+files are not staged.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="browser-tests">Browser tests<a href="#browser-tests" class="hash-link" aria-label="Direct link to Browser tests" title="Direct link to Browser tests" translate="no">​</a></h2>
 <div class="language-bash codeBlockContainer_ZGJx theme-code-block" style="--prism-color:#F8F8F2;--prism-background-color:#282A36"><div class="codeBlockContent_kX1v"><pre tabindex="0" class="prism-code language-bash codeBlock_TAPP thin-scrollbar" style="color:#F8F8F2;background-color:#282A36"><code class="codeBlockLines_AdAo"><div class="token-line" style="color:#F8F8F2"><span class="token plain">cd web</span><br></div><div class="token-line" style="color:#F8F8F2"><span class="token plain">npm run pw:test --workspace=@gigaedge/denoiser-site</span><br></div></code></pre></div></div>
 <p>Playwright starts the production build automatically unless <code>PUBLIC_INDEX_URL</code> points to an existing

@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.2">
 <title data-rh="true">Contributing to GigaDenoiser | GigaDenoiser</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://salute-developers.github.io/gigadenoiser/docs/source/CONTRIBUTING/"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Contributing to GigaDenoiser | GigaDenoiser"><meta data-rh="true" name="description" content="Quickstart"><meta data-rh="true" property="og:description" content="Quickstart"><link data-rh="true" rel="icon" href="/gigadenoiser/img/favicon.svg"><link data-rh="true" rel="canonical" href="https://salute-developers.github.io/gigadenoiser/docs/source/CONTRIBUTING/"><link data-rh="true" rel="alternate" href="https://salute-developers.github.io/gigadenoiser/docs/source/CONTRIBUTING/" hreflang="en"><link data-rh="true" rel="alternate" href="https://salute-developers.github.io/gigadenoiser/docs/source/CONTRIBUTING/" hreflang="x-default"><script src="/gigadenoiser/coi-serviceworker.min.js"></script><link rel="stylesheet" href="/gigadenoiser/assets/css/styles.08e48c37.css">
-<script src="/gigadenoiser/assets/js/runtime~main.f881a97b.js" defer="defer"></script>
-<script src="/gigadenoiser/assets/js/main.ecdd18a3.js" defer="defer"></script>
+<script src="/gigadenoiser/assets/js/runtime~main.e02dfd9a.js" defer="defer"></script>
+<script src="/gigadenoiser/assets/js/main.89361951.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -21,6 +21,10 @@
 mode exists for explicit manual troubleshooting, but normal development and
 reported validation must run commands without <code>--host</code>.</p>
 <p>See <a class="" href="/gigadenoiser/docs/source/tools/"><code>tools/README.md</code></a> for every command and target.</p>
+<p>Use the repository&#x27;s Discussions for integration and usage questions. Open an issue for a
+reproducible bug or a concrete feature proposal. See <a class="" href="/gigadenoiser/docs/source/SUPPORT/"><code>SUPPORT.md</code></a> for channel and
+support expectations. Report suspected vulnerabilities privately according to
+<a class="" href="/gigadenoiser/docs/source/SECURITY/"><code>SECURITY.md</code></a>.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="requirements">Requirements<a href="#requirements" class="hash-link" aria-label="Direct link to Requirements" title="Direct link to Requirements" translate="no">​</a></h2>
 <ul>
 <li class="">Git and Git LFS.</li>
@@ -32,6 +36,11 @@ reported validation must run commands without <code>--host</code>.</p>
 </ul>
 <p>Do not commit credentials, private model URLs, downloaded model binaries, build
 output, dependency caches, or generated platform products.</p>
+<p>Generated trees under <code>out/</code>, <code>build/</code>, <code>.cpm/</code>, and <code>.cache/</code> are not source
+files. Do not edit dependency sources under <code>out/cache/cpm/</code>; update
+<code>package-lock.cmake</code> or the corresponding patch under <code>cmake/patches/</code> instead.
+Keep generated-file boundaries intact and commit lockfile updates with their
+manifest changes.</p>
 <h2 class="anchor anchorTargetStickyNavbar_SAay" id="repository-layout">Repository Layout<a href="#repository-layout" class="hash-link" aria-label="Direct link to Repository Layout" title="Direct link to Repository Layout" translate="no">​</a></h2>
 <ul>
 <li class=""><code>core/</code>: native C and C++ SDK, implementation, utilities, CLI, and tests.</li>
@@ -134,6 +143,8 @@ configuration, platform behavior, or release behavior changes. Update
 <li class="">Link the relevant issue when one exists.</li>
 <li class="">Never bypass hooks or disable required checks to make a pull request pass.</li>
 </ul>
+<p>No contributor license agreement or Developer Certificate of Origin sign-off is required.
+Contributions are submitted under the repository&#x27;s MIT License.</p>
 <p>Release publication is performed by repository workflows from tested default-
 branch commits. Contributors should not upload release assets or publish npm,
 Android, or Apple packages manually.</p>
