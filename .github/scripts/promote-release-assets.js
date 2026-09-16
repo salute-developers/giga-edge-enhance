@@ -38,6 +38,14 @@ function assertReleaseSource(run, tagSha, defaultBranch) {
     }
 }
 
+function findReleaseByTag(releases, releaseTag) {
+    const release = releases.find(item => item.tag_name === releaseTag);
+    if (!release) {
+        throw new Error(`Release ${releaseTag} was not found.`);
+    }
+    return release;
+}
+
 async function promoteReleaseAssets({ github, context, core, ciRunId, releaseTag, outputDirectory = 'release-assets' }) {
     if (!/^\d+$/.test(ciRunId)) {
         throw new Error(`Invalid CI run ID: ${ciRunId}`);
@@ -92,7 +100,8 @@ async function promoteReleaseAssets({ github, context, core, ciRunId, releaseTag
     await fs.writeFile(path.join(outputDirectory, checksumFile.filename), checksumFile.data);
     files.push(checksumFile);
 
-    const { data: release } = await github.rest.repos.getReleaseByTag({ owner, repo, tag: releaseTag });
+    const releases = await github.paginate(github.rest.repos.listReleases, { owner, repo, per_page: 100 });
+    const release = findReleaseByTag(releases, releaseTag);
     for (const { filename, data } of files) {
         const existing = release.assets.find(asset => asset.name === filename);
         if (existing) {
@@ -127,4 +136,4 @@ async function promoteReleaseAssets({ github, context, core, ciRunId, releaseTag
     core.info(`Published ${releaseTag}.`);
 }
 
-module.exports = { ARTIFACTS, asBuffer, assertReleaseSource, promoteReleaseAssets };
+module.exports = { ARTIFACTS, asBuffer, assertReleaseSource, findReleaseByTag, promoteReleaseAssets };
