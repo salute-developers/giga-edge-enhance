@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/akhdrv/spench/compare/v2.0.0...v2.0.1) (2026-09-16)
+
+
+### Bug Fixes
+
+* **release:** locate draft releases for promotion ([f03043c](https://github.com/akhdrv/spench/commit/f03043cdea68754ed607dcca6cd46a3818be7e71))
+
 ## [2.0.0](https://github.com/akhdrv/spench/compare/v1.0.0...v2.0.0) (2026-09-16)
 
 
