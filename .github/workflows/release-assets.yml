@@ -32,7 +32,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Promote tested artifacts and publish release
         uses: actions/github-script@v8
         env:
