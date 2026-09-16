@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Promote tested artifacts and publish release
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           CI_RUN_ID: ${{ inputs.ci-run-id }}
           RELEASE_TAG: ${{ inputs.tag }}
