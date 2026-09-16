@@ -1,0 +1,25 @@
+# Core SDK, build system, models, and developer tooling
+/core/ @akhdrv
+/cmake/ @akhdrv
+/models/ @akhdrv
+/tools/ @akhdrv
+/CMakeLists.txt @akhdrv
+/CMakePresets.json @akhdrv
+/package-lock.cmake @akhdrv
+
+# Platform SDKs
+/android/ @akhdrv
+/ios/ @akhdrv
+/web/ @akhdrv
+
+# CI, containers, releases, and repository automation
+/.github/ @akhdrv
+/.devcontainer/ @akhdrv
+/dockerfiles/ @akhdrv
+/docker-bake.hcl @akhdrv
+/.release-please-manifest.json @akhdrv
+/release-please-config.json @akhdrv
+
+# Root documentation and policies
+/*.md @akhdrv
+/LICENSE @akhdrv

@@ -22,6 +22,11 @@ reported validation must run commands without `--host`.
 
 See [`tools/README.md`](tools/README.md) for every command and target.
 
+Use the repository's Discussions for integration and usage questions. Open an issue for a
+reproducible bug or a concrete feature proposal. See [`SUPPORT.md`](SUPPORT.md) for channel and
+support expectations. Report suspected vulnerabilities privately according to
+[`SECURITY.md`](SECURITY.md).
+
 ## Requirements
 
 - Git and Git LFS.
@@ -113,6 +118,9 @@ configuration, platform behavior, or release behavior changes. Update
 - Describe behavior changes, API or ABI impact, and validation results in the pull request.
 - Link the relevant issue when one exists.
 - Never bypass hooks or disable required checks to make a pull request pass.
+
+No contributor license agreement or Developer Certificate of Origin sign-off is required.
+Contributions are submitted under the repository's MIT License.
 
 Release publication is performed by repository workflows from tested default-
 branch commits. Contributors should not upload release assets or publish npm,

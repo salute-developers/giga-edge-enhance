@@ -43,6 +43,7 @@ and packaging. Build outputs are written under `out/`.
 - [Web workspace](web/README.md) and [documentation website](web/apps/site/README.md)
 - [CI and releases](web/apps/site/docs/development/ci-and-releases.md)
 - [Contributing](CONTRIBUTING.md)
+- [Support](SUPPORT.md)
 - [Changelog](CHANGELOG.md)
 
 Report vulnerabilities privately as described in the [security policy](SECURITY.md).
