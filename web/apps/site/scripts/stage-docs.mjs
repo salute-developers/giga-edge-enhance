@@ -43,7 +43,9 @@ const repositoryDocumentation = [
 
 function normalizeForDocusaurus(content, sourcePath) {
     const toolsLink = sourcePath.endsWith(`${sep}CONTRIBUTING.md`) ? '../tools/' : './tools/';
-    const normalizedLinks = content.replace(/\(tools\/README\.md\)/g, `(${toolsLink})`);
+    const normalizedLinks = content
+        .replace(/\(tools\/README\.md\)/g, `(${toolsLink})`)
+        .replace(/\(web\/apps\/site\/docs\//g, '(../');
     if (!sourcePath.includes(`${sep}Documentation.docc${sep}`)) {
         return normalizedLinks;
     }

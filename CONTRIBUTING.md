@@ -34,6 +34,12 @@ See [`tools/README.md`](tools/README.md) for every command and target.
 Do not commit credentials, private model URLs, downloaded model binaries, build
 output, dependency caches, or generated platform products.
 
+Generated trees under `out/`, `build/`, `.cpm/`, and `.cache/` are not source
+files. Do not edit dependency sources under `out/cache/cpm/`; update
+`package-lock.cmake` or the corresponding patch under `cmake/patches/` instead.
+Keep generated-file boundaries intact and commit lockfile updates with their
+manifest changes.
+
 ## Repository Layout
 
 - `core/`: native C and C++ SDK, implementation, utilities, CLI, and tests.

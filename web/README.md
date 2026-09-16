@@ -45,7 +45,8 @@ npm run build --workspace=@gigaedge/denoiser-site
 ```
 
 Generated WebAssembly assets live under `packages/web-sdk/generated/wasm/` and are not committed.
-`npm pack` validates the release manifest before packaging.
+Regenerate them through the staging scripts instead of editing them manually. `npm pack` validates
+the release manifest before packaging.
 
 ## Develop the documentation and demo
 
@@ -57,16 +58,3 @@ npm start --workspace=@gigaedge/denoiser-site
 The demo imports the workspace SDK during development and packs the SDK before a production build.
 See [`apps/site/README.md`](apps/site/README.md) for testing and GitHub Pages
 details.
-
-## Git LFS
-
-Install Git LFS once, then restore the repository's managed binary fixtures:
-
-```bash
-git lfs install
-git lfs checkout
-```
-
-When adding new binary test fixtures, update `.gitattributes` with `git lfs track` and commit both the
-attributes change and the resulting LFS pointer. Never commit downloaded model binaries outside the
-repository's established model workflow.

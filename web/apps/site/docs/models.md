@@ -4,8 +4,6 @@ title: Models
 
 # Models
 
-GigaDenoiser model files are runtime assets, not source dependencies. Keep model selection explicit and
-match the model's expected sample rate to the audio pipeline.
 
 ## Repository contributors
 

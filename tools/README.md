@@ -135,7 +135,12 @@ tools/shell
 
 This opens the native Linux development container at `/workspace`. The
 repository is mounted read/write, and the host home is mounted at `/host-home`.
-The shell does not build automatically.
+`/host-home` becomes the shell's home, so `cd ~` opens the host home and makes
+files such as `~/Music/input.wav` available to containerized command-line tools.
+Project caches remain under `/workspace/out/cache`.
+
+The shell does not build automatically. Build a native target first, then run
+its tools from `out/build/container-clang-llvm-tools/TARGET`.
 
 ## CI Operations
 
