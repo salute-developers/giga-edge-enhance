@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "gigadenoiser/stream_stat.h"
+#include "src/denoiser_model_adviser.h"
 #include "util/sound/sound_stream.h"
 
 namespace gigaedge::denoiser {
@@ -202,6 +203,7 @@ template <typename T>
 struct Context {
   uint64_t id;
   StreamCurrentMetrics<T> metrics;
+  std::unique_ptr<DenoiserModelAdviser<T>> snr_adviser;
   StatInfo stat;
   std::vector<T> prev_input_chunk;
   std::queue<ComplexNumber<T>> prev_features;  // params.real_buf and params.imag_buf in python

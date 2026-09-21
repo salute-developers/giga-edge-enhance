@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 
 #include "src/denoiser_model_adviser.h"
@@ -28,6 +29,9 @@ Context<float>* DenoiserAudioHandler::create_context(uint32_t input_sample_rate,
   } else {
     ctx = dynamic_cast<Context<float>*>(new DenoiseContextSF<float>());
   }
+
+  ctx->snr_adviser = std::make_unique<DenoiserModelAdviser<float>>(*adviser_);
+  ctx->snr_adviser->reset();
 
   if (input_sample_rate == 0) {
     input_sample_rate = dynamic_cast<gigaedge::denoiser::DenoiserConfig*>(config_.get())->sampling_freq();
@@ -118,6 +122,13 @@ GigaDenoiserRetCode DenoiserAudioHandler::infer_frame(std::unique_ptr<gigaedge::
       feature_extractor_runner_ptr_->run(task_ptr.get());
       if (task_ptr->state.is(ChunkOutcome::warming_up)) {
         ret_code = GigaDenoiserRetCode::CONTEXT_ACCUMULATION;
+      } else if (!task_ptr->data.input_spectrogram.empty() && !task_ptr->data.context->prev_spectrogram.empty()) {
+        const float snr = task_ptr->data.context->snr_adviser->process_frame(task_ptr->data.input_spectrogram.back(),
+                                                                             task_ptr->data.context->prev_spectrogram,
+                                                                             task_ptr->data.context->metrics);
+        if (std::isfinite(snr)) {
+          task_ptr->data.context->stat.snr = snr;
+        }
       }
     } catch (const std::exception& e) {
       spdlog::error("{}", e.what());
