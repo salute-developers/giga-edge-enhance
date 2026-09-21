@@ -1,9 +1,12 @@
 #include <gigadenoiser/errors.h>
 
 #include <catch.hpp>
+#include <cmath>
 #include <filesystem>
+#include <limits>
 
 #include "src/handler/denoiser_audio_handler.h"
+#include "src/inference_runner.h"
 #include "tests/src/utils.h"
 
 struct TestHandler {
@@ -254,4 +257,70 @@ TEST_CASE("SUCCEED Run denoise and check finalize a chunk for the best quality m
   REQUIRE(input_frame_size * 1 == output.size());
   REQUIRE(std::vector<float>(input_frame_size * 1, 0.0) != output);
   scheduler_test_env.handler->destroy_context(&ctx);
+}
+
+
+TEST_CASE("Inference configuration rejects invalid model type and context length", "[validation]") {
+  using namespace gigaedge::denoiser;
+#ifdef BUILD_TFLITE_ENGINE
+  const std::string model = "data/models/quality_model_48khz.tflite";
+#else
+  const std::string model = "data/models/quality_model_48khz.onnx";
+#endif
+  const std::string prefix = "model:\n  model_path: " + model + "\n";
+  SECTION("unsupported model type") {
+    auto config =
+        std::make_shared<DenoiserConfig>(StringConfigReader(prefix + "inference:\n  model_type: unsupported\n"));
+    REQUIRE_THROWS_AS(InferenceRunner(config, 1, false), std::invalid_argument);
+  }
+  SECTION("non-scalar context length") {
+    REQUIRE_THROWS_WITH(DenoiserConfig(StringConfigReader(prefix + "  model_input_ctx_len: [1, 2]\n")),
+                        "Config reading error. Model context length is not a scalar!");
+  }
+}
+
+TEST_CASE("SNR adviser validates spectra and maintains its sliding window", "[snr]") {
+  using namespace gigaedge::denoiser;
+  DenoiserModelAdviser<float> adviser(48, 16);
+  StreamCurrentMetrics<float> metrics;
+  SECTION("window becomes available and drops old samples") {
+    CHECK(std::isnan(adviser.average_snr_db()));
+    adviser.add_value(3);
+    adviser.add_value(6);
+    CHECK(std::isnan(adviser.average_snr_db()));
+    adviser.add_value(9);
+    CHECK(adviser.average_snr_db() == Approx(6));
+    adviser.add_value(12);
+    CHECK(adviser.average_snr_db() == Approx(9));
+    adviser.reset();
+    CHECK(std::isnan(adviser.average_snr_db()));
+  }
+  SECTION("invalid energies yield zero") {
+    for (float value : {1e38f, std::numeric_limits<float>::quiet_NaN()}) {
+      ComplexNumber<float> spectrum(value, 10, 0.0f, 10);
+      CHECK(adviser.calc_snr_estimation(spectrum, spectrum, metrics) == 0.0f);
+    }
+  }
+  SECTION("mismatched complex components yield zero") {
+    ComplexNumber<float> input(1.0f, 8, 1.0f, 10);
+    ComplexNumber<float> enhanced(1.0f, 10, 1.0f, 10);
+    CHECK(adviser.calc_snr_estimation(input, enhanced, metrics) == 0.0f);
+  }
+  SECTION("silence and empty spectra remain finite") {
+    ComplexNumber<float> empty;
+    ComplexNumber<float> zero(0.0f, 10, 0.0f, 10);
+    CHECK(std::isfinite(adviser.calc_snr_estimation(empty, empty, metrics)));
+    CHECK(std::isfinite(adviser.calc_snr_estimation(zero, zero, metrics)));
+  }
+  SECTION("extreme enhancement uses the documented saturation value") {
+    ComplexNumber<float> input(0.01f, 10, 0.01f, 10);
+    ComplexNumber<float> enhanced(10000.0f, 10, 10000.0f, 10);
+    CHECK(adviser.calc_snr_estimation(input, enhanced, metrics) == 100.0f);
+  }
+}
+
+TEST_CASE("AEC configuration rejects unsupported canceler types", "[validation]") {
+  REQUIRE_THROWS_WITH(gigaedge::denoiser::AecConfig(
+                          gigaedge::denoiser::StringConfigReader("echo_cancellation:\n  type: unsupported\n")),
+                      "Invalid echo canceler type: unsupported");
 }
