@@ -1,6 +1,7 @@
 #include <gigadenoiser.h>
 
 #include <catch.hpp>
+#include <cmath>
 #include <filesystem>
 #include <future>  // NOLINT
 #include <memory>
@@ -177,32 +178,32 @@ TEST_CASE("SUCCEED Run inference with 100 tensors [giga-denoiser c++ api]") {
   REQUIRE(ctx == nullptr);
 }
 
-#if 0
 TEST_CASE("SUCCEED Get statistic information [giga-denoiser c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
-    auto test_data =
-              std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_16khz.yaml")).
-                        SetWav("rec_noise_001_16k.wav"));
+  auto test_data =
+      std::move(TestFixture()
+                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml"))
+                    .SetWav("test1_48_noised.wav"));
 #else
-    auto test_data =
-              std::move(TestFixture().
-                        InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_16khz.yaml")).
-                        SetWav("rec_noise_001_16k.wav"));
+  auto test_data =
+      std::move(TestFixture()
+                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml"))
+                    .SetWav("test1_48_noised.wav"));
 #endif
 
   gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
-  const uint32_t chunks_to_compare = 100;
+  const uint32_t chunks_to_compare = 400;
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   auto chunks = ChunkWav<float>(test_data.wav_data,
                                 test_data.denoiser->GetModelSampleRate(),
                                 chunk_size, chunk_stride);
-  chunks.resize(chunks_to_compare);
+  REQUIRE_FALSE(chunks.empty());
 
-  for (auto& chunk : chunks) {
+  for (uint32_t i = 0; i < chunks_to_compare; ++i) {
+    const auto& chunk = chunks[i % chunks.size()];
     std::vector<float> ret;
-    auto ret_code = test_data.denoiser->ProcessChunk(ctx, chunk, ret);
+    auto ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
     test_data.denoiser->GetStreamStat(ctx);
 
     REQUIRE(ret_code >= GigaDenoiserRetCode::SUCCESS);
@@ -213,12 +214,21 @@ TEST_CASE("SUCCEED Get statistic information [giga-denoiser c++ api]") {
   CHECK(stat.snr == 0.0);
 
   stat = test_data.denoiser->GetStreamStat(ctx);
+  REQUIRE(std::isfinite(stat.snr));
   REQUIRE(stat.snr != 0.0);
+
+  auto* fresh_context = test_data.denoiser->CreateContext();
+  for (uint32_t i = 0; i < 10; ++i) {
+    std::vector<float> output;
+    test_data.denoiser->ProcessChunk(chunks[i % chunks.size()], output, fresh_context);
+  }
+  CHECK(test_data.denoiser->GetStreamStat(fresh_context).snr == 0.0f);
+  test_data.denoiser->DestroyContext(&fresh_context);
+
 
   test_data.denoiser->DestroyContext(&ctx);
   REQUIRE(ctx == nullptr);
 }
-#endif
 
 TEST_CASE("SUCCEED Run inference with 100 tensors and default context arguments [giga-denoiser c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
