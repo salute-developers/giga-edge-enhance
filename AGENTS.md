@@ -159,6 +159,12 @@ minor and patch updates to limit pull-request noise, while keeping major updates
 review. CMake/CPM dependencies remain manual because Dependabot does not support the repository's
 `package-lock.cmake` workflow.
 
+Commit linting extends the Conventional Commits preset and retains the
+100-character header limit. Commit bodies intentionally have no line-length
+limit so URLs, trailers, and explanatory prose do not require history rewrites.
+Dependabot uses `build` with its generated `deps` or `deps-dev` scope so its
+commits pass the same rules as contributor commits.
+
 ### Workflow boundaries
 
 Workflows have event-specific responsibilities and narrowly scoped permissions:
