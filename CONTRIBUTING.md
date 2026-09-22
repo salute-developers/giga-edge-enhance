@@ -112,6 +112,7 @@ configuration, platform behavior, or release behavior changes. Update
 ## Commits and Pull Requests
 
 - Use Conventional Commit messages consistent with repository history.
+- Keep commit headers at or below 100 characters. Commit bodies have no line-length limit.
 - Keep commits focused and do not include generated output or unrelated cleanup.
 - Mark intentional incompatible changes with `!` and explain migration in the body.
 - Rebase on the current default branch before requesting final review.
