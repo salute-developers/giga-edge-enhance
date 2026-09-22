@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/salute-developers/gigadenoiser/compare/v1.0.0...v1.0.1) (2026-09-22)
+
+
+### Bug Fixes
+
+* **tflite:** preserve logical tensor ordering ([71f0b21](https://github.com/salute-developers/gigadenoiser/commit/71f0b2146383a8ee48d5cbce56ae5022b4e329cc))
+* **web:** enable Playwright CI retries ([677caae](https://github.com/salute-developers/gigadenoiser/commit/677caae264f6a5d5d2ab8f480e449d7884f601c6))
+
 ## [1.0.0](https://github.com/salute-developers/gigadenoiser/compare/v0.0.1...v1.0.0) (2026-09-18)
 
 
