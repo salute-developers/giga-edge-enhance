@@ -204,8 +204,10 @@ uploaded and downloaded between runners.
   Chromium, Firefox, and WebKit projects by default; set
   `GDN_PLAYWRIGHT_BROWSERS` to a comma-separated subset for a focused run.
   Playwright consumes the packed SDK from the Web build job and runs against
-  the local COOP/COEP server. Linux MOS results remain authoritative because
-  scores vary by host media stack.
+  the local COOP/COEP server. Forward `CI` into the Playwright container so its
+  two configured retries are active in CI. Linux MOS results remain
+  authoritative, but processed-audio checks allow 10% regression while source
+  controls retain 5% because browser recording scores vary by host media stack.
 - Android restores one TFLite dependency per ABI and runs Release unit/native
   and connected emulator tests. Debug validation remains a local workflow.
 - macOS validates each runner architecture with both engines. Windows validates

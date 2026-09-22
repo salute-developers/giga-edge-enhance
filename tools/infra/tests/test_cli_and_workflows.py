@@ -191,12 +191,16 @@ class WorkflowsTest(unittest.TestCase):
             installed_sdk.parent.mkdir(parents=True)
             installed_sdk.touch()
             with mock.patch.object(workflows, "ROOT", root), \
-                 mock.patch.dict(workflows.os.environ, {"GDN_PLAYWRIGHT_BROWSERS": "chromium"}), \
+                 mock.patch.dict(workflows.os.environ, {
+                     "CI": "true",
+                     "GDN_PLAYWRIGHT_BROWSERS": "chromium",
+                 }), \
                  mock.patch.object(workflows, "run_web_node") as run_web_node:
                 workflows.web_workflow("playwright", False)
 
         self.assertEqual(run_web_node.call_args_list[0].args[0][-1:], ["chromium"])
         self.assertEqual(run_web_node.call_args_list[2].args[0][-1:], ["--project=chromium"])
+        self.assertEqual(run_web_node.call_args_list[2].kwargs["environment"]["CI"], "true")
 
 
 if __name__ == "__main__":
