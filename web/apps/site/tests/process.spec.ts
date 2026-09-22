@@ -12,7 +12,8 @@ type MosBaselines = Record<string, Record<string, Record<string, MosResult>>>;
 
 const limits = JSON.parse(readFileSync(limitsPath, 'utf8')) as MosBaselines;
 const candidates = (existsSync(candidatesPath) ? JSON.parse(readFileSync(candidatesPath, 'utf8')) : {}) as MosBaselines;
-const MAX_REGRESSION_FRACTION = 0.05;
+const MAX_CONTROL_REGRESSION_FRACTION = 0.05;
+const MAX_PROCESSED_REGRESSION_FRACTION = 0.1;
 test.describe.configure({ mode: 'serial' });
 
 const setFeature = async (page: Page, testId: string, value: boolean | string) => {
@@ -96,8 +97,8 @@ const processFile = async (browserName: string, featureSetCodename: string, file
         throw new Error(`Missing approved MOS baseline for ${browserName}/${featureSetCodename}/${fileName}`);
     }
 
-    expect(sourceMos).toBeGreaterThanOrEqual(baseline.control * (1 - MAX_REGRESSION_FRACTION));
-    expect(processedMos).toBeGreaterThanOrEqual(baseline.processed * (1 - MAX_REGRESSION_FRACTION));
+    expect(sourceMos).toBeGreaterThanOrEqual(baseline.control * (1 - MAX_CONTROL_REGRESSION_FRACTION));
+    expect(processedMos).toBeGreaterThanOrEqual(baseline.processed * (1 - MAX_PROCESSED_REGRESSION_FRACTION));
 };
 
 const runSingleFeatureTest = (

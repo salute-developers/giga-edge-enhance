@@ -293,8 +293,11 @@ def web_workflow(action: str, host: bool) -> None:
                 'pulseaudio --start --exit-idle-time=-1 && exec "$@"',
                 "bash", *playwright_command,
             ]
+        playwright_test_environment = {**playwright_environment, "PLAYWRIGHT_WORKERS": "1"}
+        if ci_environment := os.environ.get("CI"):
+            playwright_test_environment["CI"] = ci_environment
         run_web_node(playwright_command, container_stage=stage,
-                     environment={**playwright_environment, "PLAYWRIGHT_WORKERS": "1"},
+                     environment=playwright_test_environment,
                      workdir=web_dir, isolate_node_modules=False)
         return
 
