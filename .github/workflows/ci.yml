@@ -278,6 +278,7 @@ jobs:
   ios-lint:
     name: Lint iOS
     needs: toolchain-native
+    if: vars.ENABLE_MACOS_JOBS != 'false'
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     timeout-minutes: 30
     steps:
@@ -684,7 +685,7 @@ jobs:
   deps-macos-arm64-onnx:
     name: Build macOS arm64 ONNX Release dependency OCI
     needs: tools-tests
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: vars.ENABLE_MACOS_JOBS != 'false' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     timeout-minutes: 60
     permissions:
@@ -710,7 +711,7 @@ jobs:
   deps-macos-arm64-tflite:
     name: Build macOS arm64 TFLite Release dependency OCI
     needs: tools-tests
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: vars.ENABLE_MACOS_JOBS != 'false' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     timeout-minutes: 60
     permissions:
@@ -736,6 +737,7 @@ jobs:
   macos-arm64-onnx:
     name: Build and test macOS arm64 Release (ONNX)
     needs: deps-macos-arm64-onnx
+    if: vars.ENABLE_MACOS_JOBS != 'false'
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     timeout-minutes: 30
     steps:
@@ -754,6 +756,7 @@ jobs:
   macos-arm64-tflite:
     name: Build and test macOS arm64 Release (TFLite)
     needs: deps-macos-arm64-tflite
+    if: vars.ENABLE_MACOS_JOBS != 'false'
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     timeout-minutes: 30
     steps:
@@ -772,7 +775,7 @@ jobs:
   deps-macos-intel-onnx:
     name: Build macOS x86_64 ONNX Release dependency OCI
     needs: tools-tests
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: vars.ENABLE_MACOS_JOBS != 'false' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15"') }}
     timeout-minutes: 60
     permissions:
@@ -798,7 +801,7 @@ jobs:
   deps-macos-intel-tflite:
     name: Build macOS x86_64 TFLite Release dependency OCI
     needs: tools-tests
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: vars.ENABLE_MACOS_JOBS != 'false' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15"') }}
     timeout-minutes: 60
     permissions:
@@ -824,6 +827,7 @@ jobs:
   macos-intel-onnx:
     name: Build and test macOS x86_64 Release (ONNX)
     needs: deps-macos-intel-onnx
+    if: vars.ENABLE_MACOS_JOBS != 'false'
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15"') }}
     timeout-minutes: 30
     steps:
@@ -842,6 +846,7 @@ jobs:
   macos-intel-tflite:
     name: Build and test macOS x86_64 Release (TFLite)
     needs: deps-macos-intel-tflite
+    if: vars.ENABLE_MACOS_JOBS != 'false'
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15"') }}
     timeout-minutes: 30
     steps:
@@ -860,7 +865,7 @@ jobs:
   deps-windows-onnx:
     name: Build Windows x86_64 ONNX Release dependency OCI
     needs: tools-tests
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: vars.ENABLE_WINDOWS_JOBS != 'false' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
     timeout-minutes: 60
     permissions:
@@ -886,7 +891,7 @@ jobs:
   deps-windows-tflite:
     name: Build Windows x86_64 TFLite Release dependency OCI
     needs: tools-tests
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: vars.ENABLE_WINDOWS_JOBS != 'false' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
     timeout-minutes: 60
     permissions:
@@ -912,6 +917,7 @@ jobs:
   windows-onnx:
     name: Build and test Windows x86_64 Release (ONNX)
     needs: deps-windows-onnx
+    if: vars.ENABLE_WINDOWS_JOBS != 'false'
     runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
     timeout-minutes: 30
     steps:
@@ -930,6 +936,7 @@ jobs:
   windows-tflite:
     name: Build and test Windows x86_64 Release (TFLite)
     needs: deps-windows-tflite
+    if: vars.ENABLE_WINDOWS_JOBS != 'false'
     runs-on: ${{ fromJSON(vars.RUNNER_WINDOWS_X64 || '"windows-2022"') }}
     timeout-minutes: 30
     steps:
@@ -948,7 +955,7 @@ jobs:
   deps-ios:
     name: Build iOS ${{ matrix.slice }} Release dependency OCI
     needs: tools-tests
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: vars.ENABLE_MACOS_JOBS != 'false' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     timeout-minutes: 60
     permissions:
@@ -978,6 +985,7 @@ jobs:
   ios:
     name: Build and test iOS Release
     needs: deps-ios
+    if: vars.ENABLE_MACOS_JOBS != 'false'
     runs-on: ${{ fromJSON(vars.RUNNER_MACOS_ARM64 || '"macos-15"') }}
     timeout-minutes: 30
     steps:
