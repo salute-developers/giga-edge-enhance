@@ -177,6 +177,13 @@ Workflows have event-specific responsibilities and narrowly scoped permissions:
 - `release-assets.yml` and `release-please.yml`: release-only packaging and
   publication. They never run as pull-request checks.
 
+Platform jobs are enabled by default. Set the GitHub Actions repository variable
+`ENABLE_MACOS_JOBS` or `ENABLE_WINDOWS_JOBS` to `false` to skip jobs requiring
+that runner platform before runner allocation. `ENABLE_MACOS_JOBS` also controls
+iOS jobs because they require macOS runners. Disabled platform jobs do not
+produce release artifacts, so release publication remains blocked until every
+platform is enabled and its required artifacts exist.
+
 Do not combine pull-request validation and publishing in one workflow. Forked
 pull requests must never receive release secrets or write permissions.
 
