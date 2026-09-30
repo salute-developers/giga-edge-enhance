@@ -76,12 +76,13 @@ runs:
         $python_command tools/install "$PRESET"
 
     - name: Upload installed ${{ inputs.preset }} SDK
+      if: vars.ENABLE_ARTIFACT_UPLOADS != 'false'
       uses: actions/upload-artifact@v7
       with:
         name: gdn-install-${{ inputs.preset }}-${{ github.sha }}
         path: out/artifacts/install/${{ inputs.preset }}
         if-no-files-found: error
-        retention-days: 7
+        retention-days: ${{ github.event_name == 'pull_request' && (vars.PR_ARTIFACT_RETENTION_DAYS || '1') || (vars.MASTER_ARTIFACT_RETENTION_DAYS || '3') }}
 
     - name: Package ${{ inputs.preset }}
       if: inputs.package == 'true'
@@ -97,16 +98,16 @@ runs:
         $python_command tools/package "$PRESET"
 
     - name: Upload packaged ${{ inputs.preset }} SDK
-      if: inputs.package == 'true'
+      if: inputs.package == 'true' && vars.ENABLE_ARTIFACT_UPLOADS != 'false'
       uses: actions/upload-artifact@v7
       with:
         name: gdn-package-${{ inputs.preset }}-${{ github.sha }}
         path: out/artifacts/${{ inputs.preset }}
         if-no-files-found: error
-        retention-days: 7
+        retention-days: ${{ github.event_name == 'pull_request' && (vars.PR_ARTIFACT_RETENTION_DAYS || '1') || (vars.MASTER_ARTIFACT_RETENTION_DAYS || '3') }}
 
     - name: Upload CMake and CTest diagnostics
-      if: failure()
+      if: failure() && vars.ENABLE_ARTIFACT_UPLOADS != 'false'
       uses: actions/upload-artifact@v7
       with:
         name: cmake-diagnostics-${{ inputs.preset }}-${{ github.sha }}
@@ -116,4 +117,4 @@ runs:
           out/build/**/CMakeFiles/CMakeError.log
           out/build/**/Testing/Temporary/**
         if-no-files-found: ignore
-        retention-days: 3
+        retention-days: 1
