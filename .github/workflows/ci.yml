@@ -17,6 +17,7 @@ concurrency:
 env:
   # Build records are implicit Actions artifacts; keep Docker summaries but never upload records.
   DOCKER_BUILD_RECORD_UPLOAD: 'false'
+  GDN_ARTIFACT_RETENTION_DAYS: ${{ github.event_name == 'pull_request' && (vars.PR_ARTIFACT_RETENTION_DAYS || '1') || (vars.MASTER_ARTIFACT_RETENTION_DAYS || '3') }}
 
 jobs:
   tools-tests:
@@ -380,6 +381,8 @@ jobs:
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: native-release-onnx
+          upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
+          artifact-retention-days: ${{ env.GDN_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-native.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -403,6 +406,8 @@ jobs:
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: native-release-tflite
+          upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
+          artifact-retention-days: ${{ env.GDN_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-native.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -483,7 +488,7 @@ jobs:
           name: gdn-web-sdk-${{ github.sha }}
           path: out/artifacts/web/*.tgz
           if-no-files-found: error
-          retention-days: ${{ github.event_name == 'pull_request' && (vars.PR_ARTIFACT_RETENTION_DAYS || '1') || (vars.MASTER_ARTIFACT_RETENTION_DAYS || '3') }}
+          retention-days: ${{ env.GDN_ARTIFACT_RETENTION_DAYS }}
       - name: Upload Web site
         if: vars.ENABLE_ARTIFACT_UPLOADS != 'false'
         uses: actions/upload-artifact@v7
@@ -688,7 +693,7 @@ jobs:
             android/sdk/build/outputs/aar/*-release.aar
             android/model-quality48/build/outputs/aar/*-release.aar
           if-no-files-found: error
-          retention-days: ${{ github.event_name == 'pull_request' && (vars.PR_ARTIFACT_RETENTION_DAYS || '1') || (vars.MASTER_ARTIFACT_RETENTION_DAYS || '3') }}
+          retention-days: ${{ env.GDN_ARTIFACT_RETENTION_DAYS }}
 
   deps-macos-arm64-onnx:
     name: Build macOS arm64 ONNX Release dependency OCI
@@ -758,6 +763,8 @@ jobs:
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: macos-arm64-release-onnx
+          upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
+          artifact-retention-days: ${{ env.GDN_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -777,6 +784,8 @@ jobs:
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: macos-arm64-release-tflite
+          upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
+          artifact-retention-days: ${{ env.GDN_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -848,6 +857,8 @@ jobs:
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: macos-x86_64-release-onnx
+          upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
+          artifact-retention-days: ${{ env.GDN_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -867,6 +878,8 @@ jobs:
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: macos-x86_64-release-tflite
+          upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
+          artifact-retention-days: ${{ env.GDN_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -938,6 +951,8 @@ jobs:
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: windows-x64-release-onnx
+          upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
+          artifact-retention-days: ${{ env.GDN_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -957,6 +972,8 @@ jobs:
       - uses: ./.github/actions/build-test-cmake
         with:
           preset: windows-x64-release-tflite
+          upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
+          artifact-retention-days: ${{ env.GDN_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -1034,4 +1051,4 @@ jobs:
             ios/build/xcframework/GigaDenoiserModelFast8.bundle
             ios/build/xcframework/GigaDenoiserModelQuality48.bundle
           if-no-files-found: error
-          retention-days: ${{ github.event_name == 'pull_request' && (vars.PR_ARTIFACT_RETENTION_DAYS || '1') || (vars.MASTER_ARTIFACT_RETENTION_DAYS || '3') }}
+          retention-days: ${{ env.GDN_ARTIFACT_RETENTION_DAYS }}
