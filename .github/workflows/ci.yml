@@ -14,6 +14,10 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  # Build records are implicit Actions artifacts; keep Docker summaries but never upload records.
+  DOCKER_BUILD_RECORD_UPLOAD: 'false'
+
 jobs:
   tools-tests:
     name: Test infrastructure tool
@@ -473,13 +477,15 @@ jobs:
           GDN_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
         run: tools/package web
       - name: Upload Web SDK package
+        if: vars.ENABLE_ARTIFACT_UPLOADS != 'false'
         uses: actions/upload-artifact@v7
         with:
           name: gdn-web-sdk-${{ github.sha }}
           path: out/artifacts/web/*.tgz
           if-no-files-found: error
-          retention-days: 7
+          retention-days: ${{ github.event_name == 'pull_request' && (vars.PR_ARTIFACT_RETENTION_DAYS || '1') || (vars.MASTER_ARTIFACT_RETENTION_DAYS || '3') }}
       - name: Upload Web site
+        if: vars.ENABLE_ARTIFACT_UPLOADS != 'false'
         uses: actions/upload-artifact@v7
         with:
           name: gdn-web-site-${{ github.sha }}
@@ -490,6 +496,7 @@ jobs:
   web-playwright:
     name: Test Web Playwright
     needs: [toolchain-web, web]
+    if: vars.ENABLE_ARTIFACT_UPLOADS != 'false'
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     timeout-minutes: 60
     steps:
@@ -533,7 +540,7 @@ jobs:
           GDN_PLAYWRIGHT_BROWSERS: chromium
         run: tools/test web-playwright
       - name: Upload Playwright diagnostics
-        if: failure()
+        if: failure() && vars.ENABLE_ARTIFACT_UPLOADS != 'false'
         uses: actions/upload-artifact@v7
         with:
           name: playwright-${{ github.sha }}
@@ -545,7 +552,7 @@ jobs:
 
   preview:
     name: Publish PR web preview
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: vars.ENABLE_ARTIFACT_UPLOADS != 'false' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     needs: web
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     timeout-minutes: 30
@@ -662,7 +669,7 @@ jobs:
           GDN_CONTAINER_IMAGE_ANDROID_UI: ${{ needs.toolchain-android.outputs.ui_image }}
         run: tools/test android-ui
       - name: Upload Android UI test diagnostics
-        if: failure()
+        if: failure() && vars.ENABLE_ARTIFACT_UPLOADS != 'false'
         uses: actions/upload-artifact@v7
         with:
           name: android-ui-diagnostics-${{ github.sha }}
@@ -673,6 +680,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
       - name: Upload Android artifacts
+        if: vars.ENABLE_ARTIFACT_UPLOADS != 'false'
         uses: actions/upload-artifact@v7
         with:
           name: gdn-android-${{ github.sha }}
@@ -680,7 +688,7 @@ jobs:
             android/sdk/build/outputs/aar/*-release.aar
             android/model-quality48/build/outputs/aar/*-release.aar
           if-no-files-found: error
-          retention-days: 7
+          retention-days: ${{ github.event_name == 'pull_request' && (vars.PR_ARTIFACT_RETENTION_DAYS || '1') || (vars.MASTER_ARTIFACT_RETENTION_DAYS || '3') }}
 
   deps-macos-arm64-onnx:
     name: Build macOS arm64 ONNX Release dependency OCI
@@ -1017,6 +1025,7 @@ jobs:
           GDN_TOOLCHAIN_IDENTITY: ${{ steps.toolchain.outputs.identity }}
         run: tools/test ios
       - name: Upload iOS artifacts
+        if: vars.ENABLE_ARTIFACT_UPLOADS != 'false'
         uses: actions/upload-artifact@v7
         with:
           name: gdn-ios-${{ github.sha }}
@@ -1025,4 +1034,4 @@ jobs:
             ios/build/xcframework/GigaDenoiserModelFast8.bundle
             ios/build/xcframework/GigaDenoiserModelQuality48.bundle
           if-no-files-found: error
-          retention-days: 7
+          retention-days: ${{ github.event_name == 'pull_request' && (vars.PR_ARTIFACT_RETENTION_DAYS || '1') || (vars.MASTER_ARTIFACT_RETENTION_DAYS || '3') }}

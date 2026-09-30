@@ -184,6 +184,12 @@ iOS jobs because they require macOS runners. Disabled platform jobs do not
 produce release artifacts, so release publication remains blocked until every
 platform is enabled and its required artifacts exist.
 
+Set `ENABLE_ARTIFACT_UPLOADS=false` to run builds and unit tests without Actions
+artifact uploads when storage is constrained. Web Playwright, PR previews,
+default-branch Pages deployment, and release automation are skipped because
+they consume those artifacts. Docker Bake build records are always disabled;
+toolchain images and dependency bundles still use GHCR independently.
+
 Do not combine pull-request validation and publishing in one workflow. Forked
 pull requests must never receive release secrets or write permissions.
 
@@ -248,13 +254,15 @@ uploaded and downloaded between runners.
 
 - On failure, upload CTest logs, CMake configure logs, compiler-cache statistics,
   Playwright reports/traces, Gradle reports, and Xcode result bundles when they
-  exist. Keep CMake/CTest failure artifacts for three days.
+  exist. Keep diagnostic artifacts for one day when uploads are enabled.
 - On success, upload only deliberate products from `out/artifacts/`, together
   with a manifest and SHA-256 checksums. Never upload the entire workspace,
   dependency caches, credentials, or private artifact configuration.
-- Retain tested artifacts that can feed a release for seven days so the
-  asynchronous release workflow is not constrained to a one-day promotion
-  window.
+- Retain PR products for `PR_ARTIFACT_RETENTION_DAYS` (default one day) and
+  default-branch products for `MASTER_ARTIFACT_RETENTION_DAYS` (default three
+  days). These GitHub Actions repository variables are whole days, at least one
+  day; complete release promotion within the default-branch retention window.
+  Web site artifacts remain at one day for Pages and PR previews.
 - Put a compact matrix and cache summary in `GITHUB_STEP_SUMMARY`; job logs
   remain the detailed source of truth.
 
