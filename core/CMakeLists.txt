@@ -14,6 +14,12 @@ if(BUILD_RESAMPLER)
   endif()
   set(_gdn_build_shared_libs "${BUILD_SHARED_LIBS}")
   CPMGetPackage(soxr)
+  # Clang -O1 and above resample differently from Debug and from the GCC Release
+  # that produced the golden waveforms. -O0 is last so it overrides Release -O3
+  # for this target only.
+  if(TARGET soxr AND CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(soxr PRIVATE -O0)
+  endif()
   set(BUILD_SHARED_LIBS "${_gdn_build_shared_libs}" CACHE BOOL "Build all libraries dynamically." FORCE)
 endif()
 
