@@ -306,37 +306,6 @@ TEST_CASE("SUCCEED Run STFT with single real vector (audio 16kHz) [feature extra
   IsVectorsClose(reference_imag, result[0].imag, 0.000005);
 }
 
-#if 0
-TEST_CASE("SUCCEED Run 10 STFT calculations with data from .wav file (audio 16kHz) [feature extractor]") {
-  gigaedge::denoiser::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
-  auto feature_extractor = std::move(TestFE().
-                                     InitFE(params).
-                                     SetWav("rec_noise_001_16k.wav"));
-
-  std::vector<std::vector<float>> reference_mag;
-  std::vector<std::vector<float>> result_mag;
-  std::vector<gigaedge::denoiser::ComplexNumber<float>> result;
-  size_t iterations = 11;
-
-  feature_extractor.LoadSpecDataFromBin("10_mag_stft_tensors.dump", reference_mag);
-
-  REQUIRE(reference_mag.size() == iterations - 1);
-
-  std::vector<float> audio(feature_extractor.wav_data.begin(),
-                           feature_extractor.wav_data.begin() + params.num_frame_stride_samples() * iterations);
-
-  feature_extractor.feature_extractor->stft_apply(audio, result);
-  for (size_t i = 0; i < iterations - 1 ; ++i) {
-    result_mag.push_back(result[i].get_magnitude());
-  }
-
-  REQUIRE(reference_mag.size() == result_mag.size());
-
-  for (uint32_t i = 0; i < reference_mag.size(); ++i) {
-    IsVectorsClose(reference_mag[i], result_mag[i], 0.0001);
-  }
-}
-#endif
 
 TEST_CASE("SUCCEED Run iSTFT with dummy complex zero vector (audio 16kHz) [giga-denoiser]") {
   gigaedge::denoiser::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
