@@ -354,12 +354,12 @@ TEST_CASE("FAIL Read config for Inference Runner with not existed model path [on
 }
 
 TEST_CASE("FAIL Run cpu onnx runner with null pointer task and zeroed hidden layer [onnx runner]") {
-  auto data = std::move(TestOnnxRunner().InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
+  auto data = std::move(TestOnnxRunner().InitRunner("default_configuration_discr_web_onnx_48khz.yaml"));
   CHECK_THROWS_WITH(data.gigadenoiser_model_runner->infer(nullptr), "Task data or context are not initialized!");
 }
 
 TEST_CASE("FAIL Run cpu onnx runner with null pointer context and zeroed hidden layer [onnx runner]") {
-  auto data = std::move(TestOnnxRunner().InitRunner("default_configuration_best_quality_onnx_48khz.yaml"));
+  auto data = std::move(TestOnnxRunner().InitRunner("default_configuration_discr_web_onnx_48khz.yaml"));
   gigaedge::denoiser::Task denoise_task;
   CHECK_THROWS_WITH(data.gigadenoiser_model_runner->infer(&denoise_task), "Task data or context are not initialized!");
 }

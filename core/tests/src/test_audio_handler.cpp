@@ -102,11 +102,11 @@ TEST_CASE("FAIL Run denoiser handler with error for small input length [denoiser
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<gigaedge::denoiser::DenoiserAudioHandler, gigaedge::denoiser::DenoiserConfig>(
-          "default_configuration_best_quality_tflite_48khz.yaml"));
+          "default_configuration_discr_web_tflite_48khz.yaml"));
 #else
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<gigaedge::denoiser::DenoiserAudioHandler, gigaedge::denoiser::DenoiserConfig>(
-          "default_configuration_best_quality_onnx_48khz.yaml"));
+          "default_configuration_discr_web_onnx_48khz.yaml"));
 #endif
 
   gigaedge::denoiser::Context<float>* ctx = scheduler_test_env.handler->create_context();
@@ -124,11 +124,11 @@ TEST_CASE("FAIL Run denoiser handler with error for incorrect input length [deno
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<gigaedge::denoiser::DenoiserAudioHandler, gigaedge::denoiser::DenoiserConfig>(
-          "default_configuration_best_quality_tflite_48khz.yaml"));
+          "default_configuration_discr_web_tflite_48khz.yaml"));
 #else
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<gigaedge::denoiser::DenoiserAudioHandler, gigaedge::denoiser::DenoiserConfig>(
-          "default_configuration_best_quality_onnx_48khz.yaml"));
+          "default_configuration_discr_web_onnx_48khz.yaml"));
 #endif
 
   gigaedge::denoiser::Context<float>* ctx = scheduler_test_env.handler->create_context();
@@ -141,24 +141,6 @@ TEST_CASE("FAIL Run denoiser handler with error for incorrect input length [deno
   CHECK(output.empty());
   scheduler_test_env.handler->destroy_context(&ctx);
 }
-
-// TEST_CASE("SUCCEED Change number of engine threads [denoiser handler]") {
-// #ifdef BUILD_TFLITE_ENGINE
-//   auto scheduler_test_env = std::move(
-//       TestHandler().InitHandlerFromFile<gigaedge::denoiser::DenoiserAudioHandler,
-//                                         gigaedge::denoiser::DenoiserConfig>(
-//           "default_configuration_best_quality_tflite_16khz.yaml"));
-// #else
-//   auto scheduler_test_env = std::move(
-//       TestHandler().InitHandlerFromFile<gigaedge::denoiser::DenoiserAudioHandler,
-//                                         gigaedge::denoiser::DenoiserConfig>(
-//           "default_configuration_best_quality_onnx_16khz.yaml"));
-// #endif
-
-//   const uint32_t default_thread_count = 4;
-//   CHECK(default_thread_count == scheduler_test_env.handler->get_engine_threads_num());
-//   REQUIRE_NOTHROW(scheduler_test_env.handler->reload_config());
-// }
 
 TEST_CASE("SUCCEED Run denoiser 48kHz model with yaml string config [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
@@ -202,11 +184,11 @@ TEST_CASE(
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<gigaedge::denoiser::DenoiserAudioHandler, gigaedge::denoiser::DenoiserConfig>(
-          "default_configuration_best_quality_tflite_48khz.yaml"));
+          "default_configuration_discr_web_tflite_48khz.yaml"));
 #else
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<gigaedge::denoiser::DenoiserAudioHandler, gigaedge::denoiser::DenoiserConfig>(
-          "default_configuration_best_quality_onnx_48khz.yaml"));
+          "default_configuration_discr_web_onnx_48khz.yaml"));
 #endif
 
   gigaedge::denoiser::Context<float>* ctx = scheduler_test_env.handler->create_context();
@@ -225,11 +207,11 @@ TEST_CASE("SUCCEED Run denoise and check finalize a chunk for the best quality m
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<gigaedge::denoiser::DenoiserAudioHandler, gigaedge::denoiser::DenoiserConfig>(
-          "default_configuration_best_quality_tflite_48khz.yaml"));
+          "default_configuration_discr_web_tflite_48khz.yaml"));
 #else
   auto scheduler_test_env = std::move(
       TestHandler().InitHandlerFromFile<gigaedge::denoiser::DenoiserAudioHandler, gigaedge::denoiser::DenoiserConfig>(
-          "default_configuration_best_quality_onnx_48khz.yaml"));
+          "default_configuration_discr_web_onnx_48khz.yaml"));
 #endif
 
   gigaedge::denoiser::Context<float>* ctx = scheduler_test_env.handler->create_context();
