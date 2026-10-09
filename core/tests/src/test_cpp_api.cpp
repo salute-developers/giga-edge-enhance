@@ -1,5 +1,6 @@
 #include <gigadenoiser.h>
 
+#include <algorithm>
 #include <catch.hpp>
 #include <cmath>
 #include <filesystem>
@@ -90,11 +91,11 @@ TEST_CASE("SUCCEED Convert float point to pcm [giga-denoiser c++ api]") {
 
 TEST_CASE("SUCCEED Create context [giga-denoiser c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(
-      TestFixture().InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml")));
+  auto test_data =
+      std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml")));
 #else
-  auto test_data = std::move(
-      TestFixture().InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml")));
+  auto test_data =
+      std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml")));
 #endif
   gigaedge::denoiser::Context<float>* ctx = nullptr;
   ctx = test_data.denoiser->CreateContext();
@@ -106,33 +107,33 @@ TEST_CASE("SUCCEED Create context [giga-denoiser c++ api]") {
 
 TEST_CASE("SUCCEED Retrieve model sample rate [giga-denoiser c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(
-      TestFixture().InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml")));
+  auto test_data =
+      std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml")));
 #else
-  auto test_data = std::move(
-      TestFixture().InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml")));
+  auto test_data =
+      std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml")));
 #endif
   REQUIRE(test_data.denoiser->GetModelSampleRate() == 48000);
 }
 
 TEST_CASE("SUCCEED Retrieve model input frame size [giga-denoiser c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(
-      TestFixture().InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml")));
+  auto test_data =
+      std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml")));
 #else
-  auto test_data = std::move(
-      TestFixture().InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml")));
+  auto test_data =
+      std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml")));
 #endif
   REQUIRE(test_data.denoiser->GetModelInputFrameSize() == (48000 * 16) / 1000);
 }
 
 TEST_CASE("SUCCEED Set and retrieve a context id [giga-denoiser c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(
-      TestFixture().InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml")));
+  auto test_data =
+      std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml")));
 #else
-  auto test_data = std::move(
-      TestFixture().InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml")));
+  auto test_data =
+      std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml")));
 #endif
 
   gigaedge::denoiser::Context<float>* ctx = nullptr;
@@ -150,13 +151,12 @@ TEST_CASE("SUCCEED Run inference with 100 tensors [giga-denoiser c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml"))
+                    .InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml"))
                     .SetWav("test1_48_noised.wav"));
 #else
-  auto test_data =
-      std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml"))
-                    .SetWav("test1_48_noised.wav"));
+  auto test_data = std::move(TestFixture()
+                                 .InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml"))
+                                 .SetWav("test1_48_noised.wav"));
 #endif
 
   gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
@@ -182,22 +182,19 @@ TEST_CASE("SUCCEED Get statistic information [giga-denoiser c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml"))
+                    .InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml"))
                     .SetWav("test1_48_noised.wav"));
 #else
-  auto test_data =
-      std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml"))
-                    .SetWav("test1_48_noised.wav"));
+  auto test_data = std::move(TestFixture()
+                                 .InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml"))
+                                 .SetWav("test1_48_noised.wav"));
 #endif
 
   gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
   const uint32_t chunks_to_compare = 400;
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
-  auto chunks = ChunkWav<float>(test_data.wav_data,
-                                test_data.denoiser->GetModelSampleRate(),
-                                chunk_size, chunk_stride);
+  auto chunks = ChunkWav<float>(test_data.wav_data, test_data.denoiser->GetModelSampleRate(), chunk_size, chunk_stride);
   REQUIRE_FALSE(chunks.empty());
 
   for (uint32_t i = 0; i < chunks_to_compare; ++i) {
@@ -234,13 +231,12 @@ TEST_CASE("SUCCEED Run inference with 100 tensors and default context arguments 
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml"))
+                    .InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml"))
                     .SetWav("test1_48_noised.wav"));
 #else
-  auto test_data =
-      std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml"))
-                    .SetWav("test1_48_noised.wav"));
+  auto test_data = std::move(TestFixture()
+                                 .InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml"))
+                                 .SetWav("test1_48_noised.wav"));
 #endif
 
   gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(0, 0);
@@ -265,11 +261,11 @@ TEST_CASE("SUCCEED Run inference with 100 tensors and default context arguments 
 
 TEST_CASE("SUCCEED Reload configuration from disk [giga-denoiser c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
-  auto test_data = std::move(
-      TestFixture().InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml")));
+  auto test_data =
+      std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml")));
 #else
-  auto test_data = std::move(
-      TestFixture().InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml")));
+  auto test_data =
+      std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml")));
 #endif
   REQUIRE_NOTHROW(test_data.denoiser->ReloadConfig());
 }
@@ -279,13 +275,12 @@ TEST_CASE("SUCCEED Run inference with the best quality 48 kHz model and 2 contex
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml"))
+                    .InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml"))
                     .SetWav("test1_48_noised.wav"));
 #else
-  auto test_data =
-      std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml"))
-                    .SetWav("test1_48_noised.wav"));
+  auto test_data = std::move(TestFixture()
+                                 .InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml"))
+                                 .SetWav("test1_48_noised.wav"));
 #endif
 
   std::vector<float> predictions1;
@@ -320,13 +315,12 @@ TEST_CASE("SUCCEED Run inference with 48 kHz model and 2 context with default pa
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml"))
+                    .InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml"))
                     .SetWav("test1_48_noised.wav"));
 #else
-  auto test_data =
-      std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml"))
-                    .SetWav("test1_48_noised.wav"));
+  auto test_data = std::move(TestFixture()
+                                 .InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml"))
+                                 .SetWav("test1_48_noised.wav"));
 #endif
 
   std::vector<float> predictions1;
@@ -362,13 +356,12 @@ TEST_CASE(
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml"))
+                    .InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml"))
                     .SetWav("test1_48_noised.wav"));
 #else
-  auto test_data =
-      std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml"))
-                    .SetWav("test1_48_noised.wav"));
+  auto test_data = std::move(TestFixture()
+                                 .InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml"))
+                                 .SetWav("test1_48_noised.wav"));
 #endif
 
   const uint16_t context_count = 2;
@@ -416,13 +409,12 @@ TEST_CASE("FAIL Run inference with invalid chunk size [giga-denoiser c++ api]") 
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml"))
+                    .InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml"))
                     .SetWav("test1_48_noised.wav"));
 #else
-  auto test_data =
-      std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml"))
-                    .SetWav("test1_48_noised.wav"));
+  auto test_data = std::move(TestFixture()
+                                 .InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml"))
+                                 .SetWav("test1_48_noised.wav"));
 #endif
 
   std::vector<float> predictions;
@@ -438,164 +430,16 @@ TEST_CASE("FAIL Run inference with invalid chunk size [giga-denoiser c++ api]") 
   test_data.denoiser->DestroyContext(&ctx);
 }
 
-// TEST_CASE("SUCCEED Run inference with the best quality model on a part of .wav file [giga-denoiser c++ api]") {
-//   #ifdef BUILD_TFLITE_ENGINE
-//     auto test_data =
-//             std::move(TestFixture().
-//                       InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml")).
-//                       SetWav("rec_noise_001_48k.wav"));
-//     const float precision_threshold = 0.015;
-//   #else
-//     auto test_data =
-//             std::move(TestFixture().
-//                       InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml")).
-//                       SetWav("rec_noise_001_48k.wav"));
-//     const float precision_threshold = 0.005;
-//   #endif
-
-//   std::vector<float> prediction;
-//   std::vector<float> reference_prediction;
-//   gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
-
-//   const uint32_t chunk_size = 16;
-//   const uint32_t chunk_stride = 16;
-//   const uint32_t chunks_to_compare = 300;
-//   auto chunks = ChunkWav<float>(test_data.wav_data,
-//                                 test_data.denoiser->GetModelSampleRate(),
-//                                 chunk_size, chunk_stride);
-//   LoadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction);
-
-//   chunks.resize(chunks_to_compare);
-
-//   for (uint32_t i = 0; i < chunks.size(); ++i) {
-//     auto& chunk = chunks[i];
-//     std::vector<float> ret;
-//     test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-//     prediction.insert(prediction.end(), ret.begin(), ret.end());
-//   }
-//   test_data.denoiser->DestroyContext(&ctx);
-
-//   // erase first zero frame
-//   const uint32_t warmup_samples = 768;
-//   prediction.erase(prediction.begin(), prediction.begin() + warmup_samples);
-//   reference_prediction.resize(prediction.size());
-//   IsVectorsClose(reference_prediction, prediction, precision_threshold);
-// }
-
-// TEST_CASE("SUCCEED Run inference with model 48kHz on a part of .wav with double chunks [giga-denoiser c++ api]") {
-//   #ifdef BUILD_TFLITE_ENGINE
-//     auto test_data =
-//             std::move(TestFixture().
-//                       InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml")).
-//                       SetWav("rec_noise_001_48k.wav"));
-//     const float precision_threshold = 0.015;
-//   #else
-//     auto test_data =
-//             std::move(TestFixture().
-//                       InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml")).
-//                       SetWav("rec_noise_001_48k.wav"));
-//     const float precision_threshold = 0.005;
-//   #endif
-
-//   std::vector<float> prediction;
-//   std::vector<float> reference_prediction;
-//   gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
-
-//   const uint32_t chunk_size = 32;
-//   const uint32_t chunk_stride = chunk_size;
-//   const uint32_t chunks_to_compare = 150;
-//   auto chunks = ChunkWav<float>(test_data.wav_data,
-//                                 test_data.denoiser->GetModelSampleRate(),
-//                                 chunk_size, chunk_stride);
-//   LoadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction);
-
-//   chunks.resize(chunks_to_compare);
-
-//   for (uint32_t i = 0; i < chunks.size(); ++i) {
-//     auto& chunk = chunks[i];
-//     std::vector<float> ret;
-//     test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-//     prediction.insert(prediction.end(), ret.begin(), ret.end());
-//   }
-//   test_data.denoiser->DestroyContext(&ctx);
-//   reference_prediction.resize(prediction.size());
-//   IsVectorsClose(reference_prediction, prediction, precision_threshold);
-// }
-
-// TEST_CASE("SUCCEED Run inference with model 48kHz on a part of .wav with chunks of various size [giga-denoiser c++
-// api]") { #ifdef BUILD_TFLITE_ENGINE
-//   auto test_data =
-//       std::move(TestFixture()
-//                     .InitDenoiser(std::filesystem::path(
-//                         "default_configuration_best_quality_tflite_48khz.yaml"))
-//                     .SetWav("rec_noise_001_48k.wav"));
-//   const float precision_threshold = 0.015;
-// #else
-//   auto test_data =
-//       std::move(TestFixture()
-//                     .InitDenoiser(std::filesystem::path(
-//                         "default_configuration_best_quality_onnx_48khz.yaml"))
-//                     .SetWav("rec_noise_001_48k.wav"));
-//   const float precision_threshold = 0.005;
-// #endif
-
-//   std::vector<float> prediction;
-//   std::vector<float> reference_prediction;
-
-//   gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
-
-//   const uint32_t chunk_size = 16;          // ms
-//   const uint32_t chunk_stride = chunk_size;
-//   const uint32_t chunks_to_compare = 300;
-
-//   auto chunks = ChunkWav<float>(test_data.wav_data,
-//                                 test_data.denoiser->GetModelSampleRate(),
-//                                 chunk_size, chunk_stride);
-//   chunks.resize(chunks_to_compare);
-
-//   LoadWavFx("data/results/wavs/rec_denoised_best_quality_001_48k.wav", reference_prediction);
-
-//   // 20*8 + 20*4 + 10*3 + 15*2 = 160 + 80 + 30 + 30 = 300
-//   // constexpr std::size_t num_groups = 65;
-//   const std::array<uint32_t, 65> merge_factors = [] {
-//     std::array<uint32_t, 65> a{};
-//     std::size_t idx = 0;
-
-//     for (uint32_t i = 0; i < 20; ++i) a[idx++] = 8;
-//     for (uint32_t i = 0; i < 20; ++i) a[idx++] = 4;
-//     for (uint32_t i = 0; i < 10; ++i) a[idx++] = 3;
-//     for (uint32_t i = 0; i < 15; ++i) a[idx++] = 2;
-
-//     return a;
-//   }();
-
-//   std::size_t chunk_pos = 0;
-//   for (uint32_t factor : merge_factors) {
-//     auto merged_chunk = MergeChunks(chunks, chunk_pos, factor);
-//     chunk_pos += factor;
-
-//     std::vector<float> ret;
-//     test_data.denoiser->ProcessChunk(merged_chunk, ret, ctx);
-//     prediction.insert(prediction.end(), ret.begin(), ret.end());
-//   }
-
-//   test_data.denoiser->DestroyContext(&ctx);
-
-//   reference_prediction.resize(prediction.size());
-//   IsVectorsClose(reference_prediction, prediction, precision_threshold);
-// }
-
 TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 frames) [giga-denoiser c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_tflite_48khz.yaml"))
+                    .InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml"))
                     .SetWav("test1_48_noised.wav"));
 #else
-  auto test_data =
-      std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml"))
-                    .SetWav("test1_48_noised.wav"));
+  auto test_data = std::move(TestFixture()
+                                 .InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml"))
+                                 .SetWav("test1_48_noised.wav"));
 #endif
 
   gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
@@ -637,10 +481,9 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 fra
 
 #ifdef BUILD_ONNX_ENGINE
 TEST_CASE("ONNX dynamic buffers shrink after a larger chunk [giga-denoiser c++ api]") {
-  auto test_data =
-      std::move(TestFixture()
-                    .InitDenoiser(std::filesystem::path("default_configuration_best_quality_onnx_48khz.yaml"))
-                    .SetWav("test1_48_noised.wav"));
+  auto test_data = std::move(TestFixture()
+                                 .InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml"))
+                                 .SetWav("test1_48_noised.wav"));
   gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
   const auto chunks = ChunkWav<float>(test_data.wav_data, test_data.denoiser->GetModelSampleRate(), 16, 16);
   REQUIRE(chunks.size() >= 7);
@@ -661,340 +504,17 @@ TEST_CASE("ONNX dynamic buffers shrink after a larger chunk [giga-denoiser c++ a
 }
 #endif
 
-#if 0
-#ifdef BUILD_RESAMPLER
-TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input resampling [giga-denoiser c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-#else
-#endif
-
-  const uint32_t chunk_size = 16;
-  const uint32_t chunk_stride = 16;
-  const uint32_t chunks_to_compare = 200;
-  const uint32_t audio_src_sample_rate = 48000;
-  const uint32_t audio_dst_sample_rate = 24000;
-  const uint32_t total_size = chunk_size * chunks_to_compare * audio_dst_sample_rate / 1000;
-  GigaDenoiserRetCode ret_code;
-  std::vector<float> prediction;
-  std::vector<float> reference;
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(audio_src_sample_rate, audio_dst_sample_rate);
-
-  auto chunks = ChunkWav<float>(test_data.wav_data, audio_src_sample_rate, chunk_size, chunk_stride);
-  LoadWavFx("data/results/wavs/test1_24_enhanced.wav", reference);
-  chunks.resize(chunks_to_compare);
-  for (uint32_t i = 0; i < chunks.size(); ++i) {
-    auto& chunk = chunks[i];
-    std::vector<float> ret;
-    ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-    if (ret_code >= GigaDenoiserRetCode::SUCCESS) {
-      prediction.insert(prediction.end(), ret.begin(), ret.end());
-    }
-  }
-  // remove context zeroes as reference does not include that
-  prediction.erase(prediction.begin(), prediction.begin() + audio_dst_sample_rate * chunk_size / 1000);
-  //
-  std::vector<float> ret;
-  ret_code = test_data.denoiser->GetFinalChunk(ret, ctx);
-
-  CHECK(ret_code == GigaDenoiserRetCode::SUCCESS);
-  REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
-  prediction.insert(prediction.end(), ret.begin(), ret.end());
-
-  reference.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
-  prediction.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
-
-  IsVectorsClose(reference, prediction, 0.03);
-  test_data.denoiser->DestroyContext(&ctx);
-}
-
-TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with output resampling [giga-denoiser c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-#else
-#endif
-
-  const uint32_t chunk_size = 16;
-  const uint32_t chunk_stride = 16;
-  const uint32_t chunks_to_compare = 200;
-  const uint32_t audio_src_sample_rate = 24000;
-  const uint32_t audio_dst_sample_rate = 48000;
-  const uint32_t total_size = chunk_size * chunks_to_compare * audio_dst_sample_rate / 1000;
-  GigaDenoiserRetCode ret_code;
-  std::vector<float> prediction;
-  std::vector<float> reference;
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(audio_src_sample_rate, audio_dst_sample_rate);
-
-  auto chunks = ChunkWav<float>(test_data.wav_data, audio_src_sample_rate, chunk_size, chunk_stride);
-  LoadWavFx("data/results/wavs/test1_48_enhanced_upsampled.wav", reference);
-  chunks.resize(chunks_to_compare);
-  for (uint32_t i = 0; i < chunks.size(); ++i) {
-    auto& chunk = chunks[i];
-    std::vector<float> ret;
-    ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-    if (ret_code >= GigaDenoiserRetCode::SUCCESS) {
-      prediction.insert(prediction.end(), ret.begin(), ret.end());
-    }
-  }
-  // remove context zeroes as reference does not include that
-  prediction.erase(prediction.begin(), prediction.begin() + audio_dst_sample_rate * chunk_size / 1000);
-
-  std::vector<float> ret;
-  ret_code = test_data.denoiser->GetFinalChunk(ret, ctx);
-
-  CHECK(ret_code == GigaDenoiserRetCode::SUCCESS);
-  REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
-
-  prediction.insert(prediction.end(), ret.begin(), ret.end());
-
-  reference.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
-  prediction.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
-
-  IsVectorsClose(reference, prediction, 0.03);
-  test_data.denoiser->DestroyContext(&ctx);
-}
-
-TEST_CASE("SUCCEED Run inference with the fast 24 kHz model with input and output resampling 48 kHz [giga-denoiser c++ api]") {
-#ifdef BUILD_TFLITE_ENGINE
-#else
-#endif
-
-  const uint32_t chunk_size = 16;
-  const uint32_t chunk_stride = 16;
-  const uint32_t chunks_to_compare = 100;
-  const uint32_t audio_src_sample_rate = 48000;
-  const uint32_t audio_dst_sample_rate = 48000;
-  const uint32_t total_size = chunk_size * chunks_to_compare * audio_dst_sample_rate / 1000;
-  GigaDenoiserRetCode ret_code;
-  std::vector<float> prediction;
-  std::vector<float> reference;
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(audio_src_sample_rate, audio_dst_sample_rate);
-
-  auto chunks = ChunkWav<float>(test_data.wav_data, audio_src_sample_rate, chunk_size, chunk_stride);
-  LoadWavFx("data/results/wavs/test1_48_enhanced_upsampled.wav", reference);
-  chunks.resize(chunks_to_compare);
-
-  for (uint32_t i = 0; i < chunks.size(); ++i) {
-    auto& chunk = chunks[i];
-    std::vector<float> ret;
-    ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-    if (ret_code >= GigaDenoiserRetCode::SUCCESS) {
-      prediction.insert(prediction.end(), ret.begin(), ret.end());
-    }
-  }
-  // remove context zeroes as reference does not include that
-  prediction.erase(prediction.begin(), prediction.begin() + audio_dst_sample_rate * chunk_size / 1000);
-  //
-  std::vector<float> ret;
-  ret_code = test_data.denoiser->GetFinalChunk(ret, ctx);
-
-  CHECK(ret_code == GigaDenoiserRetCode::SUCCESS);
-  REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
-
-  prediction.insert(prediction.end(), ret.begin(), ret.end());
-
-  reference.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
-  prediction.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
-
-  IsVectorsClose(reference, prediction, 0.03);
-  test_data.denoiser->DestroyContext(&ctx);
-}
-
-#endif
-#endif
 
 #ifdef BUILD_ONNX_ENGINE
-// TEST_CASE("SUCCEED Run inference with the super fast 8 kHz model with yaml string config [giga-denoiser c++ api]") {
-//     static constexpr char yaml[] = R"(
-// model:
-//   model_path: data/models/fast_quant_model_8khz.onnx
-//   model_inputs: ["noisy_mag_in", "prev_fb_h_in", "prev_fb_c_in", "prev_fb_conv1_buf_in", "prev_fb_conv3_buf_in"]
-//   model_outputs: ["cur_fb_h_out", "cur_fb_c_out", "cur_fb_conv1_buf_out", "cur_fb_conv3_buf_out",
-//   "predicted_mask_out"]
+namespace {
 
-// feature_params:
-//   # sampling rate
-//   sampling_freq: 8000
-
-// inference:
-//   gpu: false
-//   engine_num_threads: 1
-//   model_type: denoiser_discr_hq_model)";
-
-//   auto test_data = std::move(TestFixture().
-//                               InitDenoiser(std::string(yaml)).
-//                               SetWav("rec_noise_002_8k.wav"));
-
-//   const uint32_t chunk_size = 16;
-//   const uint32_t chunk_stride = 16;
-//   const uint32_t chunks_to_compare = 300;
-//   const uint32_t audio_src_sample_rate = 8000;
-//   const uint32_t audio_dst_sample_rate = 8000;
-//   const uint32_t total_size = chunk_size * chunks_to_compare
-//                                         * audio_dst_sample_rate / 1000;
-//   GigaDenoiserRetCode ret_code;
-//   std::vector<float> prediction;
-//   std::vector<float> reference;
-//   gigaedge::denoiser::Context<float>* ctx =
-//                           test_data.denoiser->CreateContext(audio_src_sample_rate,
-//                                                               audio_dst_sample_rate);
-
-//   auto chunks = ChunkWav<float>(test_data.wav_data,
-//                                 audio_src_sample_rate,
-//                                 chunk_size, chunk_stride);
-//   LoadWavFx("data/results/wavs/rec_denoised_fast_002_8kHz_quant_8kHz.wav", reference);
-//   chunks.resize(chunks_to_compare);
-
-//   for (uint32_t i = 0; i < chunks.size(); ++i) {
-//     auto& chunk = chunks[i];
-//     std::vector<float> ret;
-//     ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-//     if (ret_code >= GigaDenoiserRetCode::SUCCESS) {
-//       prediction.insert(prediction.end(), ret.begin(), ret.end());
-//     }
-//   }
-//   // remove context zeroes as reference does not include that
-//   prediction.erase(prediction.begin(),
-//                    prediction.begin() + audio_dst_sample_rate * chunk_size / 1000);
-//   //
-//   std::vector<float> ret;
-//   ret_code = test_data.denoiser->GetFinalChunk(ret, ctx);
-
-//   CHECK(ret_code == GigaDenoiserRetCode::SUCCESS);
-//   REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
-
-//   prediction.insert(prediction.end(), ret.begin(), ret.end());
-
-//   reference.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
-//   prediction.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
-
-//   IsVectorsClose(reference, prediction, 0.008);
-//   test_data.denoiser->DestroyContext(&ctx);
-// }
-
-// TEST_CASE("SUCCEED Run inference with the super fast 8 kHz on a part of .wav with double chunks [giga-denoiser c++
-// api]") {
-//   static constexpr char yaml[] = R"(
-// model:
-//   model_path: data/models/fast_quant_model_8khz.onnx
-//   model_inputs: ["noisy_mag_in", "prev_fb_h_in", "prev_fb_c_in", "prev_fb_conv1_buf_in", "prev_fb_conv3_buf_in"]
-//   model_outputs: ["cur_fb_h_out", "cur_fb_c_out", "cur_fb_conv1_buf_out", "cur_fb_conv3_buf_out",
-//   "predicted_mask_out"]
-
-// feature_params:
-//   # sampling rate
-//   sampling_freq: 8000
-
-// inference:
-//   gpu: false
-//   engine_num_threads: 1
-//   model_type: denoiser_discr_hq_model)";
-
-//   auto test_data = std::move(TestFixture().
-//                               InitDenoiser(std::string(yaml)).
-//                               SetWav("rec_noise_002_8k.wav"));
-
-//   std::vector<float> prediction;
-//   std::vector<float> reference;
-//   gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
-
-//   const uint32_t chunk_size = 32;
-//   const uint32_t chunk_stride = chunk_size;
-//   const uint32_t chunks_to_compare = 150;
-//   auto chunks = ChunkWav<float>(test_data.wav_data,
-//                                 test_data.denoiser->GetModelSampleRate(),
-//                                 chunk_size, chunk_stride);
-//   LoadWavFx("data/results/wavs/rec_denoised_fast_002_8kHz_quant_8kHz.wav", reference);
-
-//   chunks.resize(chunks_to_compare);
-
-//   for (uint32_t i = 0; i < chunks.size(); ++i) {
-//     auto& chunk = chunks[i];
-//     std::vector<float> ret;
-//     test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-//     prediction.insert(prediction.end(), ret.begin(), ret.end());
-//   }
-//   test_data.denoiser->DestroyContext(&ctx);
-//   reference.resize(prediction.size());
-//   IsVectorsClose(reference, prediction, 0.008);
-// }
-
-// TEST_CASE("SUCCEED Run inference with the super fast 8 kHz with chunks of various size [giga-denoiser c++ api]") {
-//   static constexpr char yaml[] = R"(
-// model:
-//   model_path: data/models/fast_quant_model_8khz.onnx
-//   model_inputs: ["noisy_mag_in", "prev_fb_h_in", "prev_fb_c_in", "prev_fb_conv1_buf_in", "prev_fb_conv3_buf_in"]
-//   model_outputs: ["cur_fb_h_out", "cur_fb_c_out", "cur_fb_conv1_buf_out", "cur_fb_conv3_buf_out",
-//   "predicted_mask_out"]
-
-// feature_params:
-//   # sampling rate
-//   sampling_freq: 8000
-
-// inference:
-//   gpu: false
-//   engine_num_threads: 1
-//   model_type: denoiser_discr_hq_model)";
-
-//   auto test_data = std::move(TestFixture().
-//                               InitDenoiser(std::string(yaml)).
-//                               SetWav("rec_noise_002_8k.wav"));
-
-//   std::vector<float> prediction;
-//   std::vector<float> reference;
-
-//   gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
-
-//   const uint32_t chunk_size = 16;          // ms
-//   const uint32_t chunk_stride = chunk_size;
-//   const uint32_t chunks_to_compare = 300;
-
-//   auto chunks = ChunkWav<float>(test_data.wav_data,
-//                                 test_data.denoiser->GetModelSampleRate(),
-//                                 chunk_size, chunk_stride);
-//   chunks.resize(chunks_to_compare);
-
-//   LoadWavFx("data/results/wavs/rec_denoised_fast_002_8kHz_quant_8kHz.wav", reference);
-
-//   // 20*8 + 20*4 + 10*3 + 15*2 = 160 + 80 + 30 + 30 = 300
-//   const std::array<uint32_t, 65> kMergeFactors = [] {
-//     std::array<uint32_t, 65> a{};
-//     std::size_t idx = 0;
-
-//     for (uint32_t i = 0; i < 20; ++i) a[idx++] = 8;
-//     for (uint32_t i = 0; i < 20; ++i) a[idx++] = 4;
-//     for (uint32_t i = 0; i < 10; ++i) a[idx++] = 3;
-//     for (uint32_t i = 0; i < 15; ++i) a[idx++] = 2;
-
-//     return a;
-//   }();
-
-//   std::size_t chunk_pos = 0;
-//   for (uint32_t factor : kMergeFactors) {
-//     auto merged_chunk = MergeChunks(chunks, chunk_pos, factor);
-//     chunk_pos += factor;
-
-//     std::vector<float> ret;
-//     test_data.denoiser->ProcessChunk(merged_chunk, ret, ctx);
-//     prediction.insert(prediction.end(), ret.begin(), ret.end());
-//   }
-
-//   test_data.denoiser->DestroyContext(&ctx);
-
-//   reference.resize(prediction.size());
-//   // ToDo (artsokol) why is presicion worse
-//   IsVectorsClose(reference, prediction, 0.01);
-// }
-
-#ifdef BUILD_RESAMPLER
-TEST_CASE(
-    "SUCCEED Run inference with the super fast 8 kHz on huge single chunk (16000 frames) [giga-denoiser c++ api]") {
-  static constexpr char yaml[] = R"(
+constexpr char hq_8khz_yaml[] = R"(
 model:
   model_path: data/models/fast_quant_model_8khz.onnx
   model_inputs: ["noisy_mag_in", "prev_fb_h_in", "prev_fb_c_in", "prev_fb_conv1_buf_in", "prev_fb_conv3_buf_in"]
   model_outputs: ["cur_fb_h_out", "cur_fb_c_out", "cur_fb_conv1_buf_out", "cur_fb_conv3_buf_out", "predicted_mask_out"]
 
 feature_params:
-  # sampling rate
   sampling_freq: 8000
 
 inference:
@@ -1002,7 +522,104 @@ inference:
   engine_num_threads: 1
   model_type: denoiser_discr_hq_model)";
 
-  auto test_data = std::move(TestFixture().InitDenoiser(std::string(yaml)).SetWav("test1_24_noised.wav"));
+void require_finite(const std::vector<float>& samples) {
+  for (float sample : samples) {
+    REQUIRE(std::isfinite(sample));
+  }
+}
+
+}  // namespace
+
+TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model [giga-denoiser c++ api]") {
+  auto test_data = std::move(TestFixture().InitDenoiser(std::string(hq_8khz_yaml)).SetWav("test1_24_noised.wav"));
+  REQUIRE(test_data.denoiser->GetModelSampleRate() == 8000);
+
+  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 8000, 16, 16);
+  REQUIRE(chunks.size() >= 20);
+  chunks.resize(20);
+
+  std::vector<float> prediction;
+  for (const auto& chunk : chunks) {
+    std::vector<float> output;
+    const GigaDenoiserRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, output, ctx);
+    REQUIRE(ret_code >= GigaDenoiserRetCode::SUCCESS);
+    REQUIRE(output.size() == chunk.size());
+    prediction.insert(prediction.end(), output.begin(), output.end());
+  }
+  require_finite(prediction);
+  REQUIRE(std::find_if(prediction.begin(), prediction.end(), [](float sample) { return sample != 0.0f; }) !=
+          prediction.end());
+
+  std::vector<float> final_chunk;
+  const GigaDenoiserRetCode final_code = test_data.denoiser->GetFinalChunk(final_chunk, ctx);
+  REQUIRE(final_code == GigaDenoiserRetCode::SUCCESS);
+  REQUIRE_FALSE(final_chunk.empty());
+  require_finite(final_chunk);
+  REQUIRE(std::vector<float>(final_chunk.size(), 0.0f) != final_chunk);
+  test_data.denoiser->DestroyContext(&ctx);
+}
+
+TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model and 32 ms chunks [giga-denoiser c++ api]") {
+  auto test_data = std::move(TestFixture().InitDenoiser(std::string(hq_8khz_yaml)).SetWav("test1_24_noised.wav"));
+  const uint64_t hop = test_data.denoiser->GetModelInputFrameSize();
+  REQUIRE(hop == 128);
+  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 8000, 32, 32);
+  REQUIRE(chunks.size() >= 10);
+  chunks.resize(10);
+
+  bool first_chunk = true;
+  for (const auto& chunk : chunks) {
+    std::vector<float> output;
+    const GigaDenoiserRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, output, ctx);
+    REQUIRE(ret_code >= GigaDenoiserRetCode::SUCCESS);
+    require_finite(output);
+    if (first_chunk && chunk.size() > hop) {
+      REQUIRE(output.size() + hop == chunk.size());
+    } else {
+      REQUIRE(output.size() == chunk.size());
+    }
+    first_chunk = false;
+  }
+  test_data.denoiser->DestroyContext(&ctx);
+}
+
+TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model and variable chunk sizes [giga-denoiser c++ api]") {
+  auto test_data = std::move(TestFixture().InitDenoiser(std::string(hq_8khz_yaml)).SetWav("test1_24_noised.wav"));
+  const uint64_t hop = test_data.denoiser->GetModelInputFrameSize();
+  REQUIRE(hop == 128);
+  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
+  auto chunks = ChunkWav<float>(test_data.wav_data, 8000, 16, 16);
+  const uint32_t factors[] = {2, 4, 3, 8, 2};
+  std::size_t cursor = 0;
+  bool first_chunk = true;
+  std::vector<float> prediction;
+  for (uint32_t factor : factors) {
+    REQUIRE(cursor + factor <= chunks.size());
+    const std::vector<float> merged = MergeChunks(chunks, cursor, factor);
+    cursor += factor;
+    std::vector<float> output;
+    const GigaDenoiserRetCode ret_code = test_data.denoiser->ProcessChunk(merged, output, ctx);
+    REQUIRE(ret_code >= GigaDenoiserRetCode::SUCCESS);
+    require_finite(output);
+    if (first_chunk && merged.size() > hop) {
+      REQUIRE(output.size() + hop == merged.size());
+    } else {
+      REQUIRE(output.size() == merged.size());
+    }
+    first_chunk = false;
+    prediction.insert(prediction.end(), output.begin(), output.end());
+  }
+  REQUIRE(std::find_if(prediction.begin(), prediction.end(), [](float sample) { return sample != 0.0f; }) !=
+          prediction.end());
+  test_data.denoiser->DestroyContext(&ctx);
+}
+
+#ifdef BUILD_RESAMPLER
+TEST_CASE(
+    "SUCCEED Run inference with the super fast 8 kHz on huge single chunk (16000 frames) [giga-denoiser c++ api]") {
+  auto test_data = std::move(TestFixture().InitDenoiser(std::string(hq_8khz_yaml)).SetWav("test1_24_noised.wav"));
 
   gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(24000, 8000);
 
@@ -1042,52 +659,6 @@ inference:
 }
 #endif
 
-#if 0
-TEST_CASE("SUCCEED Run inference with the packed fast 24 kHz denoiser model [giga-denoiser c++ api]") {
-  auto bundle = std::make_shared<gigaedge::denoiser::PackedModelReader>(read_file("data/models/packed_fast_model.gdn"));
-  auto test_data = std::move(TestFixture().InitDenoiser(bundle).SetWav("test1_48_noised.wav"));
-
-  const uint32_t chunk_size = 16;
-  const uint32_t chunk_stride = 16;
-  const uint32_t chunks_to_compare = 100;
-  const uint32_t audio_src_sample_rate = 48000;
-  const uint32_t audio_dst_sample_rate = 48000;
-  const uint32_t total_size = chunk_size * chunks_to_compare * audio_dst_sample_rate / 1000;
-  GigaDenoiserRetCode ret_code;
-  std::vector<float> prediction;
-  std::vector<float> reference;
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(audio_src_sample_rate, audio_dst_sample_rate);
-
-  auto chunks = ChunkWav<float>(test_data.wav_data, audio_src_sample_rate, chunk_size, chunk_stride);
-  LoadWavFx("data/results/wavs/test1_48_enhanced_upsampled.wav", reference);
-  chunks.resize(chunks_to_compare);
-
-  for (uint32_t i = 0; i < chunks.size(); ++i) {
-    auto& chunk = chunks[i];
-    std::vector<float> ret;
-    ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-    if (ret_code >= GigaDenoiserRetCode::SUCCESS) {
-      prediction.insert(prediction.end(), ret.begin(), ret.end());
-    }
-  }
-  // remove context zeroes as reference does not include that
-  prediction.erase(prediction.begin(), prediction.begin() + audio_dst_sample_rate * chunk_size / 1000);
-  //
-  std::vector<float> ret;
-  ret_code = test_data.denoiser->GetFinalChunk(ret, ctx);
-
-  CHECK(ret_code == GigaDenoiserRetCode::SUCCESS);
-  REQUIRE(std::vector<float>(ret.size(), 0.0) != ret);
-
-  prediction.insert(prediction.end(), ret.begin(), ret.end());
-
-  reference.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
-  prediction.resize(std::min(total_size, static_cast<uint32_t>(prediction.size())));
-
-  IsVectorsClose(reference, prediction, 0.03);
-  test_data.denoiser->DestroyContext(&ctx);
-}
-#endif
 #endif
 
 TEST_CASE("SUCCEED Run AudioProcessing with RC default parameters [giga-denoiser c++ api]") {
@@ -1605,10 +1176,6 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [
                [](float& i) { return std::fabs(i) > 0.75; });
   REQUIRE(greater_than_0_75.size() == 0);
 }
-
-// -----------------------------------------------------------------------------
-// POSITIVE — YAML string accepted, chain can be built and used
-// -----------------------------------------------------------------------------
 TEST_CASE("SUCCESS AudioProcessing accepts YAML string and can process a small frame [giga-denoiser c++ api]") {
   const std::string yaml = gigaedge::denoiser::default_audio_processing_config_yaml;
 
@@ -1636,10 +1203,6 @@ TEST_CASE("SUCCESS AudioProcessing accepts YAML string and can process a small f
   REQUIRE_NOTHROW(fx.dsp->ProcessChunk(in, out));
   REQUIRE(out.size() == in.size());
 }
-
-// -----------------------------------------------------------------------------
-// NEGATIVE — structure/type validation (YAML string)
-// -----------------------------------------------------------------------------
 TEST_CASE("FAIL AudioProcessing YAML string non-scalar where scalar required throws [giga-denoiser c++ api]") {
   const std::string bad = R"(
 sound_processing:
@@ -1653,10 +1216,6 @@ sound_processing:
 )";
   REQUIRE_THROWS_AS(TestFixture().InitAudioProcessor(bad), std::runtime_error);
 }
-
-// -----------------------------------------------------------------------------
-// NEGATIVE — numeric/range validation (YAML string)
-// -----------------------------------------------------------------------------
 TEST_CASE("FAIL AudioProcessing YAML string: range_ctrl.sample_rate too large [giga-denoiser c++ api]") {
   const std::string bad = R"(
 sound_processing:
