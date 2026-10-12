@@ -4,7 +4,7 @@ title: Web SDK
 
 # Web SDK
 
-The GigaDenoiser Web SDK connects the native processing pipeline to Web Audio through WebAssembly,
+The GigaEdge Spench Web SDK connects the native processing pipeline to Web Audio through WebAssembly,
 AudioWorklet, and worker transports. The demo on this site uses the same packed SDK produced by the
 repository build.
 

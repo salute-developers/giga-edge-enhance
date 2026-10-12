@@ -1,13 +1,13 @@
 ---
 sidebar_position: 1
 slug: /
-title: GigaDenoiser documentation
+title: GigaEdge Spench documentation
 description: Build real-time speech enhancement into native, mobile, and web applications.
 ---
 
-# GigaDenoiser documentation
+# GigaEdge Spench documentation
 
-GigaDenoiser is a cross-platform speech-enhancement SDK for noise suppression, loudness normalization,
+GigaEdge Spench is a cross-platform speech-enhancement SDK for noise suppression, loudness normalization,
 and acoustic echo cancellation. Choose a platform guide or start with the interactive browser demo.
 
 ## Choose your platform
@@ -21,3 +21,14 @@ and acoustic echo cancellation. Choose a platform guide or start with the intera
 
 Repository model and test assets are tracked through Git LFS. SDK consumers should use the model
 package documented for their platform.
+
+## Acknowledgement
+
+GigaEdge Spench includes work by people who contributed to the product at different times:
+
+- Artem Sokolov
+- Artem Khaidarov
+- Yana Lysova
+- Vitaliy Yulis
+- Dmitriy Zhelonkin
+- Alexander Gladkikh

@@ -38,14 +38,14 @@ Supported file input is **mono 16-bit PCM WAV**; output is WAV. The demo require
 
 When **Record live input/output WAV dumps** is enabled, the demo writes to app-internal storage:
 
-- `files/giga-denoiser-live-input.wav`
-- `files/giga-denoiser-live-output.wav`
+- `files/gigaedge-spench-live-input.wav`
+- `files/gigaedge-spench-live-output.wav`
 
 Copy them off the device with:
 
 ```bash
-adb exec-out run-as com.gigaedge.denoiser.demo cat files/giga-denoiser-live-input.wav > giga-denoiser-live-input.wav
-adb exec-out run-as com.gigaedge.denoiser.demo cat files/giga-denoiser-live-output.wav > giga-denoiser-live-output.wav
+adb exec-out run-as com.gigaedge.spench.demo cat files/gigaedge-spench-live-input.wav > gigaedge-spench-live-input.wav
+adb exec-out run-as com.gigaedge.spench.demo cat files/gigaedge-spench-live-output.wav > gigaedge-spench-live-output.wav
 ```
 
 ## Emulator microphone caveats

@@ -78,7 +78,7 @@ class WorkflowsTest(unittest.TestCase):
                 def create_package(command, **_kwargs):
                     output_dir = Path(command[command.index("-B") + 1])
                     (output_dir / "_CPack_Packages").mkdir(parents=True)
-                    (output_dir / "giga-denoiser-0.0.1-Linux.tar.gz").touch()
+                    (output_dir / "gigaedge-spench-0.0.1-Linux.tar.gz").touch()
 
                 with mock.patch.object(workflows, "ROOT", root), \
                      mock.patch.object(workflows, "compiler_cache_environment", return_value={}), \
@@ -87,7 +87,7 @@ class WorkflowsTest(unittest.TestCase):
 
                 self.assertEqual(
                     [path.name for path in package_dir.iterdir()],
-                    ["giga-denoiser-0.0.1-Linux.tar.gz"])
+                    ["gigaedge-spench-0.0.1-Linux.tar.gz"])
                 self.assertFalse((root / "out/build/package" / preset).exists())
 
     def test_macos_x86_install_verifies_matching_consumer_architecture(self):
@@ -121,7 +121,7 @@ class WorkflowsTest(unittest.TestCase):
 
         self.assertIn("Visual Studio 17 2022", run.call_args_list[1].args[0])
         self.assertEqual(run.call_args_list[2].args[0][-2:], ["--config", "Release"])
-        self.assertTrue(run.call_args_list[3].args[0][0].endswith("/Release/gigadenoiser_package_consumer.exe"))
+        self.assertTrue(run.call_args_list[3].args[0][0].endswith("/Release/spench_package_consumer.exe"))
 
     def test_android_workflow_sets_dependency_root(self):
         with mock.patch.object(workflows, "compiler_cache_environment", return_value={}), \
@@ -130,7 +130,7 @@ class WorkflowsTest(unittest.TestCase):
         self.assertEqual(run.call_args.args[0], ["android/scripts/test-all.sh"])
         self.assertEqual(run.call_args.kwargs["container_stage"], "android")
         self.assertEqual(
-            run.call_args.kwargs["environment"]["GDN_PREBUILT_DEPENDENCIES_ROOT"],
+            run.call_args.kwargs["environment"]["GES_PREBUILT_DEPENDENCIES_ROOT"],
             "/workspace/out/artifacts/dependencies")
 
     def test_web_package_uses_repository_artifact_directory(self):
@@ -169,7 +169,7 @@ class WorkflowsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             installed_sdk = (root / "web/apps/site/node_modules" /
-                             "@gigaedge/denoiser-web-sdk/package.json")
+                             "@gigaedge/spench-web-sdk/package.json")
             installed_sdk.parent.mkdir(parents=True)
             installed_sdk.touch()
             with mock.patch.object(workflows, "ROOT", root), \
@@ -187,13 +187,13 @@ class WorkflowsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             installed_sdk = (root / "web/apps/site/node_modules" /
-                             "@gigaedge/denoiser-web-sdk/package.json")
+                             "@gigaedge/spench-web-sdk/package.json")
             installed_sdk.parent.mkdir(parents=True)
             installed_sdk.touch()
             with mock.patch.object(workflows, "ROOT", root), \
                  mock.patch.dict(workflows.os.environ, {
                      "CI": "true",
-                     "GDN_PLAYWRIGHT_BROWSERS": "chromium",
+                     "GES_PLAYWRIGHT_BROWSERS": "chromium",
                  }), \
                  mock.patch.object(workflows, "run_web_node") as run_web_node:
                 workflows.web_workflow("playwright", False)

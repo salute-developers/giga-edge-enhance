@@ -52,7 +52,7 @@ void create_default_env() {
   }
   OrtThreadingOptions* threading_options = nullptr;
   check_status(ort_api_ptr->CreateThreadingOptions(&threading_options));
-  ort_env_ptr = std::make_unique<Ort::Env>(threading_options, ORT_LOGGING_LEVEL_WARNING, "giga-denoiser-onnx");
+  ort_env_ptr = std::make_unique<Ort::Env>(threading_options, ORT_LOGGING_LEVEL_WARNING, "gigaedge-spench-onnx");
   ort_api_ptr->ReleaseThreadingOptions(threading_options);
   ort_env_ptr->DisableTelemetryEvents();
 }

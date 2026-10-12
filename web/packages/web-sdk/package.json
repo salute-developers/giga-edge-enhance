@@ -1,9 +1,9 @@
 {
-  "name": "@gigaedge/denoiser-web-sdk",
+  "name": "@gigaedge/spench-web-sdk",
   "version": "1.0.0",
   "private": true,
   "author": "Giga Edge",
-  "description": "GigaDenoiser Web SDK",
+  "description": "GigaEdgeSpench Web SDK",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.js",

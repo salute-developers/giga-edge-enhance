@@ -46,7 +46,7 @@ export function getTransferableModelRepresentation<M extends ModelsTmpl>(
     return [models, transferable];
 }
 
-interface IGigaDenoiserWorker extends Worker {
+interface IGigaEdgeSpenchWorker extends Worker {
     onmessage: ((this: Worker, event: MessageEvent<WorkerControllerMessage>) => void) | null;
     addEventListener<
         M extends { message: MessageEvent<WorkerControllerMessage>; messageerror: MessageEvent },
@@ -66,7 +66,7 @@ interface IGigaDenoiserWorker extends Worker {
     ): void;
 }
 
-class GigaDenoiserWorker<M extends ModelsTmpl = ModelsTmpl> extends Worker implements IGigaDenoiserWorker {
+class GigaEdgeSpenchWorker<M extends ModelsTmpl = ModelsTmpl> extends Worker implements IGigaEdgeSpenchWorker {
     weak = true;
 
     protected clients: number = 0;
@@ -174,10 +174,10 @@ class GigaDenoiserWorker<M extends ModelsTmpl = ModelsTmpl> extends Worker imple
 
     #handleError = (event: ErrorEvent) => {
         this.logger.error(
-            `${event.error || event.message || 'Unknown error (check resource accessibility)'} at GigaDenoiserWorker`,
+            `${event.error || event.message || 'Unknown error (check resource accessibility)'} at GigaEdgeSpenchWorker`,
         );
         this.destroy();
     };
 }
 
-export default GigaDenoiserWorker;
+export default GigaEdgeSpenchWorker;

@@ -1,8 +1,8 @@
-#include <gigadenoiser/c_api.h>
+#include <spench/c_api.h>
 
 int main() {
-  GigaDenoiserDenoise model = reinterpret_cast<GigaDenoiserDenoise>(1);
-  if (GigaDenoiserDenoiseInit(nullptr, &model) != GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT ||
+  GigaEdgeSpenchDenoise model = reinterpret_cast<GigaEdgeSpenchDenoise>(1);
+  if (GigaEdgeSpenchDenoiseInit(nullptr, &model) != GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT ||
       model != nullptr) {
     return 1;
   }

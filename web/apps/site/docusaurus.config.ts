@@ -9,13 +9,13 @@ function normalizeBaseUrl(value: string | undefined): string {
     return `/${value.replace(/^\/+|\/+$/g, '')}/`;
 }
 
-const baseUrl = normalizeBaseUrl(process.env.GDN_SITE_BASE);
+const baseUrl = normalizeBaseUrl(process.env.GES_SITE_BASE);
 
 const config: Config = {
-    title: 'GigaDenoiser',
+    title: 'GigaEdge Spench',
     tagline: 'Real-time speech enhancement SDKs and tools',
     favicon: 'img/favicon.svg',
-    url: process.env.GDN_SITE_URL ?? 'https://salute-developers.github.io',
+    url: process.env.GES_SITE_URL ?? 'https://salute-developers.github.io',
     baseUrl,
     headTags: [
         {
@@ -73,9 +73,9 @@ const config: Config = {
             respectPrefersColorScheme: true,
         },
         navbar: {
-            title: 'GigaDenoiser',
+            title: 'GigaEdge Spench',
             logo: {
-                alt: 'GigaDenoiser signal mark',
+                alt: 'GigaEdge Spench',
                 src: 'img/logo.svg',
             },
             items: [
@@ -121,7 +121,7 @@ const config: Config = {
             darkTheme: prismThemes.dracula,
         },
         metadata: [
-            { name: 'description', content: 'Try GigaDenoiser speech enhancement in the browser and explore the SDK documentation.' },
+            { name: 'description', content: 'Try GigaEdge Spench speech enhancement in the browser and explore the SDK documentation.' },
         ],
     },
 };

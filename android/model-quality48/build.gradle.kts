@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.gigaedge.denoiser.models.quality48"
+    namespace = "com.gigaedge.spench.models.quality48"
     compileSdk = 35
 
     defaultConfig {

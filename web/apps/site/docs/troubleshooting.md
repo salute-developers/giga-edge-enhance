@@ -35,7 +35,7 @@ workers, worklets, types, and models belong to the same build.
 ## An Android emulator records a tone
 
 Some emulator microphone modes provide a synthetic signal. Use a physical device when validating
-real acoustic input. This does not indicate a GigaDenoiser processing failure.
+real acoustic input. This does not indicate a GigaEdge Spench processing failure.
 
 ## A required build cannot run
 

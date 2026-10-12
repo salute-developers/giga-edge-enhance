@@ -5,7 +5,7 @@
 
 #include "src/feature_params.h"
 
-namespace gigaedge::denoiser {
+namespace gigaedge::spench {
 namespace fe {
 // Applies a given window on input
 //    s'(n) = w(n) * s(n) where w(n) are the window coefficients
@@ -31,4 +31,4 @@ class Windowing {
 };
 
 }  // namespace fe
-}  // namespace gigaedge::denoiser
+}  // namespace gigaedge::spench

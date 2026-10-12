@@ -3,35 +3,35 @@ cmake_minimum_required(VERSION 3.17)
 set(CMAKE_CXX_STANDARD 17)
 
 if(BUILD_DSP)
-    set(MODULE_NAME "giga-denoiser.dsp")
+    set(MODULE_NAME "gigaedge-spench.dsp")
     add_definitions(-DBUILD_DSP)
 else()
-    set(MODULE_NAME "giga-denoiser")
+    set(MODULE_NAME "gigaedge-spench")
 endif()
 
-add_executable(gigadenoiser_wasm src/main.cpp
+add_executable(spench_wasm src/main.cpp
                            src/elements.cpp)
 
-set_target_properties(gigadenoiser_wasm PROPERTIES OUTPUT_NAME ${MODULE_NAME})
-target_include_directories(gigadenoiser_wasm PRIVATE
+set_target_properties(spench_wasm PROPERTIES OUTPUT_NAME ${MODULE_NAME})
+target_include_directories(spench_wasm PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR})
 
-target_link_libraries(gigadenoiser_wasm PRIVATE giga-denoiser spdlog_header_only)
+target_link_libraries(spench_wasm PRIVATE gigaedge-spench spdlog_header_only)
 
 # Emscripten's executable target produces a JavaScript loader plus companion
 # WebAssembly and TypeScript declaration files.  Install all three so
 # `tools/install wasm-*` is a deployable web artifact, not only the
 # core C++ static library installed by Install.cmake.
 install(FILES
-        "$<TARGET_FILE_DIR:gigadenoiser_wasm>/${MODULE_NAME}.js"
-        "$<TARGET_FILE_DIR:gigadenoiser_wasm>/${MODULE_NAME}.wasm"
-        "$<TARGET_FILE_DIR:gigadenoiser_wasm>/${MODULE_NAME}.d.ts"
+        "$<TARGET_FILE_DIR:spench_wasm>/${MODULE_NAME}.js"
+        "$<TARGET_FILE_DIR:spench_wasm>/${MODULE_NAME}.wasm"
+        "$<TARGET_FILE_DIR:spench_wasm>/${MODULE_NAME}.d.ts"
         DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 if(BUILD_DSP)
-    set(gigadenoiser_wasm_common_compile_and_link_options
+    set(spench_wasm_common_compile_and_link_options
         -O3
         -msimd128
         --closure=1
@@ -48,7 +48,7 @@ if(BUILD_DSP)
         # -sNO_DISABLE_EXCEPTION_CATCHING
     )
 else()
-    set(gigadenoiser_wasm_common_compile_and_link_options
+    set(spench_wasm_common_compile_and_link_options
         -O3
         -msimd128
         -flto
@@ -65,13 +65,13 @@ else()
     )
 endif()
 
-target_compile_options(gigadenoiser_wasm PUBLIC
-        ${gigadenoiser_wasm_common_compile_and_link_options}
+target_compile_options(spench_wasm PUBLIC
+        ${spench_wasm_common_compile_and_link_options}
 )
 
 if(BUILD_DSP)
-    target_link_options(gigadenoiser_wasm PUBLIC
-            ${gigadenoiser_wasm_common_compile_and_link_options}
+    target_link_options(spench_wasm PUBLIC
+            ${spench_wasm_common_compile_and_link_options}
             -sMODULARIZE=1
             -sEXPORT_ES6=1
             # This prevents from usage "import.meta.url" which is not supported for a web worker.
@@ -87,8 +87,8 @@ if(BUILD_DSP)
             -sWASM_ASYNC_COMPILATION=0 # TODO check as this can block audio thread
     )
 else()
-    target_link_options(gigadenoiser_wasm PUBLIC
-            ${gigadenoiser_wasm_common_compile_and_link_options}
+    target_link_options(spench_wasm PUBLIC
+            ${spench_wasm_common_compile_and_link_options}
             # Creates module from glue code for better integration.
             -sMODULARIZE=1
             # Jazz uses es6 import

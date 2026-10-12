@@ -1,17 +1,17 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.GigaDenoiserDemo" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.GigaEdgeSpenchDemo" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">#0C5A53</item>
         <item name="colorSecondary">#C77D2B</item>
         <item name="android:statusBarColor" tools:targetApi="l">@android:color/transparent</item>
     </style>
 
-    <style name="GigaDenoiserDemoSettingsLabel" parent="TextAppearance.Material3.BodyMedium">
+    <style name="GigaEdgeSpenchDemoSettingsLabel" parent="TextAppearance.Material3.BodyMedium">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">14dp</item>
     </style>
 
-    <style name="GigaDenoiserDemoSettingsEdit">
+    <style name="GigaEdgeSpenchDemoSettingsEdit">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:inputType">numberDecimal|numberSigned</item>

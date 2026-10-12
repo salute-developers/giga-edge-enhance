@@ -192,8 +192,8 @@ function App() {
                             </label>
                             <label className="choiceCard customChoice">
                                 <input type="radio" data-testid="denoiserCustom" checked={features.noiseCancellation === 'fast48'} name="denoiserChoice" onChange={() => customDenoiseModel ? handleFeatureChange('noiseCancellation', 'fast48') : handleFeatureChange('noiseCancellation', false)} />
-                                <span><strong>Custom</strong><small>{customDenoiseModel ? 'Model ready' : 'Upload a .gdn model'}</small></span>
-                                <input className="modelInput" aria-label="Upload custom denoiser model" data-testid="customDenoiserModelInput" id="customDenoiserModelInput" type="file" ref={customDenoiserInputRef} accept=".gdn,application/octet-stream" multiple={false} onChange={handleCustomDenoiserModel} />
+                                <span><strong>Custom</strong><small>{customDenoiseModel ? 'Model ready' : 'Upload a .ges model'}</small></span>
+                                <input className="modelInput" aria-label="Upload custom denoiser model" data-testid="customDenoiserModelInput" id="customDenoiserModelInput" type="file" ref={customDenoiserInputRef} accept=".ges,application/octet-stream" multiple={false} onChange={handleCustomDenoiserModel} />
                             </label>
                         </div>
                     </div>

@@ -53,11 +53,11 @@ class IdentityTest(unittest.TestCase):
             identity.print_cache_keys("native-release-onnx", False)
         self.assertEqual(output.getvalue().splitlines(), [
             "source_cache_path=out/cache/cpm",
-            "source_cache_key=gdn-sources-v2-linux-abc123",
-            "source_cache_restore_key=gdn-sources-v2-linux-",
+            "source_cache_key=ges-sources-v2-linux-abc123",
+            "source_cache_restore_key=ges-sources-v2-linux-",
             "compiler_cache_path=out/cache/compiler",
-            "compiler_cache_key_prefix=gdn-compiler-v1-linux-x86_64-native-release-onnx-abc123",
-            "compiler_cache_restore_key=gdn-compiler-v1-linux-x86_64-native-release-onnx-",
+            "compiler_cache_key_prefix=ges-compiler-v1-linux-x86_64-native-release-onnx-abc123",
+            "compiler_cache_restore_key=ges-compiler-v1-linux-x86_64-native-release-onnx-",
         ])
 
     def test_source_cache_key_normalizes_macos(self):
@@ -67,7 +67,7 @@ class IdentityTest(unittest.TestCase):
              mock.patch.object(identity.platform, "system", return_value="Darwin"), \
              mock.patch("sys.stdout", output):
             identity.print_cache_keys("ios-device-release", False)
-        self.assertIn("source_cache_key=gdn-sources-v2-macos-abc123",
+        self.assertIn("source_cache_key=ges-sources-v2-macos-abc123",
                       output.getvalue().splitlines())
 
     def test_invalid_engine_and_container_stage_fail_clearly(self):

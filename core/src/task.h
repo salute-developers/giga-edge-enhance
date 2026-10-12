@@ -11,11 +11,11 @@
 #include "src/context.h"
 #include "src/pipeline_stage.h"
 
-namespace gigaedge::denoiser {
+namespace gigaedge::spench {
 
 class Task;
 
-using TaskPtr = std::shared_ptr<gigaedge::denoiser::Task>;
+using TaskPtr = std::shared_ptr<gigaedge::spench::Task>;
 
 struct TaskData {
   TaskData() : context(nullptr) {}
@@ -76,4 +76,4 @@ __declspec(dllexport)
 #endif
 void convert_pcm16_to_float32(const std::vector<int16_t>&, std::vector<float>&);
 }  // namespace tools
-}  // namespace gigaedge::denoiser
+}  // namespace gigaedge::spench

@@ -1,18 +1,18 @@
 # ProGuard / R8
 
-**You do not need to add any manual keep rules for the GigaDenoiser SDK.** The SDK ships consumer ProGuard
-rules that are applied automatically to your app when you depend on `giga-denoiser-sdk`.
+**You do not need to add any manual keep rules for the GigaEdge Spench SDK.** The SDK ships consumer ProGuard
+rules that are applied automatically to your app when you depend on `gigaedge-spench-sdk`.
 
 ## What ships
 
-`giga-denoiser-sdk` declares `consumerProguardFiles("consumer-rules.pro")` in its Gradle config, so R8/
+`gigaedge-spench-sdk` declares `consumerProguardFiles("consumer-rules.pro")` in its Gradle config, so R8/
 ProGuard in the consuming app automatically honors `sdk/consumer-rules.pro`:
 
 ```proguard
--keep class com.gigaedge.denoiser.NativeTelemetry { *; }
--keep class com.gigaedge.denoiser.LowPerformanceEvent { *; }
+-keep class com.gigaedge.spench.NativeTelemetry { *; }
+-keep class com.gigaedge.spench.LowPerformanceEvent { *; }
 
--keepclasseswithmembers class com.gigaedge.denoiser.Processor {
+-keepclasseswithmembers class com.gigaedge.spench.Processor {
     native <methods>;
 }
 ```

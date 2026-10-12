@@ -5,14 +5,14 @@ plugins {
     alias(libs.plugins.detekt) apply false
 }
 
-// VERSION_NUMBER at the repository root is the authoritative release version for every GigaDenoiser
+// VERSION_NUMBER at the repository root is the authoritative release version for every GigaEdgeSpench
 // SDK, so the Android modules read it instead of duplicating the literal. CI overrides it with
-// GDN_ARTIFACT_VERSION when an artifact name needs a SemVer prerelease suffix, matching the
+// GES_ARTIFACT_VERSION when an artifact name needs a SemVer prerelease suffix, matching the
 // behaviour of cmake/Install.cmake.
-val gigaDenoiserVersion: String = System.getenv("GDN_ARTIFACT_VERSION")
+val gigaEdgeSpenchVersion: String = System.getenv("GES_ARTIFACT_VERSION")
     ?.takeIf(String::isNotBlank)
     ?: rootDir.resolve("../VERSION_NUMBER").normalize().readText().trim()
 
 allprojects {
-    version = gigaDenoiserVersion
+    version = gigaEdgeSpenchVersion
 }

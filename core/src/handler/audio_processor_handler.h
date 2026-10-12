@@ -11,13 +11,13 @@
 #include <utility>
 #include <vector>
 
-#include "gigadenoiser/errors.h"
+#include "spench/errors.h"
 #include "src/handler/base_audio_handler.h"
 #include "util/sound/loudness_control.h"
 #include "util/sound/range_control.h"
 #include "util/sound/stat_collector.h"
 
-namespace gigaedge::denoiser {
+namespace gigaedge::spench {
 
 typedef struct Parameters {
   Parameters() = default;
@@ -360,15 +360,15 @@ class AudioProcessorHandler : public BaseAudioHandler {
   AudioProcessorHandler& add_lc();
   AudioProcessorHandler& add_lc(const LoudnessParameters& parameters);
 
-  GigaDenoiserRetCode process_frame(struct gigaedge::denoiser::Context<float>* ctx,
-                                    const std::vector<float>& input_audio_frame,
-                                    std::vector<float>& enhanced_audio_frame) override;
+  GigaEdgeSpenchRetCode process_frame(struct gigaedge::spench::Context<float>* ctx,
+                                      const std::vector<float>& input_audio_frame,
+                                      std::vector<float>& enhanced_audio_frame) override;
 
  protected:
-  GigaDenoiserRetCode do_start() override;
+  GigaEdgeSpenchRetCode do_start() override;
   void do_stop() override;
 
  private:
   std::vector<std::unique_ptr<AudioProcItem>> sequence_vec_;
 };
-}  // namespace gigaedge::denoiser
+}  // namespace gigaedge::spench

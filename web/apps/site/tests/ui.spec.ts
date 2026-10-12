@@ -9,13 +9,13 @@ test('demo navigation unmounts engineering tools without crashing', async ({ pag
     await expect(page.getByTestId('webrtcWorkload')).toBeVisible();
 
     await page.getByRole('link', { name: 'Documentation' }).click();
-    await expect(page.getByRole('heading', { name: 'GigaDenoiser documentation' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'GigaEdgeSpench documentation' })).toBeVisible();
 
     await page.goto('/');
     await page.locator('summary').filter({ hasText: 'WebRTC video workload' }).click();
     await page.getByRole('button', { name: 'SDK reference' }).click();
     await page.getByRole('link', { name: 'Web SDK', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'GigaDenoiser Web SDK' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'GigaEdgeSpench Web SDK' })).toBeVisible();
     expect(pageErrors).toEqual([]);
 });
 

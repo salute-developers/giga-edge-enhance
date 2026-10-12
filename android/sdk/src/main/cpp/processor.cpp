@@ -1,4 +1,4 @@
-#include "gigadenoiser/processor.h"
+#include "spench/processor.h"
 
 #include <algorithm>
 #include <chrono>
@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <utility>
 
-namespace gigaedge::denoiser {
+namespace gigaedge::spench {
 
 namespace {
 
@@ -444,8 +444,8 @@ void Processor::worker_loop() noexcept {
         processor_output_buffer_ = processor_input_buffer_;
         denoiser_output_buffer_ = processor_input_buffer_;
 
-        GigaDenoiserRetCode process_result = GigaDenoiserRetCode::SUCCESS;
-        GigaDenoiserRetCode denoise_result = GigaDenoiserRetCode::SUCCESS;
+        GigaEdgeSpenchRetCode process_result = GigaEdgeSpenchRetCode::SUCCESS;
+        GigaEdgeSpenchRetCode denoise_result = GigaEdgeSpenchRetCode::SUCCESS;
         {
           std::lock_guard<std::mutex> lock(state_mutex_);
           if (settings_.unstable_reverse_processing_order) {
@@ -457,7 +457,8 @@ void Processor::worker_loop() noexcept {
               record_telemetry(false, elapsed_milliseconds(start));
               processor_output_buffer_ = denoiser_output_buffer_;
             }
-            if (denoise_result >= GigaDenoiserRetCode::SUCCESS && normalization_active && audio_processor_ != nullptr) {
+            if (denoise_result >= GigaEdgeSpenchRetCode::SUCCESS && normalization_active &&
+                audio_processor_ != nullptr) {
               denoiser_output_buffer_ = processor_output_buffer_;
               processor_output_buffer_.clear();
               const auto start = std::chrono::steady_clock::now();
@@ -472,7 +473,7 @@ void Processor::worker_loop() noexcept {
               process_result = audio_processor_->ProcessChunk(processor_input_buffer_, processor_output_buffer_);
               record_telemetry(true, elapsed_milliseconds(start));
             }
-            if (process_result >= GigaDenoiserRetCode::SUCCESS && denoiser_ != nullptr &&
+            if (process_result >= GigaEdgeSpenchRetCode::SUCCESS && denoiser_ != nullptr &&
                 denoiser_context_ != nullptr) {
               denoiser_output_buffer_.clear();
               const auto start = std::chrono::steady_clock::now();
@@ -490,7 +491,7 @@ void Processor::worker_loop() noexcept {
         }
 
         std::size_t frames_produced = frames_to_process;
-        if (process_result < GigaDenoiserRetCode::SUCCESS || denoise_result < GigaDenoiserRetCode::SUCCESS) {
+        if (process_result < GigaEdgeSpenchRetCode::SUCCESS || denoise_result < GigaEdgeSpenchRetCode::SUCCESS) {
           frames_produced = 0U;
         } else {
           frames_produced = std::min(frames_to_process, denoiser_output_buffer_.size());
@@ -549,4 +550,4 @@ std::size_t Processor::ring_capacity_for_sample_rate(std::uint32_t sample_rate_h
   return std::max(default_ring_capacity, static_cast<std::size_t>(std::ceil(sample_rate_hz * capacity_seconds)));
 }
 
-}  // namespace gigaedge::denoiser
+}  // namespace gigaedge::spench

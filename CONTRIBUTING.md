@@ -1,4 +1,4 @@
-# Contributing to GigaDenoiser
+# Contributing to GigaEdge Spench
 
 ## Quickstart
 
@@ -48,7 +48,7 @@ manifest changes.
 ## Repository Layout
 
 - `core/`: native C and C++ SDK, implementation, utilities, CLI, and tests.
-- `core/include/gigadenoiser/`: compatibility-sensitive public headers.
+- `core/include/spench/`: compatibility-sensitive public headers.
 - `android/`: Kotlin SDK, JNI bridge, models, and demo application.
 - `ios/`: Swift and Objective-C++ framework, model bundles, tests, and demo.
 - `web/`: Web SDK npm workspace, WebAssembly bridge, documentation, and demo.
@@ -85,12 +85,12 @@ Follow [`STYLE.md`](STYLE.md) and the existing platform conventions.
 
 - C++ implementation functions and methods use `snake_case`.
 - C++ types use `PascalCase`; members use a trailing underscore.
-- Public C symbols retain their `GigaDenoiser*` prefix because C has no namespace.
-- Public C++ code uses the `gigaedge::denoiser` namespace.
-- Kotlin public types rely on `com.gigaedge.denoiser` for product context.
-- Swift public types rely on the `GigaDenoiserAudioKit` module for product context.
-- Web public exports retain `GigaDenoiserSDK`, `GigaDenoiserAudioNode`, and
-  `GigaDenoiserError`.
+- Public C symbols retain their `GigaEdge Spench*` prefix because C has no namespace.
+- Public C++ code uses the `gigaedge::spench` namespace.
+- Kotlin public types rely on `com.gigaedge.spench` for product context.
+- Swift public types rely on the `GigaEdgeSpenchAudioKit` module for product context.
+- Web public exports retain `GigaEdgeSpenchSDK`, `GigaEdgeSpenchAudioNode`, and
+  `GigaEdgeSpenchError`.
 
 Check changed C and C++ lines with:
 
