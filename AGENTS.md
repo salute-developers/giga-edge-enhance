@@ -1,13 +1,20 @@
-# GigaDenoiser repository guidance
+# GigaEdge Spench repository guidance
 
 These instructions apply to the whole repository. If a nested `AGENTS.md` is
 added later, follow the more specific instructions for files in that subtree.
+
+The official product name is GigaEdge Spench. Use that spaced form in
+user-facing documentation. Code identifiers use the `GigaEdgeSpench` prefix,
+the C++ namespace `gigaedge::spench`, the include directory `spench/`, the
+CMake target `gigaedge-spench`, the `GES_` prefix, and the `.ges` packed-model
+extension. The feature class remains `Denoiser`. The GitHub repository slug
+stays `gigadenoiser`.
 
 ## Repository map
 
 - `core/`: C and C++ library sources, public headers, utilities, CLI tools,
   demos, and Catch2 tests.
-- `core/include/gigadenoiser/`: supported public C and C++ SDK surface. Treat API
+- `core/include/spench/`: supported public C and C++ SDK surface. Treat API
   and ABI compatibility here as intentional product constraints.
 - `package-lock.cmake` and `out/cache/cpm/`: pinned dependency declarations and
   their generated source cache. Do not edit cached dependency sources.
@@ -105,7 +112,7 @@ crosses engines, platforms, ABI boundaries, or memory ownership.
 - WASM C++ or glue change: build and test the matching `wasm-release` target.
   Also build and test `wasm-dsp-release` when DSP-only behavior can be affected.
 - Web SDK TypeScript-only change: from `web`, run
-  `npm test --workspace=@gigaedge/denoiser-web-sdk` and the relevant build or
+  `npm test --workspace=@gigaedge/spench-web-sdk` and the relevant build or
   lint script. Run `tools/build web` when generated WASM, staging,
   bundling, or the native/web boundary changes.
 - Android or iOS wrapper change: run the matching platform workflow. Some
@@ -124,9 +131,9 @@ blocker. Do not silently substitute a weaker check.
 
 - Follow `STYLE.md` and `.clang-format`. Internal functions and methods use
   `snake_case`; types use `PascalCase`; class members use a trailing underscore.
-- Prefer fixed-width integer types in GigaDenoiser code as documented in `STYLE.md`.
+- Prefer fixed-width integer types in GigaEdge Spench code as documented in `STYLE.md`.
 - Do not rename exported C symbols or existing public C++ API methods for style.
-  Changes under `core/include/gigadenoiser/` require explicit compatibility review.
+  Changes under `core/include/spench/` require explicit compatibility review.
 - Keep tests close to the affected behavior under `core/tests/`. Add a
   regression test when fixing a reproducible bug.
 - Check changed C/C++ lines against `.clang-format`:
@@ -215,7 +222,7 @@ uploaded and downloaded between runners.
   required CI gate is intentionally Chromium-only to keep browser validation
   on one reproducible engine. Local `tools/test web-playwright` runs the
   Chromium, Firefox, and WebKit projects by default; set
-  `GDN_PLAYWRIGHT_BROWSERS` to a comma-separated subset for a focused run.
+  `GES_PLAYWRIGHT_BROWSERS` to a comma-separated subset for a focused run.
   Playwright consumes the packed SDK from the Web build job and runs against
   the local COOP/COEP server. Forward `CI` into the Playwright container so its
   two configured retries are active in CI. Linux MOS results remain

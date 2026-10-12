@@ -13,7 +13,7 @@
  *    n_levels
  */
 
-EMSCRIPTEN_BINDINGS(gigadenoiser) {
+EMSCRIPTEN_BINDINGS(spench) {
 #ifdef BUILD_DSP
   emscripten::class_<AudioProcessPipelineElement>("AudioProcessPipelineElement")
     .constructor<std::string>()
@@ -24,14 +24,14 @@ EMSCRIPTEN_BINDINGS(gigadenoiser) {
     .function("process", &EchoCancellationElement::processMono)
     .function("resetContext", &EchoCancellationElement::resetContext);
 #else
-  emscripten::class_<gigaedge::denoiser::PackedModelReader>("PackedModelReader")
+  emscripten::class_<gigaedge::spench::PackedModelReader>("PackedModelReader")
       .smart_ptr_constructor("PackedModelReader",
-                             &std::make_shared<gigaedge::denoiser::PackedModelReader, const uintptr_t, uint32_t>);
+                             &std::make_shared<gigaedge::spench::PackedModelReader, const uintptr_t, uint32_t>);
   emscripten::class_<DenoisePipelineElement>("DenoisePipelineElement")
-      .constructor<uint32_t, std::shared_ptr<gigaedge::denoiser::PackedModelReader> >()
+      .constructor<uint32_t, std::shared_ptr<gigaedge::spench::PackedModelReader> >()
       .function("process", &DenoisePipelineElement::process)
       .function("resetContext", &DenoisePipelineElement::resetContext);
 #endif
-  emscripten::function("SetLogLevel", &gigaedge::denoiser::set_log_level);
-  emscripten::function("InitLogger", &gigaedge::denoiser::init_logger);
+  emscripten::function("SetLogLevel", &gigaedge::spench::set_log_level);
+  emscripten::function("InitLogger", &gigaedge::spench::init_logger);
 }

@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "demo/utils.hpp"
-#include "include/gigadenoiser.h"
+#include "include/spench.h"
 
 static void help(int32_t count, char* argv[], Args& args) {
   // getopt_long expects a null-terminated argv array and may reorder it.
@@ -99,11 +99,11 @@ int32_t main(int32_t argc, char* argv[]) {
     return 1;
   }
 
-  std::unique_ptr<gigaedge::denoiser::AudioProcessor> audio_processor =
+  std::unique_ptr<gigaedge::spench::AudioProcessor> audio_processor =
       args.config_path.empty()
-          ? std::unique_ptr<gigaedge::denoiser::AudioProcessor>(new gigaedge::denoiser::AudioProcessor())
-          : std::unique_ptr<gigaedge::denoiser::AudioProcessor>(
-                new gigaedge::denoiser::AudioProcessor(args.config_path.c_str()));
+          ? std::unique_ptr<gigaedge::spench::AudioProcessor>(new gigaedge::spench::AudioProcessor())
+          : std::unique_ptr<gigaedge::spench::AudioProcessor>(
+                new gigaedge::spench::AudioProcessor(args.config_path.c_str()));
 
   audio_processor->AddRC().AddNG().AddDRC();
 

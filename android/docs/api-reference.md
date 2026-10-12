@@ -1,7 +1,7 @@
 # API reference
 
-The public API lives in the package `com.gigaedge.denoiser` (SDK) and
-`com.gigaedge.denoiser.models` (model name constants). Every member carries KDoc in source; this page
+The public API lives in the package `com.gigaedge.spench` (SDK) and
+`com.gigaedge.spench.models` (model name constants). Every member carries KDoc in source; this page
 mirrors it for quick reference.
 
 Units used throughout: **latencies in seconds**, **telemetry buckets and means in milliseconds**,
@@ -105,7 +105,7 @@ The set of stages to run. The default disables both, matching a fresh processor.
 
 - `normalization` — enables the normalization stage.
 - `noiseSuppression` — model name, or `null` to disable. Must resolve to a merged asset
-  `gigadenoiser/models/{name}.gdn` and may contain only letters, digits, `.`, `_`, and `-`.
+  `spench/models/{name}.ges` and may contain only letters, digits, `.`, `_`, and `-`.
 
 ## `Telemetry`
 
@@ -151,13 +151,13 @@ object Models {
 }
 ```
 
-- `available(context)` — returns the packaged model names, **sorted**, with the `.gdn` suffix
+- `available(context)` — returns the packaged model names, **sorted**, with the `.ges` suffix
   stripped. Returns an empty list when no model assets are present. A returned name can be used as
   `Features.noiseSuppression`.
 
-## Model name constants (`com.gigaedge.denoiser.models`)
+## Model name constants (`com.gigaedge.spench.models`)
 
-- `Quality48Model.NAME` == `"quality48"` (from `:giga-denoiser-model-quality48`).
+- `Quality48Model.NAME` == `"quality48"` (from `:gigaedge-spench-model-quality48`).
 
 ## Internal (not public API)
 

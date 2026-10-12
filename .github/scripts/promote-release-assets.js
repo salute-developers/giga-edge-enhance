@@ -3,17 +3,17 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 
 const ARTIFACTS = [
-    ['gdn-package-native-release-onnx', 'giga-denoiser-linux-onnx'],
-    ['gdn-package-native-release-tflite', 'giga-denoiser-linux-tflite'],
-    ['gdn-install-macos-arm64-release-onnx', 'giga-denoiser-macos-arm64-onnx'],
-    ['gdn-install-macos-arm64-release-tflite', 'giga-denoiser-macos-arm64-tflite'],
-    ['gdn-install-macos-x86_64-release-onnx', 'giga-denoiser-macos-x86_64-onnx'],
-    ['gdn-install-macos-x86_64-release-tflite', 'giga-denoiser-macos-x86_64-tflite'],
-    ['gdn-install-windows-x64-release-onnx', 'giga-denoiser-windows-x64-onnx'],
-    ['gdn-install-windows-x64-release-tflite', 'giga-denoiser-windows-x64-tflite'],
-    ['gdn-android', 'giga-denoiser-android'],
-    ['gdn-ios', 'giga-denoiser-ios'],
-    ['gdn-web-sdk', 'giga-denoiser-web-sdk'],
+    ['gdn-package-native-release-onnx', 'gigaedge-spench-linux-onnx'],
+    ['gdn-package-native-release-tflite', 'gigaedge-spench-linux-tflite'],
+    ['gdn-install-macos-arm64-release-onnx', 'gigaedge-spench-macos-arm64-onnx'],
+    ['gdn-install-macos-arm64-release-tflite', 'gigaedge-spench-macos-arm64-tflite'],
+    ['gdn-install-macos-x86_64-release-onnx', 'gigaedge-spench-macos-x86_64-onnx'],
+    ['gdn-install-macos-x86_64-release-tflite', 'gigaedge-spench-macos-x86_64-tflite'],
+    ['gdn-install-windows-x64-release-onnx', 'gigaedge-spench-windows-x64-onnx'],
+    ['gdn-install-windows-x64-release-tflite', 'gigaedge-spench-windows-x64-tflite'],
+    ['gdn-android', 'gigaedge-spench-android'],
+    ['gdn-ios', 'gigaedge-spench-ios'],
+    ['gdn-web-sdk', 'gigaedge-spench-web-sdk'],
 ];
 
 function asBuffer(data) {

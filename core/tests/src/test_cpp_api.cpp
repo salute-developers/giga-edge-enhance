@@ -1,4 +1,4 @@
-#include <gigadenoiser.h>
+#include <spench.h>
 
 #include <algorithm>
 #include <catch.hpp>
@@ -13,8 +13,8 @@
 
 struct TestFixture {
   std::vector<float> wav_data;
-  std::unique_ptr<gigaedge::denoiser::Denoiser> denoiser;
-  std::unique_ptr<gigaedge::denoiser::AudioProcessor> dsp;
+  std::unique_ptr<gigaedge::spench::Denoiser> denoiser;
+  std::unique_ptr<gigaedge::spench::AudioProcessor> dsp;
 
   const std::string data_root = "data/";
 
@@ -40,12 +40,12 @@ struct TestFixture {
     std::filesystem::path config_path = data_root + "config/";
     config_path += config_name;
     const std::string cfg = config_path.string();  // narrow on Windows
-    denoiser = std::make_unique<gigaedge::denoiser::Denoiser>(cfg.c_str());
+    denoiser = std::make_unique<gigaedge::spench::Denoiser>(cfg.c_str());
     return *this;
   }
 
   TestFixture& InitDenoiser(const std::string& yaml) {
-    denoiser = std::make_unique<gigaedge::denoiser::Denoiser>(yaml);
+    denoiser = std::make_unique<gigaedge::spench::Denoiser>(yaml);
     return *this;
   }
 
@@ -54,42 +54,42 @@ struct TestFixture {
     config_path += config_name;
     const std::string cfg = config_path.string();  // narrow on Windows
 
-    dsp = std::make_unique<gigaedge::denoiser::AudioProcessor>(cfg.c_str());
+    dsp = std::make_unique<gigaedge::spench::AudioProcessor>(cfg.c_str());
     return *this;
   }
 
   TestFixture& InitAudioProcessor(const std::string& yaml) {
-    dsp = std::make_unique<gigaedge::denoiser::AudioProcessor>(yaml);
+    dsp = std::make_unique<gigaedge::spench::AudioProcessor>(yaml);
     return *this;
   }
 
   TestFixture& InitAudioProcessor() {
-    dsp = std::make_unique<gigaedge::denoiser::AudioProcessor>();
+    dsp = std::make_unique<gigaedge::spench::AudioProcessor>();
     return *this;
   }
 };
 
-TEST_CASE("SUCCEED Convert pcm to float point [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Convert pcm to float point [gigaedge-spench c++ api]") {
   std::vector<int16_t> pcm16 = {0, 32767, -32768, 2000, -5000};
   std::vector<float> ref_float = {0.0, 1.0, -1.0, 0.06103, -0.1526};
   std::vector<float> converted_float;
 
-  gigaedge::denoiser::tools::convert_pcm16_to_float32(pcm16, converted_float);
+  gigaedge::spench::tools::convert_pcm16_to_float32(pcm16, converted_float);
 
   IsVectorsClose(ref_float, converted_float, 0.001);
 }
 
-TEST_CASE("SUCCEED Convert float point to pcm [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Convert float point to pcm [gigaedge-spench c++ api]") {
   std::vector<float> float_point32 = {0, 1, -1, 0.06103, -0.1526};
   std::vector<int16_t> ref_pcm = {0, 32767, -32767, 2000, -5000};
   std::vector<int16_t> converted_pcm;
 
-  gigaedge::denoiser::tools::convert_float32_to_pcm16(float_point32, converted_pcm);
+  gigaedge::spench::tools::convert_float32_to_pcm16(float_point32, converted_pcm);
 
   REQUIRE(ref_pcm == converted_pcm);
 }
 
-TEST_CASE("SUCCEED Create context [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Create context [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml")));
@@ -97,7 +97,7 @@ TEST_CASE("SUCCEED Create context [giga-denoiser c++ api]") {
   auto test_data =
       std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml")));
 #endif
-  gigaedge::denoiser::Context<float>* ctx = nullptr;
+  gigaedge::spench::Context<float>* ctx = nullptr;
   ctx = test_data.denoiser->CreateContext();
   REQUIRE(ctx != nullptr);
 
@@ -105,7 +105,7 @@ TEST_CASE("SUCCEED Create context [giga-denoiser c++ api]") {
   REQUIRE(ctx == nullptr);
 }
 
-TEST_CASE("SUCCEED Retrieve model sample rate [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Retrieve model sample rate [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml")));
@@ -116,7 +116,7 @@ TEST_CASE("SUCCEED Retrieve model sample rate [giga-denoiser c++ api]") {
   REQUIRE(test_data.denoiser->GetModelSampleRate() == 48000);
 }
 
-TEST_CASE("SUCCEED Retrieve model input frame size [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Retrieve model input frame size [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml")));
@@ -127,7 +127,7 @@ TEST_CASE("SUCCEED Retrieve model input frame size [giga-denoiser c++ api]") {
   REQUIRE(test_data.denoiser->GetModelInputFrameSize() == (48000 * 16) / 1000);
 }
 
-TEST_CASE("SUCCEED Set and retrieve a context id [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Set and retrieve a context id [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml")));
@@ -136,7 +136,7 @@ TEST_CASE("SUCCEED Set and retrieve a context id [giga-denoiser c++ api]") {
       std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml")));
 #endif
 
-  gigaedge::denoiser::Context<float>* ctx = nullptr;
+  gigaedge::spench::Context<float>* ctx = nullptr;
   ctx = test_data.denoiser->CreateContext();
 
   test_data.denoiser->SetContextId(ctx, 1000);
@@ -147,7 +147,7 @@ TEST_CASE("SUCCEED Set and retrieve a context id [giga-denoiser c++ api]") {
   test_data.denoiser->DestroyContext(&ctx);
 }
 
-TEST_CASE("SUCCEED Run inference with 100 tensors [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run inference with 100 tensors [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
@@ -159,7 +159,7 @@ TEST_CASE("SUCCEED Run inference with 100 tensors [giga-denoiser c++ api]") {
                                  .SetWav("test1_48_noised.wav"));
 #endif
 
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
+  gigaedge::spench::Context<float>* ctx = test_data.denoiser->CreateContext();
   const uint32_t chunks_to_compare = 100;
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
@@ -170,15 +170,15 @@ TEST_CASE("SUCCEED Run inference with 100 tensors [giga-denoiser c++ api]") {
     std::vector<float> ret;
     REQUIRE(chunk.size() == test_data.denoiser->GetModelInputFrameSize());
     auto ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-    REQUIRE(ret_code >= GigaDenoiserRetCode::SUCCESS);
-    REQUIRE(ret_code <= GigaDenoiserRetCode::CONTEXT_ACCUMULATION);
+    REQUIRE(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    REQUIRE(ret_code <= GigaEdgeSpenchRetCode::CONTEXT_ACCUMULATION);
   }
 
   test_data.denoiser->DestroyContext(&ctx);
   REQUIRE(ctx == nullptr);
 }
 
-TEST_CASE("SUCCEED Get statistic information [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Get statistic information [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
@@ -190,7 +190,7 @@ TEST_CASE("SUCCEED Get statistic information [giga-denoiser c++ api]") {
                                  .SetWav("test1_48_noised.wav"));
 #endif
 
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
+  gigaedge::spench::Context<float>* ctx = test_data.denoiser->CreateContext();
   const uint32_t chunks_to_compare = 400;
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
@@ -203,8 +203,8 @@ TEST_CASE("SUCCEED Get statistic information [giga-denoiser c++ api]") {
     auto ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
     test_data.denoiser->GetStreamStat(ctx);
 
-    REQUIRE(ret_code >= GigaDenoiserRetCode::SUCCESS);
-    REQUIRE(ret_code <= GigaDenoiserRetCode::CONTEXT_ACCUMULATION);
+    REQUIRE(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    REQUIRE(ret_code <= GigaEdgeSpenchRetCode::CONTEXT_ACCUMULATION);
   }
 
   auto stat = test_data.denoiser->GetStreamStat(nullptr);
@@ -227,7 +227,7 @@ TEST_CASE("SUCCEED Get statistic information [giga-denoiser c++ api]") {
   REQUIRE(ctx == nullptr);
 }
 
-TEST_CASE("SUCCEED Run inference with 100 tensors and default context arguments [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run inference with 100 tensors and default context arguments [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
@@ -239,7 +239,7 @@ TEST_CASE("SUCCEED Run inference with 100 tensors and default context arguments 
                                  .SetWav("test1_48_noised.wav"));
 #endif
 
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(0, 0);
+  gigaedge::spench::Context<float>* ctx = test_data.denoiser->CreateContext(0, 0);
   const uint32_t chunks_to_compare = 100;
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
@@ -250,8 +250,8 @@ TEST_CASE("SUCCEED Run inference with 100 tensors and default context arguments 
     std::vector<float> ret;
     REQUIRE(chunk.size() == test_data.denoiser->GetModelInputFrameSize());
     auto ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-    REQUIRE(ret_code >= GigaDenoiserRetCode::SUCCESS);
-    REQUIRE(ret_code <= GigaDenoiserRetCode::CONTEXT_ACCUMULATION);
+    REQUIRE(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    REQUIRE(ret_code <= GigaEdgeSpenchRetCode::CONTEXT_ACCUMULATION);
   }
 
   test_data.denoiser->DestroyContext(&ctx);
@@ -259,7 +259,7 @@ TEST_CASE("SUCCEED Run inference with 100 tensors and default context arguments 
 }
 
 
-TEST_CASE("SUCCEED Reload configuration from disk [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Reload configuration from disk [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_tflite_48khz.yaml")));
@@ -271,7 +271,7 @@ TEST_CASE("SUCCEED Reload configuration from disk [giga-denoiser c++ api]") {
 }
 
 
-TEST_CASE("SUCCEED Run inference with the best quality 48 kHz model and 2 contexts [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run inference with the best quality 48 kHz model and 2 contexts [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
@@ -285,8 +285,8 @@ TEST_CASE("SUCCEED Run inference with the best quality 48 kHz model and 2 contex
 
   std::vector<float> predictions1;
   std::vector<float> predictions2;
-  gigaedge::denoiser::Context<float>* ctx1 = test_data.denoiser->CreateContext();
-  gigaedge::denoiser::Context<float>* ctx2 = test_data.denoiser->CreateContext();
+  gigaedge::spench::Context<float>* ctx1 = test_data.denoiser->CreateContext();
+  gigaedge::spench::Context<float>* ctx2 = test_data.denoiser->CreateContext();
   CHECK(ctx1 != ctx2);
   const uint32_t chunks_to_compare = 100;
   const uint32_t chunk_size = 16;
@@ -296,10 +296,10 @@ TEST_CASE("SUCCEED Run inference with the best quality 48 kHz model and 2 contex
   for (auto& chunk : chunks) {
     std::vector<float> ret1;
     std::vector<float> ret2;
-    GigaDenoiserRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret1, ctx1);
-    CHECK(ret_code >= GigaDenoiserRetCode::SUCCESS);
+    GigaEdgeSpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret1, ctx1);
+    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
     ret_code = test_data.denoiser->ProcessChunk(chunk, ret2, ctx2);
-    CHECK(ret_code >= GigaDenoiserRetCode::SUCCESS);
+    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
     predictions1.insert(predictions1.end(), ret1.begin(), ret1.end());
     predictions2.insert(predictions2.end(), ret2.begin(), ret2.end());
   }
@@ -311,7 +311,7 @@ TEST_CASE("SUCCEED Run inference with the best quality 48 kHz model and 2 contex
   CHECK(ctx2 == nullptr);
 }
 
-TEST_CASE("SUCCEED Run inference with 48 kHz model and 2 context with default parameters [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run inference with 48 kHz model and 2 context with default parameters [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
@@ -325,8 +325,8 @@ TEST_CASE("SUCCEED Run inference with 48 kHz model and 2 context with default pa
 
   std::vector<float> predictions1;
   std::vector<float> predictions2;
-  gigaedge::denoiser::Context<float>* ctx1 = test_data.denoiser->CreateContext();
-  gigaedge::denoiser::Context<float>* ctx2 = test_data.denoiser->CreateContext(0, 0);
+  gigaedge::spench::Context<float>* ctx1 = test_data.denoiser->CreateContext();
+  gigaedge::spench::Context<float>* ctx2 = test_data.denoiser->CreateContext(0, 0);
   CHECK(ctx1 != ctx2);
   const uint32_t chunks_to_compare = 100;
   const uint32_t chunk_size = 16;
@@ -336,10 +336,10 @@ TEST_CASE("SUCCEED Run inference with 48 kHz model and 2 context with default pa
   for (auto& chunk : chunks) {
     std::vector<float> ret1;
     std::vector<float> ret2;
-    GigaDenoiserRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret1, ctx1);
-    CHECK(ret_code >= GigaDenoiserRetCode::SUCCESS);
+    GigaEdgeSpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret1, ctx1);
+    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
     ret_code = test_data.denoiser->ProcessChunk(chunk, ret2, ctx2);
-    CHECK(ret_code >= GigaDenoiserRetCode::SUCCESS);
+    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
     predictions1.insert(predictions1.end(), ret1.begin(), ret1.end());
     predictions2.insert(predictions2.end(), ret2.begin(), ret2.end());
   }
@@ -352,7 +352,7 @@ TEST_CASE("SUCCEED Run inference with 48 kHz model and 2 context with default pa
 }
 
 TEST_CASE(
-    "SUCCEED Run inference with the best quality 48 kHz model and 2 contexts concurently [giga-denoiser c++ api]") {
+    "SUCCEED Run inference with the best quality 48 kHz model and 2 contexts concurently [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
@@ -370,22 +370,21 @@ TEST_CASE(
   const uint32_t chunk_stride = 16;
   std::vector<std::vector<float>> predictions(context_count);
   std::vector<std::thread> pool;
-  std::vector<gigaedge::denoiser::Context<float>*> contexts;
+  std::vector<gigaedge::spench::Context<float>*> contexts;
   auto chunks = ChunkWav<float>(test_data.wav_data, test_data.denoiser->GetModelSampleRate(), chunk_size, chunk_stride);
   chunks.resize(chunks_to_compare);
 
-  auto functor = [&test_data, &chunks](gigaedge::denoiser::Context<float>* ctx,
-                                       std::vector<float>& predictions) -> void {
+  auto functor = [&test_data, &chunks](gigaedge::spench::Context<float>* ctx, std::vector<float>& predictions) -> void {
     for (auto& chunk : chunks) {
       std::vector<float> ret;
-      GigaDenoiserRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
-      CHECK(ret_code >= GigaDenoiserRetCode::SUCCESS);
+      GigaEdgeSpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
+      CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
       predictions.insert(predictions.end(), ret.begin(), ret.end());
     }
   };
 
   for (uint32_t i = 0; i < context_count; ++i) {
-    gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
+    gigaedge::spench::Context<float>* ctx = test_data.denoiser->CreateContext();
     test_data.denoiser->SetContextId(ctx, i);
     contexts.emplace_back(ctx);
     pool.emplace_back(std::thread(functor, contexts.back(), std::ref(predictions.at(i))));
@@ -405,7 +404,7 @@ TEST_CASE(
   }
 }
 
-TEST_CASE("FAIL Run inference with invalid chunk size [giga-denoiser c++ api]") {
+TEST_CASE("FAIL Run inference with invalid chunk size [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
@@ -418,19 +417,19 @@ TEST_CASE("FAIL Run inference with invalid chunk size [giga-denoiser c++ api]") 
 #endif
 
   std::vector<float> predictions;
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(48000, 48000);
+  gigaedge::spench::Context<float>* ctx = test_data.denoiser->CreateContext(48000, 48000);
   const uint32_t chunk_size = 20;
   const uint32_t chunk_stride = 10;
   const uint32_t chunks_to_compare = 5;
   auto chunks = ChunkWav<float>(test_data.wav_data, test_data.denoiser->GetModelSampleRate(), chunk_size, chunk_stride);
   chunks.resize(chunks_to_compare);
   std::vector<float> ret;
-  GigaDenoiserRetCode ret_code = test_data.denoiser->ProcessChunk(chunks[0], ret, ctx);
-  CHECK(ret_code == GigaDenoiserRetCode::ERR_INVALID_FRAME_SIZE);
+  GigaEdgeSpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunks[0], ret, ctx);
+  CHECK(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_FRAME_SIZE);
   test_data.denoiser->DestroyContext(&ctx);
 }
 
-TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 frames) [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 frames) [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
       std::move(TestFixture()
@@ -442,7 +441,7 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 fra
                                  .SetWav("test1_48_noised.wav"));
 #endif
 
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
+  gigaedge::spench::Context<float>* ctx = test_data.denoiser->CreateContext();
 
   const uint32_t chunk_size = 16;  // ms
   const uint32_t chunk_stride = chunk_size;
@@ -480,11 +479,11 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 fra
 }
 
 #ifdef BUILD_ONNX_ENGINE
-TEST_CASE("ONNX dynamic buffers shrink after a larger chunk [giga-denoiser c++ api]") {
+TEST_CASE("ONNX dynamic buffers shrink after a larger chunk [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture()
                                  .InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml"))
                                  .SetWav("test1_48_noised.wav"));
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext();
+  gigaedge::spench::Context<float>* ctx = test_data.denoiser->CreateContext();
   const auto chunks = ChunkWav<float>(test_data.wav_data, test_data.denoiser->GetModelSampleRate(), 16, 16);
   REQUIRE(chunks.size() >= 7);
 
@@ -495,8 +494,8 @@ TEST_CASE("ONNX dynamic buffers shrink after a larger chunk [giga-denoiser c++ a
     }
 
     std::vector<float> output;
-    const GigaDenoiserRetCode ret_code = test_data.denoiser->ProcessChunk(input, output, ctx);
-    REQUIRE(ret_code >= GigaDenoiserRetCode::SUCCESS);
+    const GigaEdgeSpenchRetCode ret_code = test_data.denoiser->ProcessChunk(input, output, ctx);
+    REQUIRE(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
     REQUIRE(output.size() == input.size());
   }
 
@@ -530,11 +529,11 @@ void require_finite(const std::vector<float>& samples) {
 
 }  // namespace
 
-TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture().InitDenoiser(std::string(hq_8khz_yaml)).SetWav("test1_24_noised.wav"));
   REQUIRE(test_data.denoiser->GetModelSampleRate() == 8000);
 
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
+  gigaedge::spench::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
   auto chunks = ChunkWav<float>(test_data.wav_data, 8000, 16, 16);
   REQUIRE(chunks.size() >= 20);
   chunks.resize(20);
@@ -542,8 +541,8 @@ TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model [giga-denoiser c++ api]
   std::vector<float> prediction;
   for (const auto& chunk : chunks) {
     std::vector<float> output;
-    const GigaDenoiserRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, output, ctx);
-    REQUIRE(ret_code >= GigaDenoiserRetCode::SUCCESS);
+    const GigaEdgeSpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, output, ctx);
+    REQUIRE(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
     REQUIRE(output.size() == chunk.size());
     prediction.insert(prediction.end(), output.begin(), output.end());
   }
@@ -552,19 +551,19 @@ TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model [giga-denoiser c++ api]
           prediction.end());
 
   std::vector<float> final_chunk;
-  const GigaDenoiserRetCode final_code = test_data.denoiser->GetFinalChunk(final_chunk, ctx);
-  REQUIRE(final_code == GigaDenoiserRetCode::SUCCESS);
+  const GigaEdgeSpenchRetCode final_code = test_data.denoiser->GetFinalChunk(final_chunk, ctx);
+  REQUIRE(final_code == GigaEdgeSpenchRetCode::SUCCESS);
   REQUIRE_FALSE(final_chunk.empty());
   require_finite(final_chunk);
   REQUIRE(std::vector<float>(final_chunk.size(), 0.0f) != final_chunk);
   test_data.denoiser->DestroyContext(&ctx);
 }
 
-TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model and 32 ms chunks [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model and 32 ms chunks [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture().InitDenoiser(std::string(hq_8khz_yaml)).SetWav("test1_24_noised.wav"));
   const uint64_t hop = test_data.denoiser->GetModelInputFrameSize();
   REQUIRE(hop == 128);
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
+  gigaedge::spench::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
   auto chunks = ChunkWav<float>(test_data.wav_data, 8000, 32, 32);
   REQUIRE(chunks.size() >= 10);
   chunks.resize(10);
@@ -572,8 +571,8 @@ TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model and 32 ms chunks [giga-
   bool first_chunk = true;
   for (const auto& chunk : chunks) {
     std::vector<float> output;
-    const GigaDenoiserRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, output, ctx);
-    REQUIRE(ret_code >= GigaDenoiserRetCode::SUCCESS);
+    const GigaEdgeSpenchRetCode ret_code = test_data.denoiser->ProcessChunk(chunk, output, ctx);
+    REQUIRE(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
     require_finite(output);
     if (first_chunk && chunk.size() > hop) {
       REQUIRE(output.size() + hop == chunk.size());
@@ -585,11 +584,11 @@ TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model and 32 ms chunks [giga-
   test_data.denoiser->DestroyContext(&ctx);
 }
 
-TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model and variable chunk sizes [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model and variable chunk sizes [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture().InitDenoiser(std::string(hq_8khz_yaml)).SetWav("test1_24_noised.wav"));
   const uint64_t hop = test_data.denoiser->GetModelInputFrameSize();
   REQUIRE(hop == 128);
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
+  gigaedge::spench::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
   auto chunks = ChunkWav<float>(test_data.wav_data, 8000, 16, 16);
   const uint32_t factors[] = {2, 4, 3, 8, 2};
   std::size_t cursor = 0;
@@ -600,8 +599,8 @@ TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model and variable chunk size
     const std::vector<float> merged = MergeChunks(chunks, cursor, factor);
     cursor += factor;
     std::vector<float> output;
-    const GigaDenoiserRetCode ret_code = test_data.denoiser->ProcessChunk(merged, output, ctx);
-    REQUIRE(ret_code >= GigaDenoiserRetCode::SUCCESS);
+    const GigaEdgeSpenchRetCode ret_code = test_data.denoiser->ProcessChunk(merged, output, ctx);
+    REQUIRE(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
     require_finite(output);
     if (first_chunk && merged.size() > hop) {
       REQUIRE(output.size() + hop == merged.size());
@@ -618,10 +617,10 @@ TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model and variable chunk size
 
 #ifdef BUILD_RESAMPLER
 TEST_CASE(
-    "SUCCEED Run inference with the super fast 8 kHz on huge single chunk (16000 frames) [giga-denoiser c++ api]") {
+    "SUCCEED Run inference with the super fast 8 kHz on huge single chunk (16000 frames) [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture().InitDenoiser(std::string(hq_8khz_yaml)).SetWav("test1_24_noised.wav"));
 
-  gigaedge::denoiser::Context<float>* ctx = test_data.denoiser->CreateContext(24000, 8000);
+  gigaedge::spench::Context<float>* ctx = test_data.denoiser->CreateContext(24000, 8000);
 
   const uint32_t chunk_size = 16;  // ms
   const uint32_t chunk_stride = chunk_size;
@@ -661,7 +660,7 @@ TEST_CASE(
 
 #endif
 
-TEST_CASE("SUCCEED Run AudioProcessing with RC default parameters [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing with RC default parameters [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture().InitAudioProcessor().SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddRC();
@@ -696,7 +695,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with RC default parameters [giga-denoiser
   REQUIRE(greater_than_0_9.size() == 0);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing LC with parameters passed via constructor [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing LC with parameters passed via constructor [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture().InitAudioProcessor());
 
   constexpr uint32_t fs = 16000;
@@ -742,7 +741,7 @@ TEST_CASE("SUCCEED Run AudioProcessing LC with parameters passed via constructor
   }
 }
 
-TEST_CASE("SUCCEED LC with VAD prevents clipping on loud input [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED LC with VAD prevents clipping on loud input [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture().InitAudioProcessor());
 
   constexpr uint32_t fs = 16000;
@@ -778,7 +777,7 @@ TEST_CASE("SUCCEED LC with VAD prevents clipping on loud input [giga-denoiser c+
   REQUIRE(MaxAbs(out) <= limiter_mag + 5e-3f);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with AGC default parameters [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing with AGC default parameters [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture().InitAudioProcessor().SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddAGC();
@@ -811,7 +810,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with AGC default parameters [giga-denoise
   REQUIRE(greater_than_1.size() != 0);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with cahnged threshold for NG [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing with cahnged threshold for NG [gigaedge-spench c++ api]") {
   const char change[] = R"(
 sound_processing:
   noise_gate_ctrl:
@@ -854,7 +853,7 @@ sound_processing:
   REQUIRE(equal_0.size() > orig_equal_0);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with DRC default parameters [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing with DRC default parameters [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture().InitAudioProcessor().SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddDRC();
@@ -889,7 +888,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with DRC default parameters [giga-denoise
   REQUIRE(greater_than_0_75.size() == 0);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture().InitAudioProcessor().SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddAGC(48000, 0.9, 20.0);
@@ -922,7 +921,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [giga-denoise
   REQUIRE(greater_than_09.size() != 0);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture().InitAudioProcessor().SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddRC(48000, -4);
@@ -957,7 +956,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [giga-denoiser
   REQUIRE(greater_than_0_8.size() == 0);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with changed NG parameters [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing with changed NG parameters [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture().InitAudioProcessor().SetWav("test1_48_noised.wav"));
   test_data.dsp->AddNG(48000, -40, 0.05, 0.02, 0.05);
   const uint32_t chunk_size = 16;
@@ -993,7 +992,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed NG parameters [giga-denoiser
   REQUIRE(equal_0.size() == orig_equal_0);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with changed DRC parameters [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing with changed DRC parameters [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture().InitAudioProcessor().SetWav("test1_48_noised.wav"));
 
   test_data.dsp->AddDRC(48000, 0, 5, 0.0, 0.01, 0.2);
@@ -1028,7 +1027,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed DRC parameters [giga-denoise
   REQUIRE(greater_than_0_75.size() != 0);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture()
                                  .InitAudioProcessor(std::filesystem::path("sound_processing_rc.yaml"))
                                  .SetWav("test1_48_noised.wav"));
@@ -1065,7 +1064,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [g
   REQUIRE(greater_than_0_9.size() == 0);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture()
                                  .InitAudioProcessor(std::filesystem::path("sound_processing_agc.yaml"))
                                  .SetWav("test1_48_noised.wav"));
@@ -1100,7 +1099,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [
   REQUIRE(greater_than_1.size() != 0);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with reading NG parameters from config [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing with reading NG parameters from config [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture()
                                  .InitAudioProcessor(std::filesystem::path("sound_processing_rc.yaml"))
                                  .SetWav("test1_48_noised.wav"));
@@ -1140,7 +1139,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading NG parameters from config [g
   REQUIRE(equal_0.size() > orig_equal_0);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [giga-denoiser c++ api]") {
+TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [gigaedge-spench c++ api]") {
   auto test_data = std::move(TestFixture()
                                  .InitAudioProcessor(std::filesystem::path("sound_processing_agc.yaml"))
                                  .SetWav("test1_48_noised.wav"));
@@ -1176,8 +1175,8 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [
                [](float& i) { return std::fabs(i) > 0.75; });
   REQUIRE(greater_than_0_75.size() == 0);
 }
-TEST_CASE("SUCCESS AudioProcessing accepts YAML string and can process a small frame [giga-denoiser c++ api]") {
-  const std::string yaml = gigaedge::denoiser::default_audio_processing_config_yaml;
+TEST_CASE("SUCCESS AudioProcessing accepts YAML string and can process a small frame [gigaedge-spench c++ api]") {
+  const std::string yaml = gigaedge::spench::default_audio_processing_config_yaml;
 
   // Construct from YAML string
   auto fx = std::move(TestFixture().InitAudioProcessor(yaml));
@@ -1203,7 +1202,7 @@ TEST_CASE("SUCCESS AudioProcessing accepts YAML string and can process a small f
   REQUIRE_NOTHROW(fx.dsp->ProcessChunk(in, out));
   REQUIRE(out.size() == in.size());
 }
-TEST_CASE("FAIL AudioProcessing YAML string non-scalar where scalar required throws [giga-denoiser c++ api]") {
+TEST_CASE("FAIL AudioProcessing YAML string non-scalar where scalar required throws [gigaedge-spench c++ api]") {
   const std::string bad = R"(
 sound_processing:
   range_ctrl:
@@ -1216,7 +1215,7 @@ sound_processing:
 )";
   REQUIRE_THROWS_AS(TestFixture().InitAudioProcessor(bad), std::runtime_error);
 }
-TEST_CASE("FAIL AudioProcessing YAML string: range_ctrl.sample_rate too large [giga-denoiser c++ api]") {
+TEST_CASE("FAIL AudioProcessing YAML string: range_ctrl.sample_rate too large [gigaedge-spench c++ api]") {
   const std::string bad = R"(
 sound_processing:
   range_ctrl:
@@ -1225,7 +1224,7 @@ sound_processing:
   REQUIRE_THROWS_AS(TestFixture().InitAudioProcessor(bad), std::runtime_error);
 }
 
-TEST_CASE("FAIL AudioProcessing YAML string: auto_gain_ctrl.target_level <= 0 [giga-denoiser c++ api]") {
+TEST_CASE("FAIL AudioProcessing YAML string: auto_gain_ctrl.target_level <= 0 [gigaedge-spench c++ api]") {
   const std::string bad = R"(
 sound_processing:
   auto_gain_ctrl:
@@ -1234,7 +1233,7 @@ sound_processing:
   REQUIRE_THROWS_AS(TestFixture().InitAudioProcessor(bad), std::runtime_error);
 }
 
-TEST_CASE("FAIL AudioProcessing YAML string: noise_gate_ctrl.attack_time <= 0 [giga-denoiser c++ api]") {
+TEST_CASE("FAIL AudioProcessing YAML string: noise_gate_ctrl.attack_time <= 0 [gigaedge-spench c++ api]") {
   const std::string bad = R"(
 sound_processing:
   noise_gate_ctrl:
@@ -1244,7 +1243,7 @@ sound_processing:
   REQUIRE_THROWS_AS(TestFixture().InitAudioProcessor(bad), std::runtime_error);
 }
 
-TEST_CASE("FAIL AudioProcessing YAML string: drc.release_time <= 0 [giga-denoiser c++ api]") {
+TEST_CASE("FAIL AudioProcessing YAML string: drc.release_time <= 0 [gigaedge-spench c++ api]") {
   const std::string bad = R"(
 sound_processing:
   dynamic_range_compressor_ctrl:
@@ -1258,7 +1257,7 @@ sound_processing:
   REQUIRE_THROWS_AS(TestFixture().InitAudioProcessor(bad), std::runtime_error);
 }
 
-TEST_CASE("FAIL AudioProcessing YAML string: loudness_ctrl.bypass_time <= 0 [giga-denoiser c++ api]") {
+TEST_CASE("FAIL AudioProcessing YAML string: loudness_ctrl.bypass_time <= 0 [gigaedge-spench c++ api]") {
   const std::string bad = R"(
 sound_processing:
   loudness_ctrl:
@@ -1268,7 +1267,7 @@ sound_processing:
   REQUIRE_THROWS_AS(TestFixture().InitAudioProcessor(bad), std::runtime_error);
 }
 
-TEST_CASE("FAIL AudioProcessing YAML string: limiter_ctrl.threshold non-numeric [giga-denoiser c++ api]") {
+TEST_CASE("FAIL AudioProcessing YAML string: limiter_ctrl.threshold non-numeric [gigaedge-spench c++ api]") {
   const std::string bad = R"(
 sound_processing:
   limiter_ctrl:

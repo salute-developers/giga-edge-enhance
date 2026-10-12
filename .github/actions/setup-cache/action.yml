@@ -1,5 +1,5 @@
-name: Set up GigaDenoiser build caches
-description: Restore dependency sources and compiler outputs for one GigaDenoiser preset.
+name: Set up GigaEdgeSpench build caches
+description: Restore dependency sources and compiler outputs for one GigaEdgeSpench preset.
 
 inputs:
   preset:

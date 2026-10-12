@@ -8,16 +8,16 @@
 #include <string>
 #include <vector>
 
-#include "gigadenoiser/processor.h"
+#include "spench/processor.h"
 
 namespace {
 
-using gigaedge::denoiser::Processor;
+using gigaedge::spench::Processor;
 
 constexpr const char* illegal_argument_exception = "java/lang/IllegalArgumentException";
 constexpr const char* illegal_state_exception = "java/lang/IllegalStateException";
-constexpr const char* model_asset_prefix = "gigadenoiser/models/";
-constexpr const char* model_asset_suffix = ".gdn";
+constexpr const char* model_asset_prefix = "spench/models/";
+constexpr const char* model_asset_suffix = ".ges";
 
 void throw_java_exception(JNIEnv* env, const char* class_name, const char* message) {
   jclass exception_class = env->FindClass(class_name);
@@ -77,13 +77,13 @@ jintArray make_int_array(JNIEnv* env, const std::vector<jint>& values) {
 std::vector<std::uint8_t> read_asset(AAssetManager* asset_manager, const std::string& asset_path) {
   AAsset* asset = AAssetManager_open(asset_manager, asset_path.c_str(), AASSET_MODE_BUFFER);
   if (asset == nullptr) {
-    throw std::invalid_argument("GigaDenoiser model asset not found: " + asset_path);
+    throw std::invalid_argument("GigaEdgeSpench model asset not found: " + asset_path);
   }
 
   const off_t length = AAsset_getLength(asset);
   if (length <= 0) {
     AAsset_close(asset);
-    throw std::runtime_error("GigaDenoiser model asset is empty: " + asset_path);
+    throw std::runtime_error("GigaEdgeSpench model asset is empty: " + asset_path);
   }
 
   std::vector<std::uint8_t> data(static_cast<std::size_t>(length));
@@ -92,7 +92,7 @@ std::vector<std::uint8_t> read_asset(AAssetManager* asset_manager, const std::st
     const std::int32_t bytes_read = AAsset_read(asset, data.data() + total_read, data.size() - total_read);
     if (bytes_read <= 0) {
       AAsset_close(asset);
-      throw std::runtime_error("Failed to read GigaDenoiser model asset: " + asset_path);
+      throw std::runtime_error("Failed to read GigaEdgeSpench model asset: " + asset_path);
     }
     total_read += static_cast<std::size_t>(bytes_read);
   }
@@ -105,7 +105,7 @@ std::vector<std::uint8_t> read_asset(AAssetManager* asset_manager, const std::st
 
 // JNI exports are part of the Java native-method ABI and cannot use internal naming.
 // NOLINTBEGIN(readability-identifier-naming)
-extern "C" JNIEXPORT jlong JNICALL Java_com_gigaedge_denoiser_Processor_nativeCreate(
+extern "C" JNIEXPORT jlong JNICALL Java_com_gigaedge_spench_Processor_nativeCreate(
     JNIEnv* env, jobject /* thiz */, jint sample_rate_hz, jdouble low_performance_window_seconds,
     jint low_performance_max_refill_times, jdouble low_performance_max_refill_time_factor, jdouble min_latency,
     jdouble latency_increase_step, jdouble telemetry_rounding_milliseconds, jboolean use_vad_normalization,
@@ -115,7 +115,7 @@ extern "C" JNIEXPORT jlong JNICALL Java_com_gigaedge_denoiser_Processor_nativeCr
     if (sample_rate_hz <= 0) {
       throw std::invalid_argument("sampleRateHz must be greater than zero");
     }
-    gigaedge::denoiser::ProcessorSettings settings;
+    gigaedge::spench::ProcessorSettings settings;
     settings.low_performance_window_seconds = low_performance_window_seconds;
     settings.low_performance_max_refill_times = low_performance_max_refill_times;
     settings.low_performance_max_refill_time_factor = low_performance_max_refill_time_factor;
@@ -141,15 +141,15 @@ extern "C" JNIEXPORT jlong JNICALL Java_com_gigaedge_denoiser_Processor_nativeCr
   }
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_denoiser_Processor_nativeDestroy(JNIEnv* /* env */,
-                                                                                     jobject /* thiz */, jlong handle) {
+extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_spench_Processor_nativeDestroy(JNIEnv* /* env */,
+                                                                                   jobject /* thiz */, jlong handle) {
   delete from_handle(handle);
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_denoiser_Processor_nativeProcess(JNIEnv* env, jobject /* thiz */,
-                                                                                     jlong handle, jfloatArray input,
-                                                                                     jfloatArray output,
-                                                                                     jint num_frames) {
+extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_spench_Processor_nativeProcess(JNIEnv* env, jobject /* thiz */,
+                                                                                   jlong handle, jfloatArray input,
+                                                                                   jfloatArray output,
+                                                                                   jint num_frames) {
   Processor* processor = require_processor(env, handle);
   if (processor == nullptr) {
     return;
@@ -189,8 +189,8 @@ extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_denoiser_Processor_nativePro
   env->ReleaseFloatArrayElements(output, output_ptr, 0);
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_denoiser_Processor_nativeReset(JNIEnv* env, jobject /* thiz */,
-                                                                                   jlong handle) {
+extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_spench_Processor_nativeReset(JNIEnv* env, jobject /* thiz */,
+                                                                                 jlong handle) {
   Processor* processor = require_processor(env, handle);
   if (processor == nullptr) {
     return;
@@ -204,15 +204,15 @@ extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_denoiser_Processor_nativeRes
   }
 }
 
-extern "C" JNIEXPORT jobject JNICALL Java_com_gigaedge_denoiser_Processor_nativeGetTelemetry(JNIEnv* env,
-                                                                                             jobject /* thiz */,
-                                                                                             jlong handle) {
+extern "C" JNIEXPORT jobject JNICALL Java_com_gigaedge_spench_Processor_nativeGetTelemetry(JNIEnv* env,
+                                                                                           jobject /* thiz */,
+                                                                                           jlong handle) {
   try {
     Processor* processor = require_processor(env, handle);
     if (processor == nullptr) {
       return nullptr;
     }
-    const gigaedge::denoiser::TelemetrySnapshot snapshot = processor->telemetry_snapshot();
+    const gigaedge::spench::TelemetrySnapshot snapshot = processor->telemetry_snapshot();
     std::vector<double> normalization_buckets;
     std::vector<jint> normalization_counts;
     std::vector<double> noise_buckets;
@@ -226,7 +226,7 @@ extern "C" JNIEXPORT jobject JNICALL Java_com_gigaedge_denoiser_Processor_native
       noise_counts.push_back(entry.second);
     }
 
-    jclass clazz = env->FindClass("com/gigaedge/denoiser/NativeTelemetry");
+    jclass clazz = env->FindClass("com/gigaedge/spench/NativeTelemetry");
     if (clazz == nullptr) {
       return nullptr;  // FindClass left a pending exception (e.g. class stripped by R8).
     }
@@ -247,14 +247,14 @@ extern "C" JNIEXPORT jobject JNICALL Java_com_gigaedge_denoiser_Processor_native
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_gigaedge_denoiser_Processor_nativeDrainLowPerformanceEvents(JNIEnv* env, jobject /* thiz */, jlong handle) {
+Java_com_gigaedge_spench_Processor_nativeDrainLowPerformanceEvents(JNIEnv* env, jobject /* thiz */, jlong handle) {
   try {
     Processor* processor = require_processor(env, handle);
     if (processor == nullptr) {
       return nullptr;
     }
-    const std::vector<gigaedge::denoiser::LowPerformanceEventNative> events = processor->drain_low_performance_events();
-    jclass event_class = env->FindClass("com/gigaedge/denoiser/LowPerformanceEvent");
+    const std::vector<gigaedge::spench::LowPerformanceEventNative> events = processor->drain_low_performance_events();
+    jclass event_class = env->FindClass("com/gigaedge/spench/LowPerformanceEvent");
     if (event_class == nullptr) {
       return nullptr;  // Pending exception; class likely stripped/renamed by R8 without keep rules.
     }
@@ -301,9 +301,11 @@ Java_com_gigaedge_denoiser_Processor_nativeDrainLowPerformanceEvents(JNIEnv* env
   }
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_denoiser_Processor_nativeSetFeatures(
-    JNIEnv* env, jobject /* thiz */, jlong handle, jobject asset_manager_object, jboolean normalization,
-    jstring noise_suppression) {
+extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_spench_Processor_nativeSetFeatures(JNIEnv* env, jobject /* thiz */,
+                                                                                       jlong handle,
+                                                                                       jobject asset_manager_object,
+                                                                                       jboolean normalization,
+                                                                                       jstring noise_suppression) {
   try {
     Processor* processor = require_processor(env, handle);
     if (processor == nullptr) {
@@ -311,7 +313,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_denoiser_Processor_nativeSet
     }
 
     std::string model_name;
-    std::shared_ptr<gigaedge::denoiser::PackedModelReader> model_reader;
+    std::shared_ptr<gigaedge::spench::PackedModelReader> model_reader;
     if (noise_suppression != nullptr) {
       if (asset_manager_object == nullptr) {
         throw std::invalid_argument("AssetManager must be non-null");
@@ -324,7 +326,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_denoiser_Processor_nativeSet
       model_name = get_java_string(env, noise_suppression);
       const std::string asset_path = std::string(model_asset_prefix) + model_name + model_asset_suffix;
       const std::vector<std::uint8_t> model_data = read_asset(asset_manager, asset_path);
-      model_reader = std::make_shared<gigaedge::denoiser::PackedModelReader>(model_data);
+      model_reader = std::make_shared<gigaedge::spench::PackedModelReader>(model_data);
     }
 
     processor->set_features(normalization == JNI_TRUE, model_name, model_reader);

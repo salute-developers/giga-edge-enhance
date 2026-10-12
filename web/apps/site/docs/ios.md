@@ -4,7 +4,7 @@ title: iOS SDK
 
 # iOS SDK
 
-GigaDenoiserAudioKit supports AVAudioEngine integration and direct mono `Float` buffer processing. Its
+GigaEdgeSpenchAudioKit supports AVAudioEngine integration and direct mono `Float` buffer processing. Its
 DocC catalog documents model bundles, lifecycle rules, telemetry, and typed error handling.
 
 iOS builds and tests use the host Xcode toolchain through `tools`.

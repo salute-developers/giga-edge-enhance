@@ -1,9 +1,9 @@
-# GigaDenoiser Web SDK
+# GigaEdge Spench Web SDK
 
-**GigaDenoiser** is a real‑time audio‑processing library that runs in the browser using
+**GigaEdge Spench** is a real‑time audio‑processing library that runs in the browser using
 Web Audio, Web Workers and, optionally, a WebAssembly‑backed DSP worklet.
-The SDK exposes a single class – `GigaDenoiserSDK` – that lets you create a
-`GigaDenoiserAudioNode` and enable any combination of the following features:
+The SDK exposes a single class – `GigaEdgeSpenchSDK` – that lets you create a
+`GigaEdgeSpenchAudioNode` and enable any combination of the following features:
 
 | Feature | Description |
 |---------|-------------|
@@ -23,10 +23,10 @@ overhead.
 
 ```bash
 # Yarn
-yarn add @gigaedge/denoiser-web-sdk
+yarn add @gigaedge/spench-web-sdk
 
 # NPM
-npm i @gigaedge/denoiser-web-sdk
+npm i @gigaedge/spench-web-sdk
 ```
 
 > The SDK uses native ES modules. If you target older browsers, bundle with
@@ -35,13 +35,13 @@ npm i @gigaedge/denoiser-web-sdk
 ## Quickstart
 
 ```ts
-import { GigaDenoiserSDK, type Features } from '@gigaedge/denoiser-web-sdk';
+import { GigaEdgeSpenchSDK, type Features } from '@gigaedge/spench-web-sdk';
 
 // 1️⃣ Create an AudioContext
 const audioCtx = new AudioContext();
 
 // 2️⃣ Create an SDK instance
-const sdk = GigaDenoiserSDK.create(audioCtx);
+const sdk = GigaEdgeSpenchSDK.create(audioCtx);
 
 // 3️⃣ Define the feature set
 const features: Features = {
@@ -51,29 +51,29 @@ const features: Features = {
 };
 
 // 4️⃣ Create a node
-const gigaDenoiserNode = await sdk.createAudioNode(features);
+const gigaEdgeSpenchNode = await sdk.createAudioNode(features);
 
 // 5️⃣ Hook it into a graph
 const source = audioCtx.createMediaStreamSource(stream);
-source.connect(gigaDenoiserNode);
-gigaDenoiserNode.connect(audioCtx.destination);
+source.connect(gigaEdgeSpenchNode);
+gigaEdgeSpenchNode.connect(audioCtx.destination);
 ```
 
 ## API Reference
 
-### `GigaDenoiserSDK`
+### `GigaEdgeSpenchSDK`
 
 | Method | Description |
 |--------|-------------|
 | `static isEnvironmentSupported(): boolean` | Quick check if the browser has the required Web Audio APIs. |
-| `static create(ctx, params?): GigaDenoiserSDK` | Factory – returns a new SDK instance. |
-| `createAudioNode(features?, settings?): Promise<GigaDenoiserAudioNode \| LoadError \| SetFeaturesFailedError>` | Create and configure a node. |
+| `static create(ctx, params?): GigaEdgeSpenchSDK` | Factory – returns a new SDK instance. |
+| `createAudioNode(features?, settings?): Promise<GigaEdgeSpenchAudioNode \| LoadError \| SetFeaturesFailedError>` | Create and configure a node. |
 
 > The SDK internally preloads the worklet module, the optional DSP WASM and the
 > requested model files.  The returned node already emits a `destroyed` event
 > when the underlying worker or worklet terminates.
 
-### `GigaDenoiserSDK.create(ctx: AudioContext, params?: CreateGigaDenoiserParams<M>)`
+### `GigaEdgeSpenchSDK.create(ctx: AudioContext, params?: CreateGigaEdgeSpenchParams<M>)`
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
@@ -85,7 +85,7 @@ gigaDenoiserNode.connect(audioCtx.destination);
 | `params.models` | `Partial<M>` | Custom model URLs or ArrayBuffers that will override the default model map (`DEFAULT_MODELS`).  Useful for loading locally hosted or user‑provided models. | `undefined` |
 | `params.settings` | `Partial<Settings>` | User‑supplied overrides for the SDK configuration.  All other settings use the built‑in defaults defined in `utils/common.ts`. | `undefined` |
 
-### `GigaDenoiserSDK.createAudioNode(features?: Partial<Features<M>>, settings?: Partial<Settings>)`
+### `GigaEdgeSpenchSDK.createAudioNode(features?: Partial<Features<M>>, settings?: Partial<Settings>)`
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
@@ -119,7 +119,7 @@ All settings can be overridden per‑node via the `settings` argument to
 `createAudioNode`.  Settings that are not overridden simply inherit the SDK
 defaults.
 
-### `GigaDenoiserAudioNode`
+### `GigaEdgeSpenchAudioNode`
 
 This is a subclass of the native `AudioWorkletNode` and has the following
 additions:
@@ -144,7 +144,7 @@ audio processing is lagging.  The event contains the most probable cause
 | `echoCancellation` | `boolean` | `false` |
 | `noiseCancellation` | `boolean \| "fast8" \| "quality48"` | `false` |
 
-The SDK bundles `fast8.gdn` as `fast8` and `quality48.gdn` as `quality48`. Supply other model keys through
+The SDK bundles `fast8.ges` as `fast8` and `quality48.ges` as `quality48`. Supply other model keys through
 `params.models` when using custom model files.
 
 ## Testing
@@ -192,9 +192,9 @@ all SDK capabilities:
 If you have a custom model you can load it directly:
 
 ```ts
-const customModel = await fetch('/path/to/my/denoise.gdn').arrayBuffer();
+const customModel = await fetch('/path/to/my/denoise.ges').arrayBuffer();
 
-const sdk = GigaDenoiserSDK.create(audioCtx, {
+const sdk = GigaEdgeSpenchSDK.create(audioCtx, {
   models: {
     noiseCancellation: { fast48: customModel },
   },
@@ -206,7 +206,7 @@ The node will use the supplied ArrayBuffer instead of downloading the default mo
 ## Example — In Details
 
 ```ts
-import { GigaDenoiserAudioNode, GigaDenoiserError, GigaDenoiserSDK } from '@gigaedge/denoiser-web-sdk';
+import { GigaEdgeSpenchAudioNode, GigaEdgeSpenchError, GigaEdgeSpenchSDK } from '@gigaedge/spench-web-sdk';
 
 // Define the sample rate (SR) for the incoming stream, or leave undefined to use the device's default SR.
 const sampleRate: number | undefined = 48000;
@@ -224,7 +224,7 @@ const features = {
 
 // Create the SDK instance.
 // Set to 'verbose' for detailed debugging output.
-const sdk = GigaDenoiserSDK.create(ctx, {
+const sdk = GigaEdgeSpenchSDK.create(ctx, {
   loggerVerbosity: 'verbose',
   // Provide an external logger implementation if desired.
   logger: { info: ..., debug: ..., ... },
@@ -237,35 +237,35 @@ const sdk = GigaDenoiserSDK.create(ctx, {
 // Features can be set during creation or later with setFeatures.
 // Setting features after creation integrates the node into the graph more quickly,
 // even if noise‑cancellation resources aren't yet available.
-const gigaDenoiserNode: GigaDenoiserAudioNode | GigaDenoiserError = await sdk.createAudioNode();
-if (gigaDenoiserNode instanceof GigaDenoiserError) {
-  throw gigaDenoiserNode;
+const gigaEdgeSpenchNode: GigaEdgeSpenchAudioNode | GigaEdgeSpenchError = await sdk.createAudioNode();
+if (gigaEdgeSpenchNode instanceof GigaEdgeSpenchError) {
+  throw gigaEdgeSpenchNode;
 }
 
 // Triggered when the system is under heavy load; disable effects to prevent audio artifacts.
-gigaDenoiserNode.addEventListener('low_performance', () => {});
+gigaEdgeSpenchNode.addEventListener('low_performance', () => {});
 
 // Triggered when an unexpected worker error occurs; disable the node.
-gigaDenoiserNode.addEventListener('destroyed', () => {});
+gigaEdgeSpenchNode.addEventListener('destroyed', () => {});
 
 const callStream: MediaStream; // Input stream
 const sourceStreamNode = ctx.createMediaStreamSource(callStream);
 const destinationStreamNode = ctx.createMediaStreamDestination();
-sourceStreamNode.connect(gigaDenoiserNode).connect(destinationStreamNode);
+sourceStreamNode.connect(gigaEdgeSpenchNode).connect(destinationStreamNode);
 
 // The resulting stream with noise cancelled.
 const outputStream = destinationStreamNode.stream;
 
-const res = await gigaDenoiserNode.setFeatures(features);
-if (res instanceof GigaDenoiserError) {
+const res = await gigaEdgeSpenchNode.setFeatures(features);
+if (res instanceof GigaEdgeSpenchError) {
   throw res;
 }
 
 // The node can be reused across calls; invoke reset() after each call completes.
-gigaDenoiserNode.reset();
+gigaEdgeSpenchNode.reset();
 
 // Release resources when finished.
-gigaDenoiserNode.destroy();
+gigaEdgeSpenchNode.destroy();
 await ctx.close();
 ```
 

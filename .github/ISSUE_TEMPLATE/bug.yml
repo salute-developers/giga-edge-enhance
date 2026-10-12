@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem in GigaDenoiser
+description: Report a reproducible problem in GigaEdgeSpench
 title: "bug: "
 labels:
   - bug

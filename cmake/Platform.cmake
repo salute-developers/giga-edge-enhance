@@ -1,7 +1,7 @@
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
   # Soften iOS SDK warnings for vendored code. ORT still sets
   # COMPILE_WARNING_AS_ERROR ON per-target (adds trailing -Werror); that is
-  # cleared after dependencies are configured by gdn_relax_ios_third_party_warnings().
+  # cleared after dependencies are configured by ges_relax_ios_third_party_warnings().
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-shorten-64-to-32 -Wno-error")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-shorten-64-to-32 -Wno-error")
   set(CMAKE_COMPILE_WARNING_AS_ERROR OFF)
@@ -34,11 +34,11 @@ elseif(WIN32)
   # declares it. ONNX Runtime builds with warnings-as-errors, so use the STL's
   # documented compatibility switch until the pinned Eigen is upgraded.
   add_compile_definitions(_SILENCE_CXX23_DENORM_DEPRECATION_WARNING)
-  set(_gdn_msvc_disabled_warnings
+  set(_ges_msvc_disabled_warnings
     "/wd4820 /wd5264 /wd4514 /wd4127 /wd4710 /wd5045 /wd4706 /wd4668 /wd4210 /wd4061 /wd5026 /wd5027 /wd4623 /wd4625 /wd4626 /wd5250 /wd4100 /wd5262 /wd4324 /wd4868"
   )
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${_gdn_msvc_disabled_warnings}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${_gdn_msvc_disabled_warnings}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${_ges_msvc_disabled_warnings}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${_ges_msvc_disabled_warnings}")
 elseif(UNIX AND CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")
   message(STATUS "Platform: Linux")
 elseif(ANDROID)
@@ -49,28 +49,28 @@ else()
   message(STATUS "Platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-function(_gdn_ios_relax_target _gdn_tgt)
-  get_target_property(_gdn_tgt_type "${_gdn_tgt}" TYPE)
-  if(_gdn_tgt_type STREQUAL "INTERFACE_LIBRARY"
-     OR _gdn_tgt_type STREQUAL "UTILITY")
+function(_ges_ios_relax_target _ges_tgt)
+  get_target_property(_ges_tgt_type "${_ges_tgt}" TYPE)
+  if(_ges_tgt_type STREQUAL "INTERFACE_LIBRARY"
+     OR _ges_tgt_type STREQUAL "UTILITY")
     return()
   endif()
 
   # ORT's onnxruntime_set_compile_flags() sets COMPILE_WARNING_AS_ERROR ON,
   # which makes CMake append -Werror after any -Wno-error compile options.
-  set_target_properties(${_gdn_tgt} PROPERTIES
+  set_target_properties(${_ges_tgt} PROPERTIES
     COMPILE_WARNING_AS_ERROR OFF
     XCODE_ATTRIBUTE_GCC_TREAT_WARNINGS_AS_ERRORS NO
     XCODE_ATTRIBUTE_GCC_WARN_64_TO_32_BIT_CONVERSION NO
   )
-  target_compile_options(${_gdn_tgt} PRIVATE
+  target_compile_options(${_ges_tgt} PRIVATE
     -Wno-shorten-64-to-32
     -Wno-error
     -Wno-error=shorten-64-to-32
   )
 endfunction()
 
-function(gdn_relax_ios_third_party_warnings)
+function(ges_relax_ios_third_party_warnings)
   if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
     return()
   endif()
@@ -81,7 +81,7 @@ function(gdn_relax_ios_third_party_warnings)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-shorten-64-to-32 -Wno-error -Wno-error=shorten-64-to-32" PARENT_SCOPE)
 
   # Named targets first (covers the failing onnxruntime_common path).
-  set(_gdn_named_targets
+  set(_ges_named_targets
     onnxruntime_common
     onnxruntime_mlas
     onnxruntime_mlas_x86_64
@@ -97,9 +97,9 @@ function(gdn_relax_ios_third_party_warnings)
     onnx
     onnx_proto
   )
-  foreach(_gdn_tgt IN LISTS _gdn_named_targets)
-    if(TARGET ${_gdn_tgt})
-      _gdn_ios_relax_target(${_gdn_tgt})
+  foreach(_ges_tgt IN LISTS _ges_named_targets)
+    if(TARGET ${_ges_tgt})
+      _ges_ios_relax_target(${_ges_tgt})
     endif()
   endforeach()
 

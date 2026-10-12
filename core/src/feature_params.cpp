@@ -5,9 +5,9 @@
 
 #include "src/config_reader.h"
 
-namespace gigaedge::denoiser {
+namespace gigaedge::spench {
 namespace fe {
-void FeatureParams::read_feature_params_node(std::shared_ptr<gigaedge::denoiser::NetworkConfig> config) {
+void FeatureParams::read_feature_params_node(std::shared_ptr<gigaedge::spench::NetworkConfig> config) {
   sampling_freq = config->sampling_freq();
   frame_size_ms = config->frame_size_ms();
   frame_stride_ms = config->frame_stride_ms();
@@ -25,4 +25,4 @@ WindowType FeatureParams::string_to_window_type_enum(const std::string& window) 
 }
 
 }  // namespace fe
-}  // namespace gigaedge::denoiser
+}  // namespace gigaedge::spench

@@ -1,6 +1,6 @@
 /* eslint-disable no-shadow */
-import GigaDenoiserError from './utils/error';
-import { SetFeaturesFailedError, GigaDenoiserAudioNode, GigaDenoiserAudioNodeImpl } from './audioNode';
+import GigaEdgeSpenchError from './utils/error';
+import { SetFeaturesFailedError, GigaEdgeSpenchAudioNode, GigaEdgeSpenchAudioNodeImpl } from './audioNode';
 import { Features, getSettingsWithDefaults, ModelsTmpl, Settings } from './utils/common';
 import createLogger, { ExternalLogger, Logger, Verbosity } from './utils/logger';
 import { createTelemetry, Telemetry, SendMetricFunction } from './utils/telemetry';
@@ -9,7 +9,7 @@ import Loader, { LoadError } from './loader';
 import { DEFAULT_MODELS, getDefaultModels } from './utils/resources';
 
 /**
- * Configuration options used to create a {@link GigaDenoiserSDK} instance.
+ * Configuration options used to create a {@link GigaEdgeSpenchSDK} instance.
  *
  * @template M - The model template used by the SDK.
  * @property {ExternalLogger} [logger] - External logger to use.
@@ -19,7 +19,7 @@ import { DEFAULT_MODELS, getDefaultModels } from './utils/resources';
  * @property {Partial<M>} [models] - Custom models to override defaults.
  * @property {Partial<Settings>} [settings] - Custom settings to override defaults.
  */
-type CreateGigaDenoiserParams<M extends ModelsTmpl> = {
+type CreateGigaEdgeSpenchParams<M extends ModelsTmpl> = {
     logger?: ExternalLogger;
     sendMetric?: SendMetricFunction;
     preloadFeatures?: Partial<Features<M>>;
@@ -29,11 +29,11 @@ type CreateGigaDenoiserParams<M extends ModelsTmpl> = {
 };
 
 /**
- * Represents the main SDK class for interacting with GigaDenoiser features.
+ * Represents the main SDK class for interacting with GigaEdgeSpench features.
  *
  * @template M - The model template for the SDK, defaulting to {@link DEFAULT_MODELS}.
  */
-class GigaDenoiserSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
+class GigaEdgeSpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
     #ctx: AudioContext;
 
     #logger: Logger;
@@ -45,7 +45,7 @@ class GigaDenoiserSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
     #settings: Settings;
 
     /**
-     * Creates a new instance of {@link GigaDenoiserSDK}.
+     * Creates a new instance of {@link GigaEdgeSpenchSDK}.
      *
      * @param ctx - The {@link AudioContext} to use for the SDK.
      * @param logger - The external logger instance.
@@ -77,11 +77,11 @@ class GigaDenoiserSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
     }
 
     /**
-     * Factory method to create a new {@link GigaDenoiserSDK} instance.
+     * Factory method to create a new {@link GigaEdgeSpenchSDK} instance.
      *
      * @param ctx - The {@link AudioContext} to use.
-     * @param params - Optional configuration parameters {@link CreateGigaDenoiserParams}.
-     * @returns A new {@link GigaDenoiserSDK} instance.
+     * @param params - Optional configuration parameters {@link CreateGigaEdgeSpenchParams}.
+     * @returns A new {@link GigaEdgeSpenchSDK} instance.
      */
     static create<M extends ModelsTmpl = typeof DEFAULT_MODELS>(
         ctx: AudioContext,
@@ -92,20 +92,20 @@ class GigaDenoiserSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
             sendMetric,
             models: rawModels = DEFAULT_MODELS as any,
             settings: rawSettings,
-        }: CreateGigaDenoiserParams<M> = {},
-    ): GigaDenoiserSDK<typeof DEFAULT_MODELS & M> {
+        }: CreateGigaEdgeSpenchParams<M> = {},
+    ): GigaEdgeSpenchSDK<typeof DEFAULT_MODELS & M> {
         const logger = createLogger(loggerVerbosity, externalLogger);
         const models = getDefaultModels(rawModels);
         const telemetry = createTelemetry(sendMetric);
         const settings = getSettingsWithDefaults(rawSettings);
-        const instance = new GigaDenoiserSDK(ctx, logger, telemetry, settings, models);
+        const instance = new GigaEdgeSpenchSDK(ctx, logger, telemetry, settings, models);
 
         if (preloadFeatures) {
             instance.#loader.preload(preloadFeatures, settings);
         }
 
         logger.info(
-            `GigaDenoiserSDK v${LIB_VERSION} created.`,
+            `GigaEdgeSpenchSDK v${LIB_VERSION} created.`,
             `Logger verbosity: ${loggerVerbosity}, ${!externalLogger ? 'not ' : ''}connected with external logger.`,
             Object.keys(preloadFeatures || {}).length > 0
                 ? `Preloading features: ${JSON.stringify(preloadFeatures)}.`
@@ -118,26 +118,26 @@ class GigaDenoiserSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
     }
 
     /**
-     * Creates an {@link GigaDenoiserAudioNode} with optional features and settings.
+     * Creates an {@link GigaEdgeSpenchAudioNode} with optional features and settings.
      *
      * @param features - Features to enable on the node.
      * @param rawSettings - Optional additional settings to merge with the SDK defaults.
-     * @returns A promise that resolves to an {@link GigaDenoiserAudioNode} or an error type.
+     * @returns A promise that resolves to an {@link GigaEdgeSpenchAudioNode} or an error type.
      */
     async createAudioNode(
         features?: Partial<Features<M>>,
         rawSettings?: Partial<Settings>,
-    ): Promise<GigaDenoiserAudioNode<M> | LoadError | SetFeaturesFailedError> {
+    ): Promise<GigaEdgeSpenchAudioNode<M> | LoadError | SetFeaturesFailedError> {
         const settings = getSettingsWithDefaults({ ...this.#settings, ...(rawSettings || {}) });
         this.#loader.preload(features || {}, settings);
 
-        const workletLoad = await this.#loader.loadGigaDenoiserWorklet(settings);
+        const workletLoad = await this.#loader.loadGigaEdgeSpenchWorklet(settings);
 
         if (workletLoad instanceof LoadError) {
             return workletLoad;
         }
 
-        const node = new GigaDenoiserAudioNodeImpl<M>({
+        const node = new GigaEdgeSpenchAudioNodeImpl<M>({
             loader: this.#loader,
             ctx: this.#ctx,
             logger: this.#logger,
@@ -152,7 +152,7 @@ class GigaDenoiserSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
         try {
             const res = await node.setFeatures(features);
 
-            if (res instanceof GigaDenoiserError) {
+            if (res instanceof GigaEdgeSpenchError) {
                 node.destroy();
 
                 return res;
@@ -166,4 +166,4 @@ class GigaDenoiserSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
     }
 }
 
-export default GigaDenoiserSDK;
+export default GigaEdgeSpenchSDK;

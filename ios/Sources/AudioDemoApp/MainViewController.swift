@@ -1,6 +1,6 @@
 import UIKit
 import UniformTypeIdentifiers
-import GigaDenoiserAudioKit
+import GigaEdgeSpenchAudioKit
 
 final class MainViewController: UIViewController {
     private let titleLabel = UILabel()
@@ -65,7 +65,7 @@ final class MainViewController: UIViewController {
 
     private func configureUI() {
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.text = "Realtime GigaDenoiser Processor"
+        titleLabel.text = "Realtime GigaEdgeSpench Processor"
         titleLabel.font = .preferredFont(forTextStyle: .title2)
         titleLabel.textAlignment = .center
 
@@ -78,7 +78,7 @@ final class MainViewController: UIViewController {
         modelButton.showsMenuAsPrimaryAction = true
 
         processingLabel.translatesAutoresizingMaskIntoConstraints = false
-        processingLabel.text = "GigaDenoiser audio processing"
+        processingLabel.text = "GigaEdgeSpench audio processing"
         processingLabel.font = .preferredFont(forTextStyle: .body)
 
         processingSwitch.translatesAutoresizingMaskIntoConstraints = false

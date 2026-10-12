@@ -3,7 +3,7 @@
 ## Supported versions
 
 Before the first public release, security fixes are provided for the current `master` branch only.
-After releases begin, fixes are provided for the latest published GigaDenoiser release. Older
+After releases begin, fixes are provided for the latest published GigaEdge Spench release. Older
 revisions are not supported; upgrade before reporting an issue that may already be fixed.
 
 ## Reporting a vulnerability

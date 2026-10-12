@@ -1,5 +1,5 @@
 import UIKit
-import GigaDenoiserAudioKit
+import GigaEdgeSpenchAudioKit
 
 final class SettingsViewController: UIViewController {
     private let scrollView = UIScrollView()

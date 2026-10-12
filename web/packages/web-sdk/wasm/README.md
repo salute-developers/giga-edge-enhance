@@ -1,4 +1,4 @@
-# GigaDenoiser WebAssembly
+# GigaEdge Spench WebAssembly
 
 ## Model packing
 
@@ -7,11 +7,11 @@ pack the configuration and model with the native `model_packer` executable:
 
 ```shell
 <build-dir>/core/cli/model_packer/model_packer \
-  --pack path/to/config.yaml path/to/output/model.gdn
+  --pack path/to/config.yaml path/to/output/model.ges
 ```
 
 Build `<build-dir>` with the `native-model-packer` preset. Put the resulting
-`.gdn` file in the web SDK's `models/` directory or distribute it with the
+`.ges` file in the web SDK's `models/` directory or distribute it with the
 application.
 
 ## Builds

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT="$ROOT_DIR/GigaDenoiserSDK.xcodeproj"
+PROJECT="$ROOT_DIR/GigaEdgeSpenchSDK.xcodeproj"
 
 "$ROOT_DIR/scripts/build_core.sh"
 "$ROOT_DIR/scripts/generate_project.sh"

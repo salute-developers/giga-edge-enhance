@@ -5,7 +5,7 @@ title: Getting started
 
 # Getting started
 
-The fastest way to evaluate GigaDenoiser is the [browser demo](/). For product integration, choose the
+The fastest way to evaluate GigaEdge Spench is the [browser demo](/). For product integration, choose the
 platform-specific guide from the documentation overview.
 
 Repository contributors should run supported builds through `tools` from the repository root:

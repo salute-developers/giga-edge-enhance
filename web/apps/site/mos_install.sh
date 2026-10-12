@@ -3,7 +3,7 @@
 set -eu
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-VENV_DIR="${MOS_VENV_DIR:-$HOME/.cache/gigadenoiser/mos-venv}"
+VENV_DIR="${MOS_VENV_DIR:-$HOME/.cache/spench/mos-venv}"
 
 python3 --version
 python3 -m venv "$VENV_DIR"

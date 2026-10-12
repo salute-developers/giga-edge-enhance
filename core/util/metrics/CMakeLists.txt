@@ -4,7 +4,7 @@ add_library(util__metrics STATIC
         mute_frame_detector.cpp
 )
 
-gdn_apply_build_config(util__metrics)
+ges_apply_build_config(util__metrics)
 
 set_property(TARGET util__metrics PROPERTY CXX_STANDARD 17)
 if (NOT WIN32)

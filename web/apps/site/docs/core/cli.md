@@ -13,19 +13,19 @@ tools/build native-release-onnx
 tools/shell
 
 # Inside the container
-out/build/container-clang-llvm-tools/native-release-onnx/core/cli/demo/gigadenoiser --help
+out/build/container-clang-llvm-tools/native-release-onnx/core/cli/demo/spench --help
 ```
 
 The shell starts in `/workspace` with the repository, user identity, and development caches mounted
 the same way as other containerized workflows. It does not build the CLI automatically. Run `exit`
 or press Ctrl-D to remove the disposable container and return to the host terminal.
 
-Packaged and installed builds expose the executable as `giga-denoiser`. Use its built-in help for
+Packaged and installed builds expose the executable as `gigaedge-spench`. Use its built-in help for
 the exact options supported by the current build:
 
 ```bash
-giga-denoiser --help
-giga-denoiser denoise --help
-giga-denoiser norm --help
-giga-denoiser echo --help
+gigaedge-spench --help
+gigaedge-spench denoise --help
+gigaedge-spench norm --help
+gigaedge-spench echo --help
 ```

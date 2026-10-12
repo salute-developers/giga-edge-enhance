@@ -1,4 +1,4 @@
-#include "gigadenoiser/denoiser.h"
+#include "spench/denoiser.h"
 
 #include <spdlog/spdlog.h>
 
@@ -8,26 +8,26 @@
 #include "src/logger.h"
 #include "src/task.h"
 
-namespace gigaedge::denoiser {
+namespace gigaedge::spench {
 
 Denoiser::Denoiser(const char* config_file)
     : Sequencer(),
       handler_(std::make_unique<DenoiserAudioHandler>(
-          std::make_shared<gigaedge::denoiser::DenoiserConfig>(FileConfigReader(std::string(config_file))))) {
-  spdlog::info("Create GigaDenoiser denoiser from config file {}", config_file);
+          std::make_shared<gigaedge::spench::DenoiserConfig>(FileConfigReader(std::string(config_file))))) {
+  spdlog::info("Create GigaEdgeSpench denoiser from config file {}", config_file);
 }
 
 Denoiser::Denoiser(const std::string& yaml_str)
     : Sequencer(),
       handler_(std::make_unique<DenoiserAudioHandler>(
-          std::make_shared<gigaedge::denoiser::DenoiserConfig>(StringConfigReader(yaml_str)))) {
-  spdlog::info("Create GigaDenoiser denoiser from YAML string config");
+          std::make_shared<gigaedge::spench::DenoiserConfig>(StringConfigReader(yaml_str)))) {
+  spdlog::info("Create GigaEdgeSpench denoiser from YAML string config");
 }
 
-Denoiser::Denoiser(std::shared_ptr<gigaedge::denoiser::PackedModelReader> bundle)
+Denoiser::Denoiser(std::shared_ptr<gigaedge::spench::PackedModelReader> bundle)
     : Sequencer(),
-      handler_(std::make_unique<DenoiserAudioHandler>(std::make_shared<gigaedge::denoiser::DenoiserConfig>(bundle))) {
-  spdlog::info("Create GigaDenoiser denoiser from packed model");
+      handler_(std::make_unique<DenoiserAudioHandler>(std::make_shared<gigaedge::spench::DenoiserConfig>(bundle))) {
+  spdlog::info("Create GigaEdgeSpench denoiser from packed model");
 }
 
 Denoiser::Denoiser(Denoiser&& orig) noexcept : Sequencer(), handler_(std::move(orig.handler_)) {
@@ -36,7 +36,7 @@ Denoiser::Denoiser(Denoiser&& orig) noexcept : Sequencer(), handler_(std::move(o
 
 Denoiser::~Denoiser() { handler_.reset(); }
 
-GigaDenoiserRetCode Denoiser::ReloadConfig() { return handler_->reload_config(); }
+GigaEdgeSpenchRetCode Denoiser::ReloadConfig() { return handler_->reload_config(); }
 
 uint32_t Denoiser::GetEngineThreads() { return handler_->get_engine_threads_num(); }
 
@@ -46,14 +46,14 @@ uint64_t Denoiser::GetModelInputFrameSize() { return handler_->get_input_frame_s
 
 StreamStatStruct Denoiser::GetStreamStat(const Context<float>* ctx) { return handler_->get_stat_info(ctx); }
 
-GigaDenoiserRetCode Denoiser::GetFinalChunk(std::vector<float>& ret, Context<float>* ctx) {
+GigaEdgeSpenchRetCode Denoiser::GetFinalChunk(std::vector<float>& ret, Context<float>* ctx) {
   return handler_->finalize_inference(ctx, ret);
 }
 
-GigaDenoiserRetCode Denoiser::GetFinalChunk(std::vector<int16_t>& ret16, Context<float>* ctx) {
+GigaEdgeSpenchRetCode Denoiser::GetFinalChunk(std::vector<int16_t>& ret16, Context<float>* ctx) {
   std::vector<float> output;
 
-  GigaDenoiserRetCode ret_code = handler_->finalize_inference(ctx, output);
+  GigaEdgeSpenchRetCode ret_code = handler_->finalize_inference(ctx, output);
   tools::convert_float32_to_pcm16(output, ret16);
 
   return ret_code;
@@ -80,18 +80,18 @@ uint64_t Denoiser::GetContextId(const Context<float>* ctx) { return ctx->id; }
 
 void Denoiser::SetContextId(Context<float>* ctx, uint64_t id) { ctx->id = id; }
 
-GigaDenoiserRetCode Denoiser::ProcessChunk(const std::vector<float>& chunk, std::vector<float>& ret,
-                                           Context<float>* ctx) {
+GigaEdgeSpenchRetCode Denoiser::ProcessChunk(const std::vector<float>& chunk, std::vector<float>& ret,
+                                             Context<float>* ctx) {
   return handler_->process_frame(ctx, chunk, ret);
 }
 
-GigaDenoiserRetCode Denoiser::ProcessChunk(const std::vector<int16_t>& chunk16, std::vector<int16_t>& ret16,
-                                           Context<float>* ctx) {
+GigaEdgeSpenchRetCode Denoiser::ProcessChunk(const std::vector<int16_t>& chunk16, std::vector<int16_t>& ret16,
+                                             Context<float>* ctx) {
   std::vector<float> input;
   std::vector<float> output;
 
   tools::convert_pcm16_to_float32(chunk16, input);
-  GigaDenoiserRetCode ret_code = handler_->process_frame(ctx, input, output);
+  GigaEdgeSpenchRetCode ret_code = handler_->process_frame(ctx, input, output);
   tools::convert_float32_to_pcm16(output, ret16);
 
   return ret_code;
@@ -107,4 +107,4 @@ std::vector<int16_t> Denoiser::operator()(const std::vector<int16_t>& chunk16, s
   this->ProcessChunk(chunk16, ret16, ctx);
   return ret16;
 }
-}  // namespace gigaedge::denoiser
+}  // namespace gigaedge::spench

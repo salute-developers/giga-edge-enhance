@@ -33,8 +33,8 @@ CPMDeclarePackage(rnnoise
 )
 
 string_option(SPEEXDSP_URL "https://github.com/xiph/speexdsp.git")
-CPMDeclarePackage(speexdsp_gdn_core
-  NAME speexdsp_gdn_core
+CPMDeclarePackage(speexdsp_ges_core
+  NAME speexdsp_ges_core
   PATCHES "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/speex.patch"
   GIT_TAG "SpeexDSP-1.2.1"
   GIT_REPOSITORY ${SPEEXDSP_URL}

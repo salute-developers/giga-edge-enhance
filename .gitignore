@@ -100,7 +100,7 @@ _CPack_Packages/
 build_shared_tflite_pocketfft/
 ios_device/
 ios_simulator/
-GigaDenoiserCore.xcframework/
+GigaEdgeSpenchCore.xcframework/
 out-xcframework/
 DerivedData/
 target/

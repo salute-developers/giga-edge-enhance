@@ -1,4 +1,4 @@
-import { type GigaDenoiserAudioNode, GigaDenoiserSDK } from '@gigaedge/denoiser-web-sdk';
+import { type GigaEdgeSpenchAudioNode, GigaEdgeSpenchSDK } from '@gigaedge/spench-web-sdk';
 import { useCallback, useRef, useState } from 'react';
 
 function MultipleNormTest() {
@@ -6,7 +6,7 @@ function MultipleNormTest() {
     const [multipleNormResult, setMultipleNormResult] = useState<null | boolean>(null);
     const [multinormProgress, setMultinormProgress] = useState<number>(0);
 
-    const sdkRef = useRef<GigaDenoiserSDK>(null);
+    const sdkRef = useRef<GigaEdgeSpenchSDK>(null);
 
     const checkMultipleNormalizerNodes = useCallback(async () => {
         setIsProcessingMultipleNorm(true);
@@ -18,7 +18,7 @@ function MultipleNormTest() {
             if (!sdkRef.current) {
                 const ctx = new AudioContext();
 
-                sdk = GigaDenoiserSDK.create(ctx, {
+                sdk = GigaEdgeSpenchSDK.create(ctx, {
                     loggerVerbosity: 'silent',
                     sendMetric: (metric, value) => console.log(metric, value),
                     settings: {
@@ -30,7 +30,7 @@ function MultipleNormTest() {
                 sdk = sdkRef.current;
             }
 
-            let nodes = [] as GigaDenoiserAudioNode[];
+            let nodes = [] as GigaEdgeSpenchAudioNode[];
 
             for (let i = 0; i < 50; ++i) {
                 console.log(`Multinorm test iteration #${i + 1}`);
@@ -38,13 +38,13 @@ function MultipleNormTest() {
 
                 for (let j = 0; j < 50; ++j) {
                     setMultinormProgress(Math.round((i * 50 + j + 1) / 25));
-                    const gigaDenoiserNode = await sdk.createAudioNode({ normalization: true });
+                    const gigaEdgeSpenchNode = await sdk.createAudioNode({ normalization: true });
 
-                    if (gigaDenoiserNode instanceof Error) {
-                        throw gigaDenoiserNode;
+                    if (gigaEdgeSpenchNode instanceof Error) {
+                        throw gigaEdgeSpenchNode;
                     }
 
-                    nodes.push(gigaDenoiserNode);
+                    nodes.push(gigaEdgeSpenchNode);
                 }
 
                 for (const node of nodes) {

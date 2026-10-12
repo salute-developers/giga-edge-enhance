@@ -8,7 +8,7 @@
 
 namespace {
 
-using gigaedge::denoiser::PipelineStage;
+using gigaedge::spench::PipelineStage;
 
 const std::vector<PipelineStage> all_stages = {
     PipelineStage::waveform_ready,
@@ -37,15 +37,15 @@ bool is_in_allowed_table(PipelineStage from, PipelineStage to) {
 TEST_CASE("Pipeline transition table accepts exactly the pipeline contract [pipeline stage]") {
   for (const auto from : all_stages) {
     for (const auto to : all_stages) {
-      INFO(gigaedge::denoiser::to_string(from) << " -> " << gigaedge::denoiser::to_string(to));
-      REQUIRE(gigaedge::denoiser::is_transition_allowed(from, to) == is_in_allowed_table(from, to));
+      INFO(gigaedge::spench::to_string(from) << " -> " << gigaedge::spench::to_string(to));
+      REQUIRE(gigaedge::spench::is_transition_allowed(from, to) == is_in_allowed_table(from, to));
     }
   }
 }
 
 TEST_CASE("Task state validates transitions and can restart [pipeline stage]") {
-  using gigaedge::denoiser::ChunkOutcome;
-  using gigaedge::denoiser::TaskState;
+  using gigaedge::spench::ChunkOutcome;
+  using gigaedge::spench::TaskState;
 
   TaskState state;
   REQUIRE(state.is(PipelineStage::waveform_ready));
@@ -63,7 +63,7 @@ TEST_CASE("Task state validates transitions and can restart [pipeline stage]") {
 }
 
 TEST_CASE("Task state rejects an unexpected stage [pipeline stage]") {
-  gigaedge::denoiser::TaskState state;
+  gigaedge::spench::TaskState state;
 
   CHECK_THROWS_AS(state.advance_to(PipelineStage::enhanced_ready), std::runtime_error);
   CHECK_THROWS_AS(state.require(PipelineStage::model_output_ready), std::runtime_error);
@@ -71,7 +71,7 @@ TEST_CASE("Task state rejects an unexpected stage [pipeline stage]") {
 }
 
 TEST_CASE("Pipeline errors identify both stages [pipeline stage]") {
-  gigaedge::denoiser::TaskState state;
+  gigaedge::spench::TaskState state;
   try {
     state.advance_to(PipelineStage::enhanced_ready);
     FAIL("advance_to should have thrown");

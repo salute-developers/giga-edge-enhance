@@ -1,5 +1,5 @@
 {
-  "name": "giga-denoiser-web",
+  "name": "gigaedge-spench-web",
   "private": true,
   "license": "MIT",
   "workspaces": [
@@ -8,8 +8,8 @@
   ],
   "scripts": {
     "stage:wasm:release": "node packages/web-sdk/scripts/stage-wasm.mjs release",
-    "build:web-sdk": "npm run build --workspace=@gigaedge/denoiser-web-sdk",
-    "test:web-sdk": "npm test --workspace=@gigaedge/denoiser-web-sdk"
+    "build:web-sdk": "npm run build --workspace=@gigaedge/spench-web-sdk",
+    "test:web-sdk": "npm test --workspace=@gigaedge/spench-web-sdk"
   },
   "devDependencies": {
     "markdownlint-cli": "0.41.0",

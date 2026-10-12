@@ -22,7 +22,7 @@ ffmpeg -i input.ext -ac 1 -ar 48000 -c:a pcm_s16le output.wav
 
 ## `UnsatisfiedLinkError`
 
-The native library `libgiga-denoiser-sdk.so` failed to load or a JNI method could not be resolved. Check:
+The native library `libgigaedge-spench-sdk.so` failed to load or a JNI method could not be resolved. Check:
 
 - Your device/emulator ABI is one of `arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86` (all are built by
   default).
@@ -51,7 +51,7 @@ mistakes: non-positive window/rounding values, negative latency, or `NaN`/infini
 
 `setFeatures(...)` throws `IllegalArgumentException` when the requested noise-suppression model asset
 is not packaged ("model asset not found"), or when the name contains characters outside letters,
-digits, `.`, `_`, and `-`. Ensure the matching `:giga-denoiser-model-*` module is an `implementation`
+digits, `.`, `_`, and `-`. Ensure the matching `:gigaedge-spench-model-*` module is an `implementation`
 dependency and select names from `Models.available(context)`. See [models.md](models.md).
 
 ## `IllegalArgumentException` for buffers or frame count

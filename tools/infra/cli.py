@@ -55,7 +55,7 @@ CACHE_TARGETS = (*CMAKE_PRESETS, *ANDROID_DEPENDENCY_TARGETS, "android", "ios")
 
 
 def _workflow_parser(command: str, targets: tuple[str, ...]) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=f"{command.capitalize()} a supported GigaDenoiser target.")
+    parser = argparse.ArgumentParser(description=f"{command.capitalize()} a supported GigaEdgeSpench target.")
     parser.add_argument("target", choices=targets)
     parser.add_argument("--host", action="store_true",
                         help="Use local tools instead of Docker where supported.")
@@ -108,7 +108,7 @@ def shell_main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Open the native Linux development container.")
     parser.parse_args(argv)
     environment = compiler_cache_environment(True)
-    environment["PS1"] = r"giga-denoiser:\w\$ "
+    environment["PS1"] = r"gigaedge-spench:\w\$ "
     run(["bash", "--noprofile", "--norc"], container_stage="native",
         environment=environment, interactive=True, mount_host_home=True)
 

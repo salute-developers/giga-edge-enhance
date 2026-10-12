@@ -1,4 +1,4 @@
-name: GigaDenoiserSDK
+name: GigaEdgeSpenchSDK
 options:
   minimumXcodeGenVersion: 2.38.0
   deploymentTarget:
@@ -16,7 +16,7 @@ settings:
     INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright (c) 2026 Giga Edge. MIT License."
     CLANG_CXX_LANGUAGE_STANDARD: "gnu++20"
 targets:
-  GigaDenoiserAudioKit:
+  GigaEdgeSpenchAudioKit:
     type: framework
     platform: iOS
     settings:
@@ -25,8 +25,8 @@ targets:
         DEFINES_MODULE: YES
         BUILD_LIBRARY_FOR_DISTRIBUTION: YES
         GENERATE_INFOPLIST_FILE: YES
-        MODULEMAP_PRIVATE_FILE: "$(SRCROOT)/Sources/GigaDenoiserAudioKit/include/GigaDenoiserAudioKit.private.modulemap"
-        OTHER_LDFLAGS: "$(inherited) -lgiga-denoiser"
+        MODULEMAP_PRIVATE_FILE: "$(SRCROOT)/Sources/GigaEdgeSpenchAudioKit/include/GigaEdgeSpenchAudioKit.private.modulemap"
+        OTHER_LDFLAGS: "$(inherited) -lgigaedge-spench"
         HEADER_SEARCH_PATHS:
           - "$(inherited)"
           - "$(SRCROOT)/../core/include"
@@ -35,54 +35,54 @@ targets:
         LIBRARY_SEARCH_PATHS[sdk=iphoneos*]: "$(SRCROOT)/../out/artifacts/ios/device"
         LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]: "$(SRCROOT)/../out/artifacts/ios/simulator"
     preBuildScripts:
-      - name: Build GigaDenoiser core
+      - name: Build GigaEdgeSpench core
         script: |
           set -euo pipefail
           "$SRCROOT/scripts/build_core.sh"
     sources:
-      - path: Sources/GigaDenoiserAudioKit/Swift
-      - path: Sources/GigaDenoiserAudioKit/ObjC
-      - path: Sources/GigaDenoiserAudioKit/Documentation.docc
-      - path: Sources/GigaDenoiserAudioKit/include/GigaDenoiserAudioKit.h
+      - path: Sources/GigaEdgeSpenchAudioKit/Swift
+      - path: Sources/GigaEdgeSpenchAudioKit/ObjC
+      - path: Sources/GigaEdgeSpenchAudioKit/Documentation.docc
+      - path: Sources/GigaEdgeSpenchAudioKit/include/GigaEdgeSpenchAudioKit.h
         buildPhase: headers
         headerVisibility: public
-      - path: Sources/GigaDenoiserAudioKit/include/PipelineElements.h
+      - path: Sources/GigaEdgeSpenchAudioKit/include/PipelineElements.h
         buildPhase: headers
         headerVisibility: private
-      - path: Sources/GigaDenoiserAudioKit/include/RingBuffer.h
+      - path: Sources/GigaEdgeSpenchAudioKit/include/RingBuffer.h
         buildPhase: headers
         headerVisibility: private
-      - path: Sources/GigaDenoiserAudioKit/include/AtomicOptionalDouble.h
+      - path: Sources/GigaEdgeSpenchAudioKit/include/AtomicOptionalDouble.h
         buildPhase: headers
         headerVisibility: private
-      - path: Sources/GigaDenoiserAudioKit/include/WorkerThreadEvent.h
+      - path: Sources/GigaEdgeSpenchAudioKit/include/WorkerThreadEvent.h
         buildPhase: headers
         headerVisibility: private
-      - path: Sources/GigaDenoiserAudioKit/include/LowPerformanceEventMailbox.h
+      - path: Sources/GigaEdgeSpenchAudioKit/include/LowPerformanceEventMailbox.h
         buildPhase: headers
         headerVisibility: private
 
-  GigaDenoiserModelFast8:
+  GigaEdgeSpenchModelFast8:
     type: bundle
     platform: iOS
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.DenoiserModelFast8
         GENERATE_INFOPLIST_FILE: NO
-        INFOPLIST_FILE: Resources/ModelBundles/GigaDenoiserModelFast8-Info.plist
+        INFOPLIST_FILE: Resources/ModelBundles/GigaEdgeSpenchModelFast8-Info.plist
     sources:
-      - path: Resources/Models/fast8.gdn
+      - path: Resources/Models/fast8.ges
 
-  GigaDenoiserModelQuality48:
+  GigaEdgeSpenchModelQuality48:
     type: bundle
     platform: iOS
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.DenoiserModelQuality48
         GENERATE_INFOPLIST_FILE: NO
-        INFOPLIST_FILE: Resources/ModelBundles/GigaDenoiserModelQuality48-Info.plist
+        INFOPLIST_FILE: Resources/ModelBundles/GigaEdgeSpenchModelQuality48-Info.plist
     sources:
-      - path: Resources/Models/quality48.gdn
+      - path: Resources/Models/quality48.ges
 
   AudioDemoApp:
     type: application
@@ -93,13 +93,13 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Sources/AudioDemoApp/Info.plist
     dependencies:
-      - target: GigaDenoiserAudioKit
-      - target: GigaDenoiserModelFast8
-      - target: GigaDenoiserModelQuality48
+      - target: GigaEdgeSpenchAudioKit
+      - target: GigaEdgeSpenchModelFast8
+      - target: GigaEdgeSpenchModelQuality48
     sources:
       - path: Sources/AudioDemoApp
 
-  GigaDenoiserAudioKitTests:
+  GigaEdgeSpenchAudioKitTests:
     type: bundle.unit-test
     platform: iOS
     settings:
@@ -107,11 +107,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.DenoiserAudioKitTests
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
-      - target: GigaDenoiserAudioKit
-      - target: GigaDenoiserModelFast8
-      - target: GigaDenoiserModelQuality48
+      - target: GigaEdgeSpenchAudioKit
+      - target: GigaEdgeSpenchModelFast8
+      - target: GigaEdgeSpenchModelQuality48
     sources:
-      - path: Tests/GigaDenoiserAudioKitTests
+      - path: Tests/GigaEdgeSpenchAudioKitTests
 
   AudioDemoAppUITests:
     type: bundle.ui-testing
@@ -130,17 +130,17 @@ targets:
         - AudioDemoAppUITests
 
 schemes:
-  GigaDenoiserAudioKit:
+  GigaEdgeSpenchAudioKit:
     build:
       targets:
-        GigaDenoiserAudioKit: all
-        GigaDenoiserModelFast8: all
-        GigaDenoiserModelQuality48: all
-        GigaDenoiserAudioKitTests: [test]
+        GigaEdgeSpenchAudioKit: all
+        GigaEdgeSpenchModelFast8: all
+        GigaEdgeSpenchModelQuality48: all
+        GigaEdgeSpenchAudioKitTests: [test]
     test:
       gatherCoverageData: true
       targets:
-        - GigaDenoiserAudioKitTests
+        - GigaEdgeSpenchAudioKitTests
 
   AudioDemoApp:
     build:

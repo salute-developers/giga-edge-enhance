@@ -1,10 +1,10 @@
 import type { Settings } from './common';
 
-export const GDN_FRAME_SIZE_SECONDS = 0.016;
+export const GES_FRAME_SIZE_SECONDS = 0.016;
 
-export const TRANSPORT_SIZE_SECONDS = GDN_FRAME_SIZE_SECONDS;
+export const TRANSPORT_SIZE_SECONDS = GES_FRAME_SIZE_SECONDS;
 
-export const GDN_FRAME_SIZE_STEP_SECONDS = GDN_FRAME_SIZE_SECONDS;
+export const GES_FRAME_SIZE_STEP_SECONDS = GES_FRAME_SIZE_SECONDS;
 
 export const HEAP_SIZE = 24576;
 
@@ -45,9 +45,9 @@ export const MAX_MESSAGE_WAIT_TIME_MS = 5;
 // Max frame time measurements in worker before submit (near 5s)
 export const TELEMETRY_FRAME_TIME_MAX_COUNT = 300;
 
-export const GDN_WORKLET_NAME = 'giga-denoiser-processor';
+export const GES_WORKLET_NAME = 'gigaedge-spench-processor';
 
-export const GDN_DSP_WORKLET_NAME = 'giga-denoiser-dsp-processor';
+export const GES_DSP_WORKLET_NAME = 'gigaedge-spench-dsp-processor';
 
 export function getBufferSize(sampleRate: number, seconds: number) {
     return Math.ceil(sampleRate * seconds);
@@ -56,13 +56,13 @@ export function getBufferSize(sampleRate: number, seconds: number) {
 export function getProcessingChunkSizeSeconds(settings: Settings) {
     const chunkSeconds = Math.min(settings.maxProcessingChunkSeconds, settings.minLatency);
 
-    if (!Number.isFinite(chunkSeconds) || chunkSeconds <= GDN_FRAME_SIZE_STEP_SECONDS) {
-        return GDN_FRAME_SIZE_STEP_SECONDS;
+    if (!Number.isFinite(chunkSeconds) || chunkSeconds <= GES_FRAME_SIZE_STEP_SECONDS) {
+        return GES_FRAME_SIZE_STEP_SECONDS;
     }
 
     return Math.max(
-        Math.floor(chunkSeconds / GDN_FRAME_SIZE_STEP_SECONDS) * GDN_FRAME_SIZE_STEP_SECONDS,
-        GDN_FRAME_SIZE_STEP_SECONDS,
+        Math.floor(chunkSeconds / GES_FRAME_SIZE_STEP_SECONDS) * GES_FRAME_SIZE_STEP_SECONDS,
+        GES_FRAME_SIZE_STEP_SECONDS,
     );
 }
 

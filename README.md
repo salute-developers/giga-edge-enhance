@@ -1,6 +1,8 @@
-# GigaDenoiser
+# GigaEdge Spench
 
-GigaDenoiser is a cross-platform SDK for real-time speech enhancement. It combines neural noise
+![GigaEdge Spench](spench_logo.svg)
+
+GigaEdge Spench is a cross-platform SDK for real-time speech enhancement. It combines neural noise
 suppression with DSP for
 native, mobile, and web applications.
 
@@ -12,7 +14,7 @@ documentation are available on the repository's GitHub Pages.
 
 | Platform | Integration | Documentation |
 | --- | --- | --- |
-| C and C++ | Public C API and `gigaedge::denoiser` C++ API | [Core guide](web/apps/site/docs/core/index.md) |
+| C and C++ | Public C API and `gigaedge::spench` C++ API | [Core guide](web/apps/site/docs/core/index.md) |
 | Web | Web Audio, AudioWorklet, workers, and WebAssembly | [Web SDK](web/packages/web-sdk/README.md) |
 | Android | Kotlin API backed by the native processing pipeline | [Android SDK](android/README.md) |
 | iOS | Swift API for `AVAudioEngine` and direct buffer processing | [iOS SDK](ios/README.md) |
@@ -50,4 +52,15 @@ Report vulnerabilities privately as described in the [security policy](SECURITY.
 
 ## License
 
-GigaDenoiser is available under the [MIT License](LICENSE).
+GigaEdge Spench is available under the [MIT License](LICENSE).
+
+## Acknowledgement
+
+GigaEdge Spench includes work by people who contributed to the product at different times:
+
+- Artem Sokolov
+- Artem Khaidarov
+- Yana Lysova
+- Vitaliy Yulis
+- Dmitriy Zhelonkin
+- Alexander Gladkikh

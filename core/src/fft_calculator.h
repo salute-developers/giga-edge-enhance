@@ -11,7 +11,7 @@ using ShapeT = std::vector<std::size_t>;
 using StrideT = std::vector<std::ptrdiff_t>;
 }  // namespace pocketfft
 
-namespace gigaedge::denoiser {
+namespace gigaedge::spench {
 namespace fe {
 
 template <typename T>
@@ -35,4 +35,4 @@ class FftCalculator {
   void copy_output_to(ComplexNumber<T>& dft) const;
 };
 }  // namespace fe
-}  // namespace gigaedge::denoiser
+}  // namespace gigaedge::spench

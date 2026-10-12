@@ -14,10 +14,10 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "giga-denoiser-android-sdk"
-include(":giga-denoiser-sdk")
-include(":giga-denoiser-model-quality48")
+rootProject.name = "gigaedge-spench-android-sdk"
+include(":gigaedge-spench-sdk")
+include(":gigaedge-spench-model-quality48")
 include(":demo-app")
 
-project(":giga-denoiser-sdk").projectDir = file("sdk")
-project(":giga-denoiser-model-quality48").projectDir = file("model-quality48")
+project(":gigaedge-spench-sdk").projectDir = file("sdk")
+project(":gigaedge-spench-model-quality48").projectDir = file("model-quality48")
