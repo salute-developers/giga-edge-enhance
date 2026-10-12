@@ -10,7 +10,7 @@
 #include "src/ifft_calculator.h"
 #include "src/windowing.h"
 
-namespace gigaedge::denoiser {
+namespace gigaedge::spench {
 namespace fe {
 // Computes Power Spectrum features for a speech signal.
 template <typename T>
@@ -59,4 +59,4 @@ class FeatureExtractor {
 };
 
 }  // namespace fe
-}  // namespace gigaedge::denoiser
+}  // namespace gigaedge::spench

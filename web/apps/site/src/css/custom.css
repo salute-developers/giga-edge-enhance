@@ -11,17 +11,17 @@
     --ifm-font-family-base: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --ifm-heading-font-family: var(--ifm-font-family-base);
     --ifm-code-font-size: 92%;
-    --giga-denoiser-canvas: #f4f3ee;
-    --giga-denoiser-surface: #ffffff;
-    --giga-denoiser-surface-soft: #ebece7;
-    --giga-denoiser-ink: #14201f;
-    --giga-denoiser-muted: #65716f;
-    --giga-denoiser-border: #d7dcd6;
-    --giga-denoiser-accent: #087f6d;
-    --giga-denoiser-accent-soft: #d9f2ec;
-    --giga-denoiser-warning: #a45f08;
-    --giga-denoiser-danger: #b42318;
-    --giga-denoiser-shadow: 0 24px 70px rgba(25, 42, 39, 0.1);
+    --gigaedge-spench-canvas: #f4f3ee;
+    --gigaedge-spench-surface: #ffffff;
+    --gigaedge-spench-surface-soft: #ebece7;
+    --gigaedge-spench-ink: #14201f;
+    --gigaedge-spench-muted: #65716f;
+    --gigaedge-spench-border: #d7dcd6;
+    --gigaedge-spench-accent: #087f6d;
+    --gigaedge-spench-accent-soft: #d9f2ec;
+    --gigaedge-spench-warning: #a45f08;
+    --gigaedge-spench-danger: #b42318;
+    --gigaedge-spench-shadow: 0 24px 70px rgba(25, 42, 39, 0.1);
 }
 
 [data-theme='dark'] {
@@ -34,17 +34,17 @@
     --ifm-color-primary-lightest: #a2ebdc;
     --ifm-background-color: #0b1212;
     --ifm-navbar-background-color: rgba(11, 18, 18, 0.94);
-    --giga-denoiser-canvas: #0b1212;
-    --giga-denoiser-surface: #121c1c;
-    --giga-denoiser-surface-soft: #192525;
-    --giga-denoiser-ink: #f2f3ed;
-    --giga-denoiser-muted: #9ba9a6;
-    --giga-denoiser-border: #2b3a38;
-    --giga-denoiser-accent: #55d6bd;
-    --giga-denoiser-accent-soft: #173d36;
-    --giga-denoiser-warning: #f0b35d;
-    --giga-denoiser-danger: #ff8178;
-    --giga-denoiser-shadow: 0 28px 80px rgba(0, 0, 0, 0.32);
+    --gigaedge-spench-canvas: #0b1212;
+    --gigaedge-spench-surface: #121c1c;
+    --gigaedge-spench-surface-soft: #192525;
+    --gigaedge-spench-ink: #f2f3ed;
+    --gigaedge-spench-muted: #9ba9a6;
+    --gigaedge-spench-border: #2b3a38;
+    --gigaedge-spench-accent: #55d6bd;
+    --gigaedge-spench-accent-soft: #173d36;
+    --gigaedge-spench-warning: #f0b35d;
+    --gigaedge-spench-danger: #ff8178;
+    --gigaedge-spench-shadow: 0 28px 80px rgba(0, 0, 0, 0.32);
 }
 
 html {
@@ -52,12 +52,12 @@ html {
 }
 
 body {
-    background: var(--giga-denoiser-canvas);
-    color: var(--giga-denoiser-ink);
+    background: var(--gigaedge-spench-canvas);
+    color: var(--gigaedge-spench-ink);
 }
 
 .navbar {
-    border-bottom: 1px solid var(--giga-denoiser-border);
+    border-bottom: 1px solid var(--gigaedge-spench-border);
     box-shadow: none;
     backdrop-filter: blur(18px);
 }
@@ -88,7 +88,7 @@ body {
 
 .eyebrow {
     margin: 0 0 12px;
-    color: var(--giga-denoiser-accent);
+    color: var(--gigaedge-spench-accent);
     font-size: 0.78rem;
     font-weight: 750;
     letter-spacing: 0.14em;

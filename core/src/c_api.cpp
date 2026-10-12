@@ -1,4 +1,4 @@
-#include "gigadenoiser/c_api.h"
+#include "spench/c_api.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -7,16 +7,16 @@
 #include <utility>
 #include <vector>
 
-#include "include/gigadenoiser.h"
+#include "include/spench.h"
 
 namespace ctools {
 
 template <typename Function>
-GigaDenoiserRetCode guard(GigaDenoiserRetCode exception_code, Function&& function) noexcept {
+GigaEdgeSpenchRetCode guard(GigaEdgeSpenchRetCode exception_code, Function&& function) noexcept {
   try {
     return std::forward<Function>(function)();
   } catch (const std::bad_alloc&) {
-    return GigaDenoiserRetCode::ERR_NOT_ENOUGH_MEMORY;
+    return GigaEdgeSpenchRetCode::ERR_NOT_ENOUGH_MEMORY;
   } catch (...) {
     return exception_code;
   }
@@ -40,81 +40,81 @@ bool initialize_output(uint8_t** output, uint64_t* output_size) {
 }
 
 template <typename T>
-GigaDenoiserRetCode bytes_to_vector(const uint8_t* input, uint64_t input_size, std::vector<T>& output) {
+GigaEdgeSpenchRetCode bytes_to_vector(const uint8_t* input, uint64_t input_size, std::vector<T>& output) {
   if (input == nullptr) {
-    return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
   if (input_size % sizeof(T) != 0) {
-    return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
   if (input_size > std::numeric_limits<size_t>::max()) {
-    return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
   const uint64_t sample_count = input_size / sizeof(T);
   if (sample_count > std::numeric_limits<size_t>::max()) {
-    return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
   output.resize(static_cast<size_t>(sample_count));
   if (input_size != 0) {
     std::memcpy(output.data(), input, static_cast<size_t>(input_size));
   }
-  return GigaDenoiserRetCode::SUCCESS;
+  return GigaEdgeSpenchRetCode::SUCCESS;
 }
 
 template <typename T>
-GigaDenoiserRetCode allocate_and_copy(const std::vector<T>& input, uint8_t** output, uint64_t* output_size) {
+GigaEdgeSpenchRetCode allocate_and_copy(const std::vector<T>& input, uint8_t** output, uint64_t* output_size) {
   if (!initialize_output(output, output_size)) {
-    return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
   if (input.empty()) {
-    return GigaDenoiserRetCode::SUCCESS;
+    return GigaEdgeSpenchRetCode::SUCCESS;
   }
   if (input.size() > std::numeric_limits<uint64_t>::max() / sizeof(T)) {
-    return GigaDenoiserRetCode::ERR_ALLOCATION_PROBLEM;
+    return GigaEdgeSpenchRetCode::ERR_ALLOCATION_PROBLEM;
   }
 
   const uint64_t bytes = static_cast<uint64_t>(input.size()) * sizeof(T);
   if (bytes > std::numeric_limits<size_t>::max()) {
-    return GigaDenoiserRetCode::ERR_ALLOCATION_PROBLEM;
+    return GigaEdgeSpenchRetCode::ERR_ALLOCATION_PROBLEM;
   }
   *output = static_cast<uint8_t*>(std::malloc(static_cast<size_t>(bytes)));
   if (*output == nullptr) {
-    return GigaDenoiserRetCode::ERR_NOT_ENOUGH_MEMORY;
+    return GigaEdgeSpenchRetCode::ERR_NOT_ENOUGH_MEMORY;
   }
   std::memcpy(*output, input.data(), static_cast<size_t>(bytes));
   *output_size = bytes;
-  return GigaDenoiserRetCode::SUCCESS;
+  return GigaEdgeSpenchRetCode::SUCCESS;
 }
 
 template <typename T, typename Function>
-GigaDenoiserRetCode process_bytes(const uint8_t* input, uint64_t input_size, uint8_t** output, uint64_t* output_size,
-                                  Function&& function) {
+GigaEdgeSpenchRetCode process_bytes(const uint8_t* input, uint64_t input_size, uint8_t** output, uint64_t* output_size,
+                                    Function&& function) {
   if (!initialize_output(output, output_size)) {
-    return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
   std::vector<T> samples;
-  const GigaDenoiserRetCode decode_code = bytes_to_vector(input, input_size, samples);
-  if (decode_code != GigaDenoiserRetCode::SUCCESS) {
+  const GigaEdgeSpenchRetCode decode_code = bytes_to_vector(input, input_size, samples);
+  if (decode_code != GigaEdgeSpenchRetCode::SUCCESS) {
     return decode_code;
   }
 
   std::vector<T> result;
-  const GigaDenoiserRetCode code = std::forward<Function>(function)(samples, result);
-  if (code != GigaDenoiserRetCode::SUCCESS && code != GigaDenoiserRetCode::CONTEXT_ACCUMULATION) {
+  const GigaEdgeSpenchRetCode code = std::forward<Function>(function)(samples, result);
+  if (code != GigaEdgeSpenchRetCode::SUCCESS && code != GigaEdgeSpenchRetCode::CONTEXT_ACCUMULATION) {
     return code;
   }
-  const GigaDenoiserRetCode copy_code = allocate_and_copy(result, output, output_size);
-  return copy_code == GigaDenoiserRetCode::SUCCESS ? code : copy_code;
+  const GigaEdgeSpenchRetCode copy_code = allocate_and_copy(result, output, output_size);
+  return copy_code == GigaEdgeSpenchRetCode::SUCCESS ? code : copy_code;
 }
 
 template <typename T, typename Function>
-GigaDenoiserRetCode final_bytes(uint8_t** output, uint64_t* output_size, Function&& function) {
+GigaEdgeSpenchRetCode final_bytes(uint8_t** output, uint64_t* output_size, Function&& function) {
   if (!initialize_output(output, output_size)) {
-    return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
   std::vector<T> result;
-  const GigaDenoiserRetCode code = std::forward<Function>(function)(result);
-  if (code != GigaDenoiserRetCode::SUCCESS) {
+  const GigaEdgeSpenchRetCode code = std::forward<Function>(function)(result);
+  if (code != GigaEdgeSpenchRetCode::SUCCESS) {
     return code;
   }
   return allocate_and_copy(result, output, output_size);
@@ -124,342 +124,345 @@ GigaDenoiserRetCode final_bytes(uint8_t** output, uint64_t* output_size, Functio
 
 extern "C" {
 
-GigaDenoiserRetCode GigaDenoiserDenoiseInit(const char* config_file, GigaDenoiserDenoise* model) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchDenoiseInit(const char* config_file, GigaEdgeSpenchDenoise* model) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM, [&] {
     if (model == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     *model = nullptr;
     if (config_file == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *model = static_cast<void*>(new gigaedge::denoiser::Denoiser(config_file));
-    return GigaDenoiserRetCode::SUCCESS;
+    *model = static_cast<void*>(new gigaedge::spench::Denoiser(config_file));
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-void GigaDenoiserDenoiseFree(GigaDenoiserDenoise* model) {
+void GigaEdgeSpenchDenoiseFree(GigaEdgeSpenchDenoise* model) {
   ctools::guard_void([&] {
     if (model != nullptr) {
-      delete static_cast<gigaedge::denoiser::Denoiser*>(*model);
+      delete static_cast<gigaedge::spench::Denoiser*>(*model);
       *model = nullptr;
     }
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserDenoiseCreateContext(GigaDenoiserDenoise model, GigaDenoiserContext* ctx,
-                                                     uint32_t in_audio_sr, uint32_t out_audio_sr) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchDenoiseCreateContext(GigaEdgeSpenchDenoise model, GigaEdgeSpenchContext* ctx,
+                                                         uint32_t in_audio_sr, uint32_t out_audio_sr) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
     if (ctx == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     *ctx = nullptr;
     if (model == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *ctx = static_cast<gigaedge::denoiser::Denoiser*>(model)->CreateContext(in_audio_sr, out_audio_sr);
-    return GigaDenoiserRetCode::SUCCESS;
+    *ctx = static_cast<gigaedge::spench::Denoiser*>(model)->CreateContext(in_audio_sr, out_audio_sr);
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-void GigaDenoiserDenoiseDestroyContext(GigaDenoiserDenoise model, GigaDenoiserContext* ctx) {
+void GigaEdgeSpenchDenoiseDestroyContext(GigaEdgeSpenchDenoise model, GigaEdgeSpenchContext* ctx) {
   ctools::guard_void([&] {
     if (model != nullptr && ctx != nullptr && *ctx != nullptr) {
-      static_cast<gigaedge::denoiser::Denoiser*>(model)->DestroyContext(
-          reinterpret_cast<gigaedge::denoiser::Context<float>**>(ctx));
+      static_cast<gigaedge::spench::Denoiser*>(model)->DestroyContext(
+          reinterpret_cast<gigaedge::spench::Context<float>**>(ctx));
     }
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserDenoiseGetContextId(GigaDenoiserDenoise model, const GigaDenoiserContext ctx,
-                                                    uint64_t* id) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchDenoiseGetContextId(GigaEdgeSpenchDenoise model, const GigaEdgeSpenchContext ctx,
+                                                        uint64_t* id) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
     if (id != nullptr) *id = 0;
     if (model == nullptr || ctx == nullptr || id == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *id = static_cast<gigaedge::denoiser::Denoiser*>(model)->GetContextId(
-        static_cast<const gigaedge::denoiser::Context<float>*>(ctx));
-    return GigaDenoiserRetCode::SUCCESS;
+    *id = static_cast<gigaedge::spench::Denoiser*>(model)->GetContextId(
+        static_cast<const gigaedge::spench::Context<float>*>(ctx));
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserDenoiseSetContextId(GigaDenoiserDenoise model, GigaDenoiserContext ctx, uint64_t id) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchDenoiseSetContextId(GigaEdgeSpenchDenoise model, GigaEdgeSpenchContext ctx,
+                                                        uint64_t id) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
     if (model == nullptr || ctx == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    static_cast<gigaedge::denoiser::Denoiser*>(model)->SetContextId(
-        static_cast<gigaedge::denoiser::Context<float>*>(ctx), id);
-    return GigaDenoiserRetCode::SUCCESS;
+    static_cast<gigaedge::spench::Denoiser*>(model)->SetContextId(static_cast<gigaedge::spench::Context<float>*>(ctx),
+                                                                  id);
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserDenoiseGetStreamStat(GigaDenoiserDenoise model, const GigaDenoiserContext ctx,
-                                                     StreamStatStruct* stream_stat) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchDenoiseGetStreamStat(GigaEdgeSpenchDenoise model, const GigaEdgeSpenchContext ctx,
+                                                         StreamStatStruct* stream_stat) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
     if (stream_stat != nullptr) *stream_stat = {};
     if (model == nullptr || ctx == nullptr || stream_stat == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *stream_stat = static_cast<gigaedge::denoiser::Denoiser*>(model)->GetStreamStat(
-        static_cast<const gigaedge::denoiser::Context<float>*>(ctx));
-    return GigaDenoiserRetCode::SUCCESS;
+    *stream_stat = static_cast<gigaedge::spench::Denoiser*>(model)->GetStreamStat(
+        static_cast<const gigaedge::spench::Context<float>*>(ctx));
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserDenoiseGetEngineThreads(const GigaDenoiserDenoise model, uint64_t* engine_threads) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchDenoiseGetEngineThreads(const GigaEdgeSpenchDenoise model,
+                                                            uint64_t* engine_threads) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
     if (engine_threads != nullptr) *engine_threads = 0;
     if (model == nullptr || engine_threads == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *engine_threads = static_cast<gigaedge::denoiser::Denoiser*>(model)->GetEngineThreads();
-    return GigaDenoiserRetCode::SUCCESS;
+    *engine_threads = static_cast<gigaedge::spench::Denoiser*>(model)->GetEngineThreads();
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserDenoiseGetInputFrameSize(const GigaDenoiserDenoise model, uint64_t* input_size) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchDenoiseGetInputFrameSize(const GigaEdgeSpenchDenoise model, uint64_t* input_size) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
     if (input_size != nullptr) *input_size = 0;
     if (model == nullptr || input_size == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *input_size = static_cast<gigaedge::denoiser::Denoiser*>(model)->GetModelInputFrameSize();
-    return GigaDenoiserRetCode::SUCCESS;
+    *input_size = static_cast<gigaedge::spench::Denoiser*>(model)->GetModelInputFrameSize();
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserDenoiseGetSampleRate(const GigaDenoiserDenoise model, uint64_t* sample_rate) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchDenoiseGetSampleRate(const GigaEdgeSpenchDenoise model, uint64_t* sample_rate) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
     if (sample_rate != nullptr) *sample_rate = 0;
     if (model == nullptr || sample_rate == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *sample_rate = static_cast<gigaedge::denoiser::Denoiser*>(model)->GetModelSampleRate();
-    return GigaDenoiserRetCode::SUCCESS;
+    *sample_rate = static_cast<gigaedge::spench::Denoiser*>(model)->GetModelSampleRate();
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserDenoiseProcessChunkFp(GigaDenoiserDenoise model, GigaDenoiserContext ctx,
-                                                      const uint8_t* input, uint64_t input_size, uint8_t** output,
-                                                      uint64_t* output_size) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INFERENCE_PROBLEM, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchDenoiseProcessChunkFp(GigaEdgeSpenchDenoise model, GigaEdgeSpenchContext ctx,
+                                                          const uint8_t* input, uint64_t input_size, uint8_t** output,
+                                                          uint64_t* output_size) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INFERENCE_PROBLEM, [&] {
     if (!ctools::initialize_output(output, output_size)) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     if (model == nullptr || ctx == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     return ctools::process_bytes<float>(input, input_size, output, output_size, [&](const auto& samples, auto& result) {
-      return static_cast<gigaedge::denoiser::Denoiser*>(model)->ProcessChunk(
-          samples, result, static_cast<gigaedge::denoiser::Context<float>*>(ctx));
+      return static_cast<gigaedge::spench::Denoiser*>(model)->ProcessChunk(
+          samples, result, static_cast<gigaedge::spench::Context<float>*>(ctx));
     });
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserDenoiseProcessChunkInt(GigaDenoiserDenoise model, GigaDenoiserContext ctx,
-                                                       const uint8_t* input, uint64_t input_size, uint8_t** output,
-                                                       uint64_t* output_size) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INFERENCE_PROBLEM, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchDenoiseProcessChunkInt(GigaEdgeSpenchDenoise model, GigaEdgeSpenchContext ctx,
+                                                           const uint8_t* input, uint64_t input_size, uint8_t** output,
+                                                           uint64_t* output_size) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INFERENCE_PROBLEM, [&] {
     if (!ctools::initialize_output(output, output_size)) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     if (model == nullptr || ctx == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     return ctools::process_bytes<int16_t>(input, input_size, output, output_size,
                                           [&](const auto& samples, auto& result) {
-                                            return static_cast<gigaedge::denoiser::Denoiser*>(model)->ProcessChunk(
-                                                samples, result, static_cast<gigaedge::denoiser::Context<float>*>(ctx));
+                                            return static_cast<gigaedge::spench::Denoiser*>(model)->ProcessChunk(
+                                                samples, result, static_cast<gigaedge::spench::Context<float>*>(ctx));
                                           });
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserDenoiseGetFinalChunkFp(GigaDenoiserDenoise model, GigaDenoiserContext ctx,
-                                                       uint8_t** output, uint64_t* output_size) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INFERENCE_PROBLEM, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchDenoiseGetFinalChunkFp(GigaEdgeSpenchDenoise model, GigaEdgeSpenchContext ctx,
+                                                           uint8_t** output, uint64_t* output_size) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INFERENCE_PROBLEM, [&] {
     if (!ctools::initialize_output(output, output_size)) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     if (model == nullptr || ctx == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     return ctools::final_bytes<float>(output, output_size, [&](auto& result) {
-      return static_cast<gigaedge::denoiser::Denoiser*>(model)->GetFinalChunk(
-          result, static_cast<gigaedge::denoiser::Context<float>*>(ctx));
+      return static_cast<gigaedge::spench::Denoiser*>(model)->GetFinalChunk(
+          result, static_cast<gigaedge::spench::Context<float>*>(ctx));
     });
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserDenoiseGetFinalChunkInt(GigaDenoiserDenoise model, GigaDenoiserContext ctx,
-                                                        uint8_t** output, uint64_t* output_size) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INFERENCE_PROBLEM, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchDenoiseGetFinalChunkInt(GigaEdgeSpenchDenoise model, GigaEdgeSpenchContext ctx,
+                                                            uint8_t** output, uint64_t* output_size) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INFERENCE_PROBLEM, [&] {
     if (!ctools::initialize_output(output, output_size)) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     if (model == nullptr || ctx == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     return ctools::final_bytes<int16_t>(output, output_size, [&](auto& result) {
-      return static_cast<gigaedge::denoiser::Denoiser*>(model)->GetFinalChunk(
-          result, static_cast<gigaedge::denoiser::Context<float>*>(ctx));
+      return static_cast<gigaedge::spench::Denoiser*>(model)->GetFinalChunk(
+          result, static_cast<gigaedge::spench::Context<float>*>(ctx));
     });
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserAudioProcessInit(const char* config_file, GigaDenoiserAudioProcess* model) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchAudioProcessInit(const char* config_file, GigaEdgeSpenchAudioProcess* model) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM, [&] {
     if (model == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     *model = nullptr;
     if (config_file == nullptr) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *model = static_cast<void*>(new gigaedge::denoiser::AudioProcessor(config_file));
-    return GigaDenoiserRetCode::SUCCESS;
+    *model = static_cast<void*>(new gigaedge::spench::AudioProcessor(config_file));
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-void GigaDenoiserAudioProcessFree(GigaDenoiserAudioProcess model) {
-  ctools::guard_void([&] { delete static_cast<gigaedge::denoiser::AudioProcessor*>(model); });
+void GigaEdgeSpenchAudioProcessFree(GigaEdgeSpenchAudioProcess model) {
+  ctools::guard_void([&] { delete static_cast<gigaedge::spench::AudioProcessor*>(model); });
 }
 
-#define GDN_AUDIO_PROCESS_ADD(function_name, method_name)                            \
-  GigaDenoiserRetCode function_name(GigaDenoiserAudioProcess model) {                \
-    return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] { \
-      if (model == nullptr) {                                                        \
-        return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;                 \
-      }                                                                              \
-      static_cast<gigaedge::denoiser::AudioProcessor*>(model)->method_name();        \
-      return GigaDenoiserRetCode::SUCCESS;                                           \
-    });                                                                              \
+#define GES_AUDIO_PROCESS_ADD(function_name, method_name)                              \
+  GigaEdgeSpenchRetCode function_name(GigaEdgeSpenchAudioProcess model) {              \
+    return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] { \
+      if (model == nullptr) {                                                          \
+        return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;                 \
+      }                                                                                \
+      static_cast<gigaedge::spench::AudioProcessor*>(model)->method_name();            \
+      return GigaEdgeSpenchRetCode::SUCCESS;                                           \
+    });                                                                                \
   }
 
-GDN_AUDIO_PROCESS_ADD(GigaDenoiserAudioProcessAddAgc, AddAGC)
-GDN_AUDIO_PROCESS_ADD(GigaDenoiserAudioProcessAddRc, AddRC)
-GDN_AUDIO_PROCESS_ADD(GigaDenoiserAudioProcessAddLc, AddLC)
-GDN_AUDIO_PROCESS_ADD(GigaDenoiserAudioProcessAddNg, AddNG)
-GDN_AUDIO_PROCESS_ADD(GigaDenoiserAudioProcessAddLim, AddLim)
-GDN_AUDIO_PROCESS_ADD(GigaDenoiserAudioProcessAddDrc, AddDRC)
+GES_AUDIO_PROCESS_ADD(GigaEdgeSpenchAudioProcessAddAgc, AddAGC)
+GES_AUDIO_PROCESS_ADD(GigaEdgeSpenchAudioProcessAddRc, AddRC)
+GES_AUDIO_PROCESS_ADD(GigaEdgeSpenchAudioProcessAddLc, AddLC)
+GES_AUDIO_PROCESS_ADD(GigaEdgeSpenchAudioProcessAddNg, AddNG)
+GES_AUDIO_PROCESS_ADD(GigaEdgeSpenchAudioProcessAddLim, AddLim)
+GES_AUDIO_PROCESS_ADD(GigaEdgeSpenchAudioProcessAddDrc, AddDRC)
 
-#undef GDN_AUDIO_PROCESS_ADD
+#undef GES_AUDIO_PROCESS_ADD
 
-GigaDenoiserRetCode GigaDenoiserAudioProcessAddAgcWithParam(GigaDenoiserAudioProcess model, uint32_t sample_rate,
-                                                            float target_power_level, float max_power_gain) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
-    if (model == nullptr) return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-    static_cast<gigaedge::denoiser::AudioProcessor*>(model)->AddAGC(sample_rate, target_power_level, max_power_gain,
-                                                                    1e-2F, 1e-2F);
-    return GigaDenoiserRetCode::SUCCESS;
+GigaEdgeSpenchRetCode GigaEdgeSpenchAudioProcessAddAgcWithParam(GigaEdgeSpenchAudioProcess model, uint32_t sample_rate,
+                                                                float target_power_level, float max_power_gain) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
+    if (model == nullptr) return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    static_cast<gigaedge::spench::AudioProcessor*>(model)->AddAGC(sample_rate, target_power_level, max_power_gain,
+                                                                  1e-2F, 1e-2F);
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserAudioProcessAddRcWithParam(GigaDenoiserAudioProcess model, uint32_t sample_rate,
-                                                           float target_level_db, float max_gain_db, float attack_time,
-                                                           float release_time, float hold_time) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
-    if (model == nullptr) return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-    static_cast<gigaedge::denoiser::AudioProcessor*>(model)->AddRC(sample_rate, target_level_db, max_gain_db,
-                                                                   attack_time, release_time, hold_time);
-    return GigaDenoiserRetCode::SUCCESS;
+GigaEdgeSpenchRetCode GigaEdgeSpenchAudioProcessAddRcWithParam(GigaEdgeSpenchAudioProcess model, uint32_t sample_rate,
+                                                               float target_level_db, float max_gain_db,
+                                                               float attack_time, float release_time, float hold_time) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
+    if (model == nullptr) return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    static_cast<gigaedge::spench::AudioProcessor*>(model)->AddRC(sample_rate, target_level_db, max_gain_db, attack_time,
+                                                                 release_time, hold_time);
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserAudioProcessAddLcWithParam(GigaDenoiserAudioProcess model, uint32_t sample_rate,
-                                                           float target_level_db, float bypass_time, float max_gain_db,
-                                                           uint32_t use_vad, uint32_t post_processing) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
-    if (model == nullptr) return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-    static_cast<gigaedge::denoiser::AudioProcessor*>(model)->AddLC(sample_rate, target_level_db, bypass_time,
-                                                                   max_gain_db, use_vad != 0, post_processing != 0);
-    return GigaDenoiserRetCode::SUCCESS;
+GigaEdgeSpenchRetCode GigaEdgeSpenchAudioProcessAddLcWithParam(GigaEdgeSpenchAudioProcess model, uint32_t sample_rate,
+                                                               float target_level_db, float bypass_time,
+                                                               float max_gain_db, uint32_t use_vad,
+                                                               uint32_t post_processing) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
+    if (model == nullptr) return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    static_cast<gigaedge::spench::AudioProcessor*>(model)->AddLC(sample_rate, target_level_db, bypass_time, max_gain_db,
+                                                                 use_vad != 0, post_processing != 0);
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserAudioProcessAddNgWithParam(GigaDenoiserAudioProcess model, uint32_t sample_rate,
-                                                           float threshold_db, float attack_time, float release_time,
-                                                           float hold_time) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
-    if (model == nullptr) return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-    static_cast<gigaedge::denoiser::AudioProcessor*>(model)->AddNG(sample_rate, threshold_db, attack_time, release_time,
-                                                                   hold_time);
-    return GigaDenoiserRetCode::SUCCESS;
+GigaEdgeSpenchRetCode GigaEdgeSpenchAudioProcessAddNgWithParam(GigaEdgeSpenchAudioProcess model, uint32_t sample_rate,
+                                                               float threshold_db, float attack_time,
+                                                               float release_time, float hold_time) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
+    if (model == nullptr) return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    static_cast<gigaedge::spench::AudioProcessor*>(model)->AddNG(sample_rate, threshold_db, attack_time, release_time,
+                                                                 hold_time);
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserAudioProcessAddLimWithParam(GigaDenoiserAudioProcess model, uint32_t sample_rate,
-                                                            float threshold_db, float knee_width, float attack_time,
-                                                            float release_time) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
-    if (model == nullptr) return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-    static_cast<gigaedge::denoiser::AudioProcessor*>(model)->AddLim(sample_rate, threshold_db, knee_width, attack_time,
-                                                                    release_time);
-    return GigaDenoiserRetCode::SUCCESS;
+GigaEdgeSpenchRetCode GigaEdgeSpenchAudioProcessAddLimWithParam(GigaEdgeSpenchAudioProcess model, uint32_t sample_rate,
+                                                                float threshold_db, float knee_width, float attack_time,
+                                                                float release_time) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
+    if (model == nullptr) return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    static_cast<gigaedge::spench::AudioProcessor*>(model)->AddLim(sample_rate, threshold_db, knee_width, attack_time,
+                                                                  release_time);
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserAudioProcessAddDrcWithParam(GigaDenoiserAudioProcess model, uint32_t sample_rate,
-                                                            float threshold_db, uint32_t ratio, float knee_width,
-                                                            float attack_time, float release_time) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
-    if (model == nullptr) return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-    static_cast<gigaedge::denoiser::AudioProcessor*>(model)->AddDRC(sample_rate, threshold_db, ratio, knee_width,
-                                                                    attack_time, release_time);
-    return GigaDenoiserRetCode::SUCCESS;
+GigaEdgeSpenchRetCode GigaEdgeSpenchAudioProcessAddDrcWithParam(GigaEdgeSpenchAudioProcess model, uint32_t sample_rate,
+                                                                float threshold_db, uint32_t ratio, float knee_width,
+                                                                float attack_time, float release_time) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
+    if (model == nullptr) return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    static_cast<gigaedge::spench::AudioProcessor*>(model)->AddDRC(sample_rate, threshold_db, ratio, knee_width,
+                                                                  attack_time, release_time);
+    return GigaEdgeSpenchRetCode::SUCCESS;
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserAudioProcessChunkFp(GigaDenoiserAudioProcess model, const uint8_t* input,
-                                                    uint64_t input_size, uint8_t** output, uint64_t* output_size) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INFERENCE_PROBLEM, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchAudioProcessChunkFp(GigaEdgeSpenchAudioProcess model, const uint8_t* input,
+                                                        uint64_t input_size, uint8_t** output, uint64_t* output_size) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INFERENCE_PROBLEM, [&] {
     if (!ctools::initialize_output(output, output_size)) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    if (model == nullptr) return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    if (model == nullptr) return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     return ctools::process_bytes<float>(input, input_size, output, output_size, [&](const auto& samples, auto& result) {
-      return static_cast<gigaedge::denoiser::AudioProcessor*>(model)->ProcessChunk(samples, result, nullptr);
+      return static_cast<gigaedge::spench::AudioProcessor*>(model)->ProcessChunk(samples, result, nullptr);
     });
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserAudioProcessChunkInt(GigaDenoiserAudioProcess model, const uint8_t* input,
-                                                     uint64_t input_size, uint8_t** output, uint64_t* output_size) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INFERENCE_PROBLEM, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchAudioProcessChunkInt(GigaEdgeSpenchAudioProcess model, const uint8_t* input,
+                                                         uint64_t input_size, uint8_t** output, uint64_t* output_size) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INFERENCE_PROBLEM, [&] {
     if (!ctools::initialize_output(output, output_size)) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    if (model == nullptr) return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    if (model == nullptr) return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     return ctools::process_bytes<int16_t>(
         input, input_size, output, output_size, [&](const auto& samples, auto& result) {
-          return static_cast<gigaedge::denoiser::AudioProcessor*>(model)->ProcessChunk(samples, result, nullptr);
+          return static_cast<gigaedge::spench::AudioProcessor*>(model)->ProcessChunk(samples, result, nullptr);
         });
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserAudioProcessGetFinalChunkFp(GigaDenoiserAudioProcess model, uint8_t** output,
-                                                            uint64_t* output_size) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INFERENCE_PROBLEM, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchAudioProcessGetFinalChunkFp(GigaEdgeSpenchAudioProcess model, uint8_t** output,
+                                                                uint64_t* output_size) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INFERENCE_PROBLEM, [&] {
     if (!ctools::initialize_output(output, output_size)) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    if (model == nullptr) return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    if (model == nullptr) return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     return ctools::final_bytes<float>(output, output_size, [&](auto& result) {
-      return static_cast<gigaedge::denoiser::AudioProcessor*>(model)->GetFinalChunk(result, nullptr);
+      return static_cast<gigaedge::spench::AudioProcessor*>(model)->GetFinalChunk(result, nullptr);
     });
   });
 }
 
-GigaDenoiserRetCode GigaDenoiserAudioProcessGetFinalChunkInt(GigaDenoiserAudioProcess model, uint8_t** output,
-                                                             uint64_t* output_size) {
-  return ctools::guard(GigaDenoiserRetCode::ERR_INFERENCE_PROBLEM, [&] {
+GigaEdgeSpenchRetCode GigaEdgeSpenchAudioProcessGetFinalChunkInt(GigaEdgeSpenchAudioProcess model, uint8_t** output,
+                                                                 uint64_t* output_size) {
+  return ctools::guard(GigaEdgeSpenchRetCode::ERR_INFERENCE_PROBLEM, [&] {
     if (!ctools::initialize_output(output, output_size)) {
-      return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    if (model == nullptr) return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    if (model == nullptr) return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     return ctools::final_bytes<int16_t>(output, output_size, [&](auto& result) {
-      return static_cast<gigaedge::denoiser::AudioProcessor*>(model)->GetFinalChunk(result, nullptr);
+      return static_cast<gigaedge::spench::AudioProcessor*>(model)->GetFinalChunk(result, nullptr);
     });
   });
 }

@@ -2,7 +2,7 @@
  * \example 1-cpp_api_demo.cpp
  */
 #include <getopt.h>
-#include <gigadenoiser.h>
+#include <spench.h>
 
 #include <cstring>
 #include <fstream>
@@ -41,7 +41,7 @@ void help(int32_t count, char* argv[], Args& args) {
           "Options:\n"
           "  -h, --help                 show this message\n"
           "  -r, --resample             use resampling for audio processing\n"
-          "  -p, --packed-model PATH    use packed .gdn model (config path not required)\n"
+          "  -p, --packed-model PATH    use packed .ges model (config path not required)\n"
           "      --chunk-ms MS          input chunk/stride length in ms (default: 16)");
   while ((option_value = getopt_long(count, argv_copy, "hrp:", long_options, &option_index)) != -1) {
     if (option_index < 0) {
@@ -111,7 +111,7 @@ int32_t main(int32_t argc, char* argv[]) {
   std::vector<float> ret;
   std::vector<float> wav_data;
   std::vector<float> prediction;
-  GigaDenoiserRetCode ret_code = GigaDenoiserRetCode::SUCCESS;
+  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
   Args args;
 
   try {
@@ -132,7 +132,7 @@ int32_t main(int32_t argc, char* argv[]) {
 
   uint32_t sample_rate = info.sample_rate;
 
-  std::unique_ptr<gigaedge::denoiser::Denoiser> denoiser;
+  std::unique_ptr<gigaedge::spench::Denoiser> denoiser;
   if (!args.packed_model_path.empty()) {
     std::ifstream packed_in(args.packed_model_path, std::ios::binary);
     if (!packed_in) {
@@ -140,15 +140,15 @@ int32_t main(int32_t argc, char* argv[]) {
       return 1;
     }
     const std::vector<uint8_t> packed_data{std::istreambuf_iterator<char>(packed_in), std::istreambuf_iterator<char>()};
-    auto bundle = std::make_shared<gigaedge::denoiser::PackedModelReader>(packed_data);
-    denoiser = std::make_unique<gigaedge::denoiser::Denoiser>(bundle);
+    auto bundle = std::make_shared<gigaedge::spench::PackedModelReader>(packed_data);
+    denoiser = std::make_unique<gigaedge::spench::Denoiser>(bundle);
   } else {
-    denoiser = std::make_unique<gigaedge::denoiser::Denoiser>(args.config_path.c_str());
+    denoiser = std::make_unique<gigaedge::spench::Denoiser>(args.config_path.c_str());
   }
 
 
-  auto input_audio_processor = std::unique_ptr<gigaedge::denoiser::AudioProcessor>(
-      new gigaedge::denoiser::AudioProcessor(make_audio_process_config_yaml(sample_rate)));
+  auto input_audio_processor = std::unique_ptr<gigaedge::spench::AudioProcessor>(
+      new gigaedge::spench::AudioProcessor(make_audio_process_config_yaml(sample_rate)));
 
   if (!args.use_resampling && info.sample_rate != denoiser->GetModelSampleRate()) {
     std::cerr << "The sample rate (" << info.sample_rate << ") does not match model rate ("
@@ -157,7 +157,7 @@ int32_t main(int32_t argc, char* argv[]) {
   }
 
   // Input/output context rates are the WAV rate; resampling to/from model rate is internal.
-  gigaedge::denoiser::Context<float>* ctx = denoiser->CreateContext(sample_rate, sample_rate);
+  gigaedge::spench::Context<float>* ctx = denoiser->CreateContext(sample_rate, sample_rate);
 
   input_audio_processor->AddLC().AddNG().AddLim();
 
@@ -170,7 +170,7 @@ int32_t main(int32_t argc, char* argv[]) {
     std::vector<float> tmp_ret;
     input_audio_processor->ProcessChunk(chunk, tmp_ret);
     ret_code = denoiser->ProcessChunk(tmp_ret, ret, ctx);
-    if (ret_code < GigaDenoiserRetCode::SUCCESS) {
+    if (ret_code < GigaEdgeSpenchRetCode::SUCCESS) {
       std::cerr << "ProcessChunk failed at chunk " << i << " (code " << static_cast<int32_t>(ret_code) << ").\n";
       denoiser->DestroyContext(&ctx);
       return 1;
@@ -181,7 +181,7 @@ int32_t main(int32_t argc, char* argv[]) {
   }
 
   ret_code = denoiser->GetFinalChunk(ret, ctx);
-  if (ret_code < GigaDenoiserRetCode::SUCCESS) {
+  if (ret_code < GigaEdgeSpenchRetCode::SUCCESS) {
     std::cerr << "GetFinalChunk failed (code " << static_cast<int32_t>(ret_code) << ").\n";
     denoiser->DestroyContext(&ctx);
     return 1;

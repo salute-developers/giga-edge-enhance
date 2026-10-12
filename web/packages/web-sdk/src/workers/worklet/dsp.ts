@@ -1,5 +1,5 @@
-import { GDN_DSP_WORKLET_NAME } from '../../utils/constants';
+import { GES_DSP_WORKLET_NAME } from '../../utils/constants';
 
-import { GigaDenoiserDspWorkletProcessor } from './GigaDenoiserDspWorkletProcessor';
+import { GigaEdgeSpenchDspWorkletProcessor } from './GigaEdgeSpenchDspWorkletProcessor';
 
-registerProcessor(GDN_DSP_WORKLET_NAME, GigaDenoiserDspWorkletProcessor);
+registerProcessor(GES_DSP_WORKLET_NAME, GigaEdgeSpenchDspWorkletProcessor);

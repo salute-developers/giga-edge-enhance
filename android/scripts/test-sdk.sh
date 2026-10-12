@@ -5,5 +5,5 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 "$ROOT_DIR/gradlew" \
     -p "$ROOT_DIR" \
-    :giga-denoiser-sdk:testDebugUnitTest \
-    :giga-denoiser-sdk:connectedDebugAndroidTest
+    :gigaedge-spench-sdk:testDebugUnitTest \
+    :gigaedge-spench-sdk:connectedDebugAndroidTest

@@ -1,8 +1,8 @@
-# GigaDenoiserSDK
+# GigaEdgeSpenchSDK
 
-iOS wrapper and demo app for Giga Edge GigaDenoiser audio processing, with:
+iOS wrapper and demo app for GigaEdge Spench audio processing, with:
 
-- C++20 `GigaDenoiser` core (CMake static library)
+- C++20 `GigaEdge Spench` core (CMake static library)
 - Objective-C++ exception-safe wrapper with private framework module
 - Swift API + custom `AUAudioUnit`/`AVAudioUnit` factory
 - Unified `DenoiserError` Swift error type (bridged to `NSError`)
@@ -25,10 +25,10 @@ framework as `MARKETING_VERSION` in `project.yml`.
 
 ## Project structure
 
-- `../gigadenoiser/` C++ core library used by `scripts/build_core.sh`
-- `Sources/GigaDenoiserAudioKit/` framework source (ObjC++ wrapper + Swift API + Audio Unit)
+- `../spench/` C++ core library used by `scripts/build_core.sh`
+- `Sources/GigaEdgeSpenchAudioKit/` framework source (ObjC++ wrapper + Swift API + Audio Unit)
 - `Sources/AudioDemoApp/` demo app (single-screen UI)
-- `Tests/GigaDenoiserAudioKitTests/` unit tests for wrappers and audio unit factory
+- `Tests/GigaEdgeSpenchAudioKitTests/` unit tests for wrappers and audio unit factory
 - `Tests/AudioDemoAppUITests/` UI test + fixture wav
 - `scripts/` build/test/lint helpers
 - `project.yml` XcodeGen spec
@@ -54,7 +54,7 @@ brew install swiftlint
 ./scripts/generate_project.sh
 ```
 
-This creates `GigaDenoiserSDK.xcodeproj`.
+This creates `GigaEdgeSpenchSDK.xcodeproj`.
 
 ## Build each part
 
@@ -67,9 +67,9 @@ This creates `GigaDenoiserSDK.xcodeproj`.
 Outputs:
 
 - Simulator fat static library (`arm64 + x86_64`):
-  `build/core/simulator/libgiga-denoiser.a`
+  `build/core/simulator/libgigaedge-spench.a`
 - Device static library (`arm64`):
-  `build/core/device/libgiga-denoiser.a`
+  `build/core/device/libgigaedge-spench.a`
 
 ### 2) Build XCFramework
 
@@ -79,7 +79,7 @@ Outputs:
 
 Output:
 
-- `build/xcframework/GigaDenoiserAudioKit.xcframework`
+- `build/xcframework/GigaEdgeSpenchAudioKit.xcframework`
 
 ### 3) Build demo app (simulator)
 
@@ -95,7 +95,7 @@ Output:
 
 Outputs:
 
-- `build/docs/.../GigaDenoiserAudioKit.doccarchive` — open in Xcode for the
+- `build/docs/.../GigaEdgeSpenchAudioKit.doccarchive` — open in Xcode for the
   Quick Help-style browsable archive.
 - `build/docs/static-site/` — static HTML site ready for any web host.
 
@@ -103,7 +103,7 @@ To host under a sub-path (e.g. GitHub Pages project site), set
 `DOCC_HOSTING_BASE_PATH`:
 
 ```bash
-DOCC_HOSTING_BASE_PATH=giga-denoiser-ios ./scripts/build_docs.sh
+DOCC_HOSTING_BASE_PATH=gigaedge-spench-ios ./scripts/build_docs.sh
 ```
 
 Preview locally:
@@ -115,7 +115,7 @@ python3 -m http.server --directory build/docs/static-site 8000
 ## Run app in Xcode
 
 1. Generate project: `./scripts/generate_project.sh`
-2. Open `GigaDenoiserSDK.xcodeproj`
+2. Open `GigaEdgeSpenchSDK.xcodeproj`
 3. Select `AudioDemoApp` scheme
 4. Select simulator (e.g. iPhone 17)
 5. Run
@@ -177,7 +177,7 @@ let features = Features(normalization: true,
 ```
 
 `ModelCatalog.availableModels()` discovers every bundle whose
-`Info.plist` declares a `GigaDenoiserModelID`. Discovery is cached for the
+`Info.plist` declares a `GigaEdgeSpenchModelID`. Discovery is cached for the
 process lifetime; call `ModelCatalog.invalidateCache()` if your
 app loads new bundles dynamically.
 
@@ -189,9 +189,9 @@ All Swift APIs throw `DenoiserError`:
 do {
     let unit = try DenoiserAVAudioUnit(features: features, settings: settings)
 } catch DenoiserError.invalidArgument(let message) {
-    log.warning("Invalid GigaDenoiser configuration: \(message)")
+    log.warning("Invalid GigaEdge Spench configuration: \(message)")
 } catch {
-    log.error("GigaDenoiser failed to start: \(error)")
+    log.error("GigaEdge Spench failed to start: \(error)")
 }
 ```
 
@@ -234,7 +234,7 @@ The custom audio unit emits a low-performance event when repeated output underru
 Delivery options:
 
 - Direct callback via `DenoiserAVAudioUnit.onLowPerformance` / `DenoiserAUAudioUnit.onLowPerformance`
-- `NotificationCenter` notification: `Notification.Name.gigaDenoiserLowPerformance`
+- `NotificationCenter` notification: `Notification.Name.gigaEdgeSpenchLowPerformance`
 
 Event payload (`LowPerformanceEvent`):
 
@@ -254,7 +254,7 @@ unit.onLowPerformance = { event in
 Notification example:
 
 ```swift
-NotificationCenter.default.addObserver(forName: .gigaDenoiserLowPerformance,
+NotificationCenter.default.addObserver(forName: .gigaEdgeSpenchLowPerformance,
                                        object: unit.auAudioUnit,
                                        queue: .main) { notification in
     let event = notification.userInfo?[NotificationUserInfoKey.lowPerformanceEvent] as? LowPerformanceEvent
@@ -267,7 +267,7 @@ NotificationCenter.default.addObserver(forName: .gigaDenoiserLowPerformance,
 ### Unit tests (framework wrappers)
 
 ```bash
-xcodebuild -project GigaDenoiserSDK.xcodeproj -scheme GigaDenoiserAudioKit -destination "platform=iOS Simulator,name=iPhone 17" test
+xcodebuild -project GigaEdgeSpenchSDK.xcodeproj -scheme GigaEdgeSpenchAudioKit -destination "platform=iOS Simulator,name=iPhone 17" test
 ```
 
 Covers:
@@ -281,7 +281,7 @@ Covers:
 Yes, `XCUITest` is the correct tool here.
 
 ```bash
-xcodebuild -project GigaDenoiserSDK.xcodeproj -scheme AudioDemoApp -destination "platform=iOS Simulator,name=iPhone 17" test
+xcodebuild -project GigaEdgeSpenchSDK.xcodeproj -scheme AudioDemoApp -destination "platform=iOS Simulator,name=iPhone 17" test
 ```
 
 `AudioDemoAppUITests` validates:
@@ -305,7 +305,7 @@ Environment variables to customize test execution:
 |----------|---------|-------------|
 | `TEST_DEVICE_NAME` | `iPhone 17` | Simulator device name to use for tests |
 | `ERASE_SIMULATOR` | `1` | Erase simulator before tests (`1` = erase, `0` = skip erase) |
-| `GDN_TEST_RETRIES` | `1` | Retry count for `GigaDenoiserAudioKit` unit tests |
+| `GES_TEST_RETRIES` | `1` | Retry count for `GigaEdgeSpenchAudioKit` unit tests |
 | `APP_TEST_RETRIES` | `3` | Retry count for `AudioDemoApp` UI tests |
 
 Examples:
@@ -315,7 +315,7 @@ Examples:
 TEST_DEVICE_NAME="iPhone 15" ERASE_SIMULATOR=0 ./scripts/test.sh
 
 # Increase retries for flaky CI environment
-GDN_TEST_RETRIES=3 APP_TEST_RETRIES=5 ./scripts/test.sh
+GES_TEST_RETRIES=3 APP_TEST_RETRIES=5 ./scripts/test.sh
 ```
 
 ## UI test fixture audio

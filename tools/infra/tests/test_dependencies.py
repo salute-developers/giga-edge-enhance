@@ -61,7 +61,7 @@ class DependenciesTest(unittest.TestCase):
             dependencies.write_engine_package_config(prefix, "onnx", library, "shared")
             config = (prefix / "lib/cmake/onnxruntime/onnxruntimeConfig.cmake").read_text()
             self.assertIn("onnxruntime::onnxruntime", config)
-            self.assertIn("${_gdn_ort_prefix}/lib/libonnxruntime.so", config)
+            self.assertIn("${_ges_ort_prefix}/lib/libonnxruntime.so", config)
             self.assertNotIn(str(prefix), config)
 
     def test_prebuilt_arguments_use_container_path(self):
@@ -71,7 +71,7 @@ class DependenciesTest(unittest.TestCase):
             arguments = dependencies.prebuilt_cmake_arguments(
                 "native-release-tflite", False, prefix, True)
         self.assertEqual(arguments, [
-            "-DGDN_PREBUILT_TFLITE_ROOT=/workspace/out/artifacts/dependencies/test/prefix"
+            "-DGES_PREBUILT_TFLITE_ROOT=/workspace/out/artifacts/dependencies/test/prefix"
         ])
 
     def test_prepare_dependency_builds_renamed_bundle_target(self):
@@ -98,8 +98,8 @@ class DependenciesTest(unittest.TestCase):
                 dependencies.prepare_dependency("native-release-onnx", False)
 
             build_command = run_mock.call_args_list[1].args[0]
-            self.assertIn("gdn_dependency_bundle", build_command)
-            self.assertNotIn("gigadenoiser_dependency_bundle", build_command)
+            self.assertIn("ges_dependency_bundle", build_command)
+            self.assertNotIn("spench_dependency_bundle", build_command)
 
 
 if __name__ == "__main__":

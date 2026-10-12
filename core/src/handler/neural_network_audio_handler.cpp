@@ -8,18 +8,18 @@
 
 #include "src/logger.h"
 
-namespace gigaedge::denoiser {
+namespace gigaedge::spench {
 
 NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::shared_ptr<NetworkConfig> config)
     : BaseAudioHandler(std::move(config)), feature_extractor_runner_ptr_(nullptr), inference_runner_ptr_(nullptr) {
   // Ensure do_start() runs after derived members are initialized.
-  GigaDenoiserRetCode ret_code = restart();
-  if (ret_code != GigaDenoiserRetCode::SUCCESS) {
+  GigaEdgeSpenchRetCode ret_code = restart();
+  if (ret_code != GigaEdgeSpenchRetCode::SUCCESS) {
     spdlog::error("A neural network handler could not be created! {}", std::to_string(static_cast<int32_t>(ret_code)));
     throw std::runtime_error("A neural network handler module creation failed. ret_code=" +
                              std::to_string(static_cast<int32_t>(ret_code)));
   }
-  skip_zero_chunk_ = dynamic_cast<gigaedge::denoiser::NetworkConfig*>(config_.get())->skip_zeroed_chunks();
+  skip_zero_chunk_ = dynamic_cast<gigaedge::spench::NetworkConfig*>(config_.get())->skip_zeroed_chunks();
 }
 
 NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(NeuralNetworkAudioHandler&& orig) noexcept
@@ -30,7 +30,7 @@ NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(NeuralNetworkAudioHandler&&
 NeuralNetworkAudioHandler::~NeuralNetworkAudioHandler() = default;
 
 uint32_t NeuralNetworkAudioHandler::get_engine_threads_num() {
-  return std::dynamic_pointer_cast<gigaedge::denoiser::NetworkConfig>(config_)->num_threads();
+  return std::dynamic_pointer_cast<gigaedge::spench::NetworkConfig>(config_)->num_threads();
 }
 
 uint64_t NeuralNetworkAudioHandler::get_model_sample_rate() {
@@ -41,11 +41,11 @@ uint64_t NeuralNetworkAudioHandler::get_input_frame_size() {
   return feature_extractor_runner_ptr_->get_frame_hop_size_samples();
 }
 
-GigaDenoiserRetCode NeuralNetworkAudioHandler::do_start() {
-  GigaDenoiserRetCode ret_code = GigaDenoiserRetCode::SUCCESS;
+GigaEdgeSpenchRetCode NeuralNetworkAudioHandler::do_start() {
+  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
 
   ret_code = launch_feature_extractor_runner();
-  if (ret_code != GigaDenoiserRetCode::SUCCESS) {
+  if (ret_code != GigaEdgeSpenchRetCode::SUCCESS) {
     return ret_code;
   }
   ret_code = launch_inference_runner();
@@ -57,34 +57,33 @@ void NeuralNetworkAudioHandler::do_stop() {
   inference_runner_ptr_.reset();
 }
 
-GigaDenoiserRetCode NeuralNetworkAudioHandler::launch_feature_extractor_runner() {
-  GigaDenoiserRetCode ret_code = GigaDenoiserRetCode::SUCCESS;
+GigaEdgeSpenchRetCode NeuralNetworkAudioHandler::launch_feature_extractor_runner() {
+  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
   try {
     if (!feature_extractor_runner_ptr_) {
       feature_extractor_runner_ptr_ =
-          std::unique_ptr<gigaedge::denoiser::FeatureExtractorRunner>(new gigaedge::denoiser::FeatureExtractorRunner(
-              std::dynamic_pointer_cast<gigaedge::denoiser::NetworkConfig>(config_)));
+          std::unique_ptr<gigaedge::spench::FeatureExtractorRunner>(new gigaedge::spench::FeatureExtractorRunner(
+              std::dynamic_pointer_cast<gigaedge::spench::NetworkConfig>(config_)));
     }
   } catch (const std::exception& e) {
     spdlog::error("{}", e.what());
-    ret_code = GigaDenoiserRetCode::ERR_MODEL_START_PROBLEM;
+    ret_code = GigaEdgeSpenchRetCode::ERR_MODEL_START_PROBLEM;
   }
   return ret_code;
 }
 
-GigaDenoiserRetCode NeuralNetworkAudioHandler::launch_inference_runner() {
-  GigaDenoiserRetCode ret_code = GigaDenoiserRetCode::SUCCESS;
+GigaEdgeSpenchRetCode NeuralNetworkAudioHandler::launch_inference_runner() {
+  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
   const uint32_t inference_engine_threads = get_engine_threads_num();
 
   try {
     if (!inference_runner_ptr_) {
-      inference_runner_ptr_ =
-          std::unique_ptr<gigaedge::denoiser::InferenceRunner>(new gigaedge::denoiser::InferenceRunner(
-              std::dynamic_pointer_cast<gigaedge::denoiser::NetworkConfig>(config_), inference_engine_threads, false));
+      inference_runner_ptr_ = std::unique_ptr<gigaedge::spench::InferenceRunner>(new gigaedge::spench::InferenceRunner(
+          std::dynamic_pointer_cast<gigaedge::spench::NetworkConfig>(config_), inference_engine_threads, false));
     }
   } catch (const std::exception& e) {
     spdlog::error("{}", e.what());
-    ret_code = GigaDenoiserRetCode::ERR_MODEL_START_PROBLEM;
+    ret_code = GigaEdgeSpenchRetCode::ERR_MODEL_START_PROBLEM;
   }
   return ret_code;
 }
@@ -121,4 +120,4 @@ void prepare_first_input_frame(const std::vector<float>& current_chunk, std::vec
 
 }  // namespace tools
 
-}  // namespace gigaedge::denoiser
+}  // namespace gigaedge::spench

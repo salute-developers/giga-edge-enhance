@@ -1,4 +1,4 @@
-#include <gigadenoiser/packed_model.h>
+#include <spench/packed_model.h>
 #include <util/packed_model/packed_model_writer.h>
 #include <yaml-cpp/yaml.h>
 
@@ -27,7 +27,7 @@ static void write_file(const fs::path& p, const std::vector<uint8_t>& data) {
 
 int32_t main(int32_t argc, char* argv[]) {
   try {
-    argparse::ArgumentParser cli("model_packager", "Pack or unpack a GigaDenoiser YAML config with a model");
+    argparse::ArgumentParser cli("model_packager", "Pack or unpack a GigaEdgeSpench YAML config with a model");
 
     cli.add_argument("input").help("YAML configuration file (pack) or packed file (unpack)");
     cli.add_argument("output").help("Output packed file (pack) or output directory (unpack)");
@@ -69,7 +69,7 @@ int32_t main(int32_t argc, char* argv[]) {
       std::vector<uint8_t> model_bytes = read_file(model_path);
 
       // form bundle content
-      std::vector<uint8_t> packed_data = gigaedge::denoiser::util::write_packed_model(config_text, model_bytes);
+      std::vector<uint8_t> packed_data = gigaedge::spench::util::write_packed_model(config_text, model_bytes);
 
       // write output
       write_file(output_path, packed_data);
@@ -80,7 +80,7 @@ int32_t main(int32_t argc, char* argv[]) {
 
       std::vector<uint8_t> packed_data = read_file(input_path);
 
-      gigaedge::denoiser::PackedModelReader reader(packed_data);
+      gigaedge::spench::PackedModelReader reader(packed_data);
 
       // ensure the output directory exists
       fs::create_directories(output_path);

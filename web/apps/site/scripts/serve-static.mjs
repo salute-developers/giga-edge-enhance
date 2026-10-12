@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const siteDirectory = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const buildDirectory = resolve(siteDirectory, 'build');
 const port = Number(process.env.PORT ?? 5173);
-const isolationHeadersEnabled = process.env.GDN_DISABLE_ISOLATION_HEADERS !== '1';
+const isolationHeadersEnabled = process.env.GES_DISABLE_ISOLATION_HEADERS !== '1';
 
 const contentTypes = new Map([
     ['.css', 'text/css; charset=utf-8'],
@@ -15,7 +15,7 @@ const contentTypes = new Map([
     ['.js', 'text/javascript; charset=utf-8'],
     ['.json', 'application/json; charset=utf-8'],
     ['.mp4', 'video/mp4'],
-    ['.gdn', 'application/octet-stream'],
+    ['.ges', 'application/octet-stream'],
     ['.svg', 'image/svg+xml'],
     ['.wasm', 'application/wasm'],
     ['.wav', 'audio/wav'],

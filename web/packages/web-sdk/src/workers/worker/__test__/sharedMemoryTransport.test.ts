@@ -6,13 +6,13 @@ import {
     getBufferSize,
     getInputBufferSeconds,
     getOutputBufferSeconds,
-    GDN_FRAME_SIZE_SECONDS,
+    GES_FRAME_SIZE_SECONDS,
 } from '../../../utils/constants';
 import { RingBuffer } from '../../../utils/ringBuffer';
 import { SharedMemoryTransport, Payload } from '../transport';
 
 const SAMPLE_RATE = 48000;
-const FRAME_SIZE = GDN_FRAME_SIZE_SECONDS;
+const FRAME_SIZE = GES_FRAME_SIZE_SECONDS;
 const SETTINGS = getSettingsWithDefaults();
 
 jest.mock('../../../utils/semaphore', () => {

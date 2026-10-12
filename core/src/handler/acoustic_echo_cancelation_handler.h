@@ -5,12 +5,12 @@
 #include <utility>
 #include <vector>
 
-#include "gigadenoiser/errors.h"
+#include "spench/errors.h"
 #include "src/config_reader.h"
 #include "src/handler/base_audio_handler.h"
 #include "util/echo/echo_canceler.h"
 
-namespace gigaedge::denoiser {
+namespace gigaedge::spench {
 
 class AudioEchoCancelationHandler : public BaseAudioHandler {
  public:
@@ -35,13 +35,13 @@ class AudioEchoCancelationHandler : public BaseAudioHandler {
 
 
   // BaseAudioHandler integration
-  GigaDenoiserRetCode process_frame(struct gigaedge::denoiser::Context<float>* ctx, const std::vector<float>& mic_frame,
-                                    const std::vector<float>& lbk_frame, std::vector<float>& out) override;
+  GigaEdgeSpenchRetCode process_frame(struct gigaedge::spench::Context<float>* ctx, const std::vector<float>& mic_frame,
+                                      const std::vector<float>& lbk_frame, std::vector<float>& out) override;
 
   // Explicitly mark single-input as unsupported for AEC
-  GigaDenoiserRetCode process_frame(struct gigaedge::denoiser::Context<float>*, const std::vector<float>&,
-                                    std::vector<float>&) override {
-    return GigaDenoiserRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  GigaEdgeSpenchRetCode process_frame(struct gigaedge::spench::Context<float>*, const std::vector<float>&,
+                                      std::vector<float>&) override {
+    return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
 
   const uint32_t get_sample_rate();
@@ -49,11 +49,11 @@ class AudioEchoCancelationHandler : public BaseAudioHandler {
   const uint16_t get_frame_length();
 
  protected:
-  GigaDenoiserRetCode do_start() override;
+  GigaEdgeSpenchRetCode do_start() override;
   void do_stop() override;
 
  private:
   std::unique_ptr<util::echo::IEchoCanceler> canceler_;
-  GigaDenoiserRetCode load_configuration(const std::string& config_path);
+  GigaEdgeSpenchRetCode load_configuration(const std::string& config_path);
 };
-}  // namespace gigaedge::denoiser
+}  // namespace gigaedge::spench

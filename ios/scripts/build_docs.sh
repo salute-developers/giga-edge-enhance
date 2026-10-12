@@ -2,9 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT="$ROOT_DIR/GigaDenoiserSDK.xcodeproj"
+PROJECT="$ROOT_DIR/GigaEdgeSpenchSDK.xcodeproj"
 BUILD_DIR="$ROOT_DIR/build/docs"
-SCHEME="GigaDenoiserAudioKit"
+SCHEME="GigaEdgeSpenchAudioKit"
 HOSTING_BASE_PATH="${DOCC_HOSTING_BASE_PATH:-}"
 STATIC_OUTPUT="$BUILD_DIR/static-site"
 
@@ -30,7 +30,7 @@ echo "Built DocC archive at $ARCHIVE_PATH"
 
 # Transform the archive into a static site that can be served from any
 # static host (GitHub Pages, S3, internal CDN, ...). Pass a non-empty
-# DOCC_HOSTING_BASE_PATH (e.g. "giga-denoiser-ios") to mount the site under a
+# DOCC_HOSTING_BASE_PATH (e.g. "gigaedge-spench-ios") to mount the site under a
 # subpath; otherwise it is hosted at the document root.
 mkdir -p "$STATIC_OUTPUT"
 

@@ -1,4 +1,4 @@
-import { type Features as RawFeatures, GigaDenoiserSDK } from '@gigaedge/denoiser-web-sdk';
+import { type Features as RawFeatures, GigaEdgeSpenchSDK } from '@gigaedge/spench-web-sdk';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import Statistics from '../Statistics';
 import benchmarkFile from './sample.wav';
@@ -84,7 +84,7 @@ async function processAudio(
     const destNode = ctx.createMediaStreamDestination();
     srcNode.buffer = inputBuffer; // monoBuffer;
 
-    const sdk = GigaDenoiserSDK.create(ctx, {
+    const sdk = GigaEdgeSpenchSDK.create(ctx, {
         loggerVerbosity: 'verbose',
         settings: {
             ...settings,
@@ -111,18 +111,18 @@ async function processAudio(
         },
     });
 
-    const gigaDenoiserNode = await sdk.createAudioNode(features);
+    const gigaEdgeSpenchNode = await sdk.createAudioNode(features);
 
-    if (gigaDenoiserNode instanceof Error) {
+    if (gigaEdgeSpenchNode instanceof Error) {
         if (ctx.state !== 'closed' && ctx !== context) await ctx.close();
-        throw gigaDenoiserNode;
+        throw gigaEdgeSpenchNode;
     }
-    const additionalNodes: (typeof gigaDenoiserNode)[] = [];
+    const additionalNodes: (typeof gigaEdgeSpenchNode)[] = [];
 
     try {
         let fail: (() => void) | undefined;
-        gigaDenoiserNode.addEventListener('low_performance', onLowPerformance);
-        gigaDenoiserNode.addEventListener('destroyed', () => {
+        gigaEdgeSpenchNode.addEventListener('low_performance', onLowPerformance);
+        gigaEdgeSpenchNode.addEventListener('destroyed', () => {
             fail?.();
         });
         const setFeatures = (f: Features) => {
@@ -130,15 +130,15 @@ async function processAudio(
                 node.setFeatures(f);
             }
 
-            return gigaDenoiserNode.setFeatures(f);
+            return gigaEdgeSpenchNode.setFeatures(f);
         };
         setFeaturesRef.current = setFeatures;
 
         console.log('node ready');
 
         // Connect nodes
-        srcNode.connect(gigaDenoiserNode);
-        gigaDenoiserNode.connect(destNode);
+        srcNode.connect(gigaEdgeSpenchNode);
+        gigaEdgeSpenchNode.connect(destNode);
 
         const recordingFormat = captureOutput ? getRecordingFormat() : undefined;
         const mediaRecorder = recordingFormat
@@ -191,7 +191,7 @@ async function processAudio(
         };
 
         stopRef.current = stop;
-        const reset = () => gigaDenoiserNode.reset();
+        const reset = () => gigaEdgeSpenchNode.reset();
         resetRef.current = reset;
 
         console.log('Waiting for processing to finish');
@@ -247,14 +247,14 @@ async function processAudio(
         // Disconnect nodes
         if (srcNode) srcNode.disconnect();
         if (destNode) destNode.disconnect();
-        if (gigaDenoiserNode) gigaDenoiserNode.disconnect();
+        if (gigaEdgeSpenchNode) gigaEdgeSpenchNode.disconnect();
 
         for (const node of additionalNodes) {
             node.disconnect();
             node.destroy();
         }
 
-        gigaDenoiserNode.destroy();
+        gigaEdgeSpenchNode.destroy();
 
         if (ctx.state !== 'closed' && ctx !== context) await ctx.close();
     }
@@ -299,7 +299,7 @@ async function processLiveDemo(
     let sourceNode: MediaStreamAudioSourceNode | undefined;
     let destNode: MediaStreamAudioDestinationNode | undefined;
     let delayNode: DelayNode | undefined;
-    let gigaDenoiserNode: Awaited<ReturnType<ReturnType<typeof GigaDenoiserSDK.create>['createAudioNode']>> | undefined;
+    let gigaEdgeSpenchNode: Awaited<ReturnType<ReturnType<typeof GigaEdgeSpenchSDK.create>['createAudioNode']>> | undefined;
     let recorderBefore: MediaRecorder | undefined;
     let recorderAfter: MediaRecorder | undefined;
 
@@ -311,7 +311,7 @@ async function processLiveDemo(
         sourceNode = ctx.createMediaStreamSource(micStream);
         destNode = ctx.createMediaStreamDestination();
 
-        const sdk = GigaDenoiserSDK.create(ctx, {
+        const sdk = GigaEdgeSpenchSDK.create(ctx, {
             loggerVerbosity: 'verbose',
             settings: {
                 ...settings,
@@ -338,21 +338,21 @@ async function processLiveDemo(
             },
         });
 
-        gigaDenoiserNode = await sdk.createAudioNode(features);
+        gigaEdgeSpenchNode = await sdk.createAudioNode(features);
 
-        if (gigaDenoiserNode instanceof Error) {
-            throw gigaDenoiserNode;
+        if (gigaEdgeSpenchNode instanceof Error) {
+            throw gigaEdgeSpenchNode;
         }
-        const activeGigaDenoiserNode = gigaDenoiserNode;
+        const activeGigaEdgeSpenchNode = gigaEdgeSpenchNode;
 
-        activeGigaDenoiserNode.addEventListener('low_performance', onLowPerformance);
-        setFeaturesRef.current = (f) => activeGigaDenoiserNode.setFeatures(f);
+        activeGigaEdgeSpenchNode.addEventListener('low_performance', onLowPerformance);
+        setFeaturesRef.current = (f) => activeGigaEdgeSpenchNode.setFeatures(f);
 
         console.log('node ready');
 
-        sourceNode.connect(activeGigaDenoiserNode);
-        activeGigaDenoiserNode.connect(destNode);
-        activeGigaDenoiserNode.connect(delayNode);
+        sourceNode.connect(activeGigaEdgeSpenchNode);
+        activeGigaEdgeSpenchNode.connect(destNode);
+        activeGigaEdgeSpenchNode.connect(delayNode);
         delayNode.connect(ctx.destination);
 
         const recordingFormat = getRecordingFormat();
@@ -403,7 +403,7 @@ async function processLiveDemo(
         };
 
         stopRef.current = stop;
-        resetRef.current = () => activeGigaDenoiserNode.reset();
+        resetRef.current = () => activeGigaEdgeSpenchNode.reset();
 
         console.log('Waiting MediaRecorders');
         await Promise.all([recordingBeforeStopped, recordingAfterStopped]);
@@ -424,9 +424,9 @@ async function processLiveDemo(
         sourceNode?.disconnect();
         destNode?.disconnect();
         delayNode?.disconnect();
-        if (gigaDenoiserNode && !(gigaDenoiserNode instanceof Error)) {
-            gigaDenoiserNode.disconnect();
-            gigaDenoiserNode.destroy();
+        if (gigaEdgeSpenchNode && !(gigaEdgeSpenchNode instanceof Error)) {
+            gigaEdgeSpenchNode.disconnect();
+            gigaEdgeSpenchNode.destroy();
         }
 
         if (ctx?.state !== 'closed') await ctx?.close();
@@ -595,7 +595,7 @@ const Runner: React.FC<Props> = ({
             }
 
             setProcessedResult({
-                name: `giga-denoiser-processed-${file.name}.${getRecordingExtension(res.afterBlob)}`,
+                name: `gigaedge-spench-processed-${file.name}.${getRecordingExtension(res.afterBlob)}`,
                 originalUrl: URL.createObjectURL(file),
                 processedUrl: URL.createObjectURL(res.afterBlob),
             });
@@ -646,11 +646,11 @@ const Runner: React.FC<Props> = ({
 
             if (shouldSaveRecording) {
                 if (res.beforeBlob) {
-                    saveRecording('giga-denoiser-recorded-original', res.beforeBlob);
+                    saveRecording('gigaedge-spench-recorded-original', res.beforeBlob);
                 }
 
                 if (res.afterBlob) {
-                    saveRecording('giga-denoiser-recorded-processed', res.afterBlob);
+                    saveRecording('gigaedge-spench-recorded-processed', res.afterBlob);
                 }
             }
             setProcessTimeRaw(res.processTime);

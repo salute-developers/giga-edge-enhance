@@ -5,11 +5,11 @@ ROOT_DIR="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 PROFILE="${1:-wasm-dsp-release}"
 case "$PROFILE" in
   wasm-release)
-    MODULE_NAME="giga-denoiser"
+    MODULE_NAME="gigaedge-spench"
     MAX_SIZE_KB=8192
     ;;
   wasm-dsp-release)
-    MODULE_NAME="giga-denoiser.dsp"
+    MODULE_NAME="gigaedge-spench.dsp"
     MAX_SIZE_KB=4250
     ;;
   *)
@@ -18,7 +18,7 @@ case "$PROFILE" in
     ;;
 esac
 
-BUILD_DIR="${GDN_BUILD_DIR:-$ROOT_DIR/out/build/$PROFILE}"
+BUILD_DIR="${GES_BUILD_DIR:-$ROOT_DIR/out/build/$PROFILE}"
 FILE_PATH="$BUILD_DIR/web/packages/web-sdk/wasm/$MODULE_NAME.wasm"
 # Check if file exists
 if [ ! -f "$FILE_PATH" ]; then

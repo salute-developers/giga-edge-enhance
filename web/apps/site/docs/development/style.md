@@ -9,7 +9,7 @@ use `PascalCase`, and data members use a trailing underscore. Existing public C 
 compatibility constraints.
 
 ```bash
-git-clang-format --diff HEAD --extensions c,cc,cpp,h,hpp -- gigadenoiser
+git-clang-format --diff HEAD --extensions c,cc,cpp,h,hpp -- spench
 ```
 
 Web changes use the workspace's TypeScript and ESLint configuration and should preserve accessible

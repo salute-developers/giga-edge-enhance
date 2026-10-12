@@ -1,7 +1,7 @@
-import { GDN_WORKLET_NAME } from '../../utils/constants';
+import { GES_WORKLET_NAME } from '../../utils/constants';
 
-import { GigaDenoiserBaseWorkletProcessor } from './GigaDenoiserBaseWorkletProcessor';
+import { GigaEdgeSpenchBaseWorkletProcessor } from './GigaEdgeSpenchBaseWorkletProcessor';
 
-class GigaDenoiserWorkletProcessor extends GigaDenoiserBaseWorkletProcessor {}
+class GigaEdgeSpenchWorkletProcessor extends GigaEdgeSpenchBaseWorkletProcessor {}
 
-registerProcessor(GDN_WORKLET_NAME, GigaDenoiserWorkletProcessor);
+registerProcessor(GES_WORKLET_NAME, GigaEdgeSpenchWorkletProcessor);

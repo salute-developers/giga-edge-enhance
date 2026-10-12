@@ -1,4 +1,4 @@
-name: Build and test GigaDenoiser CMake target
+name: Build and test GigaEdgeSpench CMake target
 description: Restore one dependency bundle, then build and test one existing CMake preset.
 
 inputs:
@@ -46,9 +46,9 @@ runs:
       shell: bash
       env:
         PRESET: ${{ inputs.preset }}
-        GDN_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
-        GDN_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
-        GDN_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
+        GES_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        GES_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        GES_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
       run: |
         python_command=python3
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
@@ -60,9 +60,9 @@ runs:
       shell: bash
       env:
         PRESET: ${{ inputs.preset }}
-        GDN_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
-        GDN_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
-        GDN_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
+        GES_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        GES_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        GES_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
       run: |
         python_command=python3
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
@@ -74,9 +74,9 @@ runs:
       shell: bash
       env:
         PRESET: ${{ inputs.preset }}
-        GDN_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
-        GDN_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
-        GDN_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
+        GES_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        GES_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        GES_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
       run: |
         python_command=python3
         if [[ "${RUNNER_OS}" == "Windows" ]]; then
@@ -98,7 +98,7 @@ runs:
       shell: bash
       env:
         PRESET: ${{ inputs.preset }}
-        GDN_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        GES_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
       run: |
         python_command=python3
         if [[ "${RUNNER_OS}" == "Windows" ]]; then

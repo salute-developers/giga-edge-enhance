@@ -1,11 +1,11 @@
 {
-  "name": "@gigaedge/denoiser-site",
+  "name": "@gigaedge/spench-site",
   "private": true,
   "version": "0.0.1",
   "license": "MIT",
   "scripts": {
     "start": "npm-run-all -p 'watch:*'",
-    "watch:sdk": "npm run start --workspace=@gigaedge/denoiser-web-sdk",
+    "watch:sdk": "npm run start --workspace=@gigaedge/spench-web-sdk",
     "prewatch:app": "node scripts/stage-docs.mjs",
     "watch:app": "docusaurus start --port 5173",
     "build": "node scripts/stage-docs.mjs && tsc --noEmit && docusaurus build",
@@ -20,7 +20,7 @@
   "dependencies": {
     "@docusaurus/core": "3.10.2",
     "@docusaurus/preset-classic": "3.10.2",
-    "@gigaedge/denoiser-web-sdk": "file:../../packages/web-sdk",
+    "@gigaedge/spench-web-sdk": "file:../../packages/web-sdk",
     "@mdx-js/react": "^3.1.1",
     "clsx": "^2.1.1",
     "coi-serviceworker": "0.1.7",

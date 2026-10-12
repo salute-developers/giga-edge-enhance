@@ -4,7 +4,7 @@ title: Configuration
 
 # Pipeline configuration
 
-GigaDenoiser supports programmatic feature selection and YAML configuration. A typical real-time pipeline
+GigaEdge Spench supports programmatic feature selection and YAML configuration. A typical real-time pipeline
 combines one denoiser model with optional normalization and acoustic echo cancellation.
 
 Model sample rate, input sample rate, channel layout, and reference-signal requirements must match

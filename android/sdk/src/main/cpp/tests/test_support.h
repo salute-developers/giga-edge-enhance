@@ -1,5 +1,5 @@
-#ifndef GDN_TEST_SUPPORT_H
-#define GDN_TEST_SUPPORT_H
+#ifndef GES_TEST_SUPPORT_H
+#define GES_TEST_SUPPORT_H
 
 #include <cmath>
 #include <cstdlib>

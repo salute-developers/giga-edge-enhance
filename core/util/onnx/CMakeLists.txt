@@ -6,7 +6,7 @@ add_library(util__onnx STATIC
         denoise_onnx_runner.cpp
 )
 
-gdn_apply_build_config(util__onnx)
+ges_apply_build_config(util__onnx)
 
 set_property(TARGET util__onnx PROPERTY CXX_STANDARD 17)
 set_property(TARGET util__onnx PROPERTY CXX_STANDARD_REQUIRED ON)
@@ -41,12 +41,12 @@ else()
   set(onnxruntime_target onnxruntime)
 endif()
 
-if(GDN_PREBUILT_ORT_ROOT)
-  target_include_directories(util__onnx PUBLIC "${GDN_PREBUILT_ORT_ROOT}/include")
+if(GES_PREBUILT_ORT_ROOT)
+  target_include_directories(util__onnx PUBLIC "${GES_PREBUILT_ORT_ROOT}/include")
   # CMake may reduce the imported dylib/archive to -lonnxruntime when this
   # static library is consumed by another target.  Keep its bundle directory
   # on the consumer link line in that case.
-  target_link_directories(util__onnx PUBLIC "${GDN_PREBUILT_ORT_ROOT}/lib")
+  target_link_directories(util__onnx PUBLIC "${GES_PREBUILT_ORT_ROOT}/lib")
 elseif (TARGET ${onnxruntime_target})
   get_target_property(onnxruntime_cmake_dir ${onnxruntime_target} SOURCE_DIR)
   target_include_directories(util__onnx PUBLIC "${onnxruntime_cmake_dir}/../include")

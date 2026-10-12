@@ -31,14 +31,14 @@ elseif (BUILD_ONNX_ENGINE)
         )
 endif()
 
-add_executable(gigadenoiser_tests ${TEST_SRC})
-target_include_directories(gigadenoiser_tests SYSTEM PRIVATE
+add_executable(spench_tests ${TEST_SRC})
+target_include_directories(spench_tests SYSTEM PRIVATE
   "${Catch2_SOURCE_DIR}/single_include/catch2")
 
-gdn_apply_build_config(gigadenoiser_tests)
+ges_apply_build_config(spench_tests)
 
-target_link_libraries(gigadenoiser_tests PRIVATE
-  giga-denoiser
+target_link_libraries(spench_tests PRIVATE
+  gigaedge-spench
   util::packed_model
   yaml-cpp
   util::sound
@@ -50,32 +50,32 @@ target_link_libraries(gigadenoiser_tests PRIVATE
   ctpl)
 
 if(BUILD_RESAMPLER)
-  target_link_libraries(gigadenoiser_tests PRIVATE soxr)
+  target_link_libraries(spench_tests PRIVATE soxr)
 endif()
 
 if(NOT (CMAKE_SYSTEM_NAME MATCHES "Android" OR WIN32))
-  target_link_libraries(gigadenoiser_tests PRIVATE pthread)
+  target_link_libraries(spench_tests PRIVATE pthread)
 endif()
 
 if (BUILD_TFLITE_ENGINE)
-  target_link_libraries(gigadenoiser_tests PRIVATE util__tf_lite)
+  target_link_libraries(spench_tests PRIVATE util__tf_lite)
 elseif (BUILD_ONNX_ENGINE)
-  target_link_libraries(gigadenoiser_tests PRIVATE util__onnx)
+  target_link_libraries(spench_tests PRIVATE util__onnx)
 
   if (UNIX AND NOT APPLE)
-    target_link_libraries(gigadenoiser_tests PRIVATE gomp)
+    target_link_libraries(spench_tests PRIVATE gomp)
   endif()
 endif()
 
 include("${Catch2_SOURCE_DIR}/contrib/Catch.cmake")
-catch_discover_tests(gigadenoiser_tests)
+catch_discover_tests(spench_tests)
 
 if (BUILD_SHARED_LIBS AND WIN32)
-add_custom_command(TARGET gigadenoiser_tests POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:gigadenoiser_tests> $<TARGET_FILE_DIR:gigadenoiser_tests>
+add_custom_command(TARGET spench_tests POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:spench_tests> $<TARGET_FILE_DIR:spench_tests>
   COMMAND_EXPAND_LISTS)
 endif()
 
-add_custom_command(TARGET gigadenoiser_tests PRE_BUILD
+add_custom_command(TARGET spench_tests PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/core/tests/data/ ${CMAKE_CURRENT_BINARY_DIR}/data)

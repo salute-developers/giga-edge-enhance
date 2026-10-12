@@ -1,4 +1,4 @@
-#include <gigadenoiser/packed_model.h>
+#include <spench/packed_model.h>
 
 #include <array>
 #include <chrono>
@@ -9,27 +9,27 @@
 #include <thread>
 #include <vector>
 
-#include "gigadenoiser/processor.h"
+#include "spench/processor.h"
 #include "test_support.h"
 
 void run_ring_buffer_tests();
 
 namespace {
 
-std::shared_ptr<gigaedge::denoiser::PackedModelReader> test_model_reader() {
-  return std::make_shared<gigaedge::denoiser::PackedModelReader>(GDN_TEST_MODEL_PATH);
+std::shared_ptr<gigaedge::spench::PackedModelReader> test_model_reader() {
+  return std::make_shared<gigaedge::spench::PackedModelReader>(GES_TEST_MODEL_PATH);
 }
 
 constexpr std::uint32_t test_sample_rate_hz = 48000U;
 constexpr std::size_t test_chunk_frames = 768U;
 constexpr const char* test_model_name = "quality48";
 
-void enable_full_processing(gigaedge::denoiser::Processor& processor) {
+void enable_full_processing(gigaedge::spench::Processor& processor) {
   processor.set_features(true, test_model_name, test_model_reader());
 }
 
-gigaedge::denoiser::ProcessorSettings fast_congestion_settings() {
-  gigaedge::denoiser::ProcessorSettings settings;
+gigaedge::spench::ProcessorSettings fast_congestion_settings() {
+  gigaedge::spench::ProcessorSettings settings;
   settings.min_latency = 0.0;
   settings.latency_increase_step = 0.2;
   settings.low_performance_max_refill_times = 2;
@@ -39,7 +39,7 @@ gigaedge::denoiser::ProcessorSettings fast_congestion_settings() {
 }
 
 void test_async_processor_eventually_produces_output() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz);
+  gigaedge::spench::Processor processor(test_sample_rate_hz);
   enable_full_processing(processor);
   std::vector<float> input(test_chunk_frames, 0.25f);
   std::vector<float> output(input.size(), 0.0f);
@@ -65,7 +65,7 @@ void test_async_processor_eventually_produces_output() {
 }
 
 void test_first_process_zero_fills_when_worker_has_no_output_yet() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz);
+  gigaedge::spench::Processor processor(test_sample_rate_hz);
   const std::array<float, 8> input = {0.5f, -0.5f, 0.25f, -0.25f, 1.0f, -1.0f, 0.1f, -0.1f};
   std::array<float, 8> output = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
 
@@ -77,7 +77,7 @@ void test_first_process_zero_fills_when_worker_has_no_output_yet() {
 }
 
 void test_reset_clears_pending_output() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz);
+  gigaedge::spench::Processor processor(test_sample_rate_hz);
   enable_full_processing(processor);
   std::vector<float> input(test_chunk_frames, 1.0f);
   std::vector<float> output(input.size(), 1.0f);
@@ -93,7 +93,7 @@ void test_reset_clears_pending_output() {
 }
 
 void test_processor_output_is_finite() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz);
+  gigaedge::spench::Processor processor(test_sample_rate_hz);
   enable_full_processing(processor);
   std::vector<float> input(test_chunk_frames, 0.5f);
   std::vector<float> output(input.size(), 0.0f);
@@ -113,7 +113,7 @@ void test_processor_output_is_finite() {
 }
 
 void test_overflow_backlog_does_not_hang() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz);
+  gigaedge::spench::Processor processor(test_sample_rate_hz);
   enable_full_processing(processor);
   std::vector<float> input(65536, 0.25f);
   std::vector<float> output(input.size(), 0.0f);
@@ -129,7 +129,7 @@ void test_repeated_create_process_destroy_is_stable() {
   const std::array<float, 32> input = {0.2f};
 
   for (std::int32_t iteration = 0; iteration < 200; ++iteration) {
-    gigaedge::denoiser::Processor processor(test_sample_rate_hz);
+    gigaedge::spench::Processor processor(test_sample_rate_hz);
     enable_full_processing(processor);
     std::array<float, 32> output = {};
     processor.process(input.data(), output.data(), input.size());
@@ -140,7 +140,7 @@ void test_repeated_create_process_destroy_is_stable() {
 }
 
 void test_default_processor_passes_input_through_async_path() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz);
+  gigaedge::spench::Processor processor(test_sample_rate_hz);
   std::vector<float> input(test_chunk_frames, 0.0f);
   std::vector<float> output(input.size(), 0.0f);
   for (std::size_t i = 0; i < input.size(); ++i) {
@@ -166,7 +166,7 @@ void test_default_processor_passes_input_through_async_path() {
 }
 
 void test_disabled_features_pass_input_through_async_path() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz);
+  gigaedge::spench::Processor processor(test_sample_rate_hz);
   processor.set_features(false, "", nullptr);
   std::vector<float> input(test_chunk_frames, 0.0f);
   std::vector<float> output(input.size(), 0.0f);
@@ -193,7 +193,7 @@ void test_disabled_features_pass_input_through_async_path() {
 }
 
 void test_feature_switching_keeps_processor_usable() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz);
+  gigaedge::spench::Processor processor(test_sample_rate_hz);
   std::vector<float> input(test_chunk_frames, 0.25f);
   std::vector<float> output(input.size(), 0.0f);
 
@@ -233,19 +233,19 @@ void test_feature_switching_keeps_processor_usable() {
 }
 
 void test_settings_driven_processor_construction() {
-  gigaedge::denoiser::ProcessorSettings settings;
+  gigaedge::spench::ProcessorSettings settings;
   settings.telemetry_rounding_milliseconds = 0.5;
   settings.use_vad_normalization = true;
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz, settings);
+  gigaedge::spench::Processor processor(test_sample_rate_hz, settings);
   processor.set_features(true, "", nullptr);
   expect_true(true, "settings-driven processor should construct");
 }
 
 void test_worker_waits_for_configured_full_chunk() {
-  gigaedge::denoiser::ProcessorSettings settings;
+  gigaedge::spench::ProcessorSettings settings;
   settings.min_latency = 0.05;
   settings.max_processing_chunk_seconds = 0.064;
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz, settings);
+  gigaedge::spench::Processor processor(test_sample_rate_hz, settings);
   processor.set_features(true, "", nullptr);
 
   std::vector<float> input(test_chunk_frames, 0.25f);
@@ -273,10 +273,10 @@ void test_worker_waits_for_configured_full_chunk() {
 }
 
 void test_invalid_processing_chunk_setting_is_rejected() {
-  gigaedge::denoiser::ProcessorSettings settings;
+  gigaedge::spench::ProcessorSettings settings;
   settings.max_processing_chunk_seconds = std::numeric_limits<double>::quiet_NaN();
   try {
-    gigaedge::denoiser::Processor processor(test_sample_rate_hz, settings);
+    gigaedge::spench::Processor processor(test_sample_rate_hz, settings);
     expect_true(false, "invalid processing chunk setting must be rejected");
   } catch (const std::invalid_argument&) {
     // expected
@@ -284,7 +284,7 @@ void test_invalid_processing_chunk_setting_is_rejected() {
 }
 
 void test_telemetry_counters_increment_only_for_enabled_stages() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz);
+  gigaedge::spench::Processor processor(test_sample_rate_hz);
   processor.set_features(true, "", nullptr);
   std::vector<float> input(test_chunk_frames, 0.25f);
   std::vector<float> output(input.size(), 0.0f);
@@ -299,9 +299,9 @@ void test_telemetry_counters_increment_only_for_enabled_stages() {
 }
 
 void test_telemetry_bucket_saturates_for_tiny_rounding_step() {
-  gigaedge::denoiser::ProcessorSettings settings;
+  gigaedge::spench::ProcessorSettings settings;
   settings.telemetry_rounding_milliseconds = std::numeric_limits<double>::denorm_min();
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz, settings);
+  gigaedge::spench::Processor processor(test_sample_rate_hz, settings);
   processor.set_features(true, "", nullptr);
   std::vector<float> input(test_chunk_frames, 0.25f);
   std::vector<float> output(input.size(), 0.0f);
@@ -321,7 +321,7 @@ void test_telemetry_bucket_saturates_for_tiny_rounding_step() {
 }
 
 void test_reset_does_not_clear_telemetry() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz);
+  gigaedge::spench::Processor processor(test_sample_rate_hz);
   processor.set_features(true, "", nullptr);
   std::vector<float> input(test_chunk_frames, 0.25f);
   std::vector<float> output(input.size(), 0.0f);
@@ -336,9 +336,9 @@ void test_reset_does_not_clear_telemetry() {
 }
 
 void test_reverse_order_produces_finite_output() {
-  gigaedge::denoiser::ProcessorSettings settings;
+  gigaedge::spench::ProcessorSettings settings;
   settings.unstable_reverse_processing_order = true;
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz, settings);
+  gigaedge::spench::Processor processor(test_sample_rate_hz, settings);
   enable_full_processing(processor);
   std::vector<float> input(test_chunk_frames, 0.25f);
   std::vector<float> output(input.size(), 0.0f);
@@ -355,9 +355,9 @@ void test_reverse_order_produces_finite_output() {
 }
 
 void test_congestion_priming_returns_silence_until_threshold() {
-  gigaedge::denoiser::ProcessorSettings settings;
+  gigaedge::spench::ProcessorSettings settings;
   settings.min_latency = 0.064;
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz, settings);
+  gigaedge::spench::Processor processor(test_sample_rate_hz, settings);
   std::vector<float> input(test_chunk_frames, 0.5f);
   std::vector<float> output(input.size(), 1.0f);
   processor.process(input.data(), output.data(), input.size());
@@ -367,7 +367,7 @@ void test_congestion_priming_returns_silence_until_threshold() {
 }
 
 void test_repeated_underruns_create_low_performance_event_and_cap_latency() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz, fast_congestion_settings());
+  gigaedge::spench::Processor processor(test_sample_rate_hz, fast_congestion_settings());
   std::vector<float> input(test_chunk_frames, 0.5f);
   std::vector<float> large_input(test_chunk_frames * 8U, 0.5f);
   std::vector<float> output(test_chunk_frames * 8U, 0.0f);
@@ -387,7 +387,7 @@ void test_repeated_underruns_create_low_performance_event_and_cap_latency() {
 // under telemetry_mutex_) while the main thread hammers telemetry_snapshot(). This must never deadlock
 // and every snapshot must be internally consistent and monotonically non-decreasing.
 void test_concurrent_process_and_telemetry_do_not_deadlock() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz);
+  gigaedge::spench::Processor processor(test_sample_rate_hz);
   processor.set_features(true, "", nullptr);
   std::vector<float> input(test_chunk_frames, 0.25f);
   std::vector<float> output(input.size(), 0.0f);
@@ -422,9 +422,9 @@ void test_concurrent_process_and_telemetry_do_not_deadlock() {
 // streaming audio while the main thread repeatedly resets and flips features. This must terminate (no
 // deadlock) and never produce non-finite output.
 void test_concurrent_reset_and_features_stay_finite() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz);
+  gigaedge::spench::Processor processor(test_sample_rate_hz);
   const std::vector<float> input(test_chunk_frames, 0.25f);
-  const std::shared_ptr<gigaedge::denoiser::PackedModelReader> reader = test_model_reader();
+  const std::shared_ptr<gigaedge::spench::PackedModelReader> reader = test_model_reader();
 
   std::atomic<bool> stop{false};
   std::atomic<bool> saw_nonfinite{false};
@@ -454,7 +454,7 @@ void test_concurrent_reset_and_features_stay_finite() {
 }
 
 void test_reset_clears_pending_congestion_state() {
-  gigaedge::denoiser::Processor processor(test_sample_rate_hz, fast_congestion_settings());
+  gigaedge::spench::Processor processor(test_sample_rate_hz, fast_congestion_settings());
   std::vector<float> input(test_chunk_frames, 0.5f);
   std::vector<float> large_input(test_chunk_frames * 8U, 0.5f);
   std::vector<float> output(test_chunk_frames * 8U, 0.0f);
@@ -471,7 +471,7 @@ void test_reset_clears_pending_congestion_state() {
 
 }  // namespace
 
-int main() {  // giga-denoiser-allow-int
+int main() {  // gigaedge-spench-allow-int
   run_ring_buffer_tests();
   test_async_processor_eventually_produces_output();
   test_first_process_zero_fills_when_worker_has_no_output_yet();

@@ -10,7 +10,7 @@ target "native" {
   dockerfile = "dockerfiles/Dockerfile.native"
   platforms  = ["linux/amd64"]
   contexts = {
-    giga-denoiser-base = "target:base"
+    gigaedge-spench-base = "target:base"
   }
 }
 
@@ -19,7 +19,7 @@ target "web" {
   dockerfile = "dockerfiles/Dockerfile.web"
   platforms  = ["linux/amd64"]
   contexts = {
-    giga-denoiser-base = "target:base"
+    gigaedge-spench-base = "target:base"
   }
 }
 
@@ -28,7 +28,7 @@ target "android" {
   dockerfile = "dockerfiles/Dockerfile.android"
   platforms  = ["linux/amd64"]
   contexts = {
-    giga-denoiser-base = "target:base"
+    gigaedge-spench-base = "target:base"
   }
 }
 
