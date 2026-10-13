@@ -21,16 +21,21 @@ overhead.
 
 ## Installation
 
-```bash
-# Yarn
-yarn add @gigaedge/spench-web-sdk
+The tested package is the npm tarball inside the
+`gigaedge-spench-web-sdk-<tag>.zip` GitHub Release asset. Install that file
+directly:
 
-# NPM
-npm i @gigaedge/spench-web-sdk
+```bash
+npm install ./gigaedge-spench-web-sdk-1.0.0.tgz
 ```
 
-> The SDK uses native ES modules. If you target older browsers, bundle with
-> a tool that transpiles them (e.g. Rollup, Vite).
+The package name is `@gigaedge/spench-web-sdk`. The release workflow does not
+publish it to the npm registry; the registry and GitHub Releases can both carry
+this same tarball when registry publication is enabled. See
+[Distribution](/docs/distribution/).
+
+The SDK uses native ES modules. Bundle it with Rollup, Vite, or another
+transpiler when targeting older browsers.
 
 ## Quickstart
 
@@ -196,7 +201,7 @@ const customModel = await fetch('/path/to/my/denoise.ges').arrayBuffer();
 
 const sdk = GigaEdgeSpenchSDK.create(audioCtx, {
   models: {
-    noiseCancellation: { fast48: customModel },
+    noiseCancellation: { quality48: customModel },
   },
 });
 ```

@@ -91,7 +91,6 @@
 * **spendch:** add loudness control module ([4b35359](https://github.com/salute-developers/spench/commit/4b35359f02a05c6c4076f4f1e8d20175d2d23d2f))
 * support bundled models and variable audio chunks ([33739a7](https://github.com/salute-developers/spench/commit/33739a7f374d044120edbf9c38efe3cd14efa871))
 * **task:** add context and task structures for hidden state management ([d6840b1](https://github.com/salute-developers/spench/commit/d6840b139f5d924c564bf505aa9421d0ae72b5e7))
-* **tests:** add 24kHz model test support ([c68cfc5](https://github.com/salute-developers/spench/commit/c68cfc5747f386d670d025523c15b794fbb6d374))
 * **tests:** add feature extraction runner class and unit tests ([e37e98f](https://github.com/salute-developers/spench/commit/e37e98f9dcd2e659246ddefb9bdb90343fd6730b))
 * **tflite:** add BaseTfliteRunner and SpenchFTfliteRunner ([56ff97a](https://github.com/salute-developers/spench/commit/56ff97acaabeef415059d5528197217705ca22ec))
 * **tflite:** add TFLite inference runner and test ([59258ca](https://github.com/salute-developers/spench/commit/59258cab9885c666c962fc35c51c544ea66197da))
