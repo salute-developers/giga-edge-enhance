@@ -81,17 +81,6 @@ const config: Config = {
             items: [
                 { to: '/', label: 'Demo', position: 'left' },
                 { type: 'docSidebar', sidebarId: 'mainSidebar', label: 'Documentation', position: 'left' },
-                {
-                    type: 'dropdown',
-                    label: 'SDK reference',
-                    position: 'left',
-                    items: [
-                        { label: 'Core repository guide', to: '/docs/source/' },
-                        { label: 'Web SDK', to: '/docs/source/web/packages/web-sdk/' },
-                        { label: 'Android SDK', to: '/docs/source/android/' },
-                        { label: 'iOS SDK', to: '/docs/source/ios/' },
-                    ],
-                },
             ],
         },
         footer: {

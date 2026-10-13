@@ -81,7 +81,7 @@ outputs are written under `out/`.
 - [C and C++ quickstart](web/apps/site/docs/core/quickstart.md)
 - [Models](web/apps/site/docs/models.md)
 - [Command-line tools](web/apps/site/docs/core/cli.md)
-- [Contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md) and [support](SUPPORT.md)
 
 Report vulnerabilities privately as described in the [security policy](SECURITY.md).
 

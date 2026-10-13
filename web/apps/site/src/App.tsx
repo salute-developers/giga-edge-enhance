@@ -131,7 +131,7 @@ function App() {
             const arrayBuffer = reader.result;
             if (arrayBuffer instanceof ArrayBuffer) {
                 setCustomDenoiseModel(arrayBuffer);
-                handleFeatureChange('noiseCancellation', 'fast48');
+                handleFeatureChange('noiseCancellation', 'custom');
             } else {
                 console.error('reader.result is not arraybuffer');
             }
@@ -191,7 +191,7 @@ function App() {
                                 <span><strong>Fast</strong><small>Lower CPU use · 8 kHz</small></span>
                             </label>
                             <label className="choiceCard customChoice">
-                                <input type="radio" data-testid="denoiserCustom" checked={features.noiseCancellation === 'fast48'} name="denoiserChoice" onChange={() => customDenoiseModel ? handleFeatureChange('noiseCancellation', 'fast48') : handleFeatureChange('noiseCancellation', false)} />
+                                <input type="radio" data-testid="denoiserCustom" checked={features.noiseCancellation === 'custom'} name="denoiserChoice" onChange={() => customDenoiseModel ? handleFeatureChange('noiseCancellation', 'custom') : handleFeatureChange('noiseCancellation', false)} />
                                 <span><strong>Custom</strong><small>{customDenoiseModel ? 'Model ready' : 'Upload a .ges model'}</small></span>
                                 <input className="modelInput" aria-label="Upload custom denoiser model" data-testid="customDenoiserModelInput" id="customDenoiserModelInput" type="file" ref={customDenoiserInputRef} accept=".ges,application/octet-stream" multiple={false} onChange={handleCustomDenoiserModel} />
                             </label>

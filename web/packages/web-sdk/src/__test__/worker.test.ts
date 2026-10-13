@@ -123,9 +123,8 @@ describe('getTransferableModelRepresentation', () => {
     test('converts URLs and copies caller-owned ArrayBuffers before transfer', () => {
         const raw = {
             noiseCancellation: {
-                fast24: new ArrayBuffer(4),
-                quality24: new URL('https://example.com/quality24.ges'),
-                custom: 'https://example.com/custom.ges',
+                custom: new ArrayBuffer(4),
+                quality48: new URL('https://example.com/quality48.ges'),
             },
         } as unknown as ModelsTmpl<string | ArrayBuffer>;
 
@@ -134,15 +133,14 @@ describe('getTransferableModelRepresentation', () => {
         // Transferables should contain the single ArrayBuffer.
         expect(trans).toHaveLength(1);
         expect(trans[0]).toBeInstanceOf(ArrayBuffer);
-        expect(trans[0]).not.toBe((raw as any).noiseCancellation.fast24);
-        expect(trans[0]).toEqual((raw as any).noiseCancellation.fast24);
+        expect(trans[0]).not.toBe((raw as any).noiseCancellation.custom);
+        expect(trans[0]).toEqual((raw as any).noiseCancellation.custom);
 
         // Models map should have href string for URL and keep strings untouched.
         expect(models).toMatchObject({
             noiseCancellation: {
-                fast24: trans[0],
-                quality24: 'https://example.com/quality24.ges',
-                custom: 'https://example.com/custom.ges',
+                custom: trans[0],
+                quality48: 'https://example.com/quality48.ges',
             },
         });
     });
@@ -160,8 +158,8 @@ describe('GigaEdgeSpenchWorker', () => {
     test('constructor posts INIT message with the correct resources', () => {
         const rawModels = {
             noiseCancellation: {
-                fast24: new ArrayBuffer(4),
-                quality24: new URL('https://example.com/model.ges'),
+                custom: new ArrayBuffer(4),
+                quality48: new URL('https://example.com/model.ges'),
             },
         } as unknown as ModelsTmpl<string | ArrayBuffer>;
 
@@ -184,15 +182,15 @@ describe('GigaEdgeSpenchWorker', () => {
         // The models object must keep ArrayBuffers and convert URLs to hrefs.
         expect(msg.resources.models).toMatchObject({
             noiseCancellation: {
-                fast24: transfer[0],
-                quality24: 'https://example.com/model.ges',
+                custom: transfer[0],
+                quality48: 'https://example.com/model.ges',
             },
         });
 
         // The transfer list must include the ArrayBuffer from the models.
         expect(transfer).toHaveLength(1);
-        expect(transfer[0]).not.toBe(rawModels.noiseCancellation!.fast24);
-        expect(rawModels.noiseCancellation!.fast24.byteLength).toBe(4);
+        expect(transfer[0]).not.toBe(rawModels.noiseCancellation!.custom);
+        expect(rawModels.noiseCancellation!.custom.byteLength).toBe(4);
     });
 
     test('createPort returns a port that is destroyed when the last client closes', async () => {

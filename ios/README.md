@@ -25,7 +25,7 @@ framework as `MARKETING_VERSION` in `project.yml`.
 
 ## Project structure
 
-- `../spench/` C++ core library used by `scripts/build_core.sh`
+- `../core/` C++ core library used by `scripts/build_core.sh`
 - `Sources/GigaEdgeSpenchAudioKit/` framework source (ObjC++ wrapper + Swift API + Audio Unit)
 - `Sources/AudioDemoApp/` demo app (single-screen UI)
 - `Tests/GigaEdgeSpenchAudioKitTests/` unit tests for wrappers and audio unit factory

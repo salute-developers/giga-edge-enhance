@@ -10,7 +10,8 @@ and echo-cancellation stages. It exposes stable C and C++ public headers under
 
 Use the C++ API for native applications and the C API for ABI-oriented integrations. Existing
 exported names are compatibility constraints and are not renamed for style. The
-[quickstart](quickstart.md) shows the denoising calls and links to the runnable demos.
+[quickstart](quickstart.md) shows the denoising calls. [Configuration](configuration.md) covers
+YAML, packed models, return codes, DSP, and echo cancellation.
 
 ## Integration
 
