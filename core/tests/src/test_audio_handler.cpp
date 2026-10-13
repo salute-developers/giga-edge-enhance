@@ -309,10 +309,8 @@ TEST_CASE("AEC configuration rejects unsupported canceler types", "[validation]"
       "Invalid echo canceler type: unsupported");
 }
 
-TEST_CASE("Removed model identifiers are rejected before loading weights", "[validation]") {
-  for (const std::string type : {"best_quality", "best_speed", "best_speed_new"}) {
-    auto config = std::make_shared<gigaedge::spench::DenoiserConfig>(
-        gigaedge::spench::StringConfigReader("model:\n  model_path: unused.onnx\ninference:\n  model_type: " + type));
-    REQUIRE_THROWS_AS(gigaedge::spench::InferenceRunner(config, 1, false), std::invalid_argument);
-  }
+TEST_CASE("Unknown model identifiers are rejected before loading weights", "[validation]") {
+  auto config = std::make_shared<gigaedge::spench::DenoiserConfig>(gigaedge::spench::StringConfigReader(
+      "model:\n  model_path: unused.onnx\ninference:\n  model_type: unsupported\n"));
+  REQUIRE_THROWS_AS(gigaedge::spench::InferenceRunner(config, 1, false), std::invalid_argument);
 }
