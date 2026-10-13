@@ -58,8 +58,8 @@ signature names.
 - Android discovers packaged models with `Models.available(context)`. The shipped
   module is `quality48`.
 - iOS discovers `fast8` and `quality48` through `ModelCatalog`.
-- The Web SDK embeds `fast8.ges` and `quality48.ges` and accepts a replacement
-  model buffer.
+- The Web SDK embeds `fast8.ges` and `quality48.ges`. A packed model you supply
+  uses the `custom` key.
 
 Load and validate a model before real-time processing begins.
 

@@ -13,7 +13,7 @@ tools/build native-release-onnx
 tools/shell
 
 # Inside the container
-out/build/container-clang-llvm-tools/native-release-onnx/core/cli/demo/spench --help
+out/build/container-clang-llvm-tools/native-release-onnx/core/cli/demo/gigaedge-spench --help
 ```
 
 The shell starts in `/workspace` with the repository, user identity, and development caches mounted

@@ -31,7 +31,7 @@ function getRecordingExtension(blob: Blob) {
 }
 
 type Models = {
-    noiseCancellation: { fast8: URL; quality48: URL; fast48: ArrayBuffer };
+    noiseCancellation: { fast8: URL; quality48: URL; custom: ArrayBuffer };
 };
 export type Features = RawFeatures<Models>;
 
@@ -92,7 +92,7 @@ async function processAudio(
         },
         models: {
             noiseCancellation: {
-                fast48: customDenoiseModel!,
+                custom: customDenoiseModel!,
             },
         },
         sendMetric: (metric, value) => {
@@ -319,7 +319,7 @@ async function processLiveDemo(
             },
             models: {
                 noiseCancellation: {
-                    fast48: customDenoiseModel!,
+                    custom: customDenoiseModel!,
                 },
             },
             sendMetric: (metric, value) => {

@@ -29,10 +29,9 @@ directly:
 npm install ./gigaedge-spench-web-sdk-1.0.0.tgz
 ```
 
-The package name is `@gigaedge/spench-web-sdk`. The release workflow does not
-publish it to the npm registry; the registry and GitHub Releases can both carry
-this same tarball when registry publication is enabled. See
-[Distribution](/docs/distribution/).
+The package name is `@gigaedge/spench-web-sdk`. The release workflow publishes
+that tarball as a GitHub Release asset and does not publish it to the npm
+registry. See [Distribution](/docs/distribution/).
 
 The SDK uses native ES modules. Bundle it with Rollup, Vite, or another
 transpiler when targeting older browsers.
@@ -147,10 +146,10 @@ audio processing is lagging.  The event contains the most probable cause
 |----------|------|---------|
 | `normalization` | `boolean` | `false` |
 | `echoCancellation` | `boolean` | `false` |
-| `noiseCancellation` | `boolean \| "fast8" \| "quality48"` | `false` |
+| `noiseCancellation` | `boolean \| "fast8" \| "quality48" \| "custom"` | `false` |
 
-The SDK bundles `fast8.ges` as `fast8` and `quality48.ges` as `quality48`. Supply other model keys through
-`params.models` when using custom model files.
+The SDK bundles `fast8.ges` as `fast8` and `quality48.ges` as `quality48`. Put a packed `.ges`
+model you supply under the `custom` key and select `noiseCancellation: 'custom'`.
 
 ## Testing
 
@@ -201,9 +200,10 @@ const customModel = await fetch('/path/to/my/denoise.ges').arrayBuffer();
 
 const sdk = GigaEdgeSpenchSDK.create(audioCtx, {
   models: {
-    noiseCancellation: { quality48: customModel },
+    noiseCancellation: { custom: customModel },
   },
 });
+await sdk.createAudioNode({ noiseCancellation: 'custom' });
 ```
 
 The node will use the supplied ArrayBuffer instead of downloading the default model.

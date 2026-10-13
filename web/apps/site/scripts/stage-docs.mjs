@@ -13,7 +13,6 @@ const coiServiceWorkerDestination = resolve(siteDirectory, 'static/coi-servicewo
 const repositoryDocumentation = [
     'README.md',
     'CONTRIBUTING.md',
-    'CHANGELOG.md',
     'SECURITY.md',
     'SUPPORT.md',
     'STYLE.md',
