@@ -16,7 +16,7 @@ application.
 
 ## Builds
 
-Use the repository [build and test guide](../../../../README.md#build-and-test) for supported
+Use the repository [build instructions](../../../../README.md#build-the-repository) for supported
 WASM workflows:
 
 ```shell
