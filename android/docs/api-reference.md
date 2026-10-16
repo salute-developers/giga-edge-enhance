@@ -158,6 +158,7 @@ object Models {
 ## Model name constants (`com.gigaedge.spench.models`)
 
 - `Quality48Model.NAME` == `"quality48"` (from `:gigaedge-spench-model-quality48`).
+- `Hybrid48Model.NAME` == `"hybrid48"` (from `:gigaedge-spench-model-hybrid48`).
 
 ## Internal (not public API)
 

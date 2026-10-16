@@ -5,11 +5,13 @@ export const WASM_DSP_URL = new URL('../../generated/wasm/gigaedge-spench.dsp.wa
 
 const DENOISE_FAST_8_MODEL_URL = new URL('../../models/fast8.ges', import.meta.url);
 const DENOISE_QUALITY_48_MODEL_URL = new URL('../../models/quality48.ges', import.meta.url);
+const DENOISE_HYBRID_48_MODEL_URL = new URL('../../models/hybrid48.ges', import.meta.url);
 
 export const DEFAULT_MODELS = {
     noiseCancellation: {
         fast8: DENOISE_FAST_8_MODEL_URL,
         quality48: DENOISE_QUALITY_48_MODEL_URL,
+        hybrid48: DENOISE_HYBRID_48_MODEL_URL,
     },
 } as const;
 

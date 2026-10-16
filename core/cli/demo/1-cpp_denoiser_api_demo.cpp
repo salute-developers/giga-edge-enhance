@@ -44,7 +44,7 @@ void help(int32_t count, char* argv[], Args& args) {
           "  -p, --packed-model PATH    use packed .ges model (config path not required)\n"
           "      --chunk-ms MS          input chunk/stride length in ms (default: 16)");
   while ((option_value = getopt_long(count, argv_copy, "hrp:", long_options, &option_index)) != -1) {
-    if (option_index < 0) {
+    if (option_value != 0) {
       switch (option_value) {
         case 'h':
           help = 1;

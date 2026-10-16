@@ -2,7 +2,7 @@ import Foundation
 
 /// Stable identifier for a bundled GigaEdgeSpench denoiser model.
 ///
-/// Use one of the bundled descriptors (``fast8``, ``quality48``)
+/// Use one of the bundled descriptors (``fast8``, ``quality48``, ``hybrid48``)
 /// or build your own with ``init(rawValue:)``. The raw value must match the
 /// `GigaEdgeSpenchModelID` key inside the model bundle's `Info.plist`.
 public struct ModelDescriptor: RawRepresentable, Hashable, Comparable, Sendable {
@@ -23,6 +23,8 @@ public struct ModelDescriptor: RawRepresentable, Hashable, Comparable, Sendable 
     /// Full-quality 48 kHz model. Highest fidelity at the cost of CPU; best
     /// for offline rendering or when hardware can sustain it.
     public static let quality48 = ModelDescriptor(rawValue: "quality48")
+    /// Hybrid 48 kHz model.
+    public static let hybrid48 = ModelDescriptor(rawValue: "hybrid48")
 }
 
 /// Discovers GigaEdgeSpench model bundles packaged with an application or framework.

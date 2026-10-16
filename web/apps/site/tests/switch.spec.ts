@@ -50,7 +50,11 @@ async function waitForInvisible(page: Page, testId: string, timeout: number = 10
     await page.waitForSelector(selector, { state: 'detached', timeout });
 }
 
-const runFeatureSwitchingTest = (description: string, bootstrapFeatures: Record<string, boolean | string>) => {
+const runFeatureSwitchingTest = (
+    description: string,
+    bootstrapFeatures: Record<string, boolean | string>,
+    denoiserTestId: string = 'denoiserQuality48',
+) => {
     test(description, async ({ page }) => {
         await page.goto('/');
         test.skip(
@@ -82,9 +86,9 @@ const runFeatureSwitchingTest = (description: string, bootstrapFeatures: Record<
         }
 
         await setFeatureAndWaitForLoading({ normalizationToggle: true });
-        await setFeatureAndWaitForLoading({ denoiserQuality48: true });
+        await setFeatureAndWaitForLoading({ [denoiserTestId]: true });
         await setFeatureAndWaitForLoading({ denoiserNone: true, aecToggle: true });
-        await setFeatureAndWaitForLoading({ denoiserQuality48: true });
+        await setFeatureAndWaitForLoading({ [denoiserTestId]: true });
         await setFeatureAndWaitForLoading({ normalizationToggle: false });
         await setFeatureAndWaitForLoading({ denoiserNone: true });
         await setFeatureAndWaitForLoading({ aecToggle: false });
@@ -113,6 +117,18 @@ runFeatureSwitchingTest('Feature switching test. MessageChannel transport.', {
 runFeatureSwitchingTest('Feature switching test. SharedArrayBuffer transport.', {
     transportSelect: 'shared',
 });
+
+runFeatureSwitchingTest(
+    'Hybrid feature switching test. MessageChannel transport.',
+    { transportSelect: 'message' },
+    'denoiserHybrid48',
+);
+
+runFeatureSwitchingTest(
+    'Hybrid feature switching test. SharedArrayBuffer transport.',
+    { transportSelect: 'shared' },
+    'denoiserHybrid48',
+);
 
 runFeatureSwitchingTest('Feature switching through the fast 8 kHz denoiser', {
     transportSelect: 'shared',

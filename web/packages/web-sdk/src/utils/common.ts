@@ -7,7 +7,7 @@ import {
     WORKLET_OUTPUT_BUFFER_STEP,
 } from './constants';
 
-export type ModelKey = 'fast8' | 'quality48' | 'custom';
+export type ModelKey = 'fast8' | 'quality48' | 'hybrid48' | 'custom';
 
 /**
  * A value that can represent a model. It can be a string URL, a `URL` instance,

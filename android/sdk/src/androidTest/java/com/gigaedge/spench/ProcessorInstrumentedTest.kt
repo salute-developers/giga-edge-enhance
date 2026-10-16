@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 class ProcessorInstrumentedTest {
     private val modelName = "quality48"
+    private val hybridModelName = "hybrid48"
     private val sampleRateHz = 48_000
     private val chunkFrames = 768
 
@@ -22,6 +23,7 @@ class ProcessorInstrumentedTest {
         val models = Models.available(testContext())
 
         assertTrue(models.contains(modelName))
+        assertTrue(models.contains(hybridModelName))
         assertTrue(models == models.sorted())
     }
 
@@ -29,6 +31,17 @@ class ProcessorInstrumentedTest {
     fun processorEventuallyProducesFiniteOutput() {
         Processor(testContext(), sampleRateHz).use { processor ->
             processor.setFeatures(Features(normalization = true, noiseSuppression = modelName))
+            val input = FloatArray(chunkFrames) { 0.25f }
+            val output = pollForOutput(processor, input)
+
+            assertTrue(output.all { it.isFinite() })
+        }
+    }
+
+    @Test
+    fun processorEventuallyProducesFiniteOutputWithHybrid48() {
+        Processor(testContext(), sampleRateHz).use { processor ->
+            processor.setFeatures(Features(normalization = true, noiseSuppression = hybridModelName))
             val input = FloatArray(chunkFrames) { 0.25f }
             val output = pollForOutput(processor, input)
 
@@ -193,6 +206,22 @@ class ProcessorInstrumentedTest {
             assertPassThrough(processor, input)
 
             processor.setFeatures(Features(normalization = true, noiseSuppression = modelName))
+            assertTrue(pollForOutput(processor, input).all { it.isFinite() })
+        }
+    }
+
+    @Test
+    fun switchingNoiseSuppressionOnAndOffKeepsProcessorUsableWithHybrid48() {
+        Processor(testContext(), sampleRateHz).use { processor ->
+            val input = FloatArray(chunkFrames) { 0.25f }
+
+            processor.setFeatures(Features(normalization = true, noiseSuppression = hybridModelName))
+            assertTrue(pollForOutput(processor, input).all { it.isFinite() })
+
+            processor.setFeatures(Features(normalization = false, noiseSuppression = null))
+            assertPassThrough(processor, input)
+
+            processor.setFeatures(Features(normalization = true, noiseSuppression = hybridModelName))
             assertTrue(pollForOutput(processor, input).all { it.isFinite() })
         }
     }

@@ -187,6 +187,10 @@ function App() {
                                 <span><strong>Quality</strong><small>Best voice quality · 48 kHz</small></span>
                             </label>
                             <label className="choiceCard">
+                                <input type="radio" data-testid="denoiserHybrid48" checked={features.noiseCancellation === 'hybrid48'} name="denoiserChoice" onChange={() => handleDenoiserChange('hybrid48', 48000)} />
+                                <span><strong>Hybrid</strong><small>Hybrid enhancement · 48 kHz</small></span>
+                            </label>
+                            <label className="choiceCard">
                                 <input type="radio" data-testid="denoiserFast8" checked={features.noiseCancellation === 'fast8'} name="denoiserChoice" onChange={() => handleDenoiserChange('fast8', 8000)} />
                                 <span><strong>Fast</strong><small>Lower CPU use · 8 kHz</small></span>
                             </label>

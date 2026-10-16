@@ -73,6 +73,7 @@ describe('default noise cancellation models', () => {
         noiseCancellation: {
             fast8: new URL('https://example.com/fast8.ges'),
             quality48: new URL('https://example.com/quality48.ges'),
+            hybrid48: new URL('https://example.com/hybrid48.ges'),
         },
     };
 

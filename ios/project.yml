@@ -84,6 +84,17 @@ targets:
     sources:
       - path: Resources/Models/quality48.ges
 
+  GigaEdgeSpenchModelHybrid48:
+    type: bundle
+    platform: iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.DenoiserModelHybrid48
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Resources/ModelBundles/GigaEdgeSpenchModelHybrid48-Info.plist
+    sources:
+      - path: Resources/Models/hybrid48.ges
+
   AudioDemoApp:
     type: application
     platform: iOS
@@ -96,6 +107,7 @@ targets:
       - target: GigaEdgeSpenchAudioKit
       - target: GigaEdgeSpenchModelFast8
       - target: GigaEdgeSpenchModelQuality48
+      - target: GigaEdgeSpenchModelHybrid48
     sources:
       - path: Sources/AudioDemoApp
 
@@ -110,6 +122,7 @@ targets:
       - target: GigaEdgeSpenchAudioKit
       - target: GigaEdgeSpenchModelFast8
       - target: GigaEdgeSpenchModelQuality48
+      - target: GigaEdgeSpenchModelHybrid48
     sources:
       - path: Tests/GigaEdgeSpenchAudioKitTests
 
@@ -136,6 +149,7 @@ schemes:
         GigaEdgeSpenchAudioKit: all
         GigaEdgeSpenchModelFast8: all
         GigaEdgeSpenchModelQuality48: all
+        GigaEdgeSpenchModelHybrid48: all
         GigaEdgeSpenchAudioKitTests: [test]
     test:
       gatherCoverageData: true

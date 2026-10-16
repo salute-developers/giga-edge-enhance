@@ -26,7 +26,7 @@ moving at once.
 | Built-in resampling | Yes | Yes | Yes | Yes |
 | 8 kHz quantized model | ONNX | Packed `fast8` | Not packaged | Packed `fast8` |
 | Discriminative 48 kHz model | ONNX and TFLite | Packed `quality48` | Packed `quality48` | Packed `quality48` |
-| Hybrid 48 kHz model | Runner is implemented | Not packaged | Not packaged | Not packaged |
+| Hybrid 48 kHz model | ONNX and TFLite | Packed `hybrid48` | Packed `hybrid48` | Packed `hybrid48` |
 
 Acoustic echo cancellation is part of the native library and the Web SDK. The
 Android `Features` type and the iOS `Features` type currently select
@@ -35,5 +35,4 @@ reference input.
 
 The 8 kHz quantized runner is ONNX-only. A TensorFlow Lite build rejects that
 model type. The discriminative and hybrid 48 kHz runners exist for both ONNX
-Runtime and TensorFlow Lite. Hybrid weights are not in the repository or the
-release model packages; see [Models](models.md).
+Runtime and TensorFlow Lite; see [Models](models.md).
