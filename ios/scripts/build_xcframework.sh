@@ -57,6 +57,7 @@ xcodebuild build \
 
 cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/GigaEdgeSpenchModelFast8.bundle" "$BUILD_DIR"
 cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/GigaEdgeSpenchModelQuality48.bundle" "$BUILD_DIR"
+cp -R "$BUNDLE_BUILD_DIR/Build/Products/Release-iphonesimulator/GigaEdgeSpenchModelHybrid48.bundle" "$BUILD_DIR"
 
 for test_scheme in GigaEdgeSpenchAudioKit AudioDemoApp; do
   xcodebuild build-for-testing \

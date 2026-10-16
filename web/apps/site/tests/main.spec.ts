@@ -130,6 +130,14 @@ runSingleFeatureTest('Normalization + fast denoiser. MessageChannel transport.',
     denoiserFast8: true,
 });
 
+runSingleFeatureTest('Normalization + hybrid denoiser. MessageChannel transport.', {
+    transportSelect: 'message',
+    normalizationToggle: true,
+    vadNormalizationToggle: false,
+    aecToggle: false,
+    denoiserHybrid48: true,
+});
+
 runSingleFeatureTest('VAD normalization + quality denoiser. MessageChannel transport.', {
     transportSelect: 'message',
     normalizationToggle: true,
@@ -161,6 +169,14 @@ runSingleFeatureTest('Normalization + quality denoiser. SharedArrayBuffer transp
     vadNormalizationToggle: false,
     aecToggle: false,
     denoiserQuality48: true,
+});
+
+runSingleFeatureTest('Normalization + hybrid denoiser. SharedArrayBuffer transport.', {
+    transportSelect: 'shared',
+    normalizationToggle: true,
+    vadNormalizationToggle: false,
+    aecToggle: false,
+    denoiserHybrid48: true,
 });
 
 runBenchmarkTest('Multiple node benchmark. 2 nodes. VAD Normalization. MessageChannel transport.', {

@@ -56,8 +56,8 @@ inference:
 | Hybrid 48 kHz | `denoiser_hybrid_web_model` | ONNX and TFLite |
 
 The 8 kHz quantized config sets `sampling_freq: 8000` and may set `skip_zeroed_chunks: true`.
-Trained hybrid weights are not in the repository. The roles and package ids are in
-[Models](../models.md).
+The hybrid configs are in `models/hybrid48/onnx/` and `models/hybrid48/tflite/`.
+The roles and package ids are in [Models](../models.md).
 
 ## Packed models
 

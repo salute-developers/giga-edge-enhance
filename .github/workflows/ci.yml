@@ -692,6 +692,7 @@ jobs:
           path: |
             android/sdk/build/outputs/aar/*-release.aar
             android/model-quality48/build/outputs/aar/*-release.aar
+            android/model-hybrid48/build/outputs/aar/*-release.aar
           if-no-files-found: error
           retention-days: ${{ env.GES_ARTIFACT_RETENTION_DAYS }}
 
@@ -1052,5 +1053,6 @@ jobs:
             ios/build/xcframework/GigaEdgeSpenchAudioKit.xcframework
             ios/build/xcframework/GigaEdgeSpenchModelFast8.bundle
             ios/build/xcframework/GigaEdgeSpenchModelQuality48.bundle
+            ios/build/xcframework/GigaEdgeSpenchModelHybrid48.bundle
           if-no-files-found: error
           retention-days: ${{ env.GES_ARTIFACT_RETENTION_DAYS }}

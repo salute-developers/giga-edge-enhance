@@ -13,9 +13,9 @@ npm install ./gigaedge-spench-web-sdk-1.0.0.tgz
 ```
 
 Create an `AudioContext`, then a node. `fast8` is the 8 kHz quantized model. `quality48` is the
-discriminative 48 kHz model and the default above 8 kHz. `custom` is a packed `.ges` model you
-supply; it is used only when you select it or when it is the only noise-suppression model
-configured.
+discriminative 48 kHz model and the default above 8 kHz. Select `hybrid48` for the hybrid
+48 kHz model. `custom` is a packed `.ges` model you supply; it is used only when you select
+it or when it is the only noise-suppression model configured.
 
 ```ts
 const sdk = GigaEdgeSpenchSDK.create(audioContext, {

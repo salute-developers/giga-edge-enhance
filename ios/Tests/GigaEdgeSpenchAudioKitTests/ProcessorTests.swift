@@ -169,6 +169,24 @@ final class ProcessorTests: XCTestCase {
         XCTAssertNil(processingFailure)
     }
 
+    func testDenoiserProcessesNativeChunkForHybrid48() throws {
+        let processor = try Processor(
+            sampleRate: 48_000,
+            features: Features(normalization: false, noiseSuppression: .hybrid48)
+        )
+        var samples = Array(repeating: Float(0.25), count: 1_536)
+        let frameCount = samples.count
+        var processingFailure: String?
+
+        for _ in 0..<4 {
+            processingFailure = samples.withUnsafeMutableBufferPointer { pointer in
+                processor.processInPlace(pointer.baseAddress!, frameCount: frameCount)
+            }
+        }
+
+        XCTAssertNil(processingFailure)
+    }
+
     func testTelemetrySurvivesSampleRateUpdate() throws {
         let processor = try Processor(sampleRate: 44_100,
                                             features: Features(normalization: true, noiseSuppression: nil))
@@ -187,7 +205,7 @@ final class ProcessorTests: XCTestCase {
     func testAvailableModelsFindInstalledBundles() throws {
         let modelIDs = try ModelCatalog.availableModels().map(\.rawValue)
 
-        XCTAssertEqual(modelIDs, ["fast8", "quality48"])
+        XCTAssertEqual(modelIDs, ["fast8", "hybrid48", "quality48"])
     }
 
     func testNormalizationConfigIncludesVadParametersWhenEnabled() {

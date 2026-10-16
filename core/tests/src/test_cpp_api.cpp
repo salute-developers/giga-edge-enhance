@@ -178,6 +178,37 @@ TEST_CASE("SUCCEED Run inference with 100 tensors [gigaedge-spench c++ api]") {
   REQUIRE(ctx == nullptr);
 }
 
+TEST_CASE("SUCCEED Run hybrid inference with 100 tensors [gigaedge-spench c++ api]") {
+#ifdef BUILD_TFLITE_ENGINE
+  auto test_data =
+      std::move(TestFixture()
+                    .InitDenoiser(std::filesystem::path("default_configuration_hybrid_web_tflite_48khz.yaml"))
+                    .SetWav("test1_48_noised.wav"));
+#else
+  auto test_data = std::move(TestFixture()
+                                 .InitDenoiser(std::filesystem::path("default_configuration_hybrid_web_onnx_48khz.yaml"))
+                                 .SetWav("test1_48_noised.wav"));
+#endif
+
+  gigaedge::spench::Context<float>* ctx = test_data.denoiser->CreateContext();
+  const uint32_t chunks_to_compare = 100;
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  auto chunks = ChunkWav<float>(test_data.wav_data, test_data.denoiser->GetModelSampleRate(), chunk_size, chunk_stride);
+  chunks.resize(chunks_to_compare);
+
+  for (auto& chunk : chunks) {
+    std::vector<float> ret;
+    REQUIRE(chunk.size() == test_data.denoiser->GetModelInputFrameSize());
+    auto ret_code = test_data.denoiser->ProcessChunk(chunk, ret, ctx);
+    REQUIRE(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    REQUIRE(ret_code <= GigaEdgeSpenchRetCode::CONTEXT_ACCUMULATION);
+  }
+
+  test_data.denoiser->DestroyContext(&ctx);
+  REQUIRE(ctx == nullptr);
+}
+
 TEST_CASE("SUCCEED Get statistic information [gigaedge-spench c++ api]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data =
