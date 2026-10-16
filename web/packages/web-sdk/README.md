@@ -146,10 +146,11 @@ audio processing is lagging.  The event contains the most probable cause
 |----------|------|---------|
 | `normalization` | `boolean` | `false` |
 | `echoCancellation` | `boolean` | `false` |
-| `noiseCancellation` | `boolean \| "fast8" \| "quality48" \| "custom"` | `false` |
+| `noiseCancellation` | `boolean \| "fast8" \| "quality48" \| "hybrid48" \| "custom"` | `false` |
 
-The SDK bundles `fast8.ges` as `fast8` and `quality48.ges` as `quality48`. Put a packed `.ges`
-model you supply under the `custom` key and select `noiseCancellation: 'custom'`.
+The SDK bundles `fast8.ges` as `fast8`, `quality48.ges` as `quality48`, and `hybrid48.ges`
+as `hybrid48`. Put a packed `.ges` model you supply under the `custom` key and select
+`noiseCancellation: 'custom'`.
 
 ## Testing
 

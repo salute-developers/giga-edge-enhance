@@ -24,7 +24,7 @@ import com.gigaedge.spench.Models
 
 // sampleRateHz is your input rate in Hz; audio must be mono.
 Processor(context, sampleRateHz).use { processor ->
-    val model = Models.available(context).firstOrNull() // e.g. "quality48", or null
+    val model = Models.available(context).firstOrNull() // e.g. "hybrid48", or null
     processor.setFeatures(Features(normalization = true, noiseSuppression = model))
 
     val output = FloatArray(input.size)
@@ -41,6 +41,7 @@ Add the SDK and the model modules to your app's dependencies:
 dependencies {
     implementation(project(":gigaedge-spench-sdk"))
     implementation(project(":gigaedge-spench-model-quality48"))
+    implementation(project(":gigaedge-spench-model-hybrid48"))
 }
 ```
 

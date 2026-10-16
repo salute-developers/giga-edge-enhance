@@ -69,6 +69,10 @@ final class AudioDemoAppUITests: XCTestCase {
         try runFileProcessingFlow(selectedModelID: "quality48")
     }
 
+    func testFileProcessingAndSaveWithoutErrorsForHybrid48() throws {
+        try runFileProcessingFlow(selectedModelID: "hybrid48")
+    }
+
     private func runFileProcessingFlow(selectedModelID: String?) throws {
         let app = try launchApp()
 

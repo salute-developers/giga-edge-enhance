@@ -52,6 +52,7 @@ detekt {
 dependencies {
     implementation(project(":gigaedge-spench-sdk"))
     implementation(project(":gigaedge-spench-model-quality48"))
+    implementation(project(":gigaedge-spench-model-hybrid48"))
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

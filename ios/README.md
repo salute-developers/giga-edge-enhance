@@ -80,6 +80,9 @@ Outputs:
 Output:
 
 - `build/xcframework/GigaEdgeSpenchAudioKit.xcframework`
+- `build/xcframework/GigaEdgeSpenchModelFast8.bundle`
+- `build/xcframework/GigaEdgeSpenchModelQuality48.bundle`
+- `build/xcframework/GigaEdgeSpenchModelHybrid48.bundle`
 
 ### 3) Build demo app (simulator)
 
@@ -170,11 +173,15 @@ Built-in model descriptors:
 
 - `ModelDescriptor.fast8`
 - `ModelDescriptor.quality48`
+- `ModelDescriptor.hybrid48`
 
 ```swift
 let features = Features(normalization: true,
                                noiseSuppression: .quality48)
 ```
+
+Use `.hybrid48` to select the hybrid 48 kHz model. Include the corresponding
+model bundle in your application resources.
 
 `ModelCatalog.availableModels()` discovers every bundle whose
 `Info.plist` declares a `GigaEdgeSpenchModelID`. Discovery is cached for the

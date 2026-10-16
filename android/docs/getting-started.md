@@ -33,6 +33,7 @@ Add the SDK plus every model package your app needs to your app module's `build.
 dependencies {
     implementation(project(":gigaedge-spench-sdk"))
     implementation(project(":gigaedge-spench-model-quality48"))
+    implementation(project(":gigaedge-spench-model-hybrid48"))
 }
 ```
 
@@ -81,7 +82,7 @@ See [Telemetry and performance](telemetry-and-performance.md).
 ```kotlin
 import com.gigaedge.spench.Models
 
-val modelIds = Models.available(context) // sorted, e.g. ["quality48"]
+val modelIds = Models.available(context) // sorted, e.g. ["hybrid48", "quality48"]
 processor.setFeatures(Features(noiseSuppression = modelIds.firstOrNull()))
 ```
 
@@ -91,7 +92,7 @@ processor.setFeatures(Features(noiseSuppression = modelIds.firstOrNull()))
 2. You construct `Processor` with the **actual input sample rate** in Hz (`> 0`).
 3. You call `setFeatures(...)` — a fresh processor has all stages **disabled**.
 4. Noise-suppression names come from [`Models.available(context)`](models.md) (or the
-   `Quality48Model.NAME` constant).
+   `Quality48Model.NAME` or `Hybrid48Model.NAME` constant).
 5. Input/output buffers are at least `numFrames` long, and audio is **mono**.
 6. You `close()` the processor (or use `use { }`) when done.
 7. No manual ProGuard/R8 rules are needed; the SDK ships [consumer rules](proguard-r8.md).

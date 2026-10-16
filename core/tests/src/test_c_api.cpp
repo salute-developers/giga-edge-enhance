@@ -678,6 +678,75 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
   CHECK(ctx2 == nullptr);
 }
 
+TEST_CASE("SUCCEED Run hybrid inference with 100 tensors for 2 contexts and compare result [gigaedge-spench c api]") {
+  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+#ifdef BUILD_TFLITE_ENGINE
+  auto test_data = std::move(TestCAPI()
+                                 .InitDenoiser("default_configuration_hybrid_web_tflite_48khz.yaml", ret_code)
+                                 .SetWav("test1_48_noised.wav"));
+#else
+  auto test_data = std::move(TestCAPI()
+                                 .InitDenoiser("default_configuration_hybrid_web_onnx_48khz.yaml", ret_code)
+                                 .SetWav("test1_48_noised.wav"));
+#endif
+  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+
+  const uint32_t chunk_size = 16;
+  const uint32_t chunk_stride = 16;
+  const uint32_t chunks_to_compare = 100;
+  GigaEdgeSpenchContext ctx1 = nullptr;
+  GigaEdgeSpenchContext ctx2 = nullptr;
+  std::vector<float> predictions1;
+  std::vector<float> predictions2;
+
+  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx1, 0, 0);
+  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+
+  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx2, 0, 0);
+  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+
+  ret_code = GigaEdgeSpenchDenoiseSetContextId(test_data.denoiser, ctx1, 1000);
+  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+
+  ret_code = GigaEdgeSpenchDenoiseSetContextId(test_data.denoiser, ctx2, 2000);
+  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ctx1 != ctx2);
+
+  auto chunks = ChunkWav<float>(test_data.wav_data, 48000, chunk_size, chunk_stride);
+  chunks.resize(chunks_to_compare);
+
+  for (auto& chunk : chunks) {
+    unsigned char* ret_mem1;
+    uint64_t ret_size1 = 0;
+    unsigned char* ret_mem2;
+    uint64_t ret_size2 = 0;
+    ret_code = GigaEdgeSpenchDenoiseProcessChunkFp(test_data.denoiser, ctx1, (const unsigned char*)chunk.data(),
+                                                   sizeof(float) * chunk.size(), &ret_mem1, &ret_size1);
+    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+
+    ret_code = GigaEdgeSpenchDenoiseProcessChunkFp(test_data.denoiser, ctx2, (const unsigned char*)chunk.data(),
+                                                   sizeof(float) * chunk.size(), &ret_mem2, &ret_size2);
+    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+
+    std::vector<float> ret_vec1(ret_size1 / sizeof(float));
+    std::vector<float> ret_vec2(ret_size2 / sizeof(float));
+    std::memcpy(ret_vec1.data(), ret_mem1, ret_size1);
+    std::memcpy(ret_vec2.data(), ret_mem2, ret_size2);
+    predictions1.insert(predictions1.end(), ret_vec1.begin(), ret_vec1.end());
+    predictions2.insert(predictions2.end(), ret_vec2.begin(), ret_vec2.end());
+    free(ret_mem1);
+    free(ret_mem2);
+    ret_mem1 = NULL;
+    ret_mem2 = NULL;
+  }
+  REQUIRE(predictions1 == predictions2);
+
+  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx1);
+  CHECK(ctx1 == nullptr);
+  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx2);
+  CHECK(ctx2 == nullptr);
+}
+
 TEST_CASE(
     "SUCCEED Run inference with the best quality 48 kHz model and 5 contexts concurently [gigaedge-spench c api]") {
   GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;

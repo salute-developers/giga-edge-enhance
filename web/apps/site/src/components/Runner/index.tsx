@@ -31,7 +31,7 @@ function getRecordingExtension(blob: Blob) {
 }
 
 type Models = {
-    noiseCancellation: { fast8: URL; quality48: URL; custom: ArrayBuffer };
+    noiseCancellation: { fast8: URL; quality48: URL; hybrid48: URL; custom: ArrayBuffer };
 };
 export type Features = RawFeatures<Models>;
 

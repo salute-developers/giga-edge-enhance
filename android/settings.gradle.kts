@@ -17,7 +17,9 @@ dependencyResolutionManagement {
 rootProject.name = "gigaedge-spench-android-sdk"
 include(":gigaedge-spench-sdk")
 include(":gigaedge-spench-model-quality48")
+include(":gigaedge-spench-model-hybrid48")
 include(":demo-app")
 
 project(":gigaedge-spench-sdk").projectDir = file("sdk")
 project(":gigaedge-spench-model-quality48").projectDir = file("model-quality48")
+project(":gigaedge-spench-model-hybrid48").projectDir = file("model-hybrid48")

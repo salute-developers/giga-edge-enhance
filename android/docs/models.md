@@ -12,6 +12,7 @@ contributes a single packed asset. You add the models you need alongside the SDK
 dependencies {
     implementation(project(":gigaedge-spench-sdk"))
     implementation(project(":gigaedge-spench-model-quality48"))
+    implementation(project(":gigaedge-spench-model-hybrid48"))
 }
 ```
 
@@ -35,6 +36,9 @@ is built, this asset is merged into the app's assets alongside any other model m
 | Module | Asset | Name constant |
 | --- | --- | --- |
 | `:gigaedge-spench-model-quality48` | `spench/models/quality48.ges` | `com.gigaedge.spench.models.Quality48Model.NAME` (`"quality48"`) |
+| `:gigaedge-spench-model-hybrid48` | `spench/models/hybrid48.ges` | `com.gigaedge.spench.models.Hybrid48Model.NAME` (`"hybrid48"`) |
+
+Both models process audio at 48 kHz. `quality48` is discriminative; `hybrid48` is hybrid.
 
 ## Runtime discovery
 
@@ -46,7 +50,7 @@ names **sorted**:
 import com.gigaedge.spench.Features
 import com.gigaedge.spench.Models
 
-val modelIds = Models.available(context) // e.g. ["quality48"]
+val modelIds = Models.available(context) // e.g. ["hybrid48", "quality48"]
 processor.setFeatures(Features(noiseSuppression = modelIds.firstOrNull()))
 ```
 
@@ -58,6 +62,8 @@ import com.gigaedge.spench.models.Quality48Model
 
 processor.setFeatures(Features(noiseSuppression = Quality48Model.NAME))
 ```
+
+Use `Hybrid48Model.NAME` from `com.gigaedge.spench.models` to select the hybrid model.
 
 ## Selecting a model
 
