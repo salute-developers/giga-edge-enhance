@@ -13,6 +13,7 @@
 
 #include "enhance/stream_stat.h"
 #include "src/denoiser_model_adviser.h"
+#include "src/feature_workspace.h"
 #include "util/sound/sound_stream.h"
 
 namespace gigaedge::enhance {
@@ -202,6 +203,7 @@ struct StreamCurrentMetrics {
 template <typename T>
 struct Context {
   uint64_t id;
+  std::unique_ptr<fe::FeatureWorkspace<T>> feature_workspace;
   StreamCurrentMetrics<T> metrics;
   std::unique_ptr<DenoiserModelAdviser<T>> snr_adviser;
   StatInfo stat;

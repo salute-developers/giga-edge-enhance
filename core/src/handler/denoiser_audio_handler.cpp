@@ -22,17 +22,18 @@ DenoiserAudioHandler::DenoiserAudioHandler(std::shared_ptr<DenoiserConfig> confi
 DenoiserAudioHandler::~DenoiserAudioHandler() = default;
 
 Context<float>* DenoiserAudioHandler::create_context(uint32_t input_sample_rate, uint32_t output_sample_rate) {
-  Context<float>* ctx = nullptr;
+  std::unique_ptr<Context<float>> ctx;
   if (inference_runner_ptr_->get_model_type() == InferenceRunner::ModelType::denoiser_discr_web_model) {
-    ctx = dynamic_cast<Context<float>*>(new DenoiseContextDiscriminativeHq<float>());
+    ctx = std::make_unique<DenoiseContextDiscriminativeHq<float>>();
   } else if (inference_runner_ptr_->get_model_type() == InferenceRunner::ModelType::denoiser_hybrid_web_model) {
-    ctx = new DenoiseContextHybrid<float>();
+    ctx = std::make_unique<DenoiseContextHybrid<float>>();
   } else if (inference_runner_ptr_->get_model_type() == InferenceRunner::ModelType::denoiser_discr_hq_model) {
-    ctx = dynamic_cast<Context<float>*>(new DenoiseContextDiscriminativeNb<float>());
+    ctx = std::make_unique<DenoiseContextDiscriminativeNb<float>>();
   } else {
     throw std::invalid_argument("Unsupported denoiser model type");
   }
 
+  feature_extractor_runner_ptr_->initialize_context(*ctx);
   ctx->snr_adviser = std::make_unique<DenoiserModelAdviser<float>>(*adviser_);
   ctx->snr_adviser->reset();
 
@@ -43,13 +44,13 @@ Context<float>* DenoiserAudioHandler::create_context(uint32_t input_sample_rate,
     output_sample_rate = static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq();
   }
 
-  GigaEdgeEnhanceRetCode ret_code = init_audio_streams(ctx, input_sample_rate, output_sample_rate);
+  GigaEdgeEnhanceRetCode ret_code = init_audio_streams(ctx.get(), input_sample_rate, output_sample_rate);
   if (ret_code != GigaEdgeEnhanceRetCode::SUCCESS) {
     spdlog::error("Due to errors a context could not be created!");
     throw std::runtime_error("Due to errors a context could not be created!");
   }
   spdlog::info("New denoising context created! Input sr {} Output sr {}", input_sample_rate, output_sample_rate);
-  return ctx;
+  return ctx.release();
 }
 
 GigaEdgeEnhanceRetCode DenoiserAudioHandler::init_audio_streams(Context<float>* ctx, uint32_t input_sample_rate,

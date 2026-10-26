@@ -23,6 +23,18 @@ uint64_t FeatureExtractorRunner::get_frame_hop_size_samples() const { return par
 
 uint64_t FeatureExtractorRunner::get_pow_spec_feat_size_samples() const { return params_.pow_spec_feat_sz(); }
 
+void FeatureExtractorRunner::initialize_context(Context<float>& ctx) const {
+  ctx.feature_workspace = std::make_unique<fe::FeatureWorkspace<float>>(params_);
+}
+
+fe::FeatureWorkspace<float>& FeatureExtractorRunner::workspace_for(Context<float>& ctx) const {
+  // Standalone runner callers may provide a plain, uninitialized context.
+  if (!ctx.feature_workspace) {
+    initialize_context(ctx);
+  }
+  return *ctx.feature_workspace;
+}
+
 void FeatureExtractorRunner::read_config(std::shared_ptr<gigaedge::enhance::NetworkConfig> config) {
   params_.read_feature_params_node(config);
   model_output_is_spectrum_ =
@@ -134,7 +146,7 @@ void FeatureExtractorRunner::handle_model_output(gigaedge::enhance::Task* task) 
 
     // We can output N frames (but the overlap-add pipeline needs one prev for the next call).
     // new_spectrogram already contains N sequential frames, so we can iSTFT it directly.
-    feature_extractor_ptr_->istft_apply(d.new_spectrogram, d.enhanced_wav);
+    feature_extractor_ptr_->istft_apply(d.new_spectrogram, d.enhanced_wav, workspace_for(ctx).ifft);
 
     update_prev_from_new_spec(ctx, d.new_spectrogram, input_chunk_num, feat_num);
     task->state.advance_to(PipelineStage::enhanced_ready);
@@ -144,7 +156,7 @@ void FeatureExtractorRunner::handle_model_output(gigaedge::enhance::Task* task) 
   // ---- Case 2: we have previous spectrogram ----
   const auto concat = build_concat_with_prev(ctx.prev_spectrogram, d.new_spectrogram, input_chunk_num, feat_num);
 
-  feature_extractor_ptr_->istft_apply(concat, d.enhanced_wav);
+  feature_extractor_ptr_->istft_apply(concat, d.enhanced_wav, workspace_for(ctx).ifft);
 
   update_prev_from_new_spec(ctx, d.new_spectrogram, input_chunk_num, feat_num);
   task->state.advance_to(PipelineStage::enhanced_ready);
@@ -157,7 +169,8 @@ void FeatureExtractorRunner::handle_waveform(gigaedge::enhance::Task* task) {
     throw std::runtime_error("Input signal is empty!");
   }
 
-  feature_extractor_ptr_->stft_apply(enhance_data.waveform, enhance_data.input_spectrogram);
+  feature_extractor_ptr_->stft_apply(enhance_data.waveform, enhance_data.input_spectrogram,
+                                     workspace_for(*enhance_data.context).fft);
 
   if (enhance_data.input_spectrogram.empty()) {
     throw std::runtime_error("Spectrogram is calculated incorrectly! Something with input data!");
@@ -169,6 +182,9 @@ void FeatureExtractorRunner::handle_waveform(gigaedge::enhance::Task* task) {
 void FeatureExtractorRunner::run(gigaedge::enhance::Task* task) {
   if (!task) {
     throw std::invalid_argument("FeatureExtractorRunner::run: task is null");
+  }
+  if (!task->data.context) {
+    throw std::invalid_argument("FeatureExtractorRunner::run: context is null");
   }
 
   switch (task->state.stage()) {

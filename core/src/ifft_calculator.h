@@ -17,7 +17,7 @@ template <typename T>
 class IFftCalculator {
  public:
   explicit IFftCalculator(const uint32_t feature_size, const uint32_t nfft, const uint32_t frames_num_for_istft);
-  ~IFftCalculator();
+  ~IFftCalculator() = default;
 
   void calculate_istft(const uint32_t n_feats, const T* real_ptr, const T* imag_ptr, std::vector<T>& idft);
 

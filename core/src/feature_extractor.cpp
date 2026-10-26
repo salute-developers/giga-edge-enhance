@@ -17,9 +17,7 @@ namespace fe {
 template <typename T>
 FeatureExtractor<T>::FeatureExtractor(const FeatureParams& params)
     : feat_params_(params),
-      windowing_(params.num_frame_size_samples(), params.window_type, params.num_frame_stride_samples(), true),
-      fft_calculator_(params.nfft(), params.pow_spec_feat_sz(), params.frames_num_for_istft),
-      ifft_calculator_(params.pow_spec_feat_sz(), params.nfft(), params.frames_num_for_istft) {
+      windowing_(params.num_frame_size_samples(), params.window_type, params.num_frame_stride_samples(), true) {
   validate_pow_spec_params();
 }
 
@@ -28,11 +26,22 @@ void FeatureExtractor<T>::stft_apply(const std::vector<T>& input, std::vector<Co
   if (input.empty()) {
     return;
   }
-  stft_impl(input, result);
+  FftCalculator<T> fft(feat_params_.nfft(), feat_params_.pow_spec_feat_sz(), feat_params_.frames_num_for_istft);
+  stft_apply(input, result, fft);
 }
 
 template <typename T>
-void FeatureExtractor<T>::stft_impl(const std::vector<T>& input, std::vector<ComplexNumber<T>>& result) {
+void FeatureExtractor<T>::stft_apply(const std::vector<T>& input, std::vector<ComplexNumber<T>>& result,
+                                     FftCalculator<T>& fft) {
+  if (input.empty()) {
+    return;
+  }
+  stft_impl(input, result, fft);
+}
+
+template <typename T>
+void FeatureExtractor<T>::stft_impl(const std::vector<T>& input, std::vector<ComplexNumber<T>>& result,
+                                    FftCalculator<T>& fft) {
   const size_t frame_size = static_cast<size_t>(feat_params_.num_frame_size_samples());
   const size_t frame_stride = static_cast<size_t>(feat_params_.num_frame_stride_samples());
   const size_t numframes = static_cast<size_t>(feat_params_.num_frames(input.size()));
@@ -53,10 +62,7 @@ void FeatureExtractor<T>::stft_impl(const std::vector<T>& input, std::vector<Com
     // Window this frame in place.
     windowing_.apply_frame_in_place(frame_buf.data(), frame_size);
     ComplexNumber<T> dft(k, k);
-    {
-      std::lock_guard<std::mutex> lock(fft_mutex_);
-      fft_calculator_.calculate_stft(frame_size, frame_buf.data(), dft);
-    }
+    fft.calculate_stft(frame_size, frame_buf.data(), dft);
     result.push_back(std::move(dft));
   }
 }
@@ -66,7 +72,17 @@ void FeatureExtractor<T>::istft_apply(const ComplexNumber<T>& input_spec, std::v
   if (input_spec.empty()) {
     return;
   }
-  istft_impl(input_spec, output_signal);
+  IFftCalculator<T> ifft(feat_params_.pow_spec_feat_sz(), feat_params_.nfft(), feat_params_.frames_num_for_istft);
+  istft_apply(input_spec, output_signal, ifft);
+}
+
+template <typename T>
+void FeatureExtractor<T>::istft_apply(const ComplexNumber<T>& input_spec, std::vector<T>& output_signal,
+                                      IFftCalculator<T>& ifft) {
+  if (input_spec.empty()) {
+    return;
+  }
+  istft_impl(input_spec, output_signal, ifft);
 }
 
 template <typename T>
@@ -85,7 +101,8 @@ void FeatureExtractor<T>::lookup_add(const std::vector<T>& signal, std::vector<T
 }
 
 template <typename T>
-void FeatureExtractor<T>::istft_impl(const ComplexNumber<T>& input_spec, std::vector<T>& output_signal) {
+void FeatureExtractor<T>::istft_impl(const ComplexNumber<T>& input_spec, std::vector<T>& output_signal,
+                                     IFftCalculator<T>& ifft) {
   const size_t n_feats = feat_params_.pow_spec_feat_sz();
   const size_t hop_size = feat_params_.num_frame_stride_samples();
   const size_t n_samples = feat_params_.num_frame_size_samples();
@@ -128,10 +145,7 @@ void FeatureExtractor<T>::istft_impl(const ComplexNumber<T>& input_spec, std::ve
     const T* begin_real = &input_spec.real[f * n_feats];
     const T* begin_imag = &input_spec.imag[f * n_feats];
 
-    {
-      std::lock_guard<std::mutex> lock(ifft_mutex_);
-      ifft_calculator_.calculate_istft(n_feats, begin_real, begin_imag, signal);
-    }
+    ifft.calculate_istft(n_feats, begin_real, begin_imag, signal);
 
     // apply window (ifft_window, hann or hamm)
     // https://github.com/librosa/librosa/blob/a668dffeada59aa6dc4e05bbbec39ad42ac77bed/librosa/core/spectrum.py#L418

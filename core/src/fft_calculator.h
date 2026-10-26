@@ -3,7 +3,6 @@
 #include <complex>
 #include <vector>
 
-#include "src/context.h"
 #include "src/feature_params.h"
 
 namespace pocketfft {
@@ -12,13 +11,17 @@ using StrideT = std::vector<std::ptrdiff_t>;
 }  // namespace pocketfft
 
 namespace gigaedge::enhance {
+
+template <typename T>
+struct ComplexNumber;
+
 namespace fe {
 
 template <typename T>
 class FftCalculator {
  public:
   explicit FftCalculator(const uint32_t nfft, const uint32_t feature_size, const uint32_t frames_num_for_stft = 2);
-  ~FftCalculator();
+  ~FftCalculator() = default;
   void calculate_stft(const size_t& n_samples, const T* begin, ComplexNumber<T>& dft);
 
  private:

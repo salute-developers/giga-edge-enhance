@@ -107,9 +107,6 @@ void IFftCalculator<T>::calculate_ifft(const uint32_t n_feats, const T* real_ptr
   copy_output_to_vector(idft);
 }
 
-template <typename T>
-IFftCalculator<T>::~IFftCalculator() {}
-
 template class IFftCalculator<fft::BufferType>;
 }  // namespace fe
 }  // namespace gigaedge::enhance

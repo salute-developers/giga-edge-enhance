@@ -71,9 +71,6 @@ void FftCalculator<T>::calculate_fft(const size_t& n_samples, const T* begin, Co
   copy_output_to(dft);
 }
 
-template <typename T>
-FftCalculator<T>::~FftCalculator() {}
-
 template class FftCalculator<fft::BufferType>;
 }  // namespace fe
 }  // namespace gigaedge::enhance

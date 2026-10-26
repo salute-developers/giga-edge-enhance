@@ -330,6 +330,11 @@ Before reporting completion:
 
 ## Hybrid inference
 
+FFT/iFFT workspaces belong to each stream context and are allocated during context creation, then reused.
+Keep the feature extractor's configuration and window coefficients shared and read-only so independent
+contexts can transform audio concurrently without a model-wide FFT/iFFT mutex. Process calls for the
+same context must remain serialized. TFLite's interpreter mutex is still required for its shared tensors.
+
 Hybrid models use the `inference.model_type: denoiser_hybrid_web_model` configuration with FP32 ONNX and
 TFLite tensors. Their output is an enhanced complex spectrum, so it must bypass mask application.
 Keep recurrent states and SNR averaging windows local to each stream context to avoid cross-stream

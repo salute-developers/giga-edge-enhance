@@ -1,11 +1,11 @@
 #pragma once
 
 #include <functional>
-#include <mutex>  // NOLINT
 #include <tuple>
 #include <valarray>
 #include <vector>
 
+#include "src/context.h"
 #include "src/fft_calculator.h"
 #include "src/ifft_calculator.h"
 #include "src/windowing.h"
@@ -22,10 +22,14 @@ class FeatureExtractor {
   explicit FeatureExtractor(const FeatureParams& params);
   virtual ~FeatureExtractor() = default;
 
+  // Standalone calls use temporary buffers; stream processing supplies its
+  // persistent workspace through the calculator overloads below.
   // input - input speech signal (T)
   virtual void stft_apply(const std::vector<T>& input, std::vector<ComplexNumber<T>>&);
+  void stft_apply(const std::vector<T>& input, std::vector<ComplexNumber<T>>& result, FftCalculator<T>& fft);
   // input - real and image vectors (T)
   virtual void istft_apply(const ComplexNumber<T>& input_spec, std::vector<T>& output_signal);
+  void istft_apply(const ComplexNumber<T>& input_spec, std::vector<T>& output_signal, IFftCalculator<T>& ifft);
   FeatureParams feature_params() const;
 
   // apply mask to real and imaginary parts
@@ -33,9 +37,9 @@ class FeatureExtractor {
   void calc_enhanced_parts_in_place(const ComplexNumber<T>& input_spec, ComplexNumber<T>& predicted_mask);
 
  protected:
-  void stft_impl(const std::vector<T>& frames, std::vector<ComplexNumber<T>>& result);
+  void stft_impl(const std::vector<T>& frames, std::vector<ComplexNumber<T>>& result, FftCalculator<T>& fft);
 
-  void istft_impl(const ComplexNumber<T>& input_spec, std::vector<T>& output_signal);
+  void istft_impl(const ComplexNumber<T>& input_spec, std::vector<T>& output_signal, IFftCalculator<T>& ifft);
 
   void validate_pow_spec_params() const;
 
@@ -50,10 +54,6 @@ class FeatureExtractor {
 
   FeatureParams feat_params_;
   Windowing<T> windowing_;
-  std::mutex fft_mutex_;
-  FftCalculator<T> fft_calculator_;
-  std::mutex ifft_mutex_;
-  IFftCalculator<T> ifft_calculator_;
   T cirm_k_{static_cast<T>(10.0)};
   T cirm_limit_{static_cast<T>(9.9)};
 };

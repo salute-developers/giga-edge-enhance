@@ -29,6 +29,7 @@ class FeatureExtractorRunner {
 
   void run(gigaedge::enhance::Task* denoise_task) /*override*/;
   void warm_up();
+  void initialize_context(Context<float>& ctx) const;
 
   [[nodiscard]] uint64_t get_frame_size_ms() const;
   [[nodiscard]] uint64_t get_sampling_freq() const;
@@ -37,6 +38,7 @@ class FeatureExtractorRunner {
   [[nodiscard]] uint64_t get_pow_spec_feat_size_samples() const;
 
  private:
+  fe::FeatureWorkspace<float>& workspace_for(Context<float>& ctx) const;
   void handle_waveform(gigaedge::enhance::Task* task);
   void handle_model_output(gigaedge::enhance::Task* task);
   void fill_warming_up_output(gigaedge::enhance::Task* task);
