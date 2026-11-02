@@ -1020,6 +1020,8 @@ jobs:
       - uses: ./.github/actions/verify-lfs
       - id: toolchain
         uses: ./.github/actions/setup-host-toolchain
+        with:
+          install-xcodegen: 'true'
       - uses: ./.github/actions/setup-cache
         with:
           preset: ios-simulator-release

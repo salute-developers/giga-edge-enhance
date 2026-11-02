@@ -233,6 +233,9 @@ uploaded and downloaded between runners.
 - macOS validates each runner architecture with both engines. Windows validates
   both shared-engine targets. iOS restores both device and
   simulator dependencies before producing and testing the XCFramework.
+- The iOS SDK build enables `install-xcodegen` in `setup-host-toolchain` because
+  GitHub-hosted macOS runners do not include XcodeGen. Dependency-only and desktop
+  macOS jobs leave it disabled because they do not generate the iOS SDK project.
 - Lint is split by domain: C/C++, Web, Android, iOS, and workflow YAML.
 
 ### Cache and dependency-bundle policy
