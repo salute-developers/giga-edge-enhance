@@ -303,10 +303,14 @@ Environment variables to customize test execution:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TEST_DEVICE_NAME` | `iPhone 17` | Simulator device name to use for tests |
+| `TEST_DEVICE_NAME` | Automatic | First available iPhone in the selected Xcode SDK runtime; set to require a specific device name |
 | `ERASE_SIMULATOR` | `1` | Erase simulator before tests (`1` = erase, `0` = skip erase) |
 | `GES_TEST_RETRIES` | `1` | Retry count for `GigaEdgeSpenchAudioKit` unit tests |
 | `APP_TEST_RETRIES` | `3` | Retry count for `AudioDemoApp` UI tests |
+
+Simulator preparation uses the runtime matching `xcrun --sdk iphonesimulator --show-sdk-version`.
+Only the selected device is reset. Commands and boot progress are logged, each preparation command
+has a three-minute timeout, and a missing runtime or failed boot stops the test run immediately.
 
 Examples:
 

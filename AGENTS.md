@@ -236,6 +236,10 @@ uploaded and downloaded between runners.
 - The iOS SDK build enables `install-xcodegen` in `setup-host-toolchain` because
   GitHub-hosted macOS runners do not include XcodeGen. Dependency-only and desktop
   macOS jobs leave it disabled because they do not generate the iOS SDK project.
+- iOS tests select an available iPhone from the runtime matching the selected
+  Xcode simulator SDK, not a hard-coded device from a potentially newer runtime.
+  Preparation logs each command and boot progress, fails on errors, and limits
+  each command to three minutes to avoid silent CoreSimulator hangs in CI.
 - Lint is split by domain: C/C++, Web, Android, iOS, and workflow YAML.
 
 ### Cache and dependency-bundle policy
