@@ -10,7 +10,13 @@ const sidebars: SidebarsConfig = {
             type: 'category',
             label: 'Core SDK',
             link: { type: 'doc', id: 'core/index' },
-            items: ['core/quickstart', 'core/configuration', 'core/cli'],
+            items: [
+                'core/quickstart',
+                'core/configuration',
+                'core/normalization',
+                'core/echo-cancellation',
+                'core/cli',
+            ],
         },
         {
             type: 'category',

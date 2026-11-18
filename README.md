@@ -6,14 +6,18 @@ GigaEdge Spench is a cross-platform SDK for real-time speech enhancement. It add
 suppression, loudness normalization, and, on supported platforms, acoustic echo cancellation to
 native, mobile, and web applications.
 
+## Research paper
+
+Research paper link will be added later.
+
 ## Choose an SDK
 
-| Platform | Start here | First call |
-| --- | --- | --- |
-| C and C++ | [Quickstart](web/apps/site/docs/core/quickstart.md) | `Denoiser` or `GigaEdgeSpenchDenoise*` |
-| Web | [Web SDK](web/packages/web-sdk/README.md) | `GigaEdgeSpenchSDK.create` |
-| Android | [Android SDK](android/README.md) | `Processor.process` |
-| iOS | [Quick Start](ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/QuickStart.md) | `DenoiserAVAudioUnit` or `Processor` |
+| Platform | Start here |
+| --- | --- |
+| C and C++ | [Quickstart](web/apps/site/docs/core/quickstart.md) |
+| Web | [Web SDK](web/packages/web-sdk/README.md) |
+| Android | [Android SDK](android/README.md) |
+| iOS | [Quick Start](ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/QuickStart.md) |
 
 The browser demo is published with the documentation site. The
 [capability matrix](web/apps/site/docs/capabilities.md) shows which features and
@@ -80,6 +84,8 @@ outputs are written under `out/`.
 - [Capabilities](web/apps/site/docs/capabilities.md)
 - [C and C++ quickstart](web/apps/site/docs/core/quickstart.md)
 - [Models](web/apps/site/docs/models.md)
+- [Audio normalization](web/apps/site/docs/core/normalization.md)
+- [Acoustic echo cancellation (AEC)](web/apps/site/docs/core/echo-cancellation.md)
 - [Command-line tools](web/apps/site/docs/core/cli.md)
 - [Contributing](CONTRIBUTING.md) and [support](SUPPORT.md)
 
