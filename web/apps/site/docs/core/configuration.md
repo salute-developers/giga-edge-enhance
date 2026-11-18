@@ -90,15 +90,32 @@ call that returns an accumulation code. `GigaEdgeSpenchDenoiseDestroyContext` ru
 `AudioProcessor` runs the DSP chain. The default constructor uses built-in settings. A YAML path or
 YAML string reads `sound_processing`:
 
-- `loudness_ctrl` — target loudness, maximum gain, bypass time
+- `loudness_ctrl` — target loudness in LUFS, maximum gain, bypass time, speech detection
+  (`use_vad`), and an optional built-in compressor and limiter (`post_processing`)
 - `range_ctrl` — leveler attack, hold, and release
 - `auto_gain_ctrl` — target level and rise/fall steps
 - `noise_gate_ctrl` — threshold and envelope times
 - `dynamic_range_compressor_ctrl` — threshold, ratio, knee, and envelope times
+- `limiter_ctrl` — threshold, knee, and envelope times
 
-Each block carries the sample rate of the buffers passed to that processor. `ProcessChunk` and
-`GetFinalChunk` use the same success and accumulation codes as the denoiser. Build this object
-before the callback. The DSP demo is `core/cli/demo/3-cpp_dsp_api_demo.cpp`.
+For example, configure loudness control with VAD for a 48 kHz speech stream:
+
+```yaml
+sound_processing:
+  loudness_ctrl:
+    sample_rate: 48000
+    target_level_db: -23.0
+    bypass_time: 3.0
+    max_gain_db: 12.0
+    use_vad: true
+    post_processing: false
+```
+
+Construct `AudioProcessor` from this YAML and call `AddLC()` to add the configured
+stage. Create the chain before the audio callback and match the module sample
+rates to the input. `AudioProcessor::ProcessChunk` writes the processed block
+and returns `SUCCESS` when processing completes. See the
+[normalization guide](normalization.md) for module order and streaming examples.
 
 ## Acoustic echo cancellation
 
@@ -108,5 +125,5 @@ section sets `sample_rate`, `filter_len`, `chunk_len_ms`, `residual_echo_suppres
 `speex`.
 
 Pass the microphone and the far-end loopback as two mono float vectors, or pass one interleaved
-chunk. `GetFinalChunk` is unused and returns success. Android and iOS feature APIs do not expose
-this stage; see the [capability matrix](../capabilities.md).
+chunk. See the [AEC guide](echo-cancellation.md) for frame sizing and an example pipeline, and
+the [capability matrix](../capabilities.md) for SDK support.
