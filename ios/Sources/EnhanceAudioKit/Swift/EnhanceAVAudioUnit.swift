@@ -5,8 +5,8 @@ public final class EnhanceAVAudioUnit: AVAudioUnitEffect {
     /// Audio component description used to register and instantiate GigaEdgeEnhance locally.
     public static let componentDescription = AudioComponentDescription(
         componentType: kAudioUnitType_Effect,
-        componentSubType: 0x7370656E, // 'spen'
-        componentManufacturer: 0x53504348, // 'SPCH'
+        componentSubType: 0x656E6861, // 'enha'
+        componentManufacturer: 0x47674564, // 'GgEd'
         componentFlags: 0,
         componentFlagsMask: 0
     )
