@@ -21,7 +21,7 @@ struct TempYamlFile {
     std::mt19937_64 gen{std::random_device{}()};
     std::uniform_int_distribution<uint64_t> dist;
     for (int i = 0; i < 10; ++i) {
-      auto cand = base / ("spench_cfg_" + std::to_string(dist(gen)) + ".yaml");
+      auto cand = base / ("enhance_cfg_" + std::to_string(dist(gen)) + ".yaml");
       if (!fs::exists(cand)) {
         path = cand.string();
         break;
@@ -39,10 +39,10 @@ struct TempYamlFile {
 };
 
 // A minimal concrete reader so we can call merge_yaml(...)
-struct DummyReader : public gigaedge::spench::ConfigReader {};
+struct DummyReader : public gigaedge::enhance::ConfigReader {};
 
-struct MiniNetworkReader final : public gigaedge::spench::NetworkConfig {
-  using gigaedge::spench::NetworkConfig::NetworkConfig;
+struct MiniNetworkReader final : public gigaedge::enhance::NetworkConfig {
+  using gigaedge::enhance::NetworkConfig::NetworkConfig;
 };
 
 }  // namespace
@@ -66,7 +66,7 @@ d: [3, 4]
 e: 7
 )");
 
-  gigaedge::spench::merge_yaml(dest, src);
+  gigaedge::enhance::merge_yaml(dest, src);
 
   REQUIRE(dest["a"]["b"].as<int>() == 10);  // overridden
   REQUIRE(dest["a"]["c"].as<int>() == 2);   // preserved
@@ -80,13 +80,13 @@ e: 7
 TEST_CASE("SUCCESS merge_yaml with non-map source is a no-op [config reader]") {
   YAML::Node dest1 = YAML::Load("{ a: 1, b: { c: 2 } }");
   const YAML::Node src_scalar = YAML::Load("42");
-  gigaedge::spench::merge_yaml(dest1, src_scalar);
+  gigaedge::enhance::merge_yaml(dest1, src_scalar);
   REQUIRE(dest1["a"].as<int>() == 1);
   REQUIRE(dest1["b"]["c"].as<int>() == 2);
 
   YAML::Node dest2 = YAML::Load("{ k: [1,2,3] }");
   const YAML::Node src_seq = YAML::Load("[4,5,6]");
-  gigaedge::spench::merge_yaml(dest2, src_seq);
+  gigaedge::enhance::merge_yaml(dest2, src_seq);
   REQUIRE(dest2["k"].IsSequence());
   REQUIRE(dest2["k"].size() == 3);
   REQUIRE(dest2["k"][0].as<int>() == 1);
@@ -108,8 +108,8 @@ extra_section:
   flag: true
 )";
 
-  std::unique_ptr<gigaedge::spench::StringConfigReader> reader;
-  REQUIRE_NOTHROW(reader = std::make_unique<gigaedge::spench::StringConfigReader>(yaml));
+  std::unique_ptr<gigaedge::enhance::StringConfigReader> reader;
+  REQUIRE_NOTHROW(reader = std::make_unique<gigaedge::enhance::StringConfigReader>(yaml));
 
   const YAML::Node& p = reader->params();
   // Overridden by snippet
@@ -125,8 +125,8 @@ extra_section:
 
 TEST_CASE("FAIL StringConfigReader throws on malformed YAML", "[config reader]") {
   const std::string bad_yaml = "model: [in1, in2\n";  // missing ]
-  std::unique_ptr<gigaedge::spench::StringConfigReader> reader;
-  REQUIRE_THROWS_AS(reader = std::make_unique<gigaedge::spench::StringConfigReader>(bad_yaml), std::runtime_error);
+  std::unique_ptr<gigaedge::enhance::StringConfigReader> reader;
+  REQUIRE_THROWS_AS(reader = std::make_unique<gigaedge::enhance::StringConfigReader>(bad_yaml), std::runtime_error);
 }
 
 // ------------------------------------------------------------------------------
@@ -141,8 +141,8 @@ inference:
 )";
 
   TempYamlFile tmp(file_yaml);
-  std::unique_ptr<gigaedge::spench::FileConfigReader> reader;
-  REQUIRE_NOTHROW(reader = std::make_unique<gigaedge::spench::FileConfigReader>(tmp.path));
+  std::unique_ptr<gigaedge::enhance::FileConfigReader> reader;
+  REQUIRE_NOTHROW(reader = std::make_unique<gigaedge::enhance::FileConfigReader>(tmp.path));
 
   const YAML::Node& p = reader->params();
   REQUIRE(p["model"]["model_path"].as<std::string>() == "file_model.onnx");
@@ -154,14 +154,14 @@ inference:
 }
 
 TEST_CASE("FAIL FileConfigReader throws if file missing [config reader]") {
-  std::unique_ptr<gigaedge::spench::FileConfigReader> reader;
-  REQUIRE_THROWS(reader = std::make_unique<gigaedge::spench::FileConfigReader>("/does/not/exist.yaml"));
+  std::unique_ptr<gigaedge::enhance::FileConfigReader> reader;
+  REQUIRE_THROWS(reader = std::make_unique<gigaedge::enhance::FileConfigReader>("/does/not/exist.yaml"));
 }
 
 TEST_CASE("FAIL FileConfigReader throws on malformed YAML in file [config reader]") {
   TempYamlFile tmp("inference: [1, 2\n");  // bad YAML
-  std::unique_ptr<gigaedge::spench::FileConfigReader> reader;
-  REQUIRE_THROWS_AS(reader = std::make_unique<gigaedge::spench::FileConfigReader>(tmp.path), std::runtime_error);
+  std::unique_ptr<gigaedge::enhance::FileConfigReader> reader;
+  REQUIRE_THROWS_AS(reader = std::make_unique<gigaedge::enhance::FileConfigReader>(tmp.path), std::runtime_error);
 }
 
 // ------------------------------------------------------------------------------
@@ -182,9 +182,9 @@ inference:
   model_type:        "denoiser_discr_hq_model"
 )";
 
-  auto base = gigaedge::spench::StringConfigReader("");
-  REQUIRE_NOTHROW(base = gigaedge::spench::StringConfigReader(yaml));
-  gigaedge::spench::DenoiserConfig cfg(base);
+  auto base = gigaedge::enhance::StringConfigReader("");
+  REQUIRE_NOTHROW(base = gigaedge::enhance::StringConfigReader(yaml));
+  gigaedge::enhance::DenoiserConfig cfg(base);
 
   REQUIRE(cfg.model_path() == "mod.onnx");
   REQUIRE(cfg.sampling_freq() == 12345u);
@@ -202,9 +202,9 @@ model:
   model_path: "onlypath.onnx"
 )";
 
-  auto base = gigaedge::spench::StringConfigReader("");
-  REQUIRE_NOTHROW(base = gigaedge::spench::StringConfigReader(yaml));
-  gigaedge::spench::DenoiserConfig cfg(base);
+  auto base = gigaedge::enhance::StringConfigReader("");
+  REQUIRE_NOTHROW(base = gigaedge::enhance::StringConfigReader(yaml));
+  gigaedge::enhance::DenoiserConfig cfg(base);
 
   REQUIRE(cfg.model_path() == "onlypath.onnx");
   REQUIRE(cfg.sampling_freq() == 48000u);
@@ -220,9 +220,9 @@ TEST_CASE("SUCCESS DenoiserConfig throws if model_path is missing [denoiser conf
   const std::string yaml = R"(
 model: {}
 )";
-  auto base = gigaedge::spench::StringConfigReader(yaml);
-  std::unique_ptr<gigaedge::spench::DenoiserConfig> cfg;
-  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::spench::DenoiserConfig>(base), std::runtime_error);
+  auto base = gigaedge::enhance::StringConfigReader(yaml);
+  std::unique_ptr<gigaedge::enhance::DenoiserConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::enhance::DenoiserConfig>(base), std::runtime_error);
 }
 
 TEST_CASE("SUCCESS NetworkConfig accepts optional scalar model_input_ctx_len [network config reader]") {
@@ -237,7 +237,7 @@ feature_params:
   window_type:      hanning
 )";
 
-  auto base = gigaedge::spench::StringConfigReader(yaml);
+  auto base = gigaedge::enhance::StringConfigReader(yaml);
   std::unique_ptr<MiniNetworkReader> cfg;
   REQUIRE_NOTHROW(cfg = std::make_unique<MiniNetworkReader>(base));
 }
@@ -247,7 +247,7 @@ TEST_CASE("FAIL NetworkConfig missing 'model' section throws [network config rea
 inference:
   engine_num_threads: 2
 )";
-  auto base = gigaedge::spench::StringConfigReader(yaml);
+  auto base = gigaedge::enhance::StringConfigReader(yaml);
   std::unique_ptr<MiniNetworkReader> cfg;
   REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
 }
@@ -258,7 +258,7 @@ model:
   model_path: "net.onnx"
   model_input_ctx_len: 64
 )";
-  auto base = gigaedge::spench::StringConfigReader(yaml);
+  auto base = gigaedge::enhance::StringConfigReader(yaml);
   std::unique_ptr<MiniNetworkReader> cfg;
   REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
 }
@@ -268,7 +268,7 @@ TEST_CASE("FAIL NetworkConfig missing or empty model_path throws [network config
     const std::string yaml = R"(
 model: {}
 )";
-    auto base = gigaedge::spench::StringConfigReader(yaml);
+    auto base = gigaedge::enhance::StringConfigReader(yaml);
     std::unique_ptr<MiniNetworkReader> cfg;
     REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
   }
@@ -278,7 +278,7 @@ model: {}
 model:
   model_path: ""
 )";
-    auto base = gigaedge::spench::StringConfigReader(yaml);
+    auto base = gigaedge::enhance::StringConfigReader(yaml);
     std::unique_ptr<MiniNetworkReader> cfg;
     REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
   }
@@ -290,7 +290,7 @@ model:
   model_path: "ok.onnx"
   model_input_ctx_len: { not: "scalar" }
 )";
-  auto base = gigaedge::spench::StringConfigReader(yaml);
+  auto base = gigaedge::enhance::StringConfigReader(yaml);
   std::unique_ptr<MiniNetworkReader> cfg;
   REQUIRE_THROWS_AS(cfg = std::make_unique<MiniNetworkReader>(base), std::runtime_error);
 }
@@ -299,8 +299,8 @@ model:
 // AudioProcessorConfig
 // ------------------------------------------------------------------------------
 TEST_CASE("SUCCESS AudioProcessorConfig generic getter returns defaults [audio processing reader]") {
-  std::unique_ptr<gigaedge::spench::AudioProcessorConfig> cfg;
-  REQUIRE_NOTHROW(cfg = std::make_unique<gigaedge::spench::AudioProcessorConfig>());
+  std::unique_ptr<gigaedge::enhance::AudioProcessorConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<gigaedge::enhance::AudioProcessorConfig>());
 
   REQUIRE(cfg->get<uint32_t>("range_ctrl", "sample_rate") == 48000u);
   REQUIRE(cfg->get<float>("range_ctrl", "target_level_db") == Approx(-3.0f));
@@ -350,9 +350,9 @@ sound_processing:
     threshold: -1.5
 )";
 
-  auto base = gigaedge::spench::StringConfigReader(override_yaml);
-  std::unique_ptr<gigaedge::spench::AudioProcessorConfig> cfg;
-  REQUIRE_NOTHROW(cfg = std::make_unique<gigaedge::spench::AudioProcessorConfig>(base));
+  auto base = gigaedge::enhance::StringConfigReader(override_yaml);
+  std::unique_ptr<gigaedge::enhance::AudioProcessorConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<gigaedge::enhance::AudioProcessorConfig>(base));
 
   REQUIRE(cfg->get<float>("loudness_ctrl", "bypass_time") == Approx(4.5f));
   REQUIRE(cfg->get<float>("limiter_ctrl", "threshold") == Approx(-1.5f));
@@ -368,16 +368,16 @@ sound_processing:
     post_processing: false
 )";
 
-  auto base = gigaedge::spench::StringConfigReader(override_yaml);
-  std::unique_ptr<gigaedge::spench::AudioProcessorConfig> cfg;
-  REQUIRE_NOTHROW(cfg = std::make_unique<gigaedge::spench::AudioProcessorConfig>(base));
+  auto base = gigaedge::enhance::StringConfigReader(override_yaml);
+  std::unique_ptr<gigaedge::enhance::AudioProcessorConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<gigaedge::enhance::AudioProcessorConfig>(base));
 
   REQUIRE(cfg->get<bool>("loudness_ctrl", "post_processing") == false);
 }
 
 TEST_CASE("SUCCESS AudioProcessorConfig getters return defaults [audio processing reader]") {
-  std::unique_ptr<gigaedge::spench::AudioProcessorConfig> cfg;
-  REQUIRE_NOTHROW(cfg = std::make_unique<gigaedge::spench::AudioProcessorConfig>());
+  std::unique_ptr<gigaedge::enhance::AudioProcessorConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<gigaedge::enhance::AudioProcessorConfig>());
 
   REQUIRE(cfg->get<uint32_t>("range_ctrl", "sample_rate") == 48000u);
   REQUIRE(cfg->get<float>("range_ctrl", "target_level_db") == Approx(-3.0f));
@@ -419,8 +419,8 @@ TEST_CASE("SUCCESS AudioProcessorConfig getters return defaults [audio processin
 }
 
 TEST_CASE("SUCCESS AudioProcessorConfig ParamBlockView works [audio processing reader]") {
-  std::unique_ptr<gigaedge::spench::AudioProcessorConfig> cfg;
-  REQUIRE_NOTHROW(cfg = std::make_unique<gigaedge::spench::AudioProcessorConfig>());
+  std::unique_ptr<gigaedge::enhance::AudioProcessorConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<gigaedge::enhance::AudioProcessorConfig>());
 
   auto ng = cfg->block("noise_gate_ctrl");
   REQUIRE(ng.get<uint32_t>("sample_rate") == 48000u);
@@ -468,9 +468,9 @@ sound_processing:
     attack_time: 0.0
     release_time: 0.2
 )";
-  auto base = gigaedge::spench::StringConfigReader(bad_yaml);
-  std::unique_ptr<gigaedge::spench::AudioProcessorConfig> cfg;
-  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::spench::AudioProcessorConfig>(base), std::runtime_error);
+  auto base = gigaedge::enhance::StringConfigReader(bad_yaml);
+  std::unique_ptr<gigaedge::enhance::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::enhance::AudioProcessorConfig>(base), std::runtime_error);
 }
 
 TEST_CASE("SUCCESS AudioProcessorConfig defaults missing key in limiter_ctrl [audio processing reader]") {
@@ -482,9 +482,9 @@ sound_processing:
     attack_time: 0.0
     release_time: 0.2
 )";
-  auto base = gigaedge::spench::StringConfigReader(bad_yaml);
-  std::unique_ptr<gigaedge::spench::AudioProcessorConfig> cfg;
-  REQUIRE_NOTHROW(cfg = std::make_unique<gigaedge::spench::AudioProcessorConfig>(base));
+  auto base = gigaedge::enhance::StringConfigReader(bad_yaml);
+  std::unique_ptr<gigaedge::enhance::AudioProcessorConfig> cfg;
+  REQUIRE_NOTHROW(cfg = std::make_unique<gigaedge::enhance::AudioProcessorConfig>(base));
 
   REQUIRE(cfg->get<float>("limiter_ctrl", "threshold") == Approx(-3.0f));
 }
@@ -498,9 +498,9 @@ sound_processing:
   range_ctrl:
     sample_rate: 200000
 )";
-  auto base = gigaedge::spench::StringConfigReader(bad_yaml);
-  std::unique_ptr<gigaedge::spench::AudioProcessorConfig> cfg;
-  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::spench::AudioProcessorConfig>(base), std::runtime_error);
+  auto base = gigaedge::enhance::StringConfigReader(bad_yaml);
+  std::unique_ptr<gigaedge::enhance::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::enhance::AudioProcessorConfig>(base), std::runtime_error);
 }
 
 TEST_CASE("FAIL AudioProcessorConfig AGC non-positive target_level [audio processing reader]") {
@@ -509,9 +509,9 @@ sound_processing:
   auto_gain_ctrl:
     target_level: -0.01
 )";
-  auto base = gigaedge::spench::StringConfigReader(bad_yaml);
-  std::unique_ptr<gigaedge::spench::AudioProcessorConfig> cfg;
-  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::spench::AudioProcessorConfig>(base), std::runtime_error);
+  auto base = gigaedge::enhance::StringConfigReader(bad_yaml);
+  std::unique_ptr<gigaedge::enhance::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::enhance::AudioProcessorConfig>(base), std::runtime_error);
 }
 
 TEST_CASE("FAIL AudioProcessorConfig NG non-positive times [audio processing reader]") {
@@ -520,9 +520,9 @@ sound_processing:
   noise_gate_ctrl:
     attack_time: -0.01
 )";
-  auto base = gigaedge::spench::StringConfigReader(bad_yaml);
-  std::unique_ptr<gigaedge::spench::AudioProcessorConfig> cfg;
-  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::spench::AudioProcessorConfig>(base), std::runtime_error);
+  auto base = gigaedge::enhance::StringConfigReader(bad_yaml);
+  std::unique_ptr<gigaedge::enhance::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::enhance::AudioProcessorConfig>(base), std::runtime_error);
 }
 
 TEST_CASE("FAIL AudioProcessorConfig DRC non-positive release [audio processing reader]") {
@@ -531,9 +531,9 @@ sound_processing:
   dynamic_range_compressor_ctrl:
     release_time: -0.01
 )";
-  auto base = gigaedge::spench::StringConfigReader(bad_yaml);
-  std::unique_ptr<gigaedge::spench::AudioProcessorConfig> cfg;
-  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::spench::AudioProcessorConfig>(base), std::runtime_error);
+  auto base = gigaedge::enhance::StringConfigReader(bad_yaml);
+  std::unique_ptr<gigaedge::enhance::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::enhance::AudioProcessorConfig>(base), std::runtime_error);
 }
 
 TEST_CASE("FAIL AudioProcessorConfig LC non-positive bypass_time [audio processing reader]") {
@@ -542,9 +542,9 @@ sound_processing:
   loudness_ctrl:
     bypass_time: -0.01
 )";
-  auto base = gigaedge::spench::StringConfigReader(bad_yaml);
-  std::unique_ptr<gigaedge::spench::AudioProcessorConfig> cfg;
-  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::spench::AudioProcessorConfig>(base), std::runtime_error);
+  auto base = gigaedge::enhance::StringConfigReader(bad_yaml);
+  std::unique_ptr<gigaedge::enhance::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::enhance::AudioProcessorConfig>(base), std::runtime_error);
 }
 
 TEST_CASE("FAIL AudioProcessorConfig Limiter threshold not numeric [audio processing reader]") {
@@ -554,26 +554,26 @@ sound_processing:
   limiter_ctrl:
     threshold: abc
 )";
-  auto base = gigaedge::spench::StringConfigReader(bad_yaml);
-  std::unique_ptr<gigaedge::spench::AudioProcessorConfig> cfg;
-  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::spench::AudioProcessorConfig>(base), std::runtime_error);
+  auto base = gigaedge::enhance::StringConfigReader(bad_yaml);
+  std::unique_ptr<gigaedge::enhance::AudioProcessorConfig> cfg;
+  REQUIRE_THROWS_AS(cfg = std::make_unique<gigaedge::enhance::AudioProcessorConfig>(base), std::runtime_error);
 }
 
 TEST_CASE("FAIL AudioProcessorConfig rejects unsafe DSP state sizes [audio processing reader]") {
   SECTION("zero Range Control sample rate") {
-    auto base = gigaedge::spench::StringConfigReader("sound_processing:\n  range_ctrl:\n    sample_rate: 0\n");
-    CHECK_THROWS_AS(gigaedge::spench::AudioProcessorConfig(base), std::runtime_error);
+    auto base = gigaedge::enhance::StringConfigReader("sound_processing:\n  range_ctrl:\n    sample_rate: 0\n");
+    CHECK_THROWS_AS(gigaedge::enhance::AudioProcessorConfig(base), std::runtime_error);
   }
 
   SECTION("zero compressor ratio") {
     auto base =
-        gigaedge::spench::StringConfigReader("sound_processing:\n  dynamic_range_compressor_ctrl:\n    ratio: 0\n");
-    CHECK_THROWS_AS(gigaedge::spench::AudioProcessorConfig(base), std::runtime_error);
+        gigaedge::enhance::StringConfigReader("sound_processing:\n  dynamic_range_compressor_ctrl:\n    ratio: 0\n");
+    CHECK_THROWS_AS(gigaedge::enhance::AudioProcessorConfig(base), std::runtime_error);
   }
 
   SECTION("negative limiter knee") {
-    auto base = gigaedge::spench::StringConfigReader("sound_processing:\n  limiter_ctrl:\n    knee_width: -1\n");
-    CHECK_THROWS_AS(gigaedge::spench::AudioProcessorConfig(base), std::runtime_error);
+    auto base = gigaedge::enhance::StringConfigReader("sound_processing:\n  limiter_ctrl:\n    knee_width: -1\n");
+    CHECK_THROWS_AS(gigaedge::enhance::AudioProcessorConfig(base), std::runtime_error);
   }
 }
 
@@ -584,11 +584,11 @@ TEST_CASE("SUCCESS NetworkConfig constructed from bundled model uses bundle [net
   const std::vector<uint8_t> model_data = {0xAA, 0xBB, 0xCC};
 
   // Create packed bundle with bundled flag
-  std::vector<uint8_t> packed = gigaedge::spench::util::write_packed_model(cfg, model_data);
-  auto bundle = std::make_shared<gigaedge::spench::PackedModelReader>(packed);
+  std::vector<uint8_t> packed = gigaedge::enhance::util::write_packed_model(cfg, model_data);
+  auto bundle = std::make_shared<gigaedge::enhance::PackedModelReader>(packed);
 
   // Construct NetworkConfig with bundle
-  gigaedge::spench::DenoiserConfig denoiser(bundle);
+  gigaedge::enhance::DenoiserConfig denoiser(bundle);
 
   // Validate that model path is ignored and model data comes from bundle
   REQUIRE(denoiser.model_path().empty());

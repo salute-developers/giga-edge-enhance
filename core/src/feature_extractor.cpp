@@ -11,7 +11,7 @@
 
 #include "src/feature_params.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 namespace fe {
 
 template <typename T>
@@ -240,4 +240,4 @@ void FeatureExtractor<T>::calc_enhanced_parts_in_place(const ComplexNumber<T>& i
 
 template class FeatureExtractor<fft::BufferType>;
 }  // namespace fe
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

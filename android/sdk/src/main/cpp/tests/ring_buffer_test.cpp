@@ -1,4 +1,4 @@
-#include "spench/ring_buffer.h"
+#include "enhance/ring_buffer.h"
 
 #include <array>
 #include <atomic>
@@ -11,7 +11,7 @@
 namespace {
 
 void test_push_pop_round_trip() {
-  gigaedge::spench::RingBuffer ring_buffer(8);
+  gigaedge::enhance::RingBuffer ring_buffer(8);
   const std::array<float, 4> input = {0.1f, 0.2f, 0.3f, 0.4f};
   std::array<float, 4> output = {};
 
@@ -23,7 +23,7 @@ void test_push_pop_round_trip() {
 }
 
 void test_wraparound() {
-  gigaedge::spench::RingBuffer ring_buffer(4);
+  gigaedge::enhance::RingBuffer ring_buffer(4);
   const std::array<float, 4> first = {1.0f, 2.0f, 3.0f, 4.0f};
   const std::array<float, 2> second = {5.0f, 6.0f};
   std::array<float, 2> scratch = {};
@@ -41,7 +41,7 @@ void test_wraparound() {
 }
 
 void test_capacity_limit() {
-  gigaedge::spench::RingBuffer ring_buffer(4);
+  gigaedge::enhance::RingBuffer ring_buffer(4);
   const std::array<float, 6> input = {0, 1, 2, 3, 4, 5};
   std::array<float, 4> output = {};
 
@@ -55,7 +55,7 @@ void test_capacity_limit() {
 
 void test_single_producer_single_consumer_stress() {
   constexpr std::size_t sample_count = 20000;
-  gigaedge::spench::RingBuffer ring_buffer(1024);
+  gigaedge::enhance::RingBuffer ring_buffer(1024);
   std::vector<float> consumed;
   consumed.reserve(sample_count);
   std::atomic<bool> producer_done{false};

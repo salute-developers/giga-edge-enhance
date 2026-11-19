@@ -6,7 +6,7 @@
   "force-tag-creation": true,
   "packages": {
     ".": {
-      "component": "gigaedge-spench",
+      "component": "gigaedge-enhance",
       "version-file": "VERSION_NUMBER",
       "extra-files": [
         {

@@ -20,16 +20,16 @@ archive_contains_onnxruntime() {
 }
 
 core_is_current() {
-  [[ -f "$ARTIFACT_DIR/device/libgigaedge-spench.a" ]] || return 1
-  [[ -f "$ARTIFACT_DIR/simulator/libgigaedge-spench.a" ]] || return 1
+  [[ -f "$ARTIFACT_DIR/device/libgigaedge-enhance.a" ]] || return 1
+  [[ -f "$ARTIFACT_DIR/simulator/libgigaedge-enhance.a" ]] || return 1
   [[ -d "$REPO_DIR/out/build/ios-device-release" ]] || return 1
   [[ -d "$REPO_DIR/out/build/ios-simulator-release" ]] || return 1
-  archive_contains_onnxruntime "$ARTIFACT_DIR/device/libgigaedge-spench.a" || return 1
-  archive_contains_onnxruntime "$ARTIFACT_DIR/simulator/libgigaedge-spench.a" || return 1
+  archive_contains_onnxruntime "$ARTIFACT_DIR/device/libgigaedge-enhance.a" || return 1
+  archive_contains_onnxruntime "$ARTIFACT_DIR/simulator/libgigaedge-enhance.a" || return 1
 
   local reference="$CORE_STAMP"
   if [[ ! -f "$reference" ]]; then
-    reference="$ARTIFACT_DIR/device/libgigaedge-spench.a"
+    reference="$ARTIFACT_DIR/device/libgigaedge-enhance.a"
   fi
 
   [[ -z "$(find "${CORE_INPUTS[@]}" -newer "$reference" -print -quit)" ]]
@@ -39,11 +39,11 @@ build_target() {
   local preset="$1"
   local prebuilt_root=""
   case "$preset" in
-    ios-device-*) prebuilt_root="${GES_PREBUILT_ORT_DEVICE_ROOT:-}" ;;
-    ios-simulator-*) prebuilt_root="${GES_PREBUILT_ORT_SIMULATOR_ROOT:-}" ;;
+    ios-device-*) prebuilt_root="${GEE_PREBUILT_ORT_DEVICE_ROOT:-}" ;;
+    ios-simulator-*) prebuilt_root="${GEE_PREBUILT_ORT_SIMULATOR_ROOT:-}" ;;
   esac
   if [[ -n "$prebuilt_root" ]]; then
-    cmake --preset "$preset" "-DGES_PREBUILT_ORT_ROOT=$prebuilt_root"
+    cmake --preset "$preset" "-DGEE_PREBUILT_ORT_ROOT=$prebuilt_root"
   else
     cmake --preset "$preset"
   fi
@@ -89,15 +89,15 @@ build_target ios-simulator-release
 
 merge_archives \
   "$REPO_DIR/out/build/ios-device-release" \
-  "$ARTIFACT_DIR/device/libgigaedge-spench.a" \
-  "${GES_PREBUILT_ORT_DEVICE_ROOT:-}"
+  "$ARTIFACT_DIR/device/libgigaedge-enhance.a" \
+  "${GEE_PREBUILT_ORT_DEVICE_ROOT:-}"
 merge_archives \
   "$REPO_DIR/out/build/ios-simulator-release" \
-  "$ARTIFACT_DIR/simulator/libgigaedge-spench.a" \
-  "${GES_PREBUILT_ORT_SIMULATOR_ROOT:-}"
+  "$ARTIFACT_DIR/simulator/libgigaedge-enhance.a" \
+  "${GEE_PREBUILT_ORT_SIMULATOR_ROOT:-}"
 touch "$CORE_STAMP"
 
-echo "Built device static library: $ARTIFACT_DIR/device/libgigaedge-spench.a"
-echo "Built simulator static library: $ARTIFACT_DIR/simulator/libgigaedge-spench.a"
-lipo -info "$ARTIFACT_DIR/device/libgigaedge-spench.a"
-lipo -info "$ARTIFACT_DIR/simulator/libgigaedge-spench.a"
+echo "Built device static library: $ARTIFACT_DIR/device/libgigaedge-enhance.a"
+echo "Built simulator static library: $ARTIFACT_DIR/simulator/libgigaedge-enhance.a"
+lipo -info "$ARTIFACT_DIR/device/libgigaedge-enhance.a"
+lipo -info "$ARTIFACT_DIR/simulator/libgigaedge-enhance.a"

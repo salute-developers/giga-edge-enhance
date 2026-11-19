@@ -1,5 +1,5 @@
-import GigaEdgeSpench, { type PackedModelReader, type MainModule as GigaEdgeSpenchCore } from '../../../generated/wasm/gigaedge-spench';
-import GigaEdgeSpenchDsp, { type MainModule as GigaEdgeSpenchDSPCore } from '../../../generated/wasm/gigaedge-spench.dsp';
+import GigaEdgeEnhance, { type PackedModelReader, type MainModule as GigaEdgeEnhanceCore } from '../../../generated/wasm/gigaedge-enhance';
+import GigaEdgeEnhanceDsp, { type MainModule as GigaEdgeEnhanceDSPCore } from '../../../generated/wasm/gigaedge-enhance.dsp';
 import {
     FEATURE_SWITCH_CACHE_MILLISECONDS,
     getDefaultAECConfig,
@@ -7,20 +7,20 @@ import {
     HEAP_SIZE,
 } from '../../utils/constants';
 import { Logger } from '../../utils/logger';
-import { AbstractGigaEdgeSpenchWrapper } from '../../utils/wrapper';
+import { AbstractGigaEdgeEnhanceWrapper } from '../../utils/wrapper';
 import getHashCode from '../../utils/hash';
 import { ModelKey, Settings } from '../../utils/common';
-import GigaEdgeSpenchError from '../../utils/error';
+import GigaEdgeEnhanceError from '../../utils/error';
 
 import Loader, { LoadError, ModelNotFoundError } from './loader';
 
-export class InternalError extends GigaEdgeSpenchError {
+export class InternalError extends GigaEdgeEnhanceError {
     override get name() {
         return 'InternalError';
     }
 }
 
-interface CreateGigaEdgeSpenchWrapperParams {
+interface CreateGigaEdgeEnhanceWrapperParams {
     sampleRate: number;
     logger: Logger;
     loader: Loader;
@@ -29,8 +29,8 @@ interface CreateGigaEdgeSpenchWrapperParams {
     onHeavyLoadEnd?: () => void;
 }
 
-export class GigaEdgeSpenchDspWrapper extends AbstractGigaEdgeSpenchWrapper {
-    protected bridge: GigaEdgeSpenchDSPCore;
+export class GigaEdgeEnhanceDspWrapper extends AbstractGigaEdgeEnhanceWrapper {
+    protected bridge: GigaEdgeEnhanceDSPCore;
 
     protected dataCapacity = HEAP_SIZE;
 
@@ -44,7 +44,7 @@ export class GigaEdgeSpenchDspWrapper extends AbstractGigaEdgeSpenchWrapper {
     ) {
         super();
 
-        this.bridge = GigaEdgeSpenchDsp({ wasmBinary: wasm, print: logger.debug, printErr: logger.error });
+        this.bridge = GigaEdgeEnhanceDsp({ wasmBinary: wasm, print: logger.debug, printErr: logger.error });
         this.dataPtr = this.bridge._malloc(HEAP_SIZE * Float32Array.BYTES_PER_ELEMENT);
         if (!this.dataPtr) throw new InternalError('Could not allocate the WASM input buffer');
         try {
@@ -82,7 +82,7 @@ export class GigaEdgeSpenchDspWrapper extends AbstractGigaEdgeSpenchWrapper {
         logger,
         loader,
         settings,
-    }: CreateGigaEdgeSpenchWrapperParams): Promise<GigaEdgeSpenchDspWrapper | InternalError | LoadError> {
+    }: CreateGigaEdgeEnhanceWrapperParams): Promise<GigaEdgeEnhanceDspWrapper | InternalError | LoadError> {
         const wasm = await loader.loadDSPWasm();
 
         if (wasm instanceof LoadError) {
@@ -90,7 +90,7 @@ export class GigaEdgeSpenchDspWrapper extends AbstractGigaEdgeSpenchWrapper {
         }
 
         try {
-            return new GigaEdgeSpenchDspWrapper(wasm, sampleRate, logger, settings!);
+            return new GigaEdgeEnhanceDspWrapper(wasm, sampleRate, logger, settings!);
         } catch (e) {
             return new InternalError(e);
         }
@@ -102,7 +102,7 @@ export class GigaEdgeSpenchDspWrapper extends AbstractGigaEdgeSpenchWrapper {
         const cached = this.tryGetFromCache(key);
 
         this.logger.debug(
-            'Add normalizer to GigaEdgeSpenchDSP Pipeline.',
+            'Add normalizer to GigaEdgeEnhanceDSP Pipeline.',
             config ? `Using custom config:\n${config}.` : 'Using default config.',
         );
 
@@ -125,7 +125,7 @@ export class GigaEdgeSpenchDspWrapper extends AbstractGigaEdgeSpenchWrapper {
         const cached = this.tryGetFromCache(key);
 
         this.logger.debug(
-            'Add aec to GigaEdgeSpenchDSP Pipeline',
+            'Add aec to GigaEdgeEnhanceDSP Pipeline',
             config ? `Using custom config:\n${config}.` : 'Using default config.',
         );
 
@@ -164,8 +164,8 @@ export class GigaEdgeSpenchDspWrapper extends AbstractGigaEdgeSpenchWrapper {
     }
 }
 
-export class GigaEdgeSpenchWrapper extends AbstractGigaEdgeSpenchWrapper {
-    protected bridge: GigaEdgeSpenchCore;
+export class GigaEdgeEnhanceWrapper extends AbstractGigaEdgeEnhanceWrapper {
+    protected bridge: GigaEdgeEnhanceCore;
 
     protected dataCapacity = HEAP_SIZE;
 
@@ -180,7 +180,7 @@ export class GigaEdgeSpenchWrapper extends AbstractGigaEdgeSpenchWrapper {
         super();
         onHeavyLoadStart();
         try {
-            this.bridge = GigaEdgeSpench({
+            this.bridge = GigaEdgeEnhance({
                 wasmBinary: wasm,
                 print: logger.debug,
                 printErr: logger.error,
@@ -212,7 +212,7 @@ export class GigaEdgeSpenchWrapper extends AbstractGigaEdgeSpenchWrapper {
         loader,
         onHeavyLoadStart,
         onHeavyLoadEnd,
-    }: CreateGigaEdgeSpenchWrapperParams): Promise<GigaEdgeSpenchWrapper | InternalError | LoadError> {
+    }: CreateGigaEdgeEnhanceWrapperParams): Promise<GigaEdgeEnhanceWrapper | InternalError | LoadError> {
         const wasm = await loader.loadWasm();
 
         if (wasm instanceof LoadError) {
@@ -220,7 +220,7 @@ export class GigaEdgeSpenchWrapper extends AbstractGigaEdgeSpenchWrapper {
         }
 
         try {
-            return new GigaEdgeSpenchWrapper(wasm, sampleRate, logger, loader, onHeavyLoadStart!, onHeavyLoadEnd!);
+            return new GigaEdgeEnhanceWrapper(wasm, sampleRate, logger, loader, onHeavyLoadStart!, onHeavyLoadEnd!);
         } catch (e) {
             return new InternalError(e);
         }
@@ -253,7 +253,7 @@ export class GigaEdgeSpenchWrapper extends AbstractGigaEdgeSpenchWrapper {
             this.logger.debug('model loading');
             const loadedModel = await this.loader.loadNoiseCancellationModel(type);
 
-            if (loadedModel instanceof GigaEdgeSpenchError) {
+            if (loadedModel instanceof GigaEdgeEnhanceError) {
                 return loadedModel;
             }
             this.logger.debug('model loaded');
@@ -262,7 +262,7 @@ export class GigaEdgeSpenchWrapper extends AbstractGigaEdgeSpenchWrapper {
             try {
                 const model = this.loadModel(loadedModel);
 
-                if (model instanceof GigaEdgeSpenchError) {
+                if (model instanceof GigaEdgeEnhanceError) {
                     return model;
                 }
                 this.logger.debug('model created');
@@ -280,7 +280,7 @@ export class GigaEdgeSpenchWrapper extends AbstractGigaEdgeSpenchWrapper {
             }
         }
 
-        this.logger.debug(`Add noise canceller to GigaEdgeSpench Pipeline. Model type: ${type}${cached ? ' (cached)' : ''}.`);
+        this.logger.debug(`Add noise canceller to GigaEdgeEnhance Pipeline. Model type: ${type}${cached ? ' (cached)' : ''}.`);
     }
 
     destroy() {

@@ -1,6 +1,6 @@
 import UIKit
 import UniformTypeIdentifiers
-import GigaEdgeSpenchAudioKit
+import EnhanceAudioKit
 
 final class MainViewController: UIViewController {
     private let titleLabel = UILabel()
@@ -23,15 +23,15 @@ final class MainViewController: UIViewController {
     private var liveRunning = false
     private var fileProcessing = false
     private var processedFileURL: URL?
-    private var availableModels: [ModelDescriptor] = []
-    private var selectedModel: ModelDescriptor?
-    private var currentSettings = Settings.default
+    private var availableModels: [EnhanceModelDescriptor] = []
+    private var selectedModel: EnhanceModelDescriptor?
+    private var currentSettings = EnhanceSettings.default
     private var processingFailureMessage: String?
     private var telemetryTimer: Timer?
-    private var previousTelemetry = Telemetry.empty
+    private var previousTelemetry = EnhanceTelemetry.empty
 
-    private var currentFeatures: Features {
-        Features(normalization: processingSwitch.isOn,
+    private var currentFeatures: EnhanceFeatures {
+        EnhanceFeatures(normalization: processingSwitch.isOn,
                        noiseSuppression: selectedModel)
     }
 
@@ -48,7 +48,7 @@ final class MainViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
         navigationItem.title = "Audio Demo"
-        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Settings",
+        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "EnhanceSettings",
                                                             style: .plain,
                                                             target: self,
                                                             action: #selector(openSettings))
@@ -65,7 +65,7 @@ final class MainViewController: UIViewController {
 
     private func configureUI() {
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.text = "Realtime GigaEdgeSpench Processor"
+        titleLabel.text = "Realtime GigaEdgeEnhance EnhanceProcessor"
         titleLabel.font = .preferredFont(forTextStyle: .title2)
         titleLabel.textAlignment = .center
 
@@ -78,7 +78,7 @@ final class MainViewController: UIViewController {
         modelButton.showsMenuAsPrimaryAction = true
 
         processingLabel.translatesAutoresizingMaskIntoConstraints = false
-        processingLabel.text = "GigaEdgeSpench audio processing"
+        processingLabel.text = "GigaEdgeEnhance audio processing"
         processingLabel.font = .preferredFont(forTextStyle: .body)
 
         processingSwitch.translatesAutoresizingMaskIntoConstraints = false
@@ -266,7 +266,7 @@ final class MainViewController: UIViewController {
         navigationController?.pushViewController(controller, animated: true)
     }
 
-    private func startFileProcessing(url: URL, features: Features) {
+    private func startFileProcessing(url: URL, features: EnhanceFeatures) {
         fileProcessing = true
         fileButton.setTitle("Cancel Processing", for: .normal)
         saveButton.isHidden = true
@@ -342,7 +342,7 @@ final class MainViewController: UIViewController {
         updateTelemetryLabels(with: delta)
     }
 
-    private var activeTelemetry: Telemetry {
+    private var activeTelemetry: EnhanceTelemetry {
         if liveRunning {
             return liveController.telemetry
         }
@@ -352,7 +352,7 @@ final class MainViewController: UIViewController {
         return .empty
     }
 
-    private func updateTelemetryLabels(with telemetry: Telemetry) {
+    private func updateTelemetryLabels(with telemetry: EnhanceTelemetry) {
         audioProcessingTelemetryLabel.text = makeTelemetryText(title: "Audio processing mean",
                                                                value: telemetry.audioProcessingMeanMilliseconds)
         denoiserTelemetryLabel.text = makeTelemetryText(title: "Denoising mean",
@@ -377,7 +377,7 @@ final class MainViewController: UIViewController {
 
     private func loadModels() {
         do {
-            availableModels = try ModelCatalog.availableModels()
+            availableModels = try EnhanceModelCatalog.availableModels()
             refreshModelMenu()
             applyModelSelection(nil)
         } catch {
@@ -403,7 +403,7 @@ final class MainViewController: UIViewController {
         modelButton.setTitle(selectedModel?.rawValue ?? "Off", for: .normal)
     }
 
-    private func applyModelSelection(_ model: ModelDescriptor?) {
+    private func applyModelSelection(_ model: EnhanceModelDescriptor?) {
         selectedModel = model
         refreshModelMenu()
         applyCurrentFeatures()

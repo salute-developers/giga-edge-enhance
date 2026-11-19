@@ -1,13 +1,13 @@
-get_filename_component(_ges_root_dir "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+get_filename_component(_gee_root_dir "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 if(NOT DEFINED CPM_SOURCE_CACHE)
-  set(CPM_SOURCE_CACHE "${_ges_root_dir}/out/cache/cpm" CACHE PATH
-      "Shared GigaEdgeSpench CPM source cache")
+  set(CPM_SOURCE_CACHE "${_gee_root_dir}/out/cache/cpm" CACHE PATH
+      "Shared GigaEdgeEnhance CPM source cache")
 endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/CPM.cmake")
-CPMUsePackageLock("${_ges_root_dir}/package-lock.cmake")
+CPMUsePackageLock("${_gee_root_dir}/package-lock.cmake")
 
-if(GES_PROFILE STREQUAL "model-packer")
+if(GEE_PROFILE STREQUAL "model-packer")
   CPMGetPackage(yaml-cpp)
   CPMGetPackage(argparse)
   return()
@@ -17,7 +17,7 @@ if(NOT TARGET dsplib)
   CPMGetPackage(dsplib)
 endif()
 
-CPMGetPackage(speexdsp_ges_core)
+CPMGetPackage(speexdsp_gee_core)
 CPMGetPackage(spdlog)
 
 if(NOT TARGET yaml-cpp)
@@ -46,131 +46,131 @@ if(BUILD_TESTING)
   CPMGetPackage(Catch2)
 endif()
 
-function(ges_define_dependency_bundle_target)
+function(gee_define_dependency_bundle_target)
   set(options)
   set(one_value_args)
   set(multi_value_args REQUIRED OPTIONAL)
-  cmake_parse_arguments(GES_BUNDLE
+  cmake_parse_arguments(GEE_BUNDLE
     "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
-  add_custom_target(ges_dependency_bundle)
-  foreach(_ges_target IN LISTS GES_BUNDLE_REQUIRED GES_BUNDLE_OPTIONAL)
-    if(NOT TARGET ${_ges_target})
-      if(_ges_target IN_LIST GES_BUNDLE_REQUIRED)
+  add_custom_target(gee_dependency_bundle)
+  foreach(_gee_target IN LISTS GEE_BUNDLE_REQUIRED GEE_BUNDLE_OPTIONAL)
+    if(NOT TARGET ${_gee_target})
+      if(_gee_target IN_LIST GEE_BUNDLE_REQUIRED)
         message(FATAL_ERROR
-          "Required dependency bundle target '${_ges_target}' does not exist.")
+          "Required dependency bundle target '${_gee_target}' does not exist.")
       endif()
       continue()
     endif()
 
-    add_dependencies(ges_dependency_bundle ${_ges_target})
+    add_dependencies(gee_dependency_bundle ${_gee_target})
   endforeach()
 endfunction()
 
-function(ges_find_android_prebuilt_tflite output_variable)
-  if(NOT GES_PREBUILT_DEPENDENCIES_ROOT)
+function(gee_find_android_prebuilt_tflite output_variable)
+  if(NOT GEE_PREBUILT_DEPENDENCIES_ROOT)
     set(${output_variable} "" PARENT_SCOPE)
     return()
   endif()
   if(DEFINED CMAKE_ANDROID_ARCH_ABI)
-    set(_ges_android_abi "${CMAKE_ANDROID_ARCH_ABI}")
+    set(_gee_android_abi "${CMAKE_ANDROID_ARCH_ABI}")
   else()
-    set(_ges_android_abi "${ANDROID_ABI}")
+    set(_gee_android_abi "${ANDROID_ABI}")
   endif()
-  string(TOLOWER "${CMAKE_BUILD_TYPE}" _ges_build_type)
+  string(TOLOWER "${CMAKE_BUILD_TYPE}" _gee_build_type)
   # Android Gradle Plugin configures release native code as RelWithDebInfo.
   # It consumes the ABI-compatible Release engine bundle built by CI.
-  if(_ges_build_type STREQUAL "relwithdebinfo")
-    set(_ges_build_type "release")
+  if(_gee_build_type STREQUAL "relwithdebinfo")
+    set(_gee_build_type "release")
   endif()
-  file(GLOB _ges_candidates LIST_DIRECTORIES true
-    "${GES_PREBUILT_DEPENDENCIES_ROOT}/android/${_ges_android_abi}/tflite/${_ges_build_type}/shared/v*-*/prefix")
-  list(LENGTH _ges_candidates _ges_candidate_count)
-  if(NOT _ges_candidate_count EQUAL 1)
+  file(GLOB _gee_candidates LIST_DIRECTORIES true
+    "${GEE_PREBUILT_DEPENDENCIES_ROOT}/android/${_gee_android_abi}/tflite/${_gee_build_type}/shared/v*-*/prefix")
+  list(LENGTH _gee_candidates _gee_candidate_count)
+  if(NOT _gee_candidate_count EQUAL 1)
     message(WARNING
-      "Ignoring Android prebuilt TensorFlow Lite bundles for ${_ges_android_abi} "
-      "(${_ges_build_type}): expected one under ${GES_PREBUILT_DEPENDENCIES_ROOT}, "
-      "found ${_ges_candidate_count}. Falling back to CPM.")
+      "Ignoring Android prebuilt TensorFlow Lite bundles for ${_gee_android_abi} "
+      "(${_gee_build_type}): expected one under ${GEE_PREBUILT_DEPENDENCIES_ROOT}, "
+      "found ${_gee_candidate_count}. Falling back to CPM.")
     set(${output_variable} "" PARENT_SCOPE)
     return()
   endif()
-  list(GET _ges_candidates 0 _ges_prebuilt_root)
-  set(${output_variable} "${_ges_prebuilt_root}" PARENT_SCOPE)
+  list(GET _gee_candidates 0 _gee_prebuilt_root)
+  set(${output_variable} "${_gee_prebuilt_root}" PARENT_SCOPE)
 endfunction()
 
 if(BUILD_TFLITE_ENGINE)
-  set(_ges_tflite_root "${GES_PREBUILT_TFLITE_ROOT}")
-  if(NOT _ges_tflite_root AND ANDROID)
-    ges_find_android_prebuilt_tflite(_ges_tflite_root)
+  set(_gee_tflite_root "${GEE_PREBUILT_TFLITE_ROOT}")
+  if(NOT _gee_tflite_root AND ANDROID)
+    gee_find_android_prebuilt_tflite(_gee_tflite_root)
   endif()
-  if(_ges_tflite_root AND EXISTS "${_ges_tflite_root}/lib/cmake/tensorflow-lite/tensorflow-liteConfig.cmake")
+  if(_gee_tflite_root AND EXISTS "${_gee_tflite_root}/lib/cmake/tensorflow-lite/tensorflow-liteConfig.cmake")
     # The selected artifact root is part of the build configuration. Do not
     # let CMake reuse a package directory cached for an older bundle key.
     unset(tensorflow-lite_DIR CACHE)
     find_package(tensorflow-lite CONFIG REQUIRED
-      PATHS "${_ges_tflite_root}"
+      PATHS "${_gee_tflite_root}"
       NO_DEFAULT_PATH
       NO_CMAKE_FIND_ROOT_PATH)
-    set(GES_USING_PREBUILT_TFLITE ON CACHE INTERNAL
+    set(GEE_USING_PREBUILT_TFLITE ON CACHE INTERNAL
       "TensorFlow Lite is provided by a prebuilt dependency bundle." FORCE)
-    set(GES_RESOLVED_PREBUILT_TFLITE_ROOT "${_ges_tflite_root}" CACHE INTERNAL
+    set(GEE_RESOLVED_PREBUILT_TFLITE_ROOT "${_gee_tflite_root}" CACHE INTERNAL
       "Resolved TensorFlow Lite prebuilt dependency bundle root." FORCE)
     if(TARGET tensorflow-lite::tensorflow-lite AND NOT TARGET tensorflow-lite)
       add_library(tensorflow-lite ALIAS tensorflow-lite::tensorflow-lite)
     endif()
   else()
-    if(_ges_tflite_root)
-      message(WARNING "Ignoring incomplete prebuilt TensorFlow Lite bundle at ${_ges_tflite_root}; falling back to CPM.")
+    if(_gee_tflite_root)
+      message(WARNING "Ignoring incomplete prebuilt TensorFlow Lite bundle at ${_gee_tflite_root}; falling back to CPM.")
     endif()
-    set(GES_USING_PREBUILT_TFLITE OFF CACHE INTERNAL
+    set(GEE_USING_PREBUILT_TFLITE OFF CACHE INTERNAL
       "TensorFlow Lite is provided by a prebuilt dependency bundle." FORCE)
-    set(GES_RESOLVED_PREBUILT_TFLITE_ROOT "" CACHE INTERNAL
+    set(GEE_RESOLVED_PREBUILT_TFLITE_ROOT "" CACHE INTERNAL
       "Resolved TensorFlow Lite prebuilt dependency bundle root." FORCE)
     # Keep TFLite's implementation dependencies static. The patched upstream
-    # target selects its own linkage from GES_ENGINE_BUNDLE_LINKAGE, so a
+    # target selects its own linkage from GEE_ENGINE_BUNDLE_LINKAGE, so a
     # shared tensorflow-lite contains these PIC objects without exporting a
     # large graph of private CMake targets.
-    set(_ges_build_shared_libs "${BUILD_SHARED_LIBS}")
-    set(_ges_position_independent_code "${CMAKE_POSITION_INDEPENDENT_CODE}")
-    if(GES_ENGINE_BUNDLE_LINKAGE STREQUAL "shared" OR
-       (NOT GES_ENGINE_BUNDLE_LINKAGE AND BUILD_SHARED_LIBS))
-      set(GES_TFLITE_LIBRARY_TYPE SHARED)
+    set(_gee_build_shared_libs "${BUILD_SHARED_LIBS}")
+    set(_gee_position_independent_code "${CMAKE_POSITION_INDEPENDENT_CODE}")
+    if(GEE_ENGINE_BUNDLE_LINKAGE STREQUAL "shared" OR
+       (NOT GEE_ENGINE_BUNDLE_LINKAGE AND BUILD_SHARED_LIBS))
+      set(GEE_TFLITE_LIBRARY_TYPE SHARED)
     else()
-      set(GES_TFLITE_LIBRARY_TYPE STATIC)
+      set(GEE_TFLITE_LIBRARY_TYPE STATIC)
     endif()
     set(BUILD_SHARED_LIBS OFF)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     CPMGetPackage(tflite)
-    set(BUILD_SHARED_LIBS "${_ges_build_shared_libs}")
-    set(CMAKE_POSITION_INDEPENDENT_CODE "${_ges_position_independent_code}")
-    if(GES_PREPARE_DEPENDENCY_BUNDLE)
-      ges_define_dependency_bundle_target(REQUIRED tensorflow-lite)
+    set(BUILD_SHARED_LIBS "${_gee_build_shared_libs}")
+    set(CMAKE_POSITION_INDEPENDENT_CODE "${_gee_position_independent_code}")
+    if(GEE_PREPARE_DEPENDENCY_BUNDLE)
+      gee_define_dependency_bundle_target(REQUIRED tensorflow-lite)
     endif()
     if(ANDROID)
       # XNNPACK calls Android logging APIs directly. When TFLite is collected
       # into a shared dependency bundle, propagate liblog to the XNNPACK
       # shared target instead of relying on the final application link.
-      find_library(_ges_android_log_library log REQUIRED)
-      foreach(_ges_xnnpack_target XNNPACK xnnpack)
-        if(TARGET ${_ges_xnnpack_target})
-          target_link_libraries(${_ges_xnnpack_target}
-            PRIVATE "${_ges_android_log_library}")
+      find_library(_gee_android_log_library log REQUIRED)
+      foreach(_gee_xnnpack_target XNNPACK xnnpack)
+        if(TARGET ${_gee_xnnpack_target})
+          target_link_libraries(${_gee_xnnpack_target}
+            PRIVATE "${_gee_android_log_library}")
         endif()
       endforeach()
     endif()
   endif()
 elseif(BUILD_ONNX_ENGINE)
-  if(GES_PREBUILT_ORT_ROOT AND EXISTS "${GES_PREBUILT_ORT_ROOT}/lib/cmake/onnxruntime/onnxruntimeConfig.cmake")
+  if(GEE_PREBUILT_ORT_ROOT AND EXISTS "${GEE_PREBUILT_ORT_ROOT}/lib/cmake/onnxruntime/onnxruntimeConfig.cmake")
     # The selected artifact root is part of the build configuration. Do not
     # let CMake reuse a package directory cached for an older bundle key.
     unset(onnxruntime_DIR CACHE)
     find_package(onnxruntime CONFIG REQUIRED
-      PATHS "${GES_PREBUILT_ORT_ROOT}"
+      PATHS "${GEE_PREBUILT_ORT_ROOT}"
       NO_DEFAULT_PATH
       NO_CMAKE_FIND_ROOT_PATH)
   else()
-    if(GES_PREBUILT_ORT_ROOT)
-      message(WARNING "Ignoring incomplete prebuilt ONNX Runtime bundle at ${GES_PREBUILT_ORT_ROOT}; falling back to CPM.")
+    if(GEE_PREBUILT_ORT_ROOT)
+      message(WARNING "Ignoring incomplete prebuilt ONNX Runtime bundle at ${GEE_PREBUILT_ORT_ROOT}; falling back to CPM.")
     endif()
     set(onnxruntime_BUILD_UNIT_TESTS OFF)
 
@@ -181,7 +181,7 @@ elseif(BUILD_ONNX_ENGINE)
       set(onnxruntime_ENABLE_TRAINING OFF)
       set(onnxruntime_ENABLE_CPU_FP16_OPS OFF)
       set(onnxruntime_USE_TENSORRT_BUILTIN_PARSER OFF)
-    elseif(GES_ENGINE_BUNDLE_LINKAGE STREQUAL "static")
+    elseif(GEE_ENGINE_BUNDLE_LINKAGE STREQUAL "static")
       set(onnxruntime_BUILD_SHARED_LIB OFF)
     else()
       set(onnxruntime_BUILD_SHARED_LIB ON)
@@ -199,13 +199,13 @@ elseif(BUILD_ONNX_ENGINE)
     # onnx_proto also fails to link on Windows: the generated protobuf
     # `*_default_instance_` symbols are data, which CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS
     # cannot export.
-    set(_ges_build_shared_libs "${BUILD_SHARED_LIBS}")
+    set(_gee_build_shared_libs "${BUILD_SHARED_LIBS}")
     set(BUILD_SHARED_LIBS OFF)
     CPMGetPackage(onnxruntime)
-    set(BUILD_SHARED_LIBS "${_ges_build_shared_libs}")
-    if(GES_PREPARE_DEPENDENCY_BUNDLE AND NOT EMSCRIPTEN)
-      if(GES_ENGINE_BUNDLE_LINKAGE STREQUAL "static")
-        ges_define_dependency_bundle_target(
+    set(BUILD_SHARED_LIBS "${_gee_build_shared_libs}")
+    if(GEE_PREPARE_DEPENDENCY_BUNDLE AND NOT EMSCRIPTEN)
+      if(GEE_ENGINE_BUNDLE_LINKAGE STREQUAL "static")
+        gee_define_dependency_bundle_target(
           REQUIRED
             onnxruntime_common
             onnxruntime_flatbuffers
@@ -227,7 +227,7 @@ elseif(BUILD_ONNX_ENGINE)
             onnxruntime_mlas_x86_64
         )
       else()
-        ges_define_dependency_bundle_target(REQUIRED onnxruntime)
+        gee_define_dependency_bundle_target(REQUIRED onnxruntime)
       endif()
     endif()
   endif()

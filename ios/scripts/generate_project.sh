@@ -10,4 +10,4 @@ fi
 
 cd "$ROOT_DIR"
 xcodegen generate
-echo "Generated Xcode project at $ROOT_DIR/GigaEdgeSpenchSDK.xcodeproj"
+echo "Generated Xcode project at $ROOT_DIR/GigaEdgeEnhanceSDK.xcodeproj"

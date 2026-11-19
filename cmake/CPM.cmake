@@ -115,8 +115,8 @@ cpm_set_policies()
 option(CPM_USE_LOCAL_PACKAGES "Always try to use `find_package` to get dependencies"
        $ENV{CPM_USE_LOCAL_PACKAGES}
 )
-option(CPM_LOCAL_PACKAGES_ONLY "Only use `find_package` to get dependencies"
-       $ENV{CPM_LOCAL_PACKAGES_ONLY}
+option(CPM_LOCAL_PACKAGEE_ONLY "Only use `find_package` to get dependencies"
+       $ENV{CPM_LOCAL_PACKAGEE_ONLY}
 )
 option(CPM_DOWNLOAD_ALL "Always download dependencies from source" $ENV{CPM_DOWNLOAD_ALL})
 option(CPM_DONT_UPDATE_MODULE_PATH "Don't update the module path to allow using find_package"
@@ -812,7 +812,7 @@ function(CPMAddPackage)
   endif()
 
   if(NOT CPM_ARGS_FORCE)
-    if(CPM_USE_LOCAL_PACKAGES OR CPM_LOCAL_PACKAGES_ONLY)
+    if(CPM_USE_LOCAL_PACKAGES OR CPM_LOCAL_PACKAGEE_ONLY)
       cpm_find_package(${CPM_ARGS_NAME} "${CPM_ARGS_VERSION}" ${CPM_ARGS_FIND_PACKAGE_ARGUMENTS})
 
       if(CPM_PACKAGE_FOUND)
@@ -820,7 +820,7 @@ function(CPMAddPackage)
         return()
       endif()
 
-      if(CPM_LOCAL_PACKAGES_ONLY)
+      if(CPM_LOCAL_PACKAGEE_ONLY)
         message(
           SEND_ERROR
             "${CPM_INDENT} ${CPM_ARGS_NAME} not found via find_package(${CPM_ARGS_NAME} ${CPM_ARGS_VERSION})"

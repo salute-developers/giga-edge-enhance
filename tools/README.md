@@ -2,7 +2,7 @@
 
 Run every command from the repository root. The scripts in this directory are
 the supported interface for configuring, building, testing, installing, and
-packaging GigaEdge Spench. Prefer them to ad hoc CMake, Docker, Gradle, Xcode, or
+packaging GigaEdge Enhance. Prefer them to ad hoc CMake, Docker, Gradle, Xcode, or
 npm command chains.
 
 Docker is the default for native Linux, WebAssembly, Web, and Android work.

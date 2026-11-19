@@ -11,7 +11,7 @@ type SettingDefinition = {
     description: string;
 };
 
-export const SETTINGS_STORAGE_KEY = 'gigaedge-spench-demo-settings';
+export const SETTINGS_STORAGE_KEY = 'gigaedge-enhance-demo-settings';
 
 export const DEFAULT_SETTINGS: Settings = {
     lowPerformanceWindowSeconds: 1,

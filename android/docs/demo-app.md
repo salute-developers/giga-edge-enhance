@@ -38,14 +38,14 @@ Supported file input is **mono 16-bit PCM WAV**; output is WAV. The demo require
 
 When **Record live input/output WAV dumps** is enabled, the demo writes to app-internal storage:
 
-- `files/gigaedge-spench-live-input.wav`
-- `files/gigaedge-spench-live-output.wav`
+- `files/gigaedge-enhance-live-input.wav`
+- `files/gigaedge-enhance-live-output.wav`
 
 Copy them off the device with:
 
 ```bash
-adb exec-out run-as com.gigaedge.spench.demo cat files/gigaedge-spench-live-input.wav > gigaedge-spench-live-input.wav
-adb exec-out run-as com.gigaedge.spench.demo cat files/gigaedge-spench-live-output.wav > gigaedge-spench-live-output.wav
+adb exec-out run-as com.gigaedge.enhance.demo cat files/gigaedge-enhance-live-input.wav > gigaedge-enhance-live-input.wav
+adb exec-out run-as com.gigaedge.enhance.demo cat files/gigaedge-enhance-live-output.wav > gigaedge-enhance-live-output.wav
 ```
 
 ## Emulator microphone caveats

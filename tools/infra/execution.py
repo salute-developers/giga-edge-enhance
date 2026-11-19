@@ -25,7 +25,7 @@ def ensure_container_image(container_stage: str) -> str:
         return image
 
     remote_image = os.environ.get(
-        f"GES_CONTAINER_IMAGE_{container_stage.upper().replace('-', '_')}")
+        f"GEE_CONTAINER_IMAGE_{container_stage.upper().replace('-', '_')}")
     if remote_image:
         print(f"Restoring {container_stage} toolchain image: {remote_image}")
         if subprocess.run(["docker", "pull", remote_image]).returncode == 0:
@@ -104,11 +104,11 @@ def run(command: list[str], *, container_stage: str | None = None,
         "GIT_CONFIG_KEY_0": "safe.directory",
         "GIT_CONFIG_VALUE_0": "*",
     }
-    if header := os.environ.get("GES_GITHUB_AUTH_HEADER"):
-        container_git_environment["GES_GITHUB_AUTH_HEADER"] = header
+    if header := os.environ.get("GEE_GITHUB_AUTH_HEADER"):
+        container_git_environment["GEE_GITHUB_AUTH_HEADER"] = header
     add_github_git_auth(container_git_environment)
     container_environment = os.environ.copy()
-    container_environment.pop("GES_GITHUB_AUTH_HEADER", None)
+    container_environment.pop("GEE_GITHUB_AUTH_HEADER", None)
     container_environment.update(container_git_environment)
     for name in sorted(container_git_environment):
         container_command.extend(("--env", name))
@@ -128,7 +128,7 @@ def run(command: list[str], *, container_stage: str | None = None,
 
 def add_github_git_auth(environment: dict[str, str]) -> None:
     """Add ephemeral GitHub HTTPS authentication without persisting credentials."""
-    header = environment.pop("GES_GITHUB_AUTH_HEADER", "")
+    header = environment.pop("GEE_GITHUB_AUTH_HEADER", "")
     if not header:
         return
     try:

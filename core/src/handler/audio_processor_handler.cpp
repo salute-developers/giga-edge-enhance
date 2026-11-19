@@ -4,7 +4,7 @@
 
 #include "src/logger.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 void AudioProcItemWithStats::stats_configure(uint32_t sample_rate, double window_seconds,
                                              std::initializer_list<MetricDef> metrics) {
@@ -141,9 +141,9 @@ void AudioProcLC::on_stats_window(const std::vector<std::pair<std::string, util:
 
 AudioProcessorHandler::AudioProcessorHandler(std::shared_ptr<AudioProcessorConfig> config)
     : BaseAudioHandler(std::move(config)) {
-  GigaEdgeSpenchRetCode ret_code = restart();
+  GigaEdgeEnhanceRetCode ret_code = restart();
 
-  if (ret_code != GigaEdgeSpenchRetCode::SUCCESS) {
+  if (ret_code != GigaEdgeEnhanceRetCode::SUCCESS) {
     spdlog::error("Due to errors an audio processing handler module could not be created! ret_code: ",
                   std::to_string(static_cast<int32_t>(ret_code)));
     throw std::runtime_error("Due to errors an audio processing handler module could not be created! ret_code: " +
@@ -152,7 +152,7 @@ AudioProcessorHandler::AudioProcessorHandler(std::shared_ptr<AudioProcessorConfi
   spdlog::debug("Audio Processing container created!");
 }
 
-GigaEdgeSpenchRetCode AudioProcessorHandler::do_start() { return GigaEdgeSpenchRetCode::SUCCESS; }
+GigaEdgeEnhanceRetCode AudioProcessorHandler::do_start() { return GigaEdgeEnhanceRetCode::SUCCESS; }
 
 void AudioProcessorHandler::do_stop() {
   // Keep the chain by default; clear if you want a pristine restart():
@@ -365,10 +365,10 @@ std::vector<float>& AudioProcessorHandler::process(const std::vector<float>& in,
   return out;
 }
 
-GigaEdgeSpenchRetCode AudioProcessorHandler::process_frame(struct gigaedge::spench::Context<float>*,
-                                                           const std::vector<float>& input_audio_frame,
-                                                           std::vector<float>& enhanced_audio_frame) {
+GigaEdgeEnhanceRetCode AudioProcessorHandler::process_frame(struct gigaedge::enhance::Context<float>*,
+                                                            const std::vector<float>& input_audio_frame,
+                                                            std::vector<float>& enhanced_audio_frame) {
   (void)process(input_audio_frame, enhanced_audio_frame);
-  return GigaEdgeSpenchRetCode::SUCCESS;
+  return GigaEdgeEnhanceRetCode::SUCCESS;
 }
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

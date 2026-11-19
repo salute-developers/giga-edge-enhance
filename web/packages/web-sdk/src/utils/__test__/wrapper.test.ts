@@ -1,11 +1,11 @@
 // packages/web-sdk/src/utils/__tests__/wrapper.test.ts
-import { AbstractGigaEdgeSpenchWrapper } from '../wrapper';
+import { AbstractGigaEdgeEnhanceWrapper } from '../wrapper';
 
 /**
  * Concrete test implementation that exposes the protected members
- * of AbstractGigaEdgeSpenchWrapper for the test harness.
+ * of AbstractGigaEdgeEnhanceWrapper for the test harness.
  */
-class TestWrapper extends AbstractGigaEdgeSpenchWrapper {
+class TestWrapper extends AbstractGigaEdgeEnhanceWrapper {
     /* ──────────────────────────────────────────────────────────────────────
      *  Required abstract members.
      * ────────────────────────────────────────────────────────────────────── */
@@ -45,7 +45,7 @@ class TestWrapper extends AbstractGigaEdgeSpenchWrapper {
     }
 }
 
-describe('AbstractGigaEdgeSpenchWrapper', () => {
+describe('AbstractGigaEdgeEnhanceWrapper', () => {
     let wrapper: TestWrapper;
 
     beforeEach(() => {

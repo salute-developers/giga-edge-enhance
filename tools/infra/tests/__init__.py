@@ -1,1 +1,1 @@
-"""Unit tests for the GigaEdgeSpench infrastructure command."""
+"""Unit tests for the GigaEdgeEnhance infrastructure command."""

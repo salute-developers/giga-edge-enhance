@@ -1,12 +1,12 @@
 {
-  "name": "GigaEdgeSpench Native",
+  "name": "GigaEdgeEnhance Native",
   "build": {
     "dockerfile": "../dockerfiles/Dockerfile.base",
     "context": ".."
   },
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "mounts": [
-    "source=gigaedge-spench-cpm,target=/workspaces/${localWorkspaceFolderBasename}/out/cache/cpm,type=volume"
+    "source=gigaedge-enhance-cpm,target=/workspaces/${localWorkspaceFolderBasename}/out/cache/cpm,type=volume"
   ],
   "customizations": {
     "vscode": {

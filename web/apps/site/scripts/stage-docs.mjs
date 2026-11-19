@@ -29,12 +29,12 @@ const repositoryDocumentation = [
     'android/docs/threading.md',
     'android/docs/troubleshooting.md',
     'ios/README.md',
-    'ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/ErrorHandling.md',
-    'ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/ModelBundles.md',
-    'ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/QuickStart.md',
-    'ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/GigaEdgeSpenchAudioKit.md',
-    'ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/Telemetry.md',
-    'ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/ThreadingAndLifecycle.md',
+    'ios/Sources/EnhanceAudioKit/Documentation.docc/ErrorHandling.md',
+    'ios/Sources/EnhanceAudioKit/Documentation.docc/ModelBundles.md',
+    'ios/Sources/EnhanceAudioKit/Documentation.docc/QuickStart.md',
+    'ios/Sources/EnhanceAudioKit/Documentation.docc/EnhanceAudioKit.md',
+    'ios/Sources/EnhanceAudioKit/Documentation.docc/Telemetry.md',
+    'ios/Sources/EnhanceAudioKit/Documentation.docc/ThreadingAndLifecycle.md',
     'web/README.md',
     'web/apps/site/README.md',
     'web/packages/web-sdk/README.md',
@@ -59,7 +59,7 @@ await cp(resolve(siteDirectory, 'docs'), generatedDirectory, { recursive: true }
 await cp(resolve(repositoryRoot, 'LICENSE'), resolve(sourceDirectory, 'LICENSE.md'));
 // README.md references this file from the repository root. The staged copy
 // resolves that same relative URL from .generated-docs/source/.
-await cp(resolve(repositoryRoot, 'spench_logo.svg'), resolve(sourceDirectory, 'spench_logo.svg'));
+await cp(resolve(repositoryRoot, 'enhance_logo.svg'), resolve(sourceDirectory, 'enhance_logo.svg'));
 await cp(coiServiceWorkerSource, coiServiceWorkerDestination);
 
 for (const repositoryPath of repositoryDocumentation) {

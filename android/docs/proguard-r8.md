@@ -1,18 +1,18 @@
 # ProGuard / R8
 
-**You do not need to add any manual keep rules for the GigaEdge Spench SDK.** The SDK ships consumer ProGuard
-rules that are applied automatically to your app when you depend on `gigaedge-spench-sdk`.
+**You do not need to add any manual keep rules for the GigaEdge Enhance SDK.** The SDK ships consumer ProGuard
+rules that are applied automatically to your app when you depend on `gigaedge-enhance-sdk`.
 
 ## What ships
 
-`gigaedge-spench-sdk` declares `consumerProguardFiles("consumer-rules.pro")` in its Gradle config, so R8/
+`gigaedge-enhance-sdk` declares `consumerProguardFiles("consumer-rules.pro")` in its Gradle config, so R8/
 ProGuard in the consuming app automatically honors `sdk/consumer-rules.pro`:
 
 ```proguard
--keep class com.gigaedge.spench.NativeTelemetry { *; }
--keep class com.gigaedge.spench.LowPerformanceEvent { *; }
+-keep class com.gigaedge.enhance.NativeTelemetry { *; }
+-keep class com.gigaedge.enhance.LowPerformanceEvent { *; }
 
--keepclasseswithmembers class com.gigaedge.spench.Processor {
+-keepclasseswithmembers class com.gigaedge.enhance.Processor {
     native <methods>;
 }
 ```

@@ -15,7 +15,7 @@ type PipelineElement = CommonPipelineElement | AECElement;
 
 type Element = [cacheKey: string, PipelineElement];
 
-export abstract class AbstractGigaEdgeSpenchWrapper {
+export abstract class AbstractGigaEdgeEnhanceWrapper {
     protected readonly pipeline: Element[] = [];
 
     protected dataPtr = 0;

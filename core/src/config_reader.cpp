@@ -11,7 +11,7 @@
 
 #include "util/echo/echo_canceler.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 namespace {
 
 // Local helpers kept in this TU to avoid exposing yaml-cpp in the header.
@@ -518,4 +518,4 @@ uint16_t AecConfig::frame_len() const {
   return ::util::echo::EchoCancelerType::speex;
 }
 
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

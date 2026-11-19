@@ -1,4 +1,4 @@
-# GigaEdge Spench Web SDK workspace
+# GigaEdge Enhance Web SDK workspace
 
 This npm workspace contains the distributable Web SDK and the combined documentation/demo website.
 
@@ -41,7 +41,7 @@ cd web
 npm run stage:wasm:release
 npm run test:web-sdk
 npm run build:web-sdk
-npm run build --workspace=@gigaedge/spench-site
+npm run build --workspace=@gigaedge/enhance-site
 ```
 
 Generated WebAssembly assets live under `packages/web-sdk/generated/wasm/` and are not committed.
@@ -52,7 +52,7 @@ the release manifest before packaging.
 
 ```bash
 cd web
-npm start --workspace=@gigaedge/spench-site
+npm start --workspace=@gigaedge/enhance-site
 ```
 
 The demo imports the workspace SDK during development and packs the SDK before a production build.

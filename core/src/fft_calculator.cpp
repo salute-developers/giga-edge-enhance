@@ -7,7 +7,7 @@
 
 #include "src/context.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 namespace fe {
 template <typename T>
 FftCalculator<T>::FftCalculator(const uint32_t nfft, const uint32_t feature_size, const uint32_t frames_num_for_stft)
@@ -76,4 +76,4 @@ FftCalculator<T>::~FftCalculator() {}
 
 template class FftCalculator<fft::BufferType>;
 }  // namespace fe
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

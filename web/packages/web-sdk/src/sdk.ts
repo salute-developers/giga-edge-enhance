@@ -1,6 +1,6 @@
 /* eslint-disable no-shadow */
-import GigaEdgeSpenchError from './utils/error';
-import { SetFeaturesFailedError, GigaEdgeSpenchAudioNode, GigaEdgeSpenchAudioNodeImpl } from './audioNode';
+import GigaEdgeEnhanceError from './utils/error';
+import { SetFeaturesFailedError, GigaEdgeEnhanceAudioNode, GigaEdgeEnhanceAudioNodeImpl } from './audioNode';
 import { Features, getSettingsWithDefaults, ModelsTmpl, Settings } from './utils/common';
 import createLogger, { ExternalLogger, Logger, Verbosity } from './utils/logger';
 import { createTelemetry, Telemetry, SendMetricFunction } from './utils/telemetry';
@@ -9,7 +9,7 @@ import Loader, { LoadError } from './loader';
 import { DEFAULT_MODELS, getDefaultModels } from './utils/resources';
 
 /**
- * Configuration options used to create a {@link GigaEdgeSpenchSDK} instance.
+ * Configuration options used to create a {@link GigaEdgeEnhanceSDK} instance.
  *
  * @template M - The model template used by the SDK.
  * @property {ExternalLogger} [logger] - External logger to use.
@@ -19,7 +19,7 @@ import { DEFAULT_MODELS, getDefaultModels } from './utils/resources';
  * @property {Partial<M>} [models] - Custom models to override defaults.
  * @property {Partial<Settings>} [settings] - Custom settings to override defaults.
  */
-type CreateGigaEdgeSpenchParams<M extends ModelsTmpl> = {
+type CreateGigaEdgeEnhanceParams<M extends ModelsTmpl> = {
     logger?: ExternalLogger;
     sendMetric?: SendMetricFunction;
     preloadFeatures?: Partial<Features<M>>;
@@ -29,11 +29,11 @@ type CreateGigaEdgeSpenchParams<M extends ModelsTmpl> = {
 };
 
 /**
- * Represents the main SDK class for interacting with GigaEdgeSpench features.
+ * Represents the main SDK class for interacting with GigaEdgeEnhance features.
  *
  * @template M - The model template for the SDK, defaulting to {@link DEFAULT_MODELS}.
  */
-class GigaEdgeSpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
+class GigaEdgeEnhanceSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
     #ctx: AudioContext;
 
     #logger: Logger;
@@ -45,7 +45,7 @@ class GigaEdgeSpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
     #settings: Settings;
 
     /**
-     * Creates a new instance of {@link GigaEdgeSpenchSDK}.
+     * Creates a new instance of {@link GigaEdgeEnhanceSDK}.
      *
      * @param ctx - The {@link AudioContext} to use for the SDK.
      * @param logger - The external logger instance.
@@ -77,11 +77,11 @@ class GigaEdgeSpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
     }
 
     /**
-     * Factory method to create a new {@link GigaEdgeSpenchSDK} instance.
+     * Factory method to create a new {@link GigaEdgeEnhanceSDK} instance.
      *
      * @param ctx - The {@link AudioContext} to use.
-     * @param params - Optional configuration parameters {@link CreateGigaEdgeSpenchParams}.
-     * @returns A new {@link GigaEdgeSpenchSDK} instance.
+     * @param params - Optional configuration parameters {@link CreateGigaEdgeEnhanceParams}.
+     * @returns A new {@link GigaEdgeEnhanceSDK} instance.
      */
     static create<M extends ModelsTmpl = typeof DEFAULT_MODELS>(
         ctx: AudioContext,
@@ -92,20 +92,20 @@ class GigaEdgeSpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
             sendMetric,
             models: rawModels = DEFAULT_MODELS as any,
             settings: rawSettings,
-        }: CreateGigaEdgeSpenchParams<M> = {},
-    ): GigaEdgeSpenchSDK<typeof DEFAULT_MODELS & M> {
+        }: CreateGigaEdgeEnhanceParams<M> = {},
+    ): GigaEdgeEnhanceSDK<typeof DEFAULT_MODELS & M> {
         const logger = createLogger(loggerVerbosity, externalLogger);
         const models = getDefaultModels(rawModels);
         const telemetry = createTelemetry(sendMetric);
         const settings = getSettingsWithDefaults(rawSettings);
-        const instance = new GigaEdgeSpenchSDK(ctx, logger, telemetry, settings, models);
+        const instance = new GigaEdgeEnhanceSDK(ctx, logger, telemetry, settings, models);
 
         if (preloadFeatures) {
             instance.#loader.preload(preloadFeatures, settings);
         }
 
         logger.info(
-            `GigaEdgeSpenchSDK v${LIB_VERSION} created.`,
+            `GigaEdgeEnhanceSDK v${LIB_VERSION} created.`,
             `Logger verbosity: ${loggerVerbosity}, ${!externalLogger ? 'not ' : ''}connected with external logger.`,
             Object.keys(preloadFeatures || {}).length > 0
                 ? `Preloading features: ${JSON.stringify(preloadFeatures)}.`
@@ -118,26 +118,26 @@ class GigaEdgeSpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
     }
 
     /**
-     * Creates an {@link GigaEdgeSpenchAudioNode} with optional features and settings.
+     * Creates an {@link GigaEdgeEnhanceAudioNode} with optional features and settings.
      *
      * @param features - Features to enable on the node.
      * @param rawSettings - Optional additional settings to merge with the SDK defaults.
-     * @returns A promise that resolves to an {@link GigaEdgeSpenchAudioNode} or an error type.
+     * @returns A promise that resolves to an {@link GigaEdgeEnhanceAudioNode} or an error type.
      */
     async createAudioNode(
         features?: Partial<Features<M>>,
         rawSettings?: Partial<Settings>,
-    ): Promise<GigaEdgeSpenchAudioNode<M> | LoadError | SetFeaturesFailedError> {
+    ): Promise<GigaEdgeEnhanceAudioNode<M> | LoadError | SetFeaturesFailedError> {
         const settings = getSettingsWithDefaults({ ...this.#settings, ...(rawSettings || {}) });
         this.#loader.preload(features || {}, settings);
 
-        const workletLoad = await this.#loader.loadGigaEdgeSpenchWorklet(settings);
+        const workletLoad = await this.#loader.loadGigaEdgeEnhanceWorklet(settings);
 
         if (workletLoad instanceof LoadError) {
             return workletLoad;
         }
 
-        const node = new GigaEdgeSpenchAudioNodeImpl<M>({
+        const node = new GigaEdgeEnhanceAudioNodeImpl<M>({
             loader: this.#loader,
             ctx: this.#ctx,
             logger: this.#logger,
@@ -152,7 +152,7 @@ class GigaEdgeSpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
         try {
             const res = await node.setFeatures(features);
 
-            if (res instanceof GigaEdgeSpenchError) {
+            if (res instanceof GigaEdgeEnhanceError) {
                 node.destroy();
 
                 return res;
@@ -166,4 +166,4 @@ class GigaEdgeSpenchSDK<M extends ModelsTmpl = typeof DEFAULT_MODELS> {
     }
 }
 
-export default GigaEdgeSpenchSDK;
+export default GigaEdgeEnhanceSDK;

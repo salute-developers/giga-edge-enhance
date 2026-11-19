@@ -1,4 +1,4 @@
-name: Restore GigaEdgeSpench dependency bundle
+name: Restore GigaEdgeEnhance dependency bundle
 description: Restore one concrete engine bundle from GHCR with ORAS.
 
 inputs:
@@ -35,7 +35,7 @@ runs:
     - name: Restore dependency OCI artifact
       shell: bash
       env:
-        GES_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        GEE_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
         TARGET: ${{ inputs.target }}
         DOCKER_CONFIG: ${{ runner.temp }}/gdn-oras
       run: |

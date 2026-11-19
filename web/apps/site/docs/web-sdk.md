@@ -4,21 +4,21 @@ title: Web SDK
 
 # Web SDK
 
-`@gigaedge/spench-web-sdk` connects the native pipeline to Web Audio through WebAssembly, an
+`@gigaedge/enhance-web-sdk` connects the native pipeline to Web Audio through WebAssembly, an
 AudioWorklet, and a worker. Install the tested tarball from the
 [distribution](distribution.md) page:
 
 ```bash
-npm install ./gigaedge-spench-web-sdk-1.0.0.tgz
+npm install ./gigaedge-enhance-web-sdk-1.0.0.tgz
 ```
 
 Create an `AudioContext`, then a node. `fast8` is the 8 kHz quantized model. `quality48` is the
 discriminative 48 kHz model and the default above 8 kHz. Select `hybrid48` for the hybrid
-48 kHz model. `custom` is a packed `.ges` model you supply; it is used only when you select
+48 kHz model. `custom` is a packed `.enhance` model you supply; it is used only when you select
 it or when it is the only noise-suppression model configured.
 
 ```ts
-const sdk = GigaEdgeSpenchSDK.create(audioContext, {
+const sdk = GigaEdgeEnhanceSDK.create(audioContext, {
   models: {
     noiseCancellation: { custom: customModel },
   },

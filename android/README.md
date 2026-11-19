@@ -1,6 +1,6 @@
-# GigaEdge Spench Android Audio SDK
+# GigaEdge Enhance Android Audio SDK
 
-GigaEdge Spench is an Android audio SDK for real-time speech processing. It wraps a native GigaEdge Spench C++ core
+GigaEdge Enhance is an Android audio SDK for real-time speech processing. It wraps a native GigaEdge Enhance C++ core
 behind a small Kotlin API: you feed it **mono `FloatArray` PCM**, and it runs optional
 **normalization** (loudness control, noise gate, limiter) and **neural noise-suppression** stages on
 a background worker thread. Audio capture, playback, and file I/O stay in your app — the SDK does the
@@ -18,9 +18,9 @@ DSP.
 ## Quickstart
 
 ```kotlin
-import com.gigaedge.spench.Features
-import com.gigaedge.spench.Processor
-import com.gigaedge.spench.Models
+import com.gigaedge.enhance.Features
+import com.gigaedge.enhance.Processor
+import com.gigaedge.enhance.Models
 
 // sampleRateHz is your input rate in Hz; audio must be mono.
 Processor(context, sampleRateHz).use { processor ->
@@ -39,9 +39,9 @@ Add the SDK and the model modules to your app's dependencies:
 
 ```kotlin
 dependencies {
-    implementation(project(":gigaedge-spench-sdk"))
-    implementation(project(":gigaedge-spench-model-quality48"))
-    implementation(project(":gigaedge-spench-model-hybrid48"))
+    implementation(project(":gigaedge-enhance-sdk"))
+    implementation(project(":gigaedge-enhance-model-quality48"))
+    implementation(project(":gigaedge-enhance-model-hybrid48"))
 }
 ```
 
@@ -70,7 +70,7 @@ Requires JDK 17, Android SDK API 35, and (to build the native library) NDK 29.0.
 3.22.1. Use the Gradle wrapper:
 
 ```bash
-./gradlew :gigaedge-spench-sdk:assembleDebug
+./gradlew :gigaedge-enhance-sdk:assembleDebug
 ./scripts/build.sh          # SDK + models + demo
 ```
 

@@ -12,10 +12,10 @@ class ExecutionTest(unittest.TestCase):
         environment = {
             "GIT_CONFIG_COUNT": "1",
             "GIT_CONFIG_KEY_0": "safe.directory",
-            "GES_GITHUB_AUTH_HEADER": "AUTHORIZATION: basic secret",
+            "GEE_GITHUB_AUTH_HEADER": "AUTHORIZATION: basic secret",
         }
         execution.add_github_git_auth(environment)
-        self.assertNotIn("GES_GITHUB_AUTH_HEADER", environment)
+        self.assertNotIn("GEE_GITHUB_AUTH_HEADER", environment)
         self.assertEqual(environment["GIT_CONFIG_COUNT"], "2")
         self.assertEqual(environment["GIT_CONFIG_KEY_1"],
                          "http.https://github.com/.extraheader")
@@ -24,7 +24,7 @@ class ExecutionTest(unittest.TestCase):
     def test_add_github_git_auth_rejects_invalid_count(self):
         environment = {
             "GIT_CONFIG_COUNT": "invalid",
-            "GES_GITHUB_AUTH_HEADER": "secret",
+            "GEE_GITHUB_AUTH_HEADER": "secret",
         }
         with self.assertRaisesRegex(SystemExit, "must be an integer"):
             execution.add_github_git_auth(environment)
@@ -53,7 +53,7 @@ class ExecutionTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             with mock.patch.object(execution, "ROOT", root), \
-                 mock.patch.object(execution, "ensure_container_image", return_value="gigaedge-spench:test"), \
+                 mock.patch.object(execution, "ensure_container_image", return_value="gigaedge-enhance:test"), \
                  mock.patch.object(execution.subprocess, "run", return_value=completed) as subprocess_run, \
                  mock.patch.object(execution.os, "getuid", return_value=1000), \
                  mock.patch.object(execution.os, "getgid", return_value=1000):
@@ -61,7 +61,7 @@ class ExecutionTest(unittest.TestCase):
                               workdir=root, environment={"KEY": "value"})
         command = subprocess_run.call_args.args[0]
         self.assertEqual(command[:3], ["docker", "run", "--rm"])
-        self.assertIn("gigaedge-spench:test", command)
+        self.assertIn("gigaedge-enhance:test", command)
         self.assertIn("KEY=value", command)
         self.assertEqual(command[-2:], ["cmake", "--version"])
 

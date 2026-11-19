@@ -1,18 +1,18 @@
 <resources>
-    <string name="app_name">GigaEdgeSpench Demo</string>
-    <string name="main_title">GigaEdgeSpench Android Audio SDK Demo</string>
+    <string name="app_name">GigaEdgeEnhance Demo</string>
+    <string name="main_title">GigaEdgeEnhance Android Audio SDK Demo</string>
     <string name="main_help_short">Live monitors mic audio. File mode processes WAV files.</string>
     <string name="settings">Settings</string>
     <string name="settings_help">Applies to the next live or file processor.</string>
     <string name="processing">Processing</string>
-    <string name="processing_chain_fixed">GigaEdgeSpench normalization + noise suppression</string>
+    <string name="processing_chain_fixed">GigaEdgeEnhance normalization + noise suppression</string>
     <string name="noise_suppression_selector_label">Noise suppression</string>
     <string name="noise_suppression_off">Off</string>
     <string name="enable_normalization">Enable normalization (LC + NG + Lim)</string>
     <string name="start_live_demo">Start live demo</string>
     <string name="stop_live_demo">Stop live demo</string>
     <string name="record_live_dumps">Record live input/output WAV dumps</string>
-    <string name="record_live_dumps_hint">Dumps are saved as gigaedge-spench-live-input.wav and gigaedge-spench-live-output.wav in app-internal storage.</string>
+    <string name="record_live_dumps_hint">Dumps are saved as gigaedge-enhance-live-input.wav and gigaedge-enhance-live-output.wav in app-internal storage.</string>
     <string name="record_live_dumps_hint_short">Saves input/output WAV dumps.</string>
     <string name="select_file_and_process">Select file and process</string>
     <string name="stop_file_processing">Stop file processing</string>

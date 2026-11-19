@@ -4,7 +4,7 @@ final class AudioDemoAppUITests: XCTestCase {
     func testSettingsScreenCanSaveUpdatedValues() throws {
         let app = try launchApp()
 
-        app.navigationBars.buttons["Settings"].tap()
+        app.navigationBars.buttons["EnhanceSettings"].tap()
 
         let windowField = app.textFields["lowPerformanceWindowField"]
         let maxProcessingChunkField = app.textFields["maxProcessingChunkSecondsField"]

@@ -116,8 +116,8 @@ if (verifyOnly) {
         throw new Error('Usage: stage-wasm.mjs <debug|release|asan> | --verify [debug|release|asan]');
     }
 
-    const fullBuildDir = await resolveBuildDirectory('GES_WASM_FULL_BUILD_DIR', `wasm-${flavor}`, 'gigaedge-spench');
-    const dspBuildDir = await resolveBuildDirectory('GES_WASM_DSP_BUILD_DIR', `wasm-dsp-${flavor}`, 'gigaedge-spench.dsp');
+    const fullBuildDir = await resolveBuildDirectory('GEE_WASM_FULL_BUILD_DIR', `wasm-${flavor}`, 'gigaedge-enhance');
+    const dspBuildDir = await resolveBuildDirectory('GEE_WASM_DSP_BUILD_DIR', `wasm-dsp-${flavor}`, 'gigaedge-enhance.dsp');
     const tempDir = `${destinationDir}.tmp-${process.pid}`;
 
     await rm(tempDir, { recursive: true, force: true });
@@ -125,8 +125,8 @@ if (verifyOnly) {
 
     try {
         const artifacts = [
-            await stageArtifact(tempDir, 'gigaedge-spench', fullBuildDir),
-            await stageArtifact(tempDir, 'gigaedge-spench.dsp', dspBuildDir),
+            await stageArtifact(tempDir, 'gigaedge-enhance', fullBuildDir),
+            await stageArtifact(tempDir, 'gigaedge-enhance.dsp', dspBuildDir),
         ];
         const dockerfile = await readFile(resolve(rootDir, 'dockerfiles/Dockerfile.web'), 'utf8');
         const emsdkVersion = dockerfile.match(/^ARG EMSDK_VERSION=(.+)$/m)?.[1] || 'unknown';

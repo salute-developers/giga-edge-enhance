@@ -3,17 +3,17 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 
 const ARTIFACTS = [
-    ['gdn-package-native-release-onnx', 'gigaedge-spench-linux-onnx'],
-    ['gdn-package-native-release-tflite', 'gigaedge-spench-linux-tflite'],
-    ['gdn-install-macos-arm64-release-onnx', 'gigaedge-spench-macos-arm64-onnx'],
-    ['gdn-install-macos-arm64-release-tflite', 'gigaedge-spench-macos-arm64-tflite'],
-    ['gdn-install-macos-x86_64-release-onnx', 'gigaedge-spench-macos-x86_64-onnx'],
-    ['gdn-install-macos-x86_64-release-tflite', 'gigaedge-spench-macos-x86_64-tflite'],
-    ['gdn-install-windows-x64-release-onnx', 'gigaedge-spench-windows-x64-onnx'],
-    ['gdn-install-windows-x64-release-tflite', 'gigaedge-spench-windows-x64-tflite'],
-    ['gdn-android', 'gigaedge-spench-android'],
-    ['gdn-ios', 'gigaedge-spench-ios'],
-    ['gdn-web-sdk', 'gigaedge-spench-web-sdk'],
+    ['gdn-package-native-release-onnx', 'gigaedge-enhance-linux-onnx'],
+    ['gdn-package-native-release-tflite', 'gigaedge-enhance-linux-tflite'],
+    ['gdn-install-macos-arm64-release-onnx', 'gigaedge-enhance-macos-arm64-onnx'],
+    ['gdn-install-macos-arm64-release-tflite', 'gigaedge-enhance-macos-arm64-tflite'],
+    ['gdn-install-macos-x86_64-release-onnx', 'gigaedge-enhance-macos-x86_64-onnx'],
+    ['gdn-install-macos-x86_64-release-tflite', 'gigaedge-enhance-macos-x86_64-tflite'],
+    ['gdn-install-windows-x64-release-onnx', 'gigaedge-enhance-windows-x64-onnx'],
+    ['gdn-install-windows-x64-release-tflite', 'gigaedge-enhance-windows-x64-tflite'],
+    ['gdn-android', 'gigaedge-enhance-android'],
+    ['gdn-ios', 'gigaedge-enhance-ios'],
+    ['gdn-web-sdk', 'gigaedge-enhance-web-sdk'],
 ];
 
 function asBuffer(data) {

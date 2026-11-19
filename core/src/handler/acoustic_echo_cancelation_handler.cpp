@@ -6,11 +6,11 @@
 
 #include "src/logger.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 AudioEchoCancelationHandler::AudioEchoCancelationHandler() : BaseAudioHandler(std::make_shared<AecConfig>()) {
   auto ret_code = restart();  // run do_start() after derived members are live
-  if (ret_code != GigaEdgeSpenchRetCode::SUCCESS) {
+  if (ret_code != GigaEdgeEnhanceRetCode::SUCCESS) {
     spdlog::error("Failed to initialize EchoCanceler!  ret_code: {}", std::to_string(static_cast<int32_t>(ret_code)));
     throw std::runtime_error("Failed to initialize EchoCanceler!  ret_code: " +
                              std::to_string(static_cast<int32_t>(ret_code)));
@@ -20,19 +20,19 @@ AudioEchoCancelationHandler::AudioEchoCancelationHandler() : BaseAudioHandler(st
 AudioEchoCancelationHandler::AudioEchoCancelationHandler(std::shared_ptr<AecConfig> config)
     : BaseAudioHandler(std::move(config)) {
   auto ret_code = restart();
-  if (ret_code != GigaEdgeSpenchRetCode::SUCCESS) {
+  if (ret_code != GigaEdgeEnhanceRetCode::SUCCESS) {
     spdlog::error("Failed to initialize EchoCanceler!  ret_code: {}", std::to_string(static_cast<int32_t>(ret_code)));
     throw std::runtime_error("Failed to initialize EchoCanceler!  ret_code: " +
                              std::to_string(static_cast<int32_t>(ret_code)));
   }
 }
 
-GigaEdgeSpenchRetCode AudioEchoCancelationHandler::do_start() {
+GigaEdgeEnhanceRetCode AudioEchoCancelationHandler::do_start() {
   try {
-    auto* aec = dynamic_cast<gigaedge::spench::AecConfig*>(config_.get());
+    auto* aec = dynamic_cast<gigaedge::enhance::AecConfig*>(config_.get());
     if (aec == nullptr) {
       spdlog::error("AEC config reader type mismatch");
-      return GigaEdgeSpenchRetCode::ERR_CONF_FILE_PROBLEM;
+      return GigaEdgeEnhanceRetCode::ERR_CONF_FILE_PROBLEM;
     }
 
     canceler_ = util::echo::EchoCancelerBuilder()
@@ -47,16 +47,16 @@ GigaEdgeSpenchRetCode AudioEchoCancelationHandler::do_start() {
 
     if (!canceler_) {
       spdlog::error("Failed to create EchoCanceler");
-      return GigaEdgeSpenchRetCode::ERR_CONF_FILE_PROBLEM;
+      return GigaEdgeEnhanceRetCode::ERR_CONF_FILE_PROBLEM;
     }
   } catch (const std::exception& e) {
     spdlog::error("{}", e.what());
-    return GigaEdgeSpenchRetCode::ERR_CONF_FILE_PROBLEM;
+    return GigaEdgeEnhanceRetCode::ERR_CONF_FILE_PROBLEM;
   } catch (...) {
-    return GigaEdgeSpenchRetCode::ERR_CONF_FILE_PROBLEM;
+    return GigaEdgeEnhanceRetCode::ERR_CONF_FILE_PROBLEM;
   }
 
-  return GigaEdgeSpenchRetCode::SUCCESS;
+  return GigaEdgeEnhanceRetCode::SUCCESS;
 }
 
 void AudioEchoCancelationHandler::do_stop() { canceler_.reset(); }
@@ -84,21 +84,21 @@ void AudioEchoCancelationHandler::process(const std::vector<float>& mic, const s
   canceler_->process(mic, lbk, out);
 }
 
-GigaEdgeSpenchRetCode AudioEchoCancelationHandler::process_frame(struct gigaedge::spench::Context<float>*,
-                                                                 const std::vector<float>& mic_frame,
-                                                                 const std::vector<float>& lbk_frame,
-                                                                 std::vector<float>& out) {
+GigaEdgeEnhanceRetCode AudioEchoCancelationHandler::process_frame(struct gigaedge::enhance::Context<float>*,
+                                                                  const std::vector<float>& mic_frame,
+                                                                  const std::vector<float>& lbk_frame,
+                                                                  std::vector<float>& out) {
   try {
     if (!canceler_) {
       spdlog::error("EchoCanceler is not initialized!");
-      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     canceler_->process(mic_frame, lbk_frame, out);
-    return GigaEdgeSpenchRetCode::SUCCESS;
+    return GigaEdgeEnhanceRetCode::SUCCESS;
   } catch (const std::exception& e) {
     spdlog::error("{}", e.what());
-    return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+    return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
 }
 
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

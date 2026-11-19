@@ -17,7 +17,7 @@ export type LogLevel = keyof Omit<Logger, 'verbosity'>;
 
 export type ExternalLogger = Partial<Omit<Logger, 'verbosity'>>;
 
-const defaultLoggingFunc: LoggingFunc = (...data) => console.log('[GigaEdgeSpenchSDK]', ...data);
+const defaultLoggingFunc: LoggingFunc = (...data) => console.log('[GigaEdgeEnhanceSDK]', ...data);
 
 function getActiveLogLevels(verbosity: Verbosity): LogLevel[] {
     const levels: LogLevel[] = ['error'];

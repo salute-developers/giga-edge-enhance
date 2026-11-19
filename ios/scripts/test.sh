@@ -2,9 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT="$ROOT_DIR/GigaEdgeSpenchSDK.xcodeproj"
+PROJECT="$ROOT_DIR/GigaEdgeEnhanceSDK.xcodeproj"
 TEST_BUILD_DIR="$ROOT_DIR/build/xcframework/test-derived-data"
-GES_RETRIES="${GES_TEST_RETRIES:-2}"
+GEE_RETRIES="${GEE_TEST_RETRIES:-2}"
 APP_RETRIES="${APP_TEST_RETRIES:-3}"
 
 COMMON_XCODEBUILD_ARGS=(
@@ -66,5 +66,5 @@ fi
 
 DESTINATION="$(python3 "$ROOT_DIR/scripts/prepare_simulator.py")"
 
-run_tests_with_retry "GigaEdgeSpenchAudioKit" "$GES_RETRIES" "$DESTINATION"
+run_tests_with_retry "EnhanceAudioKit" "$GEE_RETRIES" "$DESTINATION"
 run_tests_with_retry "AudioDemoApp" "$APP_RETRIES" "$DESTINATION"

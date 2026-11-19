@@ -1,4 +1,4 @@
-set(GES_DEPS
+set(GEE_DEPS
   util__echo
   util::sound
   yaml-cpp
@@ -6,13 +6,13 @@ set(GES_DEPS
   dsplib
 )
 
-ges_relax_ios_third_party_warnings()
+gee_relax_ios_third_party_warnings()
 
 if(BUILD_RESAMPLER)
   if(EMSCRIPTEN)
     set(WITH_LSR_BINDINGS OFF)
   endif()
-  set(_ges_build_shared_libs "${BUILD_SHARED_LIBS}")
+  set(_gee_build_shared_libs "${BUILD_SHARED_LIBS}")
   CPMGetPackage(soxr)
   # Clang -O1 and above resample differently from Debug and from the GCC Release
   # that produced the golden waveforms. -O0 is last so it overrides Release -O3
@@ -20,12 +20,12 @@ if(BUILD_RESAMPLER)
   if(TARGET soxr AND CMAKE_C_COMPILER_ID STREQUAL "Clang")
     target_compile_options(soxr PRIVATE -O0)
   endif()
-  set(BUILD_SHARED_LIBS "${_ges_build_shared_libs}" CACHE BOOL "Build all libraries dynamically." FORCE)
+  set(BUILD_SHARED_LIBS "${_gee_build_shared_libs}" CACHE BOOL "Build all libraries dynamically." FORCE)
 endif()
 
 add_subdirectory(util EXCLUDE_FROM_ALL)
 
-set(GES_SOURCES
+set(GEE_SOURCES
   src/config_reader.cpp
   src/handler/base_audio_handler.cpp
   src/handler/acoustic_echo_cancelation_handler.cpp
@@ -39,7 +39,7 @@ set(GES_SOURCES
 )
 
 if(BUILD_TFLITE_ENGINE OR BUILD_ONNX_ENGINE OR TARGET onnxruntime::onnxruntime)
-  list(APPEND GES_SOURCES
+  list(APPEND GEE_SOURCES
     src/denoiser_model_adviser.cpp
     src/handler/neural_network_audio_handler.cpp
     src/handler/denoiser_audio_handler.cpp
@@ -52,34 +52,34 @@ if(BUILD_TFLITE_ENGINE OR BUILD_ONNX_ENGINE OR TARGET onnxruntime::onnxruntime)
     src/denoiser.cpp
     src/c_api.cpp
   )
-  list(APPEND GES_DEPS util__packed_model ctpl pocketfft)
+  list(APPEND GEE_DEPS util__packed_model ctpl pocketfft)
 endif()
 
 if(BUILD_TFLITE_ENGINE)
-  list(APPEND GES_DEPS util__tf_lite)
+  list(APPEND GEE_DEPS util__tf_lite)
 elseif(BUILD_ONNX_ENGINE OR TARGET onnxruntime::onnxruntime)
-  list(APPEND GES_DEPS util__onnx)
+  list(APPEND GEE_DEPS util__onnx)
 endif()
 
 if(BUILD_RESAMPLER)
-  list(APPEND GES_DEPS soxr)
+  list(APPEND GEE_DEPS soxr)
 endif()
 
-if(GES_SHARED_LIBS)
-  add_library(gigaedge-spench SHARED ${GES_SOURCES})
+if(GEE_SHARED_LIBS)
+  add_library(gigaedge-enhance SHARED ${GEE_SOURCES})
 else()
-  add_library(gigaedge-spench STATIC ${GES_SOURCES})
+  add_library(gigaedge-enhance STATIC ${GEE_SOURCES})
 endif()
 
 if(APPLE)
-  set_target_properties(gigaedge-spench PROPERTIES INSTALL_RPATH "@loader_path")
+  set_target_properties(gigaedge-enhance PROPERTIES INSTALL_RPATH "@loader_path")
 elseif(UNIX)
-  set_target_properties(gigaedge-spench PROPERTIES INSTALL_RPATH "$ORIGIN")
+  set_target_properties(gigaedge-enhance PROPERTIES INSTALL_RPATH "$ORIGIN")
 endif()
 
-add_library(gigaedge-spench::gigaedge-spench ALIAS gigaedge-spench)
+add_library(gigaedge::enhance ALIAS gigaedge-enhance)
 
-target_include_directories(gigaedge-spench
+target_include_directories(gigaedge-enhance
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -88,25 +88,25 @@ target_include_directories(gigaedge-spench
 )
 
 if(WIN32)
-  target_link_libraries(gigaedge-spench PRIVATE ges_build_config ${GES_DEPS})
+  target_link_libraries(gigaedge-enhance PRIVATE gee_build_config ${GEE_DEPS})
 else()
-  target_link_libraries(gigaedge-spench PRIVATE $<BUILD_INTERFACE:ges_build_config>)
-  foreach(_ges_dep IN LISTS GES_DEPS)
-    target_link_libraries(gigaedge-spench PRIVATE $<BUILD_INTERFACE:${_ges_dep}>)
+  target_link_libraries(gigaedge-enhance PRIVATE $<BUILD_INTERFACE:gee_build_config>)
+  foreach(_gee_dep IN LISTS GEE_DEPS)
+    target_link_libraries(gigaedge-enhance PRIVATE $<BUILD_INTERFACE:${_gee_dep}>)
   endforeach()
 endif()
 
 if(ANDROID)
-  message(STATUS "Applying 16KB page alignment for Android (gigaedge-spench)")
-  target_link_options(gigaedge-spench PRIVATE "-Wl,-z,max-page-size=16384")
+  message(STATUS "Applying 16KB page alignment for Android (gigaedge-enhance)")
+  target_link_options(gigaedge-enhance PRIVATE "-Wl,-z,max-page-size=16384")
 endif()
 
-if(GES_SHARED_LIBS)
+if(GEE_SHARED_LIBS)
   if(BUILD_TESTING)
     message(WARNING "Disabling -fvisibility=hidden for shared library build with tests")
   elseif(CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang)$")
-    target_compile_options(gigaedge-spench PRIVATE -fvisibility=hidden)
-    target_link_options(gigaedge-spench PRIVATE "-Wl,--exclude-libs=ALL")
-    target_compile_definitions(gigaedge-spench PUBLIC GES_DLL=1 GES_DLL_EXPORTS=1)
+    target_compile_options(gigaedge-enhance PRIVATE -fvisibility=hidden)
+    target_link_options(gigaedge-enhance PRIVATE "-Wl,--exclude-libs=ALL")
+    target_compile_definitions(gigaedge-enhance PUBLIC GEE_DLL=1 GEE_DLL_EXPORTS=1)
   endif()
 endif()

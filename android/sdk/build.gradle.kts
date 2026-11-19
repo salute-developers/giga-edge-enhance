@@ -5,10 +5,10 @@ plugins {
 }
 
 android {
-    namespace = "com.gigaedge.spench"
+    namespace = "com.gigaedge.enhance"
     compileSdk = 35
     ndkVersion = "29.0.14206865"
-    testBuildType = providers.gradleProperty("gigaEdgeSpenchAndroidTestBuildType").getOrElse("debug")
+    testBuildType = providers.gradleProperty("gigaEdgeEnhanceAndroidTestBuildType").getOrElse("debug")
 
     defaultConfig {
         minSdk = 26
@@ -17,9 +17,9 @@ android {
             cmake {
                 cppFlags += listOf("-std=c++20")
                 abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
-                targets += listOf("gigaedge-spench-sdk")
-                System.getenv("GES_PREBUILT_DEPENDENCIES_ROOT")?.let {
-                    arguments += "-DGES_PREBUILT_DEPENDENCIES_ROOT=$it"
+                targets += listOf("gigaedge-enhance-sdk")
+                System.getenv("GEE_PREBUILT_DEPENDENCIES_ROOT")?.let {
+                    arguments += "-DGEE_PREBUILT_DEPENDENCIES_ROOT=$it"
                 }
             }
         }

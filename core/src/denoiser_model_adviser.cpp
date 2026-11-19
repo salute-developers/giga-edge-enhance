@@ -5,7 +5,7 @@
 #include "src/context.h"
 #include "src/logger.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 // Explicit template instantiations to keep build times short and allow the
 // implementation to live primarily in the header for other types.
@@ -75,4 +75,4 @@ T DenoiserModelAdviser<T>::calc_snr_estimation(const ComplexNumber<T>& input_spe
 
 template class DenoiserModelAdviser<float>;
 
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

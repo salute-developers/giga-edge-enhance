@@ -1,4 +1,4 @@
-name: GigaEdgeSpenchSDK
+name: GigaEdgeEnhanceSDK
 options:
   minimumXcodeGenVersion: 2.38.0
   deploymentTarget:
@@ -12,21 +12,21 @@ settings:
     CURRENT_PROJECT_VERSION: 1
     # Kept in step with the repository-root VERSION_NUMBER by Release Please. The trailing
     # annotation is what tells its generic updater which value to rewrite.
-    MARKETING_VERSION: 1.0.0 # x-release-please-version
+    MARKETING_VERSION: 2.0.0 # x-release-please-version
     INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright (c) 2026 Giga Edge. MIT License."
     CLANG_CXX_LANGUAGE_STANDARD: "gnu++20"
 targets:
-  GigaEdgeSpenchAudioKit:
+  EnhanceAudioKit:
     type: framework
     platform: iOS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.DenoiserAudioKit
+        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.EnhanceAudioKit
         DEFINES_MODULE: YES
         BUILD_LIBRARY_FOR_DISTRIBUTION: YES
         GENERATE_INFOPLIST_FILE: YES
-        MODULEMAP_PRIVATE_FILE: "$(SRCROOT)/Sources/GigaEdgeSpenchAudioKit/include/GigaEdgeSpenchAudioKit.private.modulemap"
-        OTHER_LDFLAGS: "$(inherited) -lgigaedge-spench"
+        MODULEMAP_PRIVATE_FILE: "$(SRCROOT)/Sources/EnhanceAudioKit/include/EnhanceAudioKit.private.modulemap"
+        OTHER_LDFLAGS: "$(inherited) -lgigaedge-enhance"
         HEADER_SEARCH_PATHS:
           - "$(inherited)"
           - "$(SRCROOT)/../core/include"
@@ -35,65 +35,65 @@ targets:
         LIBRARY_SEARCH_PATHS[sdk=iphoneos*]: "$(SRCROOT)/../out/artifacts/ios/device"
         LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]: "$(SRCROOT)/../out/artifacts/ios/simulator"
     preBuildScripts:
-      - name: Build GigaEdgeSpench core
+      - name: Build GigaEdgeEnhance core
         script: |
           set -euo pipefail
           "$SRCROOT/scripts/build_core.sh"
     sources:
-      - path: Sources/GigaEdgeSpenchAudioKit/Swift
-      - path: Sources/GigaEdgeSpenchAudioKit/ObjC
-      - path: Sources/GigaEdgeSpenchAudioKit/Documentation.docc
-      - path: Sources/GigaEdgeSpenchAudioKit/include/GigaEdgeSpenchAudioKit.h
+      - path: Sources/EnhanceAudioKit/Swift
+      - path: Sources/EnhanceAudioKit/ObjC
+      - path: Sources/EnhanceAudioKit/Documentation.docc
+      - path: Sources/EnhanceAudioKit/include/EnhanceAudioKit.h
         buildPhase: headers
         headerVisibility: public
-      - path: Sources/GigaEdgeSpenchAudioKit/include/PipelineElements.h
+      - path: Sources/EnhanceAudioKit/include/PipelineElements.h
         buildPhase: headers
         headerVisibility: private
-      - path: Sources/GigaEdgeSpenchAudioKit/include/RingBuffer.h
+      - path: Sources/EnhanceAudioKit/include/RingBuffer.h
         buildPhase: headers
         headerVisibility: private
-      - path: Sources/GigaEdgeSpenchAudioKit/include/AtomicOptionalDouble.h
+      - path: Sources/EnhanceAudioKit/include/AtomicOptionalDouble.h
         buildPhase: headers
         headerVisibility: private
-      - path: Sources/GigaEdgeSpenchAudioKit/include/WorkerThreadEvent.h
+      - path: Sources/EnhanceAudioKit/include/WorkerThreadEvent.h
         buildPhase: headers
         headerVisibility: private
-      - path: Sources/GigaEdgeSpenchAudioKit/include/LowPerformanceEventMailbox.h
+      - path: Sources/EnhanceAudioKit/include/LowPerformanceEventMailbox.h
         buildPhase: headers
         headerVisibility: private
 
-  GigaEdgeSpenchModelFast8:
+  EnhanceModelFast8:
     type: bundle
     platform: iOS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.DenoiserModelFast8
+        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.EnhanceModelFast8
         GENERATE_INFOPLIST_FILE: NO
-        INFOPLIST_FILE: Resources/ModelBundles/GigaEdgeSpenchModelFast8-Info.plist
+        INFOPLIST_FILE: Resources/ModelBundles/EnhanceModelFast8-Info.plist
     sources:
-      - path: Resources/Models/fast8.ges
+      - path: Resources/Models/fast8.enhance
 
-  GigaEdgeSpenchModelQuality48:
+  EnhanceModelQuality48:
     type: bundle
     platform: iOS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.DenoiserModelQuality48
+        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.EnhanceModelQuality48
         GENERATE_INFOPLIST_FILE: NO
-        INFOPLIST_FILE: Resources/ModelBundles/GigaEdgeSpenchModelQuality48-Info.plist
+        INFOPLIST_FILE: Resources/ModelBundles/EnhanceModelQuality48-Info.plist
     sources:
-      - path: Resources/Models/quality48.ges
+      - path: Resources/Models/quality48.enhance
 
-  GigaEdgeSpenchModelHybrid48:
+  EnhanceModelHybrid48:
     type: bundle
     platform: iOS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.DenoiserModelHybrid48
+        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.EnhanceModelHybrid48
         GENERATE_INFOPLIST_FILE: NO
-        INFOPLIST_FILE: Resources/ModelBundles/GigaEdgeSpenchModelHybrid48-Info.plist
+        INFOPLIST_FILE: Resources/ModelBundles/EnhanceModelHybrid48-Info.plist
     sources:
-      - path: Resources/Models/hybrid48.ges
+      - path: Resources/Models/hybrid48.enhance
 
   AudioDemoApp:
     type: application
@@ -104,27 +104,27 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Sources/AudioDemoApp/Info.plist
     dependencies:
-      - target: GigaEdgeSpenchAudioKit
-      - target: GigaEdgeSpenchModelFast8
-      - target: GigaEdgeSpenchModelQuality48
-      - target: GigaEdgeSpenchModelHybrid48
+      - target: EnhanceAudioKit
+      - target: EnhanceModelFast8
+      - target: EnhanceModelQuality48
+      - target: EnhanceModelHybrid48
     sources:
       - path: Sources/AudioDemoApp
 
-  GigaEdgeSpenchAudioKitTests:
+  EnhanceAudioKitTests:
     type: bundle.unit-test
     platform: iOS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.DenoiserAudioKitTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.gigaedge.EnhanceAudioKitTests
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
-      - target: GigaEdgeSpenchAudioKit
-      - target: GigaEdgeSpenchModelFast8
-      - target: GigaEdgeSpenchModelQuality48
-      - target: GigaEdgeSpenchModelHybrid48
+      - target: EnhanceAudioKit
+      - target: EnhanceModelFast8
+      - target: EnhanceModelQuality48
+      - target: EnhanceModelHybrid48
     sources:
-      - path: Tests/GigaEdgeSpenchAudioKitTests
+      - path: Tests/EnhanceAudioKitTests
 
   AudioDemoAppUITests:
     type: bundle.ui-testing
@@ -143,18 +143,18 @@ targets:
         - AudioDemoAppUITests
 
 schemes:
-  GigaEdgeSpenchAudioKit:
+  EnhanceAudioKit:
     build:
       targets:
-        GigaEdgeSpenchAudioKit: all
-        GigaEdgeSpenchModelFast8: all
-        GigaEdgeSpenchModelQuality48: all
-        GigaEdgeSpenchModelHybrid48: all
-        GigaEdgeSpenchAudioKitTests: [test]
+        EnhanceAudioKit: all
+        EnhanceModelFast8: all
+        EnhanceModelQuality48: all
+        EnhanceModelHybrid48: all
+        EnhanceAudioKitTests: [test]
     test:
       gatherCoverageData: true
       targets:
-        - GigaEdgeSpenchAudioKitTests
+        - EnhanceAudioKitTests
 
   AudioDemoApp:
     build:

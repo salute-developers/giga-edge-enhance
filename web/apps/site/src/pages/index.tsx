@@ -16,10 +16,10 @@ export default function DemoPage() {
     return (
         <Layout>
             <Head>
-                <title>GigaEdge Spench web audio demo</title>
+                <title>GigaEdge Enhance web audio demo</title>
                 <meta
                     name="description"
-                    content="Process an audio file or microphone signal with the GigaEdge Spench Web SDK in your browser."
+                    content="Process an audio file or microphone signal with the GigaEdge Enhance Web SDK in your browser."
                 />
             </Head>
             <BrowserOnly fallback={<DemoFallback />}>
