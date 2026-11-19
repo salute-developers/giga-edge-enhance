@@ -13,7 +13,8 @@ namespace gigaedge::enhance {
 
 DenoiserAudioHandler::DenoiserAudioHandler(std::shared_ptr<DenoiserConfig> config)
     : NeuralNetworkAudioHandler(std::move(config)), adviser_(nullptr) {
-  float frame_shift_ms = dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms();
+  // Construction guarantees DenoiserConfig; avoid private final-type RTTI across shared libraries.
+  float frame_shift_ms = static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms();
   static constexpr float window_duration_ms = 1000 * 5;
   adviser_ = std::make_unique<DenoiserModelAdviser<float>>(window_duration_ms, frame_shift_ms);
 }
@@ -36,10 +37,10 @@ Context<float>* DenoiserAudioHandler::create_context(uint32_t input_sample_rate,
   ctx->snr_adviser->reset();
 
   if (input_sample_rate == 0) {
-    input_sample_rate = dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq();
+    input_sample_rate = static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq();
   }
   if (output_sample_rate == 0) {
-    output_sample_rate = dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq();
+    output_sample_rate = static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq();
   }
 
   GigaEdgeEnhanceRetCode ret_code = init_audio_streams(ctx, input_sample_rate, output_sample_rate);
@@ -62,14 +63,14 @@ GigaEdgeEnhanceRetCode DenoiserAudioHandler::init_audio_streams(Context<float>* 
     try {
       if (!ctx->input_sound_stream_ptr) {
         ctx->input_sound_stream_ptr = util::sound::build_sound_stream(
-            input_sample_rate, dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq(),
-            dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms(),
+            input_sample_rate, static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq(),
+            static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms(),
             util::sound::TemplateType::input);
       }
       if (!ctx->output_sound_stream_ptr) {
         ctx->output_sound_stream_ptr = util::sound::build_sound_stream(
-            dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq(), output_sample_rate,
-            dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms(),
+            static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq(), output_sample_rate,
+            static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms(),
             util::sound::TemplateType::output);
       }
     } catch (const std::exception& e) {
