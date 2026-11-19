@@ -1,8 +1,10 @@
-# GigaEdge Spench
+# GigaEdge Enhance
 
-![GigaEdge Spench](spench_logo.svg)
+Version 2.0 introduces a breaking rename. See the [upgrade guide](web/apps/site/docs/development/upgrade.md).
 
-GigaEdge Spench is a cross-platform SDK for real-time speech enhancement. It adds neural noise
+![GigaEdge Enhance](enhance_logo.svg)
+
+GigaEdge Enhance is a cross-platform SDK for real-time speech enhancement. It adds neural noise
 suppression, loudness normalization, and, on supported platforms, acoustic echo cancellation to
 native, mobile, and web applications.
 
@@ -17,7 +19,7 @@ Research paper link will be added later.
 | C and C++ | [Quickstart](web/apps/site/docs/core/quickstart.md) |
 | Web | [Web SDK](web/packages/web-sdk/README.md) |
 | Android | [Android SDK](android/README.md) |
-| iOS | [Quick Start](ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/QuickStart.md) |
+| iOS | [Quick Start](ios/Sources/EnhanceAudioKit/Documentation.docc/QuickStart.md) |
 
 The browser demo is published with the documentation site. The
 [capability matrix](web/apps/site/docs/capabilities.md) shows which features and
@@ -25,19 +27,19 @@ models each SDK exposes. Release archives and the Web SDK npm tarball are
 described in [Distribution](web/apps/site/docs/distribution.md).
 
 ```cpp
-#include <spench.h>
+#include <enhance.h>
 
 #include <vector>
 
 int main() {
-  gigaedge::spench::Denoiser denoiser("models/quality48/onnx/config.yaml");
+  gigaedge::enhance::Denoiser denoiser("models/quality48/onnx/config.yaml");
   auto* context = denoiser.CreateContext(48000, 48000);
 
   std::vector<float> input;  // Mono PCM in [-1, 1], at the context input rate.
   std::vector<float> output;
   const auto code = denoiser.ProcessChunk(input, output, context);
   denoiser.DestroyContext(&context);
-  return code < GigaEdgeSpenchRetCode::SUCCESS ? 1 : 0;
+  return code < GigaEdgeEnhanceRetCode::SUCCESS ? 1 : 0;
 }
 ```
 
@@ -51,11 +53,11 @@ Pin a [GitHub Release](https://github.com/salute-developers/gigadenoiser/release
 contains the tested native, Android, iOS, and Web SDK archives. The Web SDK archive is an npm
 tarball. The release workflow does not publish that tarball to the npm registry.
 
-A native archive exports the CMake package `gigaedge-spench`:
+A native archive exports the CMake package `gigaedge-enhance`:
 
 ```cmake
-find_package(gigaedge-spench CONFIG REQUIRED)
-target_link_libraries(your_app PRIVATE gigaedge-spench::gigaedge-spench)
+find_package(gigaedge-enhance CONFIG REQUIRED)
+target_link_libraries(your_app PRIVATE gigaedge::enhance)
 ```
 
 Android and iOS packages are consumed as described in their SDK guides. The repository build can
@@ -93,11 +95,11 @@ Report vulnerabilities privately as described in the [security policy](SECURITY.
 
 ## License
 
-GigaEdge Spench is available under the [MIT License](LICENSE).
+GigaEdge Enhance is available under the [MIT License](LICENSE).
 
 ## Acknowledgement
 
-GigaEdge Spench includes work by people who contributed to the product at different times:
+GigaEdge Enhance includes work by people who contributed to the product at different times:
 
 - Artem Sokolov
 - Artem Khaidarov

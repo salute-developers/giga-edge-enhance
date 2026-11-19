@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.gigaedge.spench.models.hybrid48"
+    namespace = "com.gigaedge.enhance.models.hybrid48"
     compileSdk = 35
 
     defaultConfig {

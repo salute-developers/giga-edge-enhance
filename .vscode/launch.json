@@ -8,7 +8,7 @@
       "program": "${command:cmake.launchTargetPath}",
       "cwd": "${command:cmake.launchTargetDirectory}",
       "MIMode": "lldb",
-      "preLaunchTask": "gigaedge-spench: native debug"
+      "preLaunchTask": "gigaedge-enhance: native debug"
     }
   ]
 }

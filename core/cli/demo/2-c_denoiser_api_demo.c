@@ -1,7 +1,7 @@
 /**
  * \example 2-c_api_demo.c
  */
-#include <spench/c_api.h>
+#include <enhance/c_api.h>
 
 #include "demo/utils_c.h"
 
@@ -19,9 +19,9 @@ int main(int argc, char* argv[]) {
   u_int32_t chunk_size_ms;
   u_int32_t wav_size;
   uint64_t prediction_size = 0;
-  GigaEdgeSpenchRetCode ret_code = SUCCESS;
-  GigaEdgeSpenchDenoise denoiser = NULL;
-  GigaEdgeSpenchContext ctx = NULL;
+  GigaEdgeEnhanceRetCode ret_code = SUCCESS;
+  GigaEdgeEnhanceDenoise denoiser = NULL;
+  GigaEdgeEnhanceContext ctx = NULL;
 
 
   if (argc != 4) {
@@ -47,12 +47,12 @@ int main(int argc, char* argv[]) {
 
   if (ret_code == SUCCESS) {
     // Create an instance on denoiser class with passing configuration file as a parameter.
-    ret_code = GigaEdgeSpenchDenoiseInit(argv[1], &denoiser);
+    ret_code = GigaEdgeEnhanceDenoiseInit(argv[1], &denoiser);
   }
 
   if (ret_code == SUCCESS) {
     // Retrieve a model sample rate value, specified in .yaml file.
-    ret_code = GigaEdgeSpenchDenoiseGetSampleRate(denoiser, &sample_rate);
+    ret_code = GigaEdgeEnhanceDenoiseGetSampleRate(denoiser, &sample_rate);
   }
 
   wav_size = header.subchunk2Size;
@@ -70,11 +70,11 @@ int main(int argc, char* argv[]) {
 
   if (ret_code == SUCCESS) {
     // Create the context for audio stream denoising without the resampling routine.
-    ret_code = GigaEdgeSpenchDenoiseCreateContext(denoiser, &ctx, 0, 0);
+    ret_code = GigaEdgeEnhanceDenoiseCreateContext(denoiser, &ctx, 0, 0);
   }
 
   if (ret_code == SUCCESS) {
-    ret_code = GigaEdgeSpenchDenoiseGetInputFrameSize(denoiser, &input_size);
+    ret_code = GigaEdgeEnhanceDenoiseGetInputFrameSize(denoiser, &input_size);
   }
 
   // Create a vector of chunks of audio data with size chunk_size_ms ms.
@@ -89,8 +89,8 @@ int main(int argc, char* argv[]) {
       float* chunk = chunks[i];
       unsigned char* ret_mem = NULL;
       uint64_t ret_size = 0;
-      ret_code = GigaEdgeSpenchDenoiseProcessChunkFp(denoiser, ctx, (const unsigned char*)chunk,
-                                                     step_size_samples * sizeof(float), &ret_mem, &ret_size);
+      ret_code = GigaEdgeEnhanceDenoiseProcessChunkFp(denoiser, ctx, (const unsigned char*)chunk,
+                                                      step_size_samples * sizeof(float), &ret_mem, &ret_size);
       if (ret_code < SUCCESS) {
         break;
       } else {
@@ -117,7 +117,7 @@ int main(int argc, char* argv[]) {
   unsigned char* ret = NULL;
   uint64_t ret_size = 0;
   if (ret_code == SUCCESS) {
-    ret_code = GigaEdgeSpenchDenoiseGetFinalChunkFp(denoiser, ctx, &ret, &ret_size);
+    ret_code = GigaEdgeEnhanceDenoiseGetFinalChunkFp(denoiser, ctx, &ret, &ret_size);
     if (ret_code != SUCCESS || ret == NULL) {
       fprintf(stderr, "GetFinalChunk error.\n");
     }
@@ -151,7 +151,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Deallocate a context memory.
-  GigaEdgeSpenchDenoiseDestroyContext(denoiser, &ctx);
+  GigaEdgeEnhanceDenoiseDestroyContext(denoiser, &ctx);
 
   free(wav_data);
   free(prediction);

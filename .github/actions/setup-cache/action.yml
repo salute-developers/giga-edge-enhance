@@ -1,5 +1,5 @@
-name: Set up GigaEdgeSpench build caches
-description: Restore dependency sources and compiler outputs for one GigaEdgeSpench preset.
+name: Set up GigaEdgeEnhance build caches
+description: Restore dependency sources and compiler outputs for one GigaEdgeEnhance preset.
 
 inputs:
   preset:

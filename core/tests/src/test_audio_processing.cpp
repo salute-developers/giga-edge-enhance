@@ -1,6 +1,6 @@
 
 #include <dsplib.h>
-#include <spench/errors.h>
+#include <enhance/errors.h>
 
 #include <algorithm>
 #include <catch.hpp>
@@ -10,7 +10,7 @@
 #include "tests/src/utils.h"
 
 struct TestAudioProcessing {
-  std::unique_ptr<gigaedge::spench::AudioProcessorHandler> audio_proc;
+  std::unique_ptr<gigaedge::enhance::AudioProcessorHandler> audio_proc;
 
   const std::string data_root = "data/";
   std::vector<float> wav_data;
@@ -25,28 +25,28 @@ struct TestAudioProcessing {
     orig.audio_proc = nullptr;
   }
 
-  gigaedge::spench::AudioProcessorHandler& getAudioProc() { return *(audio_proc.get()); }
+  gigaedge::enhance::AudioProcessorHandler& getAudioProc() { return *(audio_proc.get()); }
 
   // Default init: use config reader with default settings.
   TestAudioProcessing& InitAudioProcessing() {
     // Use default-constructed AudioProcessorConfig (no path).
-    auto reader = std::make_unique<gigaedge::spench::AudioProcessorConfig>();
-    audio_proc = std::make_unique<gigaedge::spench::AudioProcessorHandler>(std::move(reader));
+    auto reader = std::make_unique<gigaedge::enhance::AudioProcessorConfig>();
+    audio_proc = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(std::move(reader));
     return *this;
   }
 
   // Init with a specific YAML config file under data/config/.
   TestAudioProcessing& InitAudioProcessing(const std::string& yaml_conf) {
     auto reader =
-        std::make_unique<gigaedge::spench::AudioProcessorConfig>(gigaedge::spench::StringConfigReader(yaml_conf));
-    audio_proc = std::make_unique<gigaedge::spench::AudioProcessorHandler>(std::move(reader));
+        std::make_unique<gigaedge::enhance::AudioProcessorConfig>(gigaedge::enhance::StringConfigReader(yaml_conf));
+    audio_proc = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(std::move(reader));
     return *this;
   }
 
   TestAudioProcessing& InitAudioProcessing(const std::filesystem::path& config_name) {
-    auto reader = std::make_unique<gigaedge::spench::AudioProcessorConfig>(
-        gigaedge::spench::FileConfigReader(cfgPath(config_name)));
-    audio_proc = std::make_unique<gigaedge::spench::AudioProcessorHandler>(std::move(reader));
+    auto reader = std::make_unique<gigaedge::enhance::AudioProcessorConfig>(
+        gigaedge::enhance::FileConfigReader(cfgPath(config_name)));
+    audio_proc = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(std::move(reader));
     return *this;
   }
 
@@ -781,7 +781,7 @@ TEST_CASE("SUCCEED process_frame works with empty chain [audio processing handle
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     std::vector<float> out;
     auto rc = env.audio_proc->process_frame(nullptr, chunks[i], out);
-    REQUIRE(rc == GigaEdgeSpenchRetCode::SUCCESS);
+    REQUIRE(rc == GigaEdgeEnhanceRetCode::SUCCESS);
     REQUIRE(out.size() == chunks[i].size());
   }
 }
@@ -792,7 +792,7 @@ TEST_CASE("FAIL process_frame handles empty input gracefully [audio processing h
   std::vector<float> out;
 
   auto rc = env.audio_proc->process_frame(nullptr, in, out);
-  REQUIRE(rc == GigaEdgeSpenchRetCode::SUCCESS);
+  REQUIRE(rc == GigaEdgeEnhanceRetCode::SUCCESS);
   REQUIRE(out.empty());
 }
 

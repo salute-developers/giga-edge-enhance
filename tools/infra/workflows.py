@@ -52,7 +52,7 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
     build_dir = str(build_dir_host) if use_host else f"/workspace/{build_dir_host.relative_to(ROOT)}"
     environment = compiler_cache_environment(stage is not None)
     if not use_host:
-        environment["GES_BUILD_DIR"] = build_dir
+        environment["GEE_BUILD_DIR"] = build_dir
 
     if action == "build":
         prebuilt_prefix = find_prebuilt_dependency(preset, host)
@@ -171,7 +171,7 @@ def cmake_workflow(action: str, preset: str, host: bool) -> None:
                             "DYLD_LIBRARY_PATH" if target_is_macos else "LD_LIBRARY_PATH")
         library_dir = f"{install_output}/{'bin' if target_is_windows else 'lib'}"
         consumer_environment[library_variable] = library_dir
-        executable = f"{executable_directory}/spench_package_consumer"
+        executable = f"{executable_directory}/enhance_package_consumer"
         if target_is_windows:
             executable += ".exe"
         run([executable], container_stage=stage, environment=consumer_environment)
@@ -181,11 +181,11 @@ def android_workflow(action: str, host: bool) -> None:
     stage = None if host else "android"
     script = "test-all.sh" if action == "test" else "build.sh"
     environment = compiler_cache_environment(stage is not None)
-    if artifact_version := os.environ.get("GES_ARTIFACT_VERSION"):
-        environment["GES_ARTIFACT_VERSION"] = artifact_version
+    if artifact_version := os.environ.get("GEE_ARTIFACT_VERSION"):
+        environment["GEE_ARTIFACT_VERSION"] = artifact_version
     dependency_root = "/workspace/out/artifacts/dependencies" if not host else str(
         ROOT / "out" / "artifacts" / "dependencies")
-    environment["GES_PREBUILT_DEPENDENCIES_ROOT"] = dependency_root
+    environment["GEE_PREBUILT_DEPENDENCIES_ROOT"] = dependency_root
     if not host:
         environment["GRADLE_OPTS"] = (
             "-Dorg.gradle.vfs.watch=false -Dorg.gradle.workers.max=2 "
@@ -197,7 +197,7 @@ def android_workflow(action: str, host: bool) -> None:
 
 def android_ui_workflow() -> None:
     environment = compiler_cache_environment(True)
-    environment["GES_PREBUILT_DEPENDENCIES_ROOT"] = "/workspace/out/artifacts/dependencies"
+    environment["GEE_PREBUILT_DEPENDENCIES_ROOT"] = "/workspace/out/artifacts/dependencies"
     environment["GRADLE_OPTS"] = (
         "-Dorg.gradle.vfs.watch=false -Dorg.gradle.workers.max=2 "
         "-Dorg.gradle.jvmargs=-Xmx3g"
@@ -217,8 +217,8 @@ def ios_workflow(action: str) -> None:
     environment = compiler_cache_environment(False)
     if device_root and simulator_root:
         environment.update({
-            "GES_PREBUILT_ORT_DEVICE_ROOT": str(device_root),
-            "GES_PREBUILT_ORT_SIMULATOR_ROOT": str(simulator_root),
+            "GEE_PREBUILT_ORT_DEVICE_ROOT": str(device_root),
+            "GEE_PREBUILT_ORT_SIMULATOR_ROOT": str(simulator_root),
         })
     run([f"ios/scripts/{scripts[action]}"], environment=environment)
 
@@ -226,8 +226,8 @@ def ios_workflow(action: str) -> None:
 def web_workflow(action: str, host: bool) -> None:
     web_dir = ROOT / "web"
     environment = compiler_cache_environment(not host)
-    if site_base := os.environ.get("GES_SITE_BASE"):
-        environment["GES_SITE_BASE"] = site_base
+    if site_base := os.environ.get("GEE_SITE_BASE"):
+        environment["GEE_SITE_BASE"] = site_base
 
     if action == "test":
         required_outputs = (
@@ -242,7 +242,7 @@ def web_workflow(action: str, host: bool) -> None:
         test_stage = None if host else "web"
         run_web_node(["npm", "ci"], container_stage=test_stage,
                      environment=environment, workdir=web_dir)
-        run_web_node(["npm", "test", "--workspace=@gigaedge/spench-web-sdk"],
+        run_web_node(["npm", "test", "--workspace=@gigaedge/enhance-web-sdk"],
                      container_stage=test_stage, environment=environment, workdir=web_dir)
         return
 
@@ -251,17 +251,17 @@ def web_workflow(action: str, host: bool) -> None:
         package_dir.mkdir(parents=True, exist_ok=True)
         stage = None if host else "web"
         run_web_node([
-            "npm", "pack", "--workspace=@gigaedge/spench-web-sdk",
+            "npm", "pack", "--workspace=@gigaedge/enhance-web-sdk",
             "--pack-destination", "../out/artifacts/web",
         ], container_stage=stage, environment=environment, workdir=web_dir)
         return
 
     if action == "playwright":
-        installed_sdk = web_dir / "apps/site/node_modules/@gigaedge/spench-web-sdk/package.json"
+        installed_sdk = web_dir / "apps/site/node_modules/@gigaedge/enhance-web-sdk/package.json"
         if not installed_sdk.is_file():
             raise SystemExit(
                 "The packed Web SDK is not installed. Install the downloaded package into "
-                "@gigaedge/spench-site before running Playwright.")
+                "@gigaedge/enhance-site before running Playwright.")
         stage = None if host else "web"
         browser_platform = (f"{platform.system().lower()}-{platform.machine().lower()}"
                             if host else "linux-amd64")
@@ -271,20 +271,20 @@ def web_workflow(action: str, host: bool) -> None:
                          f"/workspace/{browser_cache_host.relative_to(ROOT)}")
         playwright_environment = {"PLAYWRIGHT_BROWSERS_PATH": browser_cache}
         supported_browsers = {"chromium", "firefox", "webkit"}
-        configured_browsers = os.environ.get("GES_PLAYWRIGHT_BROWSERS")
+        configured_browsers = os.environ.get("GEE_PLAYWRIGHT_BROWSERS")
         browsers = configured_browsers.split(",") if configured_browsers else ["chromium", "firefox", "webkit"]
         if not browsers or any(browser not in supported_browsers for browser in browsers):
             raise SystemExit(
-                "GES_PLAYWRIGHT_BROWSERS must be a comma-separated list of chromium, firefox, and webkit.")
+                "GEE_PLAYWRIGHT_BROWSERS must be a comma-separated list of chromium, firefox, and webkit.")
         run_web_node(["npx", "playwright", "install", *browsers],
                      container_stage=stage, environment=playwright_environment,
                      workdir=web_dir, isolate_node_modules=False)
-        run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-site"],
+        run_web_node(["npm", "run", "build", "--workspace=@gigaedge/enhance-site"],
                      container_stage=stage,
-                     environment={**playwright_environment, "GES_SITE_BASE": "/"},
+                     environment={**playwright_environment, "GEE_SITE_BASE": "/"},
                      workdir=web_dir, isolate_node_modules=False)
         playwright_command = [
-            "npm", "run", "pw:test", "--workspace=@gigaedge/spench-site", "--",
+            "npm", "run", "pw:test", "--workspace=@gigaedge/enhance-site", "--",
             *(f"--project={browser}" for browser in browsers),
         ]
         if stage is not None:
@@ -305,7 +305,7 @@ def web_workflow(action: str, host: bool) -> None:
     prebuilt_prefix = find_prebuilt_dependency("wasm-release", host)
     build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-release"
     if build_dir is not None:
-        environment["GES_BUILD_DIR"] = build_dir
+        environment["GEE_BUILD_DIR"] = build_dir
     run_web_node(["npm", "ci"], container_stage=stage, environment=environment, workdir=web_dir)
     configure_command = ["cmake", "--preset", "wasm-release"]
     configure_command.extend(prebuilt_cmake_arguments(
@@ -325,7 +325,7 @@ def web_workflow(action: str, host: bool) -> None:
     dsp_build_dir = None if host else "/workspace/out/build/container-clang-llvm-tools/wasm-dsp-release"
     dsp_environment = compiler_cache_environment(stage is not None)
     if dsp_build_dir is not None:
-        dsp_environment["GES_BUILD_DIR"] = dsp_build_dir
+        dsp_environment["GEE_BUILD_DIR"] = dsp_build_dir
     dsp_configure_command = ["cmake", "--preset", "wasm-dsp-release"]
     dsp_build_command = ["cmake", "--build", "out/build/wasm-dsp-release"]
     if dsp_build_dir is not None:
@@ -340,14 +340,14 @@ def web_workflow(action: str, host: bool) -> None:
     run(dsp_build_command, container_stage=stage, environment=dsp_environment)
 
     stage_environment = {
-        "GES_WASM_FULL_BUILD_DIR": build_dir or str(ROOT / "out/build/wasm-release"),
-        "GES_WASM_DSP_BUILD_DIR": dsp_build_dir or str(ROOT / "out/build/wasm-dsp-release"),
+        "GEE_WASM_FULL_BUILD_DIR": build_dir or str(ROOT / "out/build/wasm-release"),
+        "GEE_WASM_DSP_BUILD_DIR": dsp_build_dir or str(ROOT / "out/build/wasm-dsp-release"),
     }
     run_web_node(["npm", "run", "stage:wasm:release"], container_stage=stage,
                  environment=stage_environment, workdir=web_dir)
-    run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-web-sdk"],
+    run_web_node(["npm", "run", "build", "--workspace=@gigaedge/enhance-web-sdk"],
                  container_stage=stage, environment=environment, workdir=web_dir)
-    run_web_node(["npm", "run", "build", "--workspace=@gigaedge/spench-site"],
+    run_web_node(["npm", "run", "build", "--workspace=@gigaedge/enhance-site"],
                  container_stage=stage, environment=environment, workdir=web_dir)
 
 

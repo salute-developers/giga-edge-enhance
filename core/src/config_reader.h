@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "spench/packed_model.h"
+#include "enhance/packed_model.h"
 #include "src/default_configurations.h"
 
 // Forward declarations to avoid exposing yaml-cpp in the public header.
@@ -23,7 +23,7 @@ enum class EchoCancelerType;
 }  // namespace echo
 }  // namespace util
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 // Declared here, implemented in the .cpp to keep yaml-cpp private.
 YAML::Node lookup(const YAML::Node& root, const std::initializer_list<std::string>& path);
@@ -96,10 +96,10 @@ class NetworkConfig : public PipelineConfig {
   const std::vector<uint8_t>& get_model() const;
 
  protected:
-  NetworkConfig(std::shared_ptr<gigaedge::spench::PackedModelReader> bundle, std::string default_config)
+  NetworkConfig(std::shared_ptr<gigaedge::enhance::PackedModelReader> bundle, std::string default_config)
       : PipelineConfig(StringConfigReader(bundle->config()), std::move(default_config)), bundle_(std::move(bundle)) {}
 
-  std::shared_ptr<gigaedge::spench::PackedModelReader> bundle_ = nullptr;
+  std::shared_ptr<gigaedge::enhance::PackedModelReader> bundle_ = nullptr;
 };
 
 // -----------------------------------------------------------------------------
@@ -107,10 +107,10 @@ class NetworkConfig : public PipelineConfig {
 class DenoiserConfig final : public NetworkConfig {
  public:
   explicit DenoiserConfig(const ConfigReader& base_reader)
-      : NetworkConfig(base_reader, gigaedge::spench::default_denoiser_config_yaml) {}
+      : NetworkConfig(base_reader, gigaedge::enhance::default_denoiser_config_yaml) {}
 
-  explicit DenoiserConfig(std::shared_ptr<gigaedge::spench::PackedModelReader> bundle)
-      : NetworkConfig(std::move(bundle), gigaedge::spench::default_denoiser_config_yaml) {}
+  explicit DenoiserConfig(std::shared_ptr<gigaedge::enhance::PackedModelReader> bundle)
+      : NetworkConfig(std::move(bundle), gigaedge::enhance::default_denoiser_config_yaml) {}
 };
 
 // -----------------------------------------------------------------------------
@@ -154,7 +154,7 @@ class AudioProcessorConfig final : public PipelineConfig {
   explicit AudioProcessorConfig() : AudioProcessorConfig(StringConfigReader("")) {}
 
   explicit AudioProcessorConfig(const ConfigReader& base_reader)
-      : PipelineConfig(base_reader, gigaedge::spench::default_audio_processing_config_yaml) {
+      : PipelineConfig(base_reader, gigaedge::enhance::default_audio_processing_config_yaml) {
     validate();
   }
 
@@ -175,7 +175,7 @@ class AecConfig final : public PipelineConfig {
   explicit AecConfig() : AecConfig(StringConfigReader("")) {}
 
   explicit AecConfig(const ConfigReader& base_reader)
-      : PipelineConfig(base_reader, gigaedge::spench::default_aec_config_yaml) {
+      : PipelineConfig(base_reader, gigaedge::enhance::default_aec_config_yaml) {
     validate();
   }
 
@@ -191,4 +191,4 @@ class AecConfig final : public PipelineConfig {
   ::util::echo::EchoCancelerType type() const;
 };
 
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

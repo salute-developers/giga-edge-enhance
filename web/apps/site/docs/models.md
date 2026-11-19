@@ -52,12 +52,12 @@ signature names.
 
 ## Platform packages
 
-- Native applications pass a YAML config or a packed `.ges` model. Models are
+- Native applications pass a YAML config or a packed `.enhance` model. Models are
   supplied separately from the native library archives.
 - Android discovers packaged models with `Models.available(context)`. The shipped
   modules are `quality48` and `hybrid48`.
 - iOS discovers `fast8`, `quality48`, and `hybrid48` through `ModelCatalog`.
-- The Web SDK embeds `fast8.ges`, `quality48.ges`, and `hybrid48.ges`. A packed
+- The Web SDK embeds `fast8.enhance`, `quality48.enhance`, and `hybrid48.enhance`. A packed
   model you supply uses the `custom` key.
 
 Load and validate a model before real-time processing begins.

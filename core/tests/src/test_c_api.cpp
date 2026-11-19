@@ -1,4 +1,4 @@
-#include <spench/c_api.h>
+#include <enhance/c_api.h>
 
 #include <catch.hpp>
 #include <chrono>  // NOLINT
@@ -8,32 +8,32 @@
 
 #include "tests/src/utils.h"
 
-TEST_CASE("C API initializes outputs [gigaedge-spench c api]") {
+TEST_CASE("C API initializes outputs [gigaedge-enhance c api]") {
   SECTION("failed model initialization clears the handle") {
-    GigaEdgeSpenchDenoise model = reinterpret_cast<GigaEdgeSpenchDenoise>(1);
-    REQUIRE(GigaEdgeSpenchDenoiseInit(nullptr, &model) == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+    GigaEdgeEnhanceDenoise model = reinterpret_cast<GigaEdgeEnhanceDenoise>(1);
+    REQUIRE(GigaEdgeEnhanceDenoiseInit(nullptr, &model) == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
     REQUIRE(model == nullptr);
   }
 
   SECTION("failed scalar query clears the output") {
     uint64_t sample_rate = 123;
-    REQUIRE(GigaEdgeSpenchDenoiseGetSampleRate(nullptr, &sample_rate) ==
-            GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+    REQUIRE(GigaEdgeEnhanceDenoiseGetSampleRate(nullptr, &sample_rate) ==
+            GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
     REQUIRE(sample_rate == 0);
   }
 }
 
-TEST_CASE("C API validates byte buffers without aligned reads [gigaedge-spench c api]") {
-  GigaEdgeSpenchAudioProcess processor = nullptr;
-  REQUIRE(GigaEdgeSpenchAudioProcessInit("", &processor) == GigaEdgeSpenchRetCode::SUCCESS);
+TEST_CASE("C API validates byte buffers without aligned reads [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceAudioProcess processor = nullptr;
+  REQUIRE(GigaEdgeEnhanceAudioProcessInit("", &processor) == GigaEdgeEnhanceRetCode::SUCCESS);
   REQUIRE(processor != nullptr);
 
   SECTION("non-divisible floating-point byte length is rejected") {
     const uint8_t input[sizeof(float)]{};
     uint8_t* output = reinterpret_cast<uint8_t*>(1);
     uint64_t output_size = 123;
-    REQUIRE(GigaEdgeSpenchAudioProcessChunkFp(processor, input, sizeof(input) - 1, &output, &output_size) ==
-            GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+    REQUIRE(GigaEdgeEnhanceAudioProcessChunkFp(processor, input, sizeof(input) - 1, &output, &output_size) ==
+            GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
     REQUIRE(output == nullptr);
     REQUIRE(output_size == 0);
   }
@@ -44,26 +44,26 @@ TEST_CASE("C API validates byte buffers without aligned reads [gigaedge-spench c
     std::memcpy(storage.data() + 1, samples.data(), samples.size() * sizeof(float));
     uint8_t* output = nullptr;
     uint64_t output_size = 0;
-    REQUIRE(GigaEdgeSpenchAudioProcessChunkFp(processor, storage.data() + 1, samples.size() * sizeof(float), &output,
-                                              &output_size) == GigaEdgeSpenchRetCode::SUCCESS);
+    REQUIRE(GigaEdgeEnhanceAudioProcessChunkFp(processor, storage.data() + 1, samples.size() * sizeof(float), &output,
+                                               &output_size) == GigaEdgeEnhanceRetCode::SUCCESS);
     REQUIRE(output_size == samples.size() * sizeof(float));
     REQUIRE(std::memcmp(output, samples.data(), output_size) == 0);
     std::free(output);
   }
 
   SECTION("DSP constructor exceptions are contained") {
-    REQUIRE(GigaEdgeSpenchAudioProcessAddRcWithParam(processor, 0, -3.0F, 10.0F, 0.01F, 1.0F, 0.1F) ==
-            GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+    REQUIRE(GigaEdgeEnhanceAudioProcessAddRcWithParam(processor, 0, -3.0F, 10.0F, 0.01F, 1.0F, 0.1F) ==
+            GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
   }
 
-  GigaEdgeSpenchAudioProcessFree(processor);
+  GigaEdgeEnhanceAudioProcessFree(processor);
 }
 
 struct TestCAPI {
   std::vector<float> wav_data;
   std::vector<int16_t> pcm_wav_data;
-  GigaEdgeSpenchDenoise denoiser = nullptr;
-  GigaEdgeSpenchAudioProcess audio_proc = nullptr;
+  GigaEdgeEnhanceDenoise denoiser = nullptr;
+  GigaEdgeEnhanceAudioProcess audio_proc = nullptr;
 
   std::string data_root = "data/";
 
@@ -93,232 +93,232 @@ struct TestCAPI {
     return *this;
   }
 
-  TestCAPI& InitDenoiser(const std::string& config_name, GigaEdgeSpenchRetCode& ret) {
+  TestCAPI& InitDenoiser(const std::string& config_name, GigaEdgeEnhanceRetCode& ret) {
     std::string config_path = data_root + "config/" + config_name;
-    ret = GigaEdgeSpenchDenoiseInit(config_path.c_str(), &denoiser);
+    ret = GigaEdgeEnhanceDenoiseInit(config_path.c_str(), &denoiser);
     return *this;
   }
 
-  TestCAPI& InitAudioProcessor(const std::string& config_name, GigaEdgeSpenchRetCode& ret) {
+  TestCAPI& InitAudioProcessor(const std::string& config_name, GigaEdgeEnhanceRetCode& ret) {
     std::string config_path = data_root + "config/" + config_name;
-    ret = GigaEdgeSpenchAudioProcessInit(config_path.c_str(), &audio_proc);
+    ret = GigaEdgeEnhanceAudioProcessInit(config_path.c_str(), &audio_proc);
     return *this;
   }
   ~TestCAPI() {
     if (denoiser != nullptr) {
-      GigaEdgeSpenchDenoiseFree(&denoiser);
+      GigaEdgeEnhanceDenoiseFree(&denoiser);
     }
   }
 };
 
-TEST_CASE("FAIL Create model with incorrect config name [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Create model with incorrect config name [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
   auto test_data = std::move(TestCAPI().InitDenoiser("config.yaml", ret_code));
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM);
 }
 
-TEST_CASE("FAIL Create model with incorrect model path [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Create model with incorrect model path [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
   auto test_data = std::move(TestCAPI().InitDenoiser("test_configuration_with_incorrect_model_path.yaml", ret_code));
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM);
 }
 
-TEST_CASE("FAIL Create context with nullptr model [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Create context with nullptr model [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
 
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
-  GigaEdgeSpenchContext ctx = nullptr;
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(nullptr, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
+  GigaEdgeEnhanceContext ctx = nullptr;
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(nullptr, &ctx, 0, 0);
   REQUIRE(ctx == nullptr);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 }
 
-TEST_CASE("SUCCEED Create and destroy context [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Create and destroy context [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  GigaEdgeSpenchContext ctx = nullptr;
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  GigaEdgeEnhanceContext ctx = nullptr;
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
   REQUIRE(ctx != nullptr);
 
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
   REQUIRE(ctx == nullptr);
 }
 
-TEST_CASE("FAIL Get a context id with nullptr model [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Get a context id with nullptr model [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  GigaEdgeSpenchContext ctx = nullptr;
+  GigaEdgeEnhanceContext ctx = nullptr;
   uint64_t ret_id = 1;
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseGetContextId(nullptr, ctx, &ret_id);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  ret_code = GigaEdgeEnhanceDenoiseGetContextId(nullptr, ctx, &ret_id);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-TEST_CASE("FAIL Get a context id with nullptr context [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Get a context id with nullptr context [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  GigaEdgeSpenchContext ctx = nullptr;
+  GigaEdgeEnhanceContext ctx = nullptr;
   uint64_t ret_id = 1;
-  ret_code = GigaEdgeSpenchDenoiseGetContextId(test_data.denoiser, ctx, &ret_id);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  ret_code = GigaEdgeEnhanceDenoiseGetContextId(test_data.denoiser, ctx, &ret_id);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-TEST_CASE("FAIL Get a context id with nullptr returning argument [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Get a context id with nullptr returning argument [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  GigaEdgeSpenchContext ctx = nullptr;
+  GigaEdgeEnhanceContext ctx = nullptr;
 
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseGetContextId(test_data.denoiser, ctx, nullptr);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  ret_code = GigaEdgeEnhanceDenoiseGetContextId(test_data.denoiser, ctx, nullptr);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-TEST_CASE("FAIL Set a context id with nullptr model [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Set a context id with nullptr model [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  GigaEdgeSpenchContext ctx = nullptr;
+  GigaEdgeEnhanceContext ctx = nullptr;
 
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseSetContextId(nullptr, ctx, 1000);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  ret_code = GigaEdgeEnhanceDenoiseSetContextId(nullptr, ctx, 1000);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-TEST_CASE("FAIL Set a context id with nullptr context [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Set a context id with nullptr context [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  GigaEdgeSpenchContext ctx = nullptr;
+  GigaEdgeEnhanceContext ctx = nullptr;
 
-  ret_code = GigaEdgeSpenchDenoiseSetContextId(test_data.denoiser, ctx, 1000);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  ret_code = GigaEdgeEnhanceDenoiseSetContextId(test_data.denoiser, ctx, 1000);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 }
 
-TEST_CASE("SUCCEED Check that a default context id is zero [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Check that a default context id is zero [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  GigaEdgeSpenchContext ctx = nullptr;
+  GigaEdgeEnhanceContext ctx = nullptr;
   uint64_t ret_id = 1;
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseGetContextId(test_data.denoiser, ctx, &ret_id);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseGetContextId(test_data.denoiser, ctx, &ret_id);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
   REQUIRE(ret_id == 0);
 
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-TEST_CASE("SUCCEED Set and retrieve a context id [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Set and retrieve a context id [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  GigaEdgeSpenchContext ctx = nullptr;
+  GigaEdgeEnhanceContext ctx = nullptr;
   uint64_t ret_id = 0;
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseSetContextId(test_data.denoiser, ctx, 1000);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseSetContextId(test_data.denoiser, ctx, 1000);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseGetContextId(test_data.denoiser, ctx, &ret_id);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseGetContextId(test_data.denoiser, ctx, &ret_id);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
   REQUIRE(ret_id == 1000);
 
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-TEST_CASE("FAIL Get a model sample rate with nullptr model [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Get a model sample rate with nullptr model [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
   uint64_t sample_rate = 0;
-  ret_code = GigaEdgeSpenchDenoiseGetSampleRate(nullptr, &sample_rate);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  ret_code = GigaEdgeEnhanceDenoiseGetSampleRate(nullptr, &sample_rate);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 }
 
-TEST_CASE("FAIL Get a model sample rate with nullptr returning argument [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Get a model sample rate with nullptr returning argument [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseGetSampleRate(test_data.denoiser, nullptr);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  ret_code = GigaEdgeEnhanceDenoiseGetSampleRate(test_data.denoiser, nullptr);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 }
 
-TEST_CASE("SUCCEED Get a model sample rate [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Get a model sample rate [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
@@ -326,40 +326,40 @@ TEST_CASE("SUCCEED Get a model sample rate [gigaedge-spench c api]") {
 #endif
   uint64_t sample_rate = 0;
 
-  ret_code = GigaEdgeSpenchDenoiseGetSampleRate(test_data.denoiser, &sample_rate);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseGetSampleRate(test_data.denoiser, &sample_rate);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
   REQUIRE(sample_rate == 48000);
 }
 
-TEST_CASE("FAIL Get a model input size with nullptr model [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Get a model input size with nullptr model [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
   uint64_t input_size = 0;
-  ret_code = GigaEdgeSpenchDenoiseGetInputFrameSize(nullptr, &input_size);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  ret_code = GigaEdgeEnhanceDenoiseGetInputFrameSize(nullptr, &input_size);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 }
 
-TEST_CASE("FAIL Get a model input size with nullptr returning argument [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Get a model input size with nullptr returning argument [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseGetInputFrameSize(test_data.denoiser, nullptr);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  ret_code = GigaEdgeEnhanceDenoiseGetInputFrameSize(test_data.denoiser, nullptr);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 }
 
-TEST_CASE("SUCCEED Get a model input size [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Get a model input size [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
@@ -367,73 +367,73 @@ TEST_CASE("SUCCEED Get a model input size [gigaedge-spench c api]") {
 #endif
   uint64_t input_size = 0;
 
-  ret_code = GigaEdgeSpenchDenoiseGetInputFrameSize(test_data.denoiser, &input_size);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseGetInputFrameSize(test_data.denoiser, &input_size);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
   REQUIRE(input_size == (48000 * 16) / 1000);
 }
 
-TEST_CASE("FAIL Get a number of inference engine threads with nullptr model [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Get a number of inference engine threads with nullptr model [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  GigaEdgeSpenchContext ctx = nullptr;
+  GigaEdgeEnhanceContext ctx = nullptr;
   uint64_t ret_threads_num = 0;
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseGetEngineThreads(nullptr, &ret_threads_num);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  ret_code = GigaEdgeEnhanceDenoiseGetEngineThreads(nullptr, &ret_threads_num);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-TEST_CASE("FAIL Get a number of inference engine threads with nullptr returning argument [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Get a number of inference engine threads with nullptr returning argument [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  GigaEdgeSpenchContext ctx = nullptr;
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  GigaEdgeEnhanceContext ctx = nullptr;
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseGetEngineThreads(test_data.denoiser, nullptr);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  ret_code = GigaEdgeEnhanceDenoiseGetEngineThreads(test_data.denoiser, nullptr);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-TEST_CASE("SUCCEED Get a number of inference engine threads [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Get a number of inference engine threads [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  GigaEdgeSpenchContext ctx = nullptr;
+  GigaEdgeEnhanceContext ctx = nullptr;
   uint64_t ret_threads_num = 0;
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseGetEngineThreads(test_data.denoiser, &ret_threads_num);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseGetEngineThreads(test_data.denoiser, &ret_threads_num);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
   REQUIRE(ret_threads_num == 1);
 
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-TEST_CASE("FAIL Run inference with invalid chunk size with the best quality model 48kHz [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Run inference with invalid chunk size with the best quality model 48kHz [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI()
                                  .InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code)
@@ -443,30 +443,30 @@ TEST_CASE("FAIL Run inference with invalid chunk size with the best quality mode
                                  .InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code)
                                  .SetWav("test1_48_noised.wav"));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
   const uint32_t chunk_size = 20;
   const uint32_t chunk_stride = 10;
   unsigned char* ret;
   uint64_t ret_size = 0;
   std::vector<float> predictions(256);
-  GigaEdgeSpenchContext ctx = nullptr;
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  GigaEdgeEnhanceContext ctx = nullptr;
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
 
   auto chunks = ChunkWav<float>(test_data.wav_data, 48000, chunk_size, chunk_stride);
   chunks.resize(1);
 
-  ret_code = GigaEdgeSpenchDenoiseProcessChunkFp(test_data.denoiser, ctx, (const unsigned char*)chunks[0].data(),
-                                                 sizeof(float) * chunks[0].size(), &ret, &ret_size);
+  ret_code = GigaEdgeEnhanceDenoiseProcessChunkFp(test_data.denoiser, ctx, (const unsigned char*)chunks[0].data(),
+                                                  sizeof(float) * chunks[0].size(), &ret, &ret_size);
 
-  CHECK(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_FRAME_SIZE);
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_FRAME_SIZE);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 frames) [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 frames) [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI()
                                  .InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code)
@@ -476,9 +476,9 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 fra
                                  .InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code)
                                  .SetPCMWav("test1_48_noised.wav"));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  GigaEdgeSpenchContext ctx = nullptr;
+  GigaEdgeEnhanceContext ctx = nullptr;
 
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = chunk_size;
@@ -488,11 +488,11 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 fra
 
   REQUIRE_FALSE(chunks.empty());
 
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseSetContextId(test_data.denoiser, ctx, 1000);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseSetContextId(test_data.denoiser, ctx, 1000);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
   const std::size_t base_chunks = chunks.size();
   const std::size_t repeats = (target_chunks + base_chunks - 1) / base_chunks;
@@ -517,9 +517,9 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 fra
   uint64_t ret_size = 0;
 
   REQUIRE_NOTHROW(
-      ret_code = GigaEdgeSpenchDenoiseProcessChunkInt(test_data.denoiser, ctx, (const unsigned char*)huge_input.data(),
-                                                      huge_input.size() * sizeof(int16_t), &ret_mem, &ret_size));
-  CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+      ret_code = GigaEdgeEnhanceDenoiseProcessChunkInt(test_data.denoiser, ctx, (const unsigned char*)huge_input.data(),
+                                                       huge_input.size() * sizeof(int16_t), &ret_mem, &ret_size));
+  CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
   REQUIRE(ret_mem != nullptr);
   REQUIRE(ret_size > 0);
 
@@ -531,43 +531,43 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 fra
 
   REQUIRE_FALSE(ret_vec.empty());
 
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-TEST_CASE("FAIL Get statistic information with nullptr stat structure [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Get statistic information with nullptr stat structure [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
 
-  GigaEdgeSpenchContext ctx = nullptr;
+  GigaEdgeEnhanceContext ctx = nullptr;
 
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseGetStreamStat(test_data.denoiser, ctx, nullptr);
+  ret_code = GigaEdgeEnhanceDenoiseGetStreamStat(test_data.denoiser, ctx, nullptr);
 
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
 }
 
-TEST_CASE("FAIL Get statistic information with nullptr context [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Get statistic information with nullptr context [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code));
 #else
   auto test_data = std::move(TestCAPI().InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code));
 #endif
   StreamStatStruct stream_stat;
-  ret_code = GigaEdgeSpenchDenoiseGetStreamStat(test_data.denoiser, nullptr, &stream_stat);
+  ret_code = GigaEdgeEnhanceDenoiseGetStreamStat(test_data.denoiser, nullptr, &stream_stat);
 
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT);
 }
 
-TEST_CASE("SUCCEED Get statistic information [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Get statistic information [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI()
                                  .InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code)
@@ -577,40 +577,40 @@ TEST_CASE("SUCCEED Get statistic information [gigaedge-spench c api]") {
                                  .InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code)
                                  .SetWav("test1_48_noised.wav"));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t chunks_to_compare = 100;
-  GigaEdgeSpenchContext ctx = nullptr;
+  GigaEdgeEnhanceContext ctx = nullptr;
   std::vector<float> predictions1;
 
   auto chunks = ChunkWav<float>(test_data.wav_data, 48000, chunk_size, chunk_stride);
   chunks.resize(chunks_to_compare);
 
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
   for (auto& chunk : chunks) {
     unsigned char* ret_mem;
     uint64_t ret_size = 0;
-    ret_code = GigaEdgeSpenchDenoiseProcessChunkFp(test_data.denoiser, ctx, (const unsigned char*)chunk.data(),
-                                                   sizeof(float) * chunk.size(), &ret_mem, &ret_size);
-    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    ret_code = GigaEdgeEnhanceDenoiseProcessChunkFp(test_data.denoiser, ctx, (const unsigned char*)chunk.data(),
+                                                    sizeof(float) * chunk.size(), &ret_mem, &ret_size);
+    CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
     StreamStatStruct stream_stat;
-    ret_code = GigaEdgeSpenchDenoiseGetStreamStat(test_data.denoiser, ctx, &stream_stat);
-    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    ret_code = GigaEdgeEnhanceDenoiseGetStreamStat(test_data.denoiser, ctx, &stream_stat);
+    CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
 
     free(ret_mem);
     ret_mem = NULL;
   }
 
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx);
   CHECK(ctx == nullptr);
 }
 
-TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare result [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare result [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI()
                                  .InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code)
@@ -620,27 +620,27 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
                                  .InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code)
                                  .SetWav("test1_48_noised.wav"));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t chunks_to_compare = 100;
-  GigaEdgeSpenchContext ctx1 = nullptr;
-  GigaEdgeSpenchContext ctx2 = nullptr;
+  GigaEdgeEnhanceContext ctx1 = nullptr;
+  GigaEdgeEnhanceContext ctx2 = nullptr;
   std::vector<float> predictions1;
   std::vector<float> predictions2;
 
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx1, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx1, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx2, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx2, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseSetContextId(test_data.denoiser, ctx1, 1000);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseSetContextId(test_data.denoiser, ctx1, 1000);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseSetContextId(test_data.denoiser, ctx2, 2000);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseSetContextId(test_data.denoiser, ctx2, 2000);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
   CHECK(ctx1 != ctx2);
 
   auto chunks = ChunkWav<float>(test_data.wav_data, 48000, chunk_size, chunk_stride);
@@ -651,13 +651,13 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
     uint64_t ret_size1 = 0;
     unsigned char* ret_mem2;
     uint64_t ret_size2 = 0;
-    ret_code = GigaEdgeSpenchDenoiseProcessChunkFp(test_data.denoiser, ctx1, (const unsigned char*)chunk.data(),
-                                                   sizeof(float) * chunk.size(), &ret_mem1, &ret_size1);
-    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    ret_code = GigaEdgeEnhanceDenoiseProcessChunkFp(test_data.denoiser, ctx1, (const unsigned char*)chunk.data(),
+                                                    sizeof(float) * chunk.size(), &ret_mem1, &ret_size1);
+    CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
 
-    ret_code = GigaEdgeSpenchDenoiseProcessChunkFp(test_data.denoiser, ctx2, (const unsigned char*)chunk.data(),
-                                                   sizeof(float) * chunk.size(), &ret_mem2, &ret_size2);
-    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    ret_code = GigaEdgeEnhanceDenoiseProcessChunkFp(test_data.denoiser, ctx2, (const unsigned char*)chunk.data(),
+                                                    sizeof(float) * chunk.size(), &ret_mem2, &ret_size2);
+    CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
 
     std::vector<float> ret_vec1(ret_size1 / sizeof(float));
     std::vector<float> ret_vec2(ret_size2 / sizeof(float));
@@ -672,14 +672,14 @@ TEST_CASE("SUCCEED Run inference with 100 tensors for 2 contexts and compare res
   }
   REQUIRE(predictions1 == predictions2);
 
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx1);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx1);
   CHECK(ctx1 == nullptr);
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx2);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx2);
   CHECK(ctx2 == nullptr);
 }
 
-TEST_CASE("SUCCEED Run hybrid inference with 100 tensors for 2 contexts and compare result [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Run hybrid inference with 100 tensors for 2 contexts and compare result [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI()
                                  .InitDenoiser("default_configuration_hybrid_web_tflite_48khz.yaml", ret_code)
@@ -689,27 +689,27 @@ TEST_CASE("SUCCEED Run hybrid inference with 100 tensors for 2 contexts and comp
                                  .InitDenoiser("default_configuration_hybrid_web_onnx_48khz.yaml", ret_code)
                                  .SetWav("test1_48_noised.wav"));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t chunks_to_compare = 100;
-  GigaEdgeSpenchContext ctx1 = nullptr;
-  GigaEdgeSpenchContext ctx2 = nullptr;
+  GigaEdgeEnhanceContext ctx1 = nullptr;
+  GigaEdgeEnhanceContext ctx2 = nullptr;
   std::vector<float> predictions1;
   std::vector<float> predictions2;
 
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx1, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx1, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx2, 0, 0);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx2, 0, 0);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseSetContextId(test_data.denoiser, ctx1, 1000);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseSetContextId(test_data.denoiser, ctx1, 1000);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
-  ret_code = GigaEdgeSpenchDenoiseSetContextId(test_data.denoiser, ctx2, 2000);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceDenoiseSetContextId(test_data.denoiser, ctx2, 2000);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
   CHECK(ctx1 != ctx2);
 
   auto chunks = ChunkWav<float>(test_data.wav_data, 48000, chunk_size, chunk_stride);
@@ -720,13 +720,13 @@ TEST_CASE("SUCCEED Run hybrid inference with 100 tensors for 2 contexts and comp
     uint64_t ret_size1 = 0;
     unsigned char* ret_mem2;
     uint64_t ret_size2 = 0;
-    ret_code = GigaEdgeSpenchDenoiseProcessChunkFp(test_data.denoiser, ctx1, (const unsigned char*)chunk.data(),
-                                                   sizeof(float) * chunk.size(), &ret_mem1, &ret_size1);
-    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    ret_code = GigaEdgeEnhanceDenoiseProcessChunkFp(test_data.denoiser, ctx1, (const unsigned char*)chunk.data(),
+                                                    sizeof(float) * chunk.size(), &ret_mem1, &ret_size1);
+    CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
 
-    ret_code = GigaEdgeSpenchDenoiseProcessChunkFp(test_data.denoiser, ctx2, (const unsigned char*)chunk.data(),
-                                                   sizeof(float) * chunk.size(), &ret_mem2, &ret_size2);
-    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    ret_code = GigaEdgeEnhanceDenoiseProcessChunkFp(test_data.denoiser, ctx2, (const unsigned char*)chunk.data(),
+                                                    sizeof(float) * chunk.size(), &ret_mem2, &ret_size2);
+    CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
 
     std::vector<float> ret_vec1(ret_size1 / sizeof(float));
     std::vector<float> ret_vec2(ret_size2 / sizeof(float));
@@ -741,15 +741,15 @@ TEST_CASE("SUCCEED Run hybrid inference with 100 tensors for 2 contexts and comp
   }
   REQUIRE(predictions1 == predictions2);
 
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx1);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx1);
   CHECK(ctx1 == nullptr);
-  GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &ctx2);
+  GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &ctx2);
   CHECK(ctx2 == nullptr);
 }
 
 TEST_CASE(
-    "SUCCEED Run inference with the best quality 48 kHz model and 5 contexts concurently [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+    "SUCCEED Run inference with the best quality 48 kHz model and 5 contexts concurently [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 #ifdef BUILD_TFLITE_ENGINE
   auto test_data = std::move(TestCAPI()
                                  .InitDenoiser("default_configuration_discr_web_tflite_48khz.yaml", ret_code)
@@ -759,7 +759,7 @@ TEST_CASE(
                                  .InitDenoiser("default_configuration_discr_web_onnx_48khz.yaml", ret_code)
                                  .SetWav("test1_48_noised.wav"));
 #endif
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
@@ -767,20 +767,20 @@ TEST_CASE(
   const uint16_t context_count = 5;
   std::vector<std::vector<float>> predictions(context_count);
   std::vector<std::thread> pool;
-  std::vector<GigaEdgeSpenchContext> contexts;
+  std::vector<GigaEdgeEnhanceContext> contexts;
 
   auto chunks = ChunkWav<float>(test_data.wav_data, 48000, chunk_size, chunk_stride);
   chunks.resize(chunks_to_compare);
 
-  auto functor = [&test_data, &chunks](GigaEdgeSpenchContext ctx, std::vector<float>& predictions) -> void {
+  auto functor = [&test_data, &chunks](GigaEdgeEnhanceContext ctx, std::vector<float>& predictions) -> void {
     for (auto& chunk : chunks) {
-      GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+      GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
       unsigned char* ret_mem;
       uint64_t ret_size = 0;
       std::vector<float> ret;
-      ret_code = GigaEdgeSpenchDenoiseProcessChunkFp(test_data.denoiser, ctx, (const unsigned char*)chunk.data(),
-                                                     sizeof(float) * chunk.size(), &ret_mem, &ret_size);
-      CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+      ret_code = GigaEdgeEnhanceDenoiseProcessChunkFp(test_data.denoiser, ctx, (const unsigned char*)chunk.data(),
+                                                      sizeof(float) * chunk.size(), &ret_mem, &ret_size);
+      CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
       std::vector<float> ret_vec(ret_size / sizeof(float));
       std::memcpy(ret_vec.data(), ret_mem, ret_size);
       predictions.insert(predictions.end(), ret_vec.begin(), ret_vec.end());
@@ -791,11 +791,11 @@ TEST_CASE(
   };
 
   for (uint32_t i = 0; i < context_count; ++i) {
-    GigaEdgeSpenchContext ctx = nullptr;
-    ret_code = GigaEdgeSpenchDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
-    CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
-    ret_code = GigaEdgeSpenchDenoiseSetContextId(test_data.denoiser, ctx, i);
-    CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+    GigaEdgeEnhanceContext ctx = nullptr;
+    ret_code = GigaEdgeEnhanceDenoiseCreateContext(test_data.denoiser, &ctx, 0, 0);
+    CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
+    ret_code = GigaEdgeEnhanceDenoiseSetContextId(test_data.denoiser, ctx, i);
+    CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
     contexts.emplace_back(ctx);
     pool.emplace_back(std::thread(functor, contexts.back(), std::ref(predictions.at(i))));
   }
@@ -811,24 +811,24 @@ TEST_CASE(
   }
 
   for (uint32_t i = 0; i < context_count; ++i) {
-    GigaEdgeSpenchDenoiseDestroyContext(test_data.denoiser, &(contexts[i]));
+    GigaEdgeEnhanceDenoiseDestroyContext(test_data.denoiser, &(contexts[i]));
     CHECK(contexts[i] == nullptr);
   }
 }
 
 
-TEST_CASE("FAIL Run AudioProcessing with incorrect config file [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("FAIL Run AudioProcessing with incorrect config file [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
   auto test_data = std::move(TestCAPI().InitAudioProcessor("config.yaml", ret_code));
 
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM);
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
   auto test_data =
       std::move(TestCAPI().InitAudioProcessor("sound_processing_rc.yaml", ret_code).SetWav("test1_48_noised.wav"));
-  GigaEdgeSpenchAudioProcessAddRc(test_data.audio_proc);
+  GigaEdgeEnhanceAudioProcessAddRc(test_data.audio_proc);
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t audio_src_sample_rate = 48000;
@@ -844,9 +844,9 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [g
     unsigned char* ret_mem = nullptr;
     uint64_t ret_size = 0;
     auto& chunk = chunks[i];
-    ret_code = GigaEdgeSpenchAudioProcessChunkFp(test_data.audio_proc, (const unsigned char*)chunk.data(),
-                                                 chunk.size() * sizeof(float), &ret_mem, &ret_size);
-    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    ret_code = GigaEdgeEnhanceAudioProcessChunkFp(test_data.audio_proc, (const unsigned char*)chunk.data(),
+                                                  chunk.size() * sizeof(float), &ret_mem, &ret_size);
+    CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
     std::vector<float> ret_vec(ret_size / sizeof(float));
     std::memcpy(ret_vec.data(), ret_mem, ret_size);
     prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
@@ -868,15 +868,16 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading RC parameters from config [g
                [](float& i) { return std::fabs(i) > 0.9; });
   REQUIRE(greater_than_0_9.size() == 0);
 
-  GigaEdgeSpenchAudioProcessFree(test_data.audio_proc);
+  GigaEdgeEnhanceAudioProcessFree(test_data.audio_proc);
   test_data.audio_proc = nullptr;
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing for pcm16 data with reading RC parameters from config [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE(
+    "SUCCEED Run AudioProcessing for pcm16 data with reading RC parameters from config [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
   auto test_data =
       std::move(TestCAPI().InitAudioProcessor("sound_processing_rc.yaml", ret_code).SetPCMWav("test1_48_noised.wav"));
-  GigaEdgeSpenchAudioProcessAddRc(test_data.audio_proc);
+  GigaEdgeEnhanceAudioProcessAddRc(test_data.audio_proc);
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t audio_src_sample_rate = 48000;
@@ -895,9 +896,9 @@ TEST_CASE("SUCCEED Run AudioProcessing for pcm16 data with reading RC parameters
     unsigned char* ret_mem = nullptr;
     uint64_t ret_size = 0;
     auto& chunk = chunks[i];
-    ret_code = GigaEdgeSpenchAudioProcessChunkInt(test_data.audio_proc, (const unsigned char*)chunk.data(),
-                                                  chunk.size() * sizeof(int16_t), &ret_mem, &ret_size);
-    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    ret_code = GigaEdgeEnhanceAudioProcessChunkInt(test_data.audio_proc, (const unsigned char*)chunk.data(),
+                                                   chunk.size() * sizeof(int16_t), &ret_mem, &ret_size);
+    CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
     std::vector<int16_t> ret_vec(ret_size / sizeof(int16_t));
     std::memcpy(ret_vec.data(), ret_mem, ret_size);
     prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
@@ -926,12 +927,12 @@ TEST_CASE("SUCCEED Run AudioProcessing for pcm16 data with reading RC parameters
   std::copy_if(std::begin(prediction_fp), std::end(prediction_fp), std::back_inserter(greater_than_0_9),
                [](float& i) { return std::fabs(i) > 0.9; });
   REQUIRE(greater_than_0_9.size() == 0);
-  GigaEdgeSpenchAudioProcessFree(test_data.audio_proc);
+  GigaEdgeEnhanceAudioProcessFree(test_data.audio_proc);
   test_data.audio_proc = nullptr;
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
   auto test_data =
       std::move(TestCAPI().InitAudioProcessor("sound_processing_rc.yaml", ret_code).SetWav("test1_48_noised.wav"));
 
@@ -945,14 +946,14 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [gigaedge-spen
   std::vector<float> reference(test_data.wav_data.begin(), test_data.wav_data.begin() + source_data_size);
   std::vector<float> greater_than_0_8;
   chunks.resize(chunks_to_compare);
-  GigaEdgeSpenchAudioProcessAddRcWithParam(test_data.audio_proc, 48000, -4, 10, 0.05, 300, 5);
+  GigaEdgeEnhanceAudioProcessAddRcWithParam(test_data.audio_proc, 48000, -4, 10, 0.05, 300, 5);
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem = nullptr;
     uint64_t ret_size = 0;
     auto& chunk = chunks[i];
-    ret_code = GigaEdgeSpenchAudioProcessChunkFp(test_data.audio_proc, (const unsigned char*)chunk.data(),
-                                                 chunk.size() * sizeof(float), &ret_mem, &ret_size);
-    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    ret_code = GigaEdgeEnhanceAudioProcessChunkFp(test_data.audio_proc, (const unsigned char*)chunk.data(),
+                                                  chunk.size() * sizeof(float), &ret_mem, &ret_size);
+    CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
     std::vector<float> ret_vec(ret_size / sizeof(float));
     std::memcpy(ret_vec.data(), ret_mem, ret_size);
     prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
@@ -973,12 +974,12 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed RC parameters [gigaedge-spen
   std::copy_if(std::begin(prediction), std::end(prediction), std::back_inserter(greater_than_0_8),
                [](float& i) { return std::fabs(i) > 0.8; });
   REQUIRE(greater_than_0_8.size() == 0);
-  GigaEdgeSpenchAudioProcessFree(test_data.audio_proc);
+  GigaEdgeEnhanceAudioProcessFree(test_data.audio_proc);
   test_data.audio_proc = nullptr;
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with changed LC parameters [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Run AudioProcessing with changed LC parameters [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
   auto test_data = std::move(TestCAPI().InitAudioProcessor("sound_processing_rc.yaml", ret_code));
 
   constexpr uint32_t fs = 16000;
@@ -991,7 +992,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed LC parameters [gigaedge-spen
   const int32_t max_gain_db = 40;
   const uint32_t use_vad = false;
 
-  GigaEdgeSpenchAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db, use_vad, 0);
+  GigaEdgeEnhanceAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db, use_vad, 0);
 
   const auto tt = dsplib::arange(num_samples) / fs;
   const auto in = 0.5 * sin(2 * dsplib::pi * 440.0 * tt);
@@ -1009,8 +1010,8 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed LC parameters [gigaedge-spen
     const auto x = *in.slice(t1, t2);
     std::vector<float> chunk = x.to_vec();
 
-    ret_code = GigaEdgeSpenchAudioProcessChunkFp(test_data.audio_proc, (const unsigned char*)chunk.data(),
-                                                 chunk.size() * sizeof(float), &ret_mem, &ret_size);
+    ret_code = GigaEdgeEnhanceAudioProcessChunkFp(test_data.audio_proc, (const unsigned char*)chunk.data(),
+                                                  chunk.size() * sizeof(float), &ret_mem, &ret_size);
     // Memory to vector
     std::vector<float> ret(ret_size / sizeof(float));
     std::memcpy(ret.data(), ret_mem, ret_size);
@@ -1036,14 +1037,14 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed LC parameters [gigaedge-spen
     REQUIRE(std::abs(rms_bypassed - rms_before) < 0.5);
   }
 
-  GigaEdgeSpenchAudioProcessFree(test_data.audio_proc);
+  GigaEdgeEnhanceAudioProcessFree(test_data.audio_proc);
   test_data.audio_proc = nullptr;
 }
 
-TEST_CASE("SUCCEED VAD LC does not normalize pure noise to target [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED VAD LC does not normalize pure noise to target [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
   auto test_data = std::move(TestCAPI().InitAudioProcessor("sound_processing_rc.yaml", ret_code));
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
   REQUIRE(test_data.audio_proc != nullptr);
 
   constexpr uint32_t fs = 16000;
@@ -1057,9 +1058,9 @@ TEST_CASE("SUCCEED VAD LC does not normalize pure noise to target [gigaedge-spen
   const float max_gain_db = 30.0f;
   const uint32_t use_vad = 1;
 
-  ret_code = GigaEdgeSpenchAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db,
-                                                      use_vad, 100);
-  REQUIRE(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  ret_code = GigaEdgeEnhanceAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db,
+                                                       use_vad, 100);
+  REQUIRE(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
   // Pure noise for the whole duration.
   const auto in = Noise(num_samples, 0.01f);
@@ -1074,9 +1075,9 @@ TEST_CASE("SUCCEED VAD LC does not normalize pure noise to target [gigaedge-spen
     unsigned char* ret_mem = nullptr;
     uint64_t ret_size = 0;
     ret_code =
-        GigaEdgeSpenchAudioProcessChunkFp(test_data.audio_proc, reinterpret_cast<const unsigned char*>(chunk.data()),
-                                          chunk.size() * sizeof(float), &ret_mem, &ret_size);
-    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+        GigaEdgeEnhanceAudioProcessChunkFp(test_data.audio_proc, reinterpret_cast<const unsigned char*>(chunk.data()),
+                                           chunk.size() * sizeof(float), &ret_mem, &ret_size);
+    CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
 
     std::vector<float> ret_vec(ret_size / sizeof(float));
     if (ret_size != 0) {
@@ -1098,11 +1099,11 @@ TEST_CASE("SUCCEED VAD LC does not normalize pure noise to target [gigaedge-spen
   const float rms_in = RmsDb(in);
   REQUIRE((rms_out - rms_in) < 10.0f);
 
-  GigaEdgeSpenchAudioProcessFree(test_data.audio_proc);
+  GigaEdgeEnhanceAudioProcessFree(test_data.audio_proc);
   test_data.audio_proc = nullptr;
 }
 
-TEST_CASE("SUCCEED VAD LC reaches target for speech under different input gains [gigaedge-spench c api]") {
+TEST_CASE("SUCCEED VAD LC reaches target for speech under different input gains [gigaedge-enhance c api]") {
   constexpr uint32_t fs = 16000;
   constexpr uint32_t chunk_ms = 32;
   constexpr uint32_t frame_len = fs * chunk_ms / 1000;
@@ -1119,14 +1120,14 @@ TEST_CASE("SUCCEED VAD LC reaches target for speech under different input gains 
 
   const dsplib::arr_real gains_db = {-20, -10, 0, 10};
   for (auto gdb : gains_db) {
-    GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+    GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
     auto test_data = std::move(TestCAPI().InitAudioProcessor("sound_processing_rc.yaml", ret_code));
-    REQUIRE(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+    REQUIRE(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
     REQUIRE(test_data.audio_proc != nullptr);
 
-    ret_code = GigaEdgeSpenchAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db,
-                                                        use_vad, gdb * 100);
-    REQUIRE(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+    ret_code = GigaEdgeEnhanceAudioProcessAddLcWithParam(test_data.audio_proc, fs, target_db, bypass_time, max_gain_db,
+                                                         use_vad, gdb * 100);
+    REQUIRE(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
     const auto in = base * dsplib::db2mag(gdb);
 
@@ -1140,9 +1141,9 @@ TEST_CASE("SUCCEED VAD LC reaches target for speech under different input gains 
       unsigned char* ret_mem = nullptr;
       uint64_t ret_size = 0;
       ret_code =
-          GigaEdgeSpenchAudioProcessChunkFp(test_data.audio_proc, reinterpret_cast<const unsigned char*>(chunk.data()),
-                                            chunk.size() * sizeof(float), &ret_mem, &ret_size);
-      CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+          GigaEdgeEnhanceAudioProcessChunkFp(test_data.audio_proc, reinterpret_cast<const unsigned char*>(chunk.data()),
+                                             chunk.size() * sizeof(float), &ret_mem, &ret_size);
+      CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
 
       std::vector<float> ret_vec(ret_size / sizeof(float));
       if (ret_size != 0) {
@@ -1162,16 +1163,16 @@ TEST_CASE("SUCCEED VAD LC reaches target for speech under different input gains 
     const float rms_tail = RmsDb(out_tail);
     REQUIRE(std::abs(rms_tail - target_db) < 4.0f);
 
-    GigaEdgeSpenchAudioProcessFree(test_data.audio_proc);
+    GigaEdgeEnhanceAudioProcessFree(test_data.audio_proc);
     test_data.audio_proc = nullptr;
   }
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
   auto test_data =
       std::move(TestCAPI().InitAudioProcessor("sound_processing_agc.yaml", ret_code).SetWav("test1_48_noised.wav"));
-  GigaEdgeSpenchAudioProcessAddAgc(test_data.audio_proc);
+  GigaEdgeEnhanceAudioProcessAddAgc(test_data.audio_proc);
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
   const uint32_t audio_src_sample_rate = 48000;
@@ -1188,9 +1189,9 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [
     uint64_t ret_size = 0;
     auto& chunk = chunks[i];
     std::vector<float> ret;
-    ret_code = GigaEdgeSpenchAudioProcessChunkFp(test_data.audio_proc, (const unsigned char*)chunk.data(),
-                                                 chunk.size() * sizeof(float), &ret_mem, &ret_size);
-    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    ret_code = GigaEdgeEnhanceAudioProcessChunkFp(test_data.audio_proc, (const unsigned char*)chunk.data(),
+                                                  chunk.size() * sizeof(float), &ret_mem, &ret_size);
+    CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
     std::vector<float> ret_vec(ret_size / sizeof(float));
     std::memcpy(ret_vec.data(), ret_mem, ret_size);
     prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
@@ -1209,12 +1210,12 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading AGC parameters from config [
   std::copy_if(std::begin(prediction), std::end(prediction), std::back_inserter(greater_than_1),
                [](float& i) { return std::fabs(i) > 1.0; });
   REQUIRE(greater_than_1.size() != 0);
-  GigaEdgeSpenchAudioProcessFree(test_data.audio_proc);
+  GigaEdgeEnhanceAudioProcessFree(test_data.audio_proc);
   test_data.audio_proc = nullptr;
 }
 
-TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [gigaedge-spench c api]") {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [gigaedge-enhance c api]") {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
   auto test_data =
       std::move(TestCAPI().InitAudioProcessor("sound_processing_agc.yaml", ret_code).SetWav("test1_48_noised.wav"));
 
@@ -1227,15 +1228,15 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [gigaedge-spe
   auto chunks = ChunkWav<float>(test_data.wav_data, audio_src_sample_rate, chunk_size, chunk_stride);
   std::vector<float> reference(test_data.wav_data.begin(), test_data.wav_data.begin() + source_data_size);
   chunks.resize(chunks_to_compare);
-  GigaEdgeSpenchAudioProcessAddAgcWithParam(test_data.audio_proc, 48000, 0.9, 20.0);
+  GigaEdgeEnhanceAudioProcessAddAgcWithParam(test_data.audio_proc, 48000, 0.9, 20.0);
   for (uint32_t i = 0; i < chunks.size(); ++i) {
     unsigned char* ret_mem = nullptr;
     uint64_t ret_size = 0;
     auto& chunk = chunks[i];
     std::vector<float> ret;
-    ret_code = GigaEdgeSpenchAudioProcessChunkFp(test_data.audio_proc, (const unsigned char*)chunk.data(),
-                                                 chunk.size() * sizeof(float), &ret_mem, &ret_size);
-    CHECK(ret_code >= GigaEdgeSpenchRetCode::SUCCESS);
+    ret_code = GigaEdgeEnhanceAudioProcessChunkFp(test_data.audio_proc, (const unsigned char*)chunk.data(),
+                                                  chunk.size() * sizeof(float), &ret_mem, &ret_size);
+    CHECK(ret_code >= GigaEdgeEnhanceRetCode::SUCCESS);
     std::vector<float> ret_vec(ret_size / sizeof(float));
     std::memcpy(ret_vec.data(), ret_mem, ret_size);
     prediction.insert(prediction.end(), ret_vec.begin(), ret_vec.end());
@@ -1255,6 +1256,6 @@ TEST_CASE("SUCCEED Run AudioProcessing with changed AGC parameters [gigaedge-spe
   std::copy_if(std::begin(prediction), std::end(prediction), std::back_inserter(greater_than_09),
                [](float& i) { return std::fabs(i) > 0.9; });
   REQUIRE(greater_than_09.size() != 0);
-  GigaEdgeSpenchAudioProcessFree(test_data.audio_proc);
+  GigaEdgeEnhanceAudioProcessFree(test_data.audio_proc);
   test_data.audio_proc = nullptr;
 }

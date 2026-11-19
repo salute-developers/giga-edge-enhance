@@ -6,15 +6,15 @@ option(BUILD_RESAMPLER "Build with libsoxr audio resampling." ON)
 option(BUILD_CLI "Build command-line tools and demos." OFF)
 option(BUILD_DSP "Build the engine-free DSP configuration." OFF)
 option(BUILD_TESTING "Build tests." ON)
-set(GES_PREBUILT_ORT_ROOT "" CACHE PATH
+set(GEE_PREBUILT_ORT_ROOT "" CACHE PATH
   "Install prefix containing a compatible prebuilt ONNX Runtime bundle.")
-set(GES_PREBUILT_TFLITE_ROOT "" CACHE PATH
+set(GEE_PREBUILT_TFLITE_ROOT "" CACHE PATH
   "Install prefix containing a compatible prebuilt TensorFlow Lite bundle.")
-set(GES_PREBUILT_DEPENDENCIES_ROOT "" CACHE PATH
+set(GEE_PREBUILT_DEPENDENCIES_ROOT "" CACHE PATH
   "Root containing target-specific prebuilt dependency bundles.")
-set(GES_ENGINE_BUNDLE_LINKAGE "" CACHE STRING
+set(GEE_ENGINE_BUNDLE_LINKAGE "" CACHE STRING
   "Linkage used while explicitly preparing an inference-engine bundle (shared or static).")
-set_property(CACHE GES_ENGINE_BUNDLE_LINKAGE PROPERTY STRINGS "" shared static)
+set_property(CACHE GEE_ENGINE_BUNDLE_LINKAGE PROPERTY STRINGS "" shared static)
 
 set(BUILD_APPLE_ARCH "" CACHE STRING "Apple target architecture: arm, intel, or empty for native.")
 
@@ -39,15 +39,15 @@ endif()
 set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER CACHE STRING
     "Never satisfy FetchContent dependencies from host packages" FORCE)
 
-# Preserve whether the gigaedge-spench target itself is shared. CPM dependencies can
+# Preserve whether the gigaedge-enhance target itself is shared. CPM dependencies can
 # reset BUILD_SHARED_LIBS in the cache for third-party static linking.
-set(_ges_build_shared ${BUILD_SHARED_LIBS})
+set(_gee_build_shared ${BUILD_SHARED_LIBS})
 
-if(_ges_build_shared)
-  set(GES_SHARED_LIBS ON CACHE INTERNAL "Build the gigaedge-spench target as a shared library" FORCE)
+if(_gee_build_shared)
+  set(GEE_SHARED_LIBS ON CACHE INTERNAL "Build the gigaedge-enhance target as a shared library" FORCE)
   message(STATUS "Library linkage: shared")
 else()
-  set(GES_SHARED_LIBS OFF CACHE INTERNAL "Build the gigaedge-spench target as a shared library" FORCE)
+  set(GEE_SHARED_LIBS OFF CACHE INTERNAL "Build the gigaedge-enhance target as a shared library" FORCE)
   message(STATUS "Library linkage: static")
 endif()
 

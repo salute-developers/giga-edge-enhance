@@ -1,4 +1,4 @@
-#include "spench/echo_canceller.h"
+#include "enhance/echo_canceller.h"
 
 #include <spdlog/spdlog.h>
 
@@ -11,29 +11,29 @@
 #include "src/logger.h"
 #include "src/task.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 EchoCanceller::EchoCanceller(const char* config) : aec_(nullptr) {
   std::string config_file(config);
   if (!config_file.empty() && std::filesystem::exists(config_file)) {
-    aec_ = std::make_unique<gigaedge::spench::AudioEchoCancelationHandler>(
-        std::make_shared<gigaedge::spench::AecConfig>(gigaedge::spench::FileConfigReader(config)));
+    aec_ = std::make_unique<gigaedge::enhance::AudioEchoCancelationHandler>(
+        std::make_shared<gigaedge::enhance::AecConfig>(gigaedge::enhance::FileConfigReader(config)));
   } else if (config_file.empty()) {
     spdlog::info("EchoCanceller input config is empty. Use default values");
-    aec_ = std::make_unique<gigaedge::spench::AudioEchoCancelationHandler>(
-        std::make_shared<gigaedge::spench::AecConfig>());
+    aec_ = std::make_unique<gigaedge::enhance::AudioEchoCancelationHandler>(
+        std::make_shared<gigaedge::enhance::AecConfig>());
   } else {
     spdlog::error("Invalid or missing config file.");
     throw std::invalid_argument("Invalid or missing config file.");
   }
-  spdlog::info("Create GigaEdgeSpench echo cancelation form config {}", std::string(config));
+  spdlog::info("Create GigaEdgeEnhance echo cancelation form config {}", std::string(config));
 }
 
 EchoCanceller::EchoCanceller(const std::string& yaml_conf) : aec_(nullptr) {
-  aec_ = std::make_unique<gigaedge::spench::AudioEchoCancelationHandler>(
-      std::make_shared<gigaedge::spench::AecConfig>(gigaedge::spench::StringConfigReader(yaml_conf)));
+  aec_ = std::make_unique<gigaedge::enhance::AudioEchoCancelationHandler>(
+      std::make_shared<gigaedge::enhance::AecConfig>(gigaedge::enhance::StringConfigReader(yaml_conf)));
 
-  spdlog::info("Create GigaEdgeSpench echo cancelation from yaml string");
+  spdlog::info("Create GigaEdgeEnhance echo cancelation from yaml string");
 }
 
 EchoCanceller::~EchoCanceller() { aec_.reset(); }
@@ -59,24 +59,24 @@ std::vector<int16_t> EchoCanceller::process(const std::vector<int16_t>& input16,
   return ret16;
 }
 
-GigaEdgeSpenchRetCode EchoCanceller::ProcessChunk(const std::vector<float>& interleaved_chunk, std::vector<float>& ret,
-                                                  Context<float>* ctx) {
+GigaEdgeEnhanceRetCode EchoCanceller::ProcessChunk(const std::vector<float>& interleaved_chunk, std::vector<float>& ret,
+                                                   Context<float>* ctx) {
   (void)ctx;
   std::vector<float> input_signal, loopback;
 
   convertFromInterleaved(interleaved_chunk, input_signal, loopback);
   this->process(input_signal, loopback, ret);
-  return GigaEdgeSpenchRetCode::SUCCESS;
+  return GigaEdgeEnhanceRetCode::SUCCESS;
 }
 
-GigaEdgeSpenchRetCode EchoCanceller::ProcessChunk(const std::vector<float>& input_chunk,
-                                                  const std::vector<float>& loopback, std::vector<float>& ret) {
+GigaEdgeEnhanceRetCode EchoCanceller::ProcessChunk(const std::vector<float>& input_chunk,
+                                                   const std::vector<float>& loopback, std::vector<float>& ret) {
   this->process(input_chunk, loopback, ret);
-  return GigaEdgeSpenchRetCode::SUCCESS;
+  return GigaEdgeEnhanceRetCode::SUCCESS;
 }
 
-GigaEdgeSpenchRetCode EchoCanceller::ProcessChunk(const std::vector<int16_t>& interleaved_chunk16,
-                                                  std::vector<int16_t>& ret16, Context<float>* ctx) {
+GigaEdgeEnhanceRetCode EchoCanceller::ProcessChunk(const std::vector<int16_t>& interleaved_chunk16,
+                                                   std::vector<int16_t>& ret16, Context<float>* ctx) {
   (void)ctx;
   std::vector<float> interleaved_chunk;
   std::vector<float> output;
@@ -84,7 +84,7 @@ GigaEdgeSpenchRetCode EchoCanceller::ProcessChunk(const std::vector<int16_t>& in
   tools::convert_pcm16_to_float32(interleaved_chunk16, interleaved_chunk);
   this->ProcessChunk(interleaved_chunk, output);
   tools::convert_float32_to_pcm16(output, ret16);
-  return GigaEdgeSpenchRetCode::SUCCESS;
+  return GigaEdgeEnhanceRetCode::SUCCESS;
 }
 
 std::vector<float> EchoCanceller::operator()(const std::vector<float>& interleaved_chunk, std::vector<float>& ret,
@@ -101,14 +101,14 @@ std::vector<int16_t> EchoCanceller::operator()(const std::vector<int16_t>& inter
   return ret16;
 }
 
-GigaEdgeSpenchRetCode EchoCanceller::GetFinalChunk(std::vector<float>& interleaved_chunk, Context<float>* ctx) {
+GigaEdgeEnhanceRetCode EchoCanceller::GetFinalChunk(std::vector<float>& interleaved_chunk, Context<float>* ctx) {
   (*this)(interleaved_chunk);
-  return GigaEdgeSpenchRetCode::SUCCESS;
+  return GigaEdgeEnhanceRetCode::SUCCESS;
 }
 
-GigaEdgeSpenchRetCode EchoCanceller::GetFinalChunk(std::vector<int16_t>& interleaved_chunk16, Context<float>* ctx) {
+GigaEdgeEnhanceRetCode EchoCanceller::GetFinalChunk(std::vector<int16_t>& interleaved_chunk16, Context<float>* ctx) {
   (*this)(interleaved_chunk16);
-  return GigaEdgeSpenchRetCode::SUCCESS;
+  return GigaEdgeEnhanceRetCode::SUCCESS;
 }
 
 std::vector<float> EchoCanceller::operator()(std::vector<float>& interleaved_chunk, Context<float>* ctx) {
@@ -125,7 +125,7 @@ std::vector<int16_t> EchoCanceller::operator()(std::vector<int16_t>& interleaved
   return interleaved_chunk16;
 }
 
-// NOLINTNEXTLINE — frozen GES_API (convertToInterleaved)
+// NOLINTNEXTLINE — frozen GEE_API (convertToInterleaved)
 std::vector<float> EchoCanceller::convertToInterleaved(const std::vector<float>& mic, const std::vector<float>& lbk) {
   if (mic.size() != lbk.size()) {
     spdlog::error("Original and loopback signals must have the same size.");
@@ -143,7 +143,7 @@ std::vector<float> EchoCanceller::convertToInterleaved(const std::vector<float>&
   return interlvd;
 }
 
-// NOLINTNEXTLINE — frozen GES_API (convertFromInterleaved)
+// NOLINTNEXTLINE — frozen GEE_API (convertFromInterleaved)
 void EchoCanceller::convertFromInterleaved(const std::vector<float>& interlvd, std::vector<float>& mic,
                                            std::vector<float>& lbk) {
   if (interlvd.size() % 2 != 0) {
@@ -164,4 +164,4 @@ void EchoCanceller::convertFromInterleaved(const std::vector<float>& interlvd, s
 const uint32_t EchoCanceller::GetSampleRate() { return this->aec_->get_sample_rate(); }
 const uint16_t EchoCanceller::GetFilterLength() { return this->aec_->get_filter_length(); }
 const uint16_t EchoCanceller::GetFrameLength() { return this->aec_->get_frame_length(); }
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

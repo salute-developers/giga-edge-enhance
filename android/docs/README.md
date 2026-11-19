@@ -1,6 +1,6 @@
-# GigaEdge Spench Android SDK documentation
+# GigaEdge Enhance Android SDK documentation
 
-Integrator-facing guides for the GigaEdge Spench Android Audio SDK. Start with the top-level
+Integrator-facing guides for the GigaEdge Enhance Android Audio SDK. Start with the top-level
 [README](../README.md) for the quickstart, then dive into the topic you need.
 
 ## Guides

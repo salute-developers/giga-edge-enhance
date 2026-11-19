@@ -1,3 +1,3 @@
-import { handleControllerMessage, global } from './GigaEdgeSpenchWorker';
+import { handleControllerMessage, global } from './GigaEdgeEnhanceWorker';
 
 global.addEventListener('message', handleControllerMessage);

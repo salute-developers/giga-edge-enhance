@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('documentation navigation exposes every SDK', async ({ page }) => {
     await page.goto('/docs/');
 
-    await expect(page.getByRole('heading', { name: 'GigaEdgeSpench documentation' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'GigaEdgeEnhance documentation' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Core C and C++ SDK' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Web SDK', exact: true }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: 'Android SDK' }).first()).toBeVisible();
@@ -16,9 +16,9 @@ test('documentation navigation exposes every SDK', async ({ page }) => {
 
 test('repository Markdown and DocC articles are published', async ({ page }) => {
     await page.goto('/docs/source/');
-    await expect(page.getByRole('heading', { name: 'GigaEdgeSpench', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'GigaEdgeEnhance', exact: true })).toBeVisible();
 
-    await page.goto('/docs/source/ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/QuickStart/');
+    await page.goto('/docs/source/ios/Sources/EnhanceAudioKit/Documentation.docc/QuickStart/');
     await expect(page.getByRole('heading', { name: 'Quick Start' })).toBeVisible();
 
     const repositoryInstructions = await page.goto('/docs/source/AGENTS/');

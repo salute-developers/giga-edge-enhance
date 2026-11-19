@@ -7,7 +7,7 @@
 #include <numeric>
 #include <type_traits>
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 template <typename T>
 struct ComplexNumber;
@@ -97,4 +97,4 @@ class DenoiserModelAdviser {
   const T snr_vad_threshold = static_cast<T>(0.1);
 };
 
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

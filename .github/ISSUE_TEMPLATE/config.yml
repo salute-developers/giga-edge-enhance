@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Questions and integration help
-    url: https://github.com/akhdrv/spench/discussions
+    url: https://github.com/akhdrv/enhance/discussions
     about: Ask usage and integration questions in GitHub Discussions.
   - name: Security vulnerability
-    url: https://github.com/akhdrv/spench/security/advisories/new
+    url: https://github.com/akhdrv/enhance/security/advisories/new
     about: Report suspected vulnerabilities privately. Do not open a public issue.

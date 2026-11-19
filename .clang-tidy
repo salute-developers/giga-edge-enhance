@@ -1,6 +1,6 @@
 ---
-# Naming checks for migrated GigaEdgeSpench code (see STYLE.md).
-# GigaEdgeSpench deltas vs Google: snake_case functions/methods; no k constant prefix.
+# Naming checks for migrated GigaEdgeEnhance code (see STYLE.md).
+# GigaEdgeEnhance deltas vs Google: snake_case functions/methods; no k constant prefix.
 # Only run on paths listed in container_internals/style_naming_enforced.txt.
 
 Checks: '-*,

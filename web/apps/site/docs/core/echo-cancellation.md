@@ -30,13 +30,13 @@ blocks of another size, buffer both streams and extract paired frames of that
 length. The native Speex implementation throws on a frame size mismatch.
 
 ```cpp
-#include <spench.h>
+#include <enhance.h>
 
 #include <string>
 #include <vector>
 
 struct CallAudio {
-  gigaedge::spench::EchoCanceller aec{std::string{R"yaml(
+  gigaedge::enhance::EchoCanceller aec{std::string{R"yaml(
 echo_cancellation:
   sample_rate: 16000
   filter_len: 1024
@@ -45,7 +45,7 @@ echo_cancellation:
   delay_compensator_enabled: true
   type: speex
 )yaml"}};
-  gigaedge::spench::AudioProcessor levels;
+  gigaedge::enhance::AudioProcessor levels;
   std::vector<float> cleaned;
 
   CallAudio() {
@@ -54,15 +54,15 @@ echo_cancellation:
           .AddLim(16000, /*threshold dB=*/-3.0f);
   }
 
-  GigaEdgeSpenchRetCode process(const std::vector<float>& microphone,
+  GigaEdgeEnhanceRetCode process(const std::vector<float>& microphone,
                                 const std::vector<float>& playback_reference,
                                 std::vector<float>& output) {
     const auto frame_length = aec.GetFrameLength();
     if (microphone.size() != frame_length || playback_reference.size() != frame_length) {
-      return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     const auto status = aec.ProcessChunk(microphone, playback_reference, cleaned);
-    if (status != GigaEdgeSpenchRetCode::SUCCESS) {
+    if (status != GigaEdgeEnhanceRetCode::SUCCESS) {
       return status;
     }
     return levels.ProcessChunk(cleaned, output);

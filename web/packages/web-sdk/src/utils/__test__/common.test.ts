@@ -71,9 +71,9 @@ describe('chunk size settings', () => {
 describe('default noise cancellation models', () => {
     const models = {
         noiseCancellation: {
-            fast8: new URL('https://example.com/fast8.ges'),
-            quality48: new URL('https://example.com/quality48.ges'),
-            hybrid48: new URL('https://example.com/hybrid48.ges'),
+            fast8: new URL('https://example.com/fast8.enhance'),
+            quality48: new URL('https://example.com/quality48.enhance'),
+            hybrid48: new URL('https://example.com/hybrid48.enhance'),
         },
     };
 

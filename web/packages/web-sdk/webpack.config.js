@@ -53,13 +53,13 @@ const baseConfigFactory = (mode = 'development') => {
     };
 };
 
-const gigaEdgeSpenchWorkerConfigFactory = (mode) => {
+const gigaEdgeEnhanceWorkerConfigFactory = (mode) => {
     const baseConfig = baseConfigFactory(mode);
 
     return {
         ...baseConfig,
         entry: {
-            'gigaedge-spench-worker': './src/workers/worker/index.ts',
+            'gigaedge-enhance-worker': './src/workers/worker/index.ts',
         },
         output: {
             ...baseConfig.output,
@@ -68,13 +68,13 @@ const gigaEdgeSpenchWorkerConfigFactory = (mode) => {
     };
 };
 
-const gigaEdgeSpenchWorkletConfigFactory = (mode) => {
+const gigaEdgeEnhanceWorkletConfigFactory = (mode) => {
     const baseConfig = baseConfigFactory(mode);
 
     return {
         ...baseConfig,
         entry: {
-            'gigaedge-spench-worklet': './src/workers/worklet/index.ts',
+            'gigaedge-enhance-worklet': './src/workers/worklet/index.ts',
         },
         output: {
             ...baseConfig.output,
@@ -83,13 +83,13 @@ const gigaEdgeSpenchWorkletConfigFactory = (mode) => {
     };
 };
 
-const gigaEdgeSpenchWorkletDspConfigFactory = (mode) => {
+const gigaEdgeEnhanceWorkletDspConfigFactory = (mode) => {
     const baseConfig = baseConfigFactory(mode);
 
     return {
         ...baseConfig,
         entry: {
-            'gigaedge-spench-worklet-dsp': './src/workers/worklet/dsp.ts',
+            'gigaedge-enhance-worklet-dsp': './src/workers/worklet/dsp.ts',
         },
         output: {
             ...baseConfig.output,
@@ -101,5 +101,5 @@ const gigaEdgeSpenchWorkletDspConfigFactory = (mode) => {
 module.exports = (env, argv) => {
     const { mode } = argv;
 
-    return [gigaEdgeSpenchWorkletConfigFactory(mode), gigaEdgeSpenchWorkerConfigFactory(mode), gigaEdgeSpenchWorkletDspConfigFactory(mode)];
+    return [gigaEdgeEnhanceWorkletConfigFactory(mode), gigaEdgeEnhanceWorkerConfigFactory(mode), gigaEdgeEnhanceWorkletDspConfigFactory(mode)];
 };

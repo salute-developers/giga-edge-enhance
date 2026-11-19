@@ -9,11 +9,11 @@
 #include "src/denoiser_model_adviser.h"
 #include "src/logger.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 DenoiserAudioHandler::DenoiserAudioHandler(std::shared_ptr<DenoiserConfig> config)
     : NeuralNetworkAudioHandler(std::move(config)), adviser_(nullptr) {
-  float frame_shift_ms = dynamic_cast<gigaedge::spench::DenoiserConfig*>(config_.get())->frame_stride_ms();
+  float frame_shift_ms = dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms();
   static constexpr float window_duration_ms = 1000 * 5;
   adviser_ = std::make_unique<DenoiserModelAdviser<float>>(window_duration_ms, frame_shift_ms);
 }
@@ -36,14 +36,14 @@ Context<float>* DenoiserAudioHandler::create_context(uint32_t input_sample_rate,
   ctx->snr_adviser->reset();
 
   if (input_sample_rate == 0) {
-    input_sample_rate = dynamic_cast<gigaedge::spench::DenoiserConfig*>(config_.get())->sampling_freq();
+    input_sample_rate = dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq();
   }
   if (output_sample_rate == 0) {
-    output_sample_rate = dynamic_cast<gigaedge::spench::DenoiserConfig*>(config_.get())->sampling_freq();
+    output_sample_rate = dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq();
   }
 
-  GigaEdgeSpenchRetCode ret_code = init_audio_streams(ctx, input_sample_rate, output_sample_rate);
-  if (ret_code != GigaEdgeSpenchRetCode::SUCCESS) {
+  GigaEdgeEnhanceRetCode ret_code = init_audio_streams(ctx, input_sample_rate, output_sample_rate);
+  if (ret_code != GigaEdgeEnhanceRetCode::SUCCESS) {
     spdlog::error("Due to errors a context could not be created!");
     throw std::runtime_error("Due to errors a context could not be created!");
   }
@@ -51,38 +51,38 @@ Context<float>* DenoiserAudioHandler::create_context(uint32_t input_sample_rate,
   return ctx;
 }
 
-GigaEdgeSpenchRetCode DenoiserAudioHandler::init_audio_streams(Context<float>* ctx, uint32_t input_sample_rate,
-                                                               uint32_t output_sample_rate) {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+GigaEdgeEnhanceRetCode DenoiserAudioHandler::init_audio_streams(Context<float>* ctx, uint32_t input_sample_rate,
+                                                                uint32_t output_sample_rate) {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
   if (ctx == nullptr) {
-    return GigaEdgeSpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM;
+    return GigaEdgeEnhanceRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM;
   }
 
-  if (ret_code == GigaEdgeSpenchRetCode::SUCCESS) {
+  if (ret_code == GigaEdgeEnhanceRetCode::SUCCESS) {
     try {
       if (!ctx->input_sound_stream_ptr) {
         ctx->input_sound_stream_ptr = util::sound::build_sound_stream(
-            input_sample_rate, dynamic_cast<gigaedge::spench::DenoiserConfig*>(config_.get())->sampling_freq(),
-            dynamic_cast<gigaedge::spench::DenoiserConfig*>(config_.get())->frame_stride_ms(),
+            input_sample_rate, dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq(),
+            dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms(),
             util::sound::TemplateType::input);
       }
       if (!ctx->output_sound_stream_ptr) {
         ctx->output_sound_stream_ptr = util::sound::build_sound_stream(
-            dynamic_cast<gigaedge::spench::DenoiserConfig*>(config_.get())->sampling_freq(), output_sample_rate,
-            dynamic_cast<gigaedge::spench::DenoiserConfig*>(config_.get())->frame_stride_ms(),
+            dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq(), output_sample_rate,
+            dynamic_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms(),
             util::sound::TemplateType::output);
       }
     } catch (const std::exception& e) {
       spdlog::error("{}", e.what());
-      ret_code = GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+      ret_code = GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
   }
   return ret_code;
 }
 
-GigaEdgeSpenchRetCode DenoiserAudioHandler::destroy_audio_streams(Context<float>* ctx) {
+GigaEdgeEnhanceRetCode DenoiserAudioHandler::destroy_audio_streams(Context<float>* ctx) {
   if (ctx == nullptr) {
-    return GigaEdgeSpenchRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM;
+    return GigaEdgeEnhanceRetCode::ERR_DENOISER_CREATE_AND_SETUP_PROBLEM;
   }
 
   if (ctx->input_sound_stream_ptr) {
@@ -91,39 +91,39 @@ GigaEdgeSpenchRetCode DenoiserAudioHandler::destroy_audio_streams(Context<float>
   if (ctx->output_sound_stream_ptr) {
     ctx->output_sound_stream_ptr.reset();
   }
-  return GigaEdgeSpenchRetCode::SUCCESS;
+  return GigaEdgeEnhanceRetCode::SUCCESS;
 }
 
-GigaEdgeSpenchRetCode DenoiserAudioHandler::infer_frame(std::unique_ptr<gigaedge::spench::Task>& task_ptr) {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+GigaEdgeEnhanceRetCode DenoiserAudioHandler::infer_frame(std::unique_ptr<gigaedge::enhance::Task>& task_ptr) {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 
   if (task_ptr->data.context == nullptr) {
-    ret_code = GigaEdgeSpenchRetCode::ERR_INFERENCE_PROBLEM;
+    ret_code = GigaEdgeEnhanceRetCode::ERR_INFERENCE_PROBLEM;
   }
 
-  if (ret_code == GigaEdgeSpenchRetCode::SUCCESS) {
+  if (ret_code == GigaEdgeEnhanceRetCode::SUCCESS) {
     try {
       feature_extractor_runner_ptr_->run(task_ptr.get());
     } catch (const std::exception& e) {
       spdlog::error("{}", e.what());
-      ret_code = GigaEdgeSpenchRetCode::ERR_MEL_SPEC_CALC_PROBLEM;
+      ret_code = GigaEdgeEnhanceRetCode::ERR_MEL_SPEC_CALC_PROBLEM;
     }
   }
 
-  if (ret_code == GigaEdgeSpenchRetCode::SUCCESS) {
+  if (ret_code == GigaEdgeEnhanceRetCode::SUCCESS) {
     try {
       inference_runner_ptr_->infer(task_ptr.get());
     } catch (const std::exception& e) {
       spdlog::error("{}", e.what());
-      ret_code = GigaEdgeSpenchRetCode::ERR_INFERENCE_PROBLEM;
+      ret_code = GigaEdgeEnhanceRetCode::ERR_INFERENCE_PROBLEM;
     }
   }
 
-  if (ret_code == GigaEdgeSpenchRetCode::SUCCESS) {
+  if (ret_code == GigaEdgeEnhanceRetCode::SUCCESS) {
     try {
       feature_extractor_runner_ptr_->run(task_ptr.get());
       if (task_ptr->state.is(ChunkOutcome::warming_up)) {
-        ret_code = GigaEdgeSpenchRetCode::CONTEXT_ACCUMULATION;
+        ret_code = GigaEdgeEnhanceRetCode::CONTEXT_ACCUMULATION;
       } else if (!task_ptr->data.input_spectrogram.empty() && !task_ptr->data.context->prev_spectrogram.empty()) {
         const float snr = task_ptr->data.context->snr_adviser->process_frame(task_ptr->data.input_spectrogram.back(),
                                                                              task_ptr->data.context->prev_spectrogram,
@@ -134,13 +134,13 @@ GigaEdgeSpenchRetCode DenoiserAudioHandler::infer_frame(std::unique_ptr<gigaedge
       }
     } catch (const std::exception& e) {
       spdlog::error("{}", e.what());
-      ret_code = GigaEdgeSpenchRetCode::ERR_MASK_CALC_PROBLEM;
+      ret_code = GigaEdgeEnhanceRetCode::ERR_MASK_CALC_PROBLEM;
     }
   }
   return ret_code;
 }
 
-void DenoiserAudioHandler::fill_in_data_for_processing(std::unique_ptr<gigaedge::spench::Task>& task_ptr,
+void DenoiserAudioHandler::fill_in_data_for_processing(std::unique_ptr<gigaedge::enhance::Task>& task_ptr,
                                                        std::vector<float>& input) {
   auto& ctx = *task_ptr->data.context;
   auto& waveform = task_ptr->data.waveform;
@@ -156,19 +156,19 @@ void DenoiserAudioHandler::fill_in_data_for_processing(std::unique_ptr<gigaedge:
   ctx.prev_input_chunk.assign(input.end() - keep, input.end());
 }
 
-GigaEdgeSpenchRetCode DenoiserAudioHandler::process_frame(struct gigaedge::spench::Context<float>* ctx,
-                                                          const std::vector<float>& input_audio_frame,
-                                                          std::vector<float>& enhanced_audio_frame) {
+GigaEdgeEnhanceRetCode DenoiserAudioHandler::process_frame(struct gigaedge::enhance::Context<float>* ctx,
+                                                           const std::vector<float>& input_audio_frame,
+                                                           std::vector<float>& enhanced_audio_frame) {
   return process_frame_internal(ctx, input_audio_frame, enhanced_audio_frame, true);
 }
 
-GigaEdgeSpenchRetCode DenoiserAudioHandler::process_frame_internal(Context<float>* ctx,
-                                                                   const std::vector<float>& input_audio_frame,
-                                                                   std::vector<float>& enhanced_audio_frame,
-                                                                   bool allow_zero_shortcut) {
+GigaEdgeEnhanceRetCode DenoiserAudioHandler::process_frame_internal(Context<float>* ctx,
+                                                                    const std::vector<float>& input_audio_frame,
+                                                                    std::vector<float>& enhanced_audio_frame,
+                                                                    bool allow_zero_shortcut) {
   enhanced_audio_frame.clear();
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
-  std::unique_ptr<gigaedge::spench::Task> task_ptr(new gigaedge::spench::Task());
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
+  std::unique_ptr<gigaedge::enhance::Task> task_ptr(new gigaedge::enhance::Task());
   task_ptr->data.context = ctx;
   static constexpr double delay_warn_ms = 300.0;
   static constexpr double warn_interval_ms = 30000.0;  // 30 seconds
@@ -188,32 +188,32 @@ GigaEdgeSpenchRetCode DenoiserAudioHandler::process_frame_internal(Context<float
     }
     if (resampled_input_result.size() == 0) {
       spdlog::debug("Buffer accumulation for input resampling");
-      ret_code = GigaEdgeSpenchRetCode::RESAMPLING_INPUT_BUFFER_ACCUMULATION;
+      ret_code = GigaEdgeEnhanceRetCode::RESAMPLING_INPUT_BUFFER_ACCUMULATION;
     }
   } catch (const std::exception& e) {
     spdlog::error("{}", e.what());
-    ret_code = GigaEdgeSpenchRetCode::ERR_INPUT_AUDIO_RESAMPLE_PROBLEM;
+    ret_code = GigaEdgeEnhanceRetCode::ERR_INPUT_AUDIO_RESAMPLE_PROBLEM;
   }
 
-  if (ret_code == GigaEdgeSpenchRetCode::SUCCESS) {
+  if (ret_code == GigaEdgeEnhanceRetCode::SUCCESS) {
     const auto minimal_chunk_size = get_input_frame_size();
     const auto hop = feature_extractor_runner_ptr_->get_frame_hop_size_samples();
 
     if (resampled_input_result.size() < minimal_chunk_size) {
       spdlog::error("Frame too short: got {}, need at least {}", resampled_input_result.size(), minimal_chunk_size);
-      return GigaEdgeSpenchRetCode::ERR_INVALID_FRAME_SIZE;
+      return GigaEdgeEnhanceRetCode::ERR_INVALID_FRAME_SIZE;
     }
 
     if (resampled_input_result.size() % hop != 0) {
       spdlog::error("Frame with invalid size {} provided, need multiple of {}", resampled_input_result.size(),
                     get_input_frame_size());
-      return GigaEdgeSpenchRetCode::ERR_INVALID_FRAME_SIZE;
+      return GigaEdgeEnhanceRetCode::ERR_INVALID_FRAME_SIZE;
     }
 
     if (resampled_input_result.size() / hop >= max_number_of_time_frames_for_single_input) {
       spdlog::error("Maximum frame length exceeded {}. Maximum is {} time frames (~32 min) of audio",
                     resampled_input_result.size(), max_number_of_time_frames_for_single_input);
-      return GigaEdgeSpenchRetCode::ERR_INVALID_FRAME_SIZE;
+      return GigaEdgeEnhanceRetCode::ERR_INVALID_FRAME_SIZE;
     }
 
     if (task_ptr->data.context->prev_input_chunk.empty()) {
@@ -227,7 +227,7 @@ GigaEdgeSpenchRetCode DenoiserAudioHandler::process_frame_internal(Context<float
     }
   }
 
-  if (ret_code == GigaEdgeSpenchRetCode::SUCCESS) {
+  if (ret_code == GigaEdgeEnhanceRetCode::SUCCESS) {
     if (skip_inference) {
       task_ptr->data.enhanced_wav = resampled_input_result;
     } else {
@@ -235,7 +235,7 @@ GigaEdgeSpenchRetCode DenoiserAudioHandler::process_frame_internal(Context<float
     }
   }
 
-  if (ret_code >= GigaEdgeSpenchRetCode::SUCCESS) {
+  if (ret_code >= GigaEdgeEnhanceRetCode::SUCCESS) {
     try {
       auto result = task_ptr->data.context->output_sound_stream_ptr->read_chunk(task_ptr->data.enhanced_wav);
       // --- NEW: warn on output-stream accumulated delay ---
@@ -249,20 +249,20 @@ GigaEdgeSpenchRetCode DenoiserAudioHandler::process_frame_internal(Context<float
         std::copy(result.begin(), result.end(), back_inserter(enhanced_audio_frame));
       } else {
         spdlog::debug("Buffer accumulation for output resampling");
-        ret_code = GigaEdgeSpenchRetCode::RESAMPLING_OUTPUT_BUFFER_ACCUMULATION;
+        ret_code = GigaEdgeEnhanceRetCode::RESAMPLING_OUTPUT_BUFFER_ACCUMULATION;
       }
     } catch (const std::exception& e) {
       spdlog::error("{}", e.what());
-      ret_code = GigaEdgeSpenchRetCode::ERR_INPUT_AUDIO_RESAMPLE_PROBLEM;
+      ret_code = GigaEdgeEnhanceRetCode::ERR_INPUT_AUDIO_RESAMPLE_PROBLEM;
     }
   }
 
   return ret_code;
 }
 
-GigaEdgeSpenchRetCode DenoiserAudioHandler::finalize_inference(struct gigaedge::spench::Context<float>* ctx,
-                                                               std::vector<float>& enhanced_audio_frames) {
-  GigaEdgeSpenchRetCode ret_code = GigaEdgeSpenchRetCode::SUCCESS;
+GigaEdgeEnhanceRetCode DenoiserAudioHandler::finalize_inference(struct gigaedge::enhance::Context<float>* ctx,
+                                                                std::vector<float>& enhanced_audio_frames) {
+  GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 
   const std::vector<float> zero_input_audio_frame(ctx->input_sound_stream_ptr->input.frame_size_samples(), 0.0);
   uint32_t number_of_zero_contexts = inference_runner_ptr_->get_model_future_context_len() + 1;
@@ -270,7 +270,7 @@ GigaEdgeSpenchRetCode DenoiserAudioHandler::finalize_inference(struct gigaedge::
   for (uint32_t i = 0; i < number_of_zero_contexts; ++i) {
     std::vector<float> output_audio;
     ret_code = process_frame_internal(ctx, zero_input_audio_frame, output_audio, false);
-    if (ret_code != GigaEdgeSpenchRetCode::SUCCESS && ret_code != GigaEdgeSpenchRetCode::CONTEXT_ACCUMULATION) {
+    if (ret_code != GigaEdgeEnhanceRetCode::SUCCESS && ret_code != GigaEdgeEnhanceRetCode::CONTEXT_ACCUMULATION) {
       break;
     }
     enhanced_audio_frames.insert(enhanced_audio_frames.end(), output_audio.begin(), output_audio.end());
@@ -286,7 +286,7 @@ GigaEdgeSpenchRetCode DenoiserAudioHandler::finalize_inference(struct gigaedge::
     for (uint32_t i = 0; last_input_resampled_data.size() >
                          (i + number_of_zero_contexts) * feature_extractor_runner_ptr_->get_frame_hop_size_samples();
          ++i) {
-      std::unique_ptr<gigaedge::spench::Task> task_ptr(new gigaedge::spench::Task());
+      std::unique_ptr<gigaedge::enhance::Task> task_ptr(new gigaedge::enhance::Task());
       task_ptr->data.context = ctx;
       std::vector<float> input_audio_frame(
           last_input_resampled_data.begin() + feature_extractor_runner_ptr_->get_frame_hop_size_samples() * i,
@@ -296,7 +296,7 @@ GigaEdgeSpenchRetCode DenoiserAudioHandler::finalize_inference(struct gigaedge::
       ret_code = infer_frame(task_ptr);
 
       if (!task_ptr->state.is(PipelineStage::enhanced_ready) ||
-          (ret_code != GigaEdgeSpenchRetCode::SUCCESS && ret_code != GigaEdgeSpenchRetCode::CONTEXT_ACCUMULATION)) {
+          (ret_code != GigaEdgeEnhanceRetCode::SUCCESS && ret_code != GigaEdgeEnhanceRetCode::CONTEXT_ACCUMULATION)) {
         spdlog::warn("Unexpected case happend");
         break;
       }
@@ -321,7 +321,7 @@ GigaEdgeSpenchRetCode DenoiserAudioHandler::finalize_inference(struct gigaedge::
   return ret_code;
 }
 
-StatInfo DenoiserAudioHandler::get_stat_info(const struct gigaedge::spench::Context<float>* ctx) {
+StatInfo DenoiserAudioHandler::get_stat_info(const struct gigaedge::enhance::Context<float>* ctx) {
   if (ctx != nullptr) {
     return ctx->stat;
   } else {
@@ -329,4 +329,4 @@ StatInfo DenoiserAudioHandler::get_stat_info(const struct gigaedge::spench::Cont
   }
 }
 
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

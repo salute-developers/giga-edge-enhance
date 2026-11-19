@@ -1,7 +1,7 @@
 ---
 # clang-format style for the iOS wrapper's Objective-C++ sources.
 # Mirrors the existing manual layout so running `clang-format` on
-# `Sources/GigaEdgeSpenchAudioKit/ObjC/` and `include/` files is a no-op.
+# `Sources/EnhanceAudioKit/ObjC/` and `include/` files is a no-op.
 # Run with: ./scripts/lint.sh format
 Language: ObjC
 BasedOnStyle: Google

@@ -1,28 +1,28 @@
 import AVFoundation
-import GigaEdgeSpenchAudioKit
+import EnhanceAudioKit
 
 final class LiveAudioController {
     private var engine: AVAudioEngine?
-    private var gigaEdgeSpenchUnit: DenoiserAVAudioUnit?
+    private var gigaEdgeEnhanceUnit: EnhanceAVAudioUnit?
     private var delayNode: AVAudioUnitDelay?
 
-    var telemetry: Telemetry {
-        gigaEdgeSpenchUnit?.telemetry ?? .empty
+    var telemetry: EnhanceTelemetry {
+        gigaEdgeEnhanceUnit?.telemetry ?? .empty
     }
     var onProcessingFailure: ((String) -> Void)?
 
-    func start(features: Features,
-               settings: Settings,
-               onLowPerformance: @escaping (LowPerformanceEvent) -> Void,
+    func start(features: EnhanceFeatures,
+               settings: EnhanceSettings,
+               onLowPerformance: @escaping (EnhanceLowPerformanceEvent) -> Void,
                completion: @escaping (Error?) -> Void) {
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
             try session.setActive(true)
-            let gigaEdgeSpenchUnit = try DenoiserAVAudioUnit(features: features, settings: settings)
-            gigaEdgeSpenchUnit.onLowPerformance = onLowPerformance
-            gigaEdgeSpenchUnit.onProcessingFailure = onProcessingFailure
-            try configureEngine(gigaEdgeSpenchUnit: gigaEdgeSpenchUnit)
+            let gigaEdgeEnhanceUnit = try EnhanceAVAudioUnit(features: features, settings: settings)
+            gigaEdgeEnhanceUnit.onLowPerformance = onLowPerformance
+            gigaEdgeEnhanceUnit.onProcessingFailure = onProcessingFailure
+            try configureEngine(gigaEdgeEnhanceUnit: gigaEdgeEnhanceUnit)
             completion(nil)
         } catch {
             completion(error)
@@ -34,15 +34,15 @@ final class LiveAudioController {
             engine.stop()
             engine.pause()
 
-            if let gigaEdgeSpenchUnit {
-                gigaEdgeSpenchUnit.onLowPerformance = nil
-                gigaEdgeSpenchUnit.onProcessingFailure = nil
-                gigaEdgeSpenchUnit.reset()
-                if let audioUnit = gigaEdgeSpenchUnit.auAudioUnit as? DenoiserAUAudioUnit,
+            if let gigaEdgeEnhanceUnit {
+                gigaEdgeEnhanceUnit.onLowPerformance = nil
+                gigaEdgeEnhanceUnit.onProcessingFailure = nil
+                gigaEdgeEnhanceUnit.reset()
+                if let audioUnit = gigaEdgeEnhanceUnit.auAudioUnit as? EnhanceAUAudioUnit,
                    audioUnit.renderResourcesAllocated {
                     audioUnit.deallocateRenderResources()
                 }
-                engine.disconnectAndDetachIfNeeded(gigaEdgeSpenchUnit)
+                engine.disconnectAndDetachIfNeeded(gigaEdgeEnhanceUnit)
             }
 
             if let delayNode {
@@ -53,34 +53,34 @@ final class LiveAudioController {
         }
 
         engine = nil
-        gigaEdgeSpenchUnit = nil
+        gigaEdgeEnhanceUnit = nil
         delayNode = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
-    private func configureEngine(gigaEdgeSpenchUnit: DenoiserAVAudioUnit) throws {
+    private func configureEngine(gigaEdgeEnhanceUnit: EnhanceAVAudioUnit) throws {
         let engine = AVAudioEngine()
         let delayNode = AVAudioUnitDelay()
         delayNode.delayTime = 1.0
         delayNode.feedback = 0
         delayNode.wetDryMix = 100
 
-        engine.attach(gigaEdgeSpenchUnit)
+        engine.attach(gigaEdgeEnhanceUnit)
         engine.attach(delayNode)
 
         let inputFormat = engine.inputNode.outputFormat(forBus: 0)
-        engine.connect(engine.inputNode, to: gigaEdgeSpenchUnit, format: inputFormat)
-        engine.connect(gigaEdgeSpenchUnit, to: delayNode, format: inputFormat)
+        engine.connect(engine.inputNode, to: gigaEdgeEnhanceUnit, format: inputFormat)
+        engine.connect(gigaEdgeEnhanceUnit, to: delayNode, format: inputFormat)
         engine.connect(delayNode, to: engine.mainMixerNode, format: inputFormat)
 
         try engine.start()
 
         self.engine = engine
-        self.gigaEdgeSpenchUnit = gigaEdgeSpenchUnit
+        self.gigaEdgeEnhanceUnit = gigaEdgeEnhanceUnit
         self.delayNode = delayNode
     }
 
-    func setFeatures(_ features: Features) throws {
-        try gigaEdgeSpenchUnit?.setFeatures(features)
+    func setFeatures(_ features: EnhanceFeatures) throws {
+        try gigaEdgeEnhanceUnit?.setFeatures(features)
     }
 }

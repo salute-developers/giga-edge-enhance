@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 const char* to_string(PipelineStage stage) {
   switch (stage) {
@@ -58,4 +58,4 @@ void TaskState::require(PipelineStage expected) const {
   }
 }
 
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

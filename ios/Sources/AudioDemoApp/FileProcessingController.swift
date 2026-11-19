@@ -1,28 +1,28 @@
 import AVFoundation
-import GigaEdgeSpenchAudioKit
+import EnhanceAudioKit
 
 final class FileProcessingController {
     private var engine: AVAudioEngine?
     private var player: AVAudioPlayerNode?
-    private var gigaEdgeSpenchUnit: DenoiserAVAudioUnit?
+    private var gigaEdgeEnhanceUnit: EnhanceAVAudioUnit?
     private var outputFile: AVAudioFile?
 
-    var telemetry: Telemetry {
-        gigaEdgeSpenchUnit?.telemetry ?? .empty
+    var telemetry: EnhanceTelemetry {
+        gigaEdgeEnhanceUnit?.telemetry ?? .empty
     }
     var onProcessingFailure: ((String) -> Void)?
 
     func process(inputURL: URL,
-                 features: Features,
-                 settings: Settings,
-                 onLowPerformance: @escaping (LowPerformanceEvent) -> Void,
+                 features: EnhanceFeatures,
+                 settings: EnhanceSettings,
+                 onLowPerformance: @escaping (EnhanceLowPerformanceEvent) -> Void,
                  completion: @escaping (Result<URL, Error>) -> Void) {
         do {
-            let gigaEdgeSpenchUnit = try DenoiserAVAudioUnit(features: features, settings: settings)
-            gigaEdgeSpenchUnit.onLowPerformance = onLowPerformance
-            gigaEdgeSpenchUnit.onProcessingFailure = onProcessingFailure
+            let gigaEdgeEnhanceUnit = try EnhanceAVAudioUnit(features: features, settings: settings)
+            gigaEdgeEnhanceUnit.onLowPerformance = onLowPerformance
+            gigaEdgeEnhanceUnit.onProcessingFailure = onProcessingFailure
             try startProcessing(inputURL: inputURL,
-                                gigaEdgeSpenchUnit: gigaEdgeSpenchUnit,
+                                gigaEdgeEnhanceUnit: gigaEdgeEnhanceUnit,
                                 completion: completion)
         } catch {
             completion(.failure(error))
@@ -33,12 +33,12 @@ final class FileProcessingController {
         cleanupProcessingGraph()
     }
 
-    func setFeatures(_ features: Features) throws {
-        try gigaEdgeSpenchUnit?.setFeatures(features)
+    func setFeatures(_ features: EnhanceFeatures) throws {
+        try gigaEdgeEnhanceUnit?.setFeatures(features)
     }
 
     private func startProcessing(inputURL: URL,
-                                 gigaEdgeSpenchUnit: DenoiserAVAudioUnit,
+                                 gigaEdgeEnhanceUnit: EnhanceAVAudioUnit,
                                  completion: @escaping (Result<URL, Error>) -> Void) throws {
         let inputFile = try AVAudioFile(forReading: inputURL)
         let engine = AVAudioEngine()
@@ -60,13 +60,13 @@ final class FileProcessingController {
         }
 
         engine.attach(player)
-        engine.attach(gigaEdgeSpenchUnit)
+        engine.attach(gigaEdgeEnhanceUnit)
         engine.mainMixerNode.outputVolume = 0
 
-        engine.connect(player, to: gigaEdgeSpenchUnit, format: processingFormat)
-        engine.connect(gigaEdgeSpenchUnit, to: engine.mainMixerNode, format: processingFormat)
+        engine.connect(player, to: gigaEdgeEnhanceUnit, format: processingFormat)
+        engine.connect(gigaEdgeEnhanceUnit, to: engine.mainMixerNode, format: processingFormat)
 
-        gigaEdgeSpenchUnit.installTap(onBus: 0,
+        gigaEdgeEnhanceUnit.installTap(onBus: 0,
                               bufferSize: 1_024,
                               format: processingFormat) { buffer, _ in
             do {
@@ -89,7 +89,7 @@ final class FileProcessingController {
 
         self.engine = engine
         self.player = player
-        self.gigaEdgeSpenchUnit = gigaEdgeSpenchUnit
+        self.gigaEdgeEnhanceUnit = gigaEdgeEnhanceUnit
         self.outputFile = outputFile
     }
 
@@ -102,11 +102,11 @@ final class FileProcessingController {
                 engine.disconnectAndDetachIfNeeded(player)
             }
 
-            if let gigaEdgeSpenchUnit {
-                gigaEdgeSpenchUnit.onLowPerformance = nil
-                gigaEdgeSpenchUnit.onProcessingFailure = nil
-                gigaEdgeSpenchUnit.removeTap(onBus: 0)
-                engine.disconnectAndDetachIfNeeded(gigaEdgeSpenchUnit)
+            if let gigaEdgeEnhanceUnit {
+                gigaEdgeEnhanceUnit.onLowPerformance = nil
+                gigaEdgeEnhanceUnit.onProcessingFailure = nil
+                gigaEdgeEnhanceUnit.removeTap(onBus: 0)
+                engine.disconnectAndDetachIfNeeded(gigaEdgeEnhanceUnit)
             }
 
             engine.reset()
@@ -114,7 +114,7 @@ final class FileProcessingController {
 
         engine = nil
         player = nil
-        gigaEdgeSpenchUnit = nil
+        gigaEdgeEnhanceUnit = nil
         outputFile = nil
     }
 }

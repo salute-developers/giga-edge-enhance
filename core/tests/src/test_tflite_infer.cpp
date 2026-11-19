@@ -21,7 +21,7 @@ struct TestTfliteRunner {
 
   TestTfliteRunner& InitRunner(const std::string& yaml_config_name, uint16_t num_threads = 1) {
     std::string file_path = data_root + "config/" + yaml_config_name;
-    auto config = std::make_shared<gigaedge::spench::DenoiserConfig>(gigaedge::spench::FileConfigReader(file_path));
+    auto config = std::make_shared<gigaedge::enhance::DenoiserConfig>(gigaedge::enhance::FileConfigReader(file_path));
 
     denoiser_runner = std::make_unique<util::tf_lite::DenoiserDiscriminativeHqTfliteRunner>(config, num_threads);
     frame_size_ms = config->frame_size_ms();
@@ -42,10 +42,10 @@ struct TestTfliteRunner {
 };
 
 TEST_CASE("FAIL TFLite rejects unsupported model type before inference [tflite]") {
-  const auto config = std::make_shared<gigaedge::spench::DenoiserConfig>(
-      gigaedge::spench::StringConfigReader("model:\n  model_path: unused.tflite\n"
-                                           "inference:\n  model_type: denoiser_discr_hq_model\n"));
-  CHECK_THROWS_WITH(gigaedge::spench::InferenceRunner(config, 1, false),
+  const auto config = std::make_shared<gigaedge::enhance::DenoiserConfig>(
+      gigaedge::enhance::StringConfigReader("model:\n  model_path: unused.tflite\n"
+                                            "inference:\n  model_type: denoiser_discr_hq_model\n"));
+  CHECK_THROWS_WITH(gigaedge::enhance::InferenceRunner(config, 1, false),
                     "Model type is not supported by the selected inference engine.");
 }
 
@@ -80,8 +80,8 @@ TEST_CASE("SUCCEED Run relu model dummy inference [tflite]") {
 }
 
 TEST_CASE("FAIL Read config with corrupted model [tflite runner]") {
-  auto config = std::make_shared<gigaedge::spench::DenoiserConfig>(
-      gigaedge::spench::StringConfigReader("model:\n  model_path: data/models/invalid_model.tflite\n"));
+  auto config = std::make_shared<gigaedge::enhance::DenoiserConfig>(
+      gigaedge::enhance::StringConfigReader("model:\n  model_path: data/models/invalid_model.tflite\n"));
   CHECK_THROWS_WITH(util::tf_lite::DenoiserDiscriminativeHqTfliteRunner(config, 1),
                     "Model reading error. There is problem with checkpoint file.");
 }

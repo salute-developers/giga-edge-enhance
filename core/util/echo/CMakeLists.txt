@@ -5,12 +5,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # implement FFT backend for speexdsp
 add_library(spx_fft STATIC speex_fftwrap.cpp)
-ges_apply_build_config(spx_fft)
+gee_apply_build_config(spx_fft)
 target_link_libraries(spx_fft PRIVATE pocketfft)
 target_link_libraries(speexdsp_gdn PRIVATE spx_fft)
 
 add_library(${PROJECT_NAME} STATIC echo_canceler.cpp)
-ges_apply_build_config(${PROJECT_NAME})
+gee_apply_build_config(${PROJECT_NAME})
 target_link_libraries(${PROJECT_NAME} PRIVATE
     dsplib 
     speexdsp_gdn

@@ -1,7 +1,7 @@
-import { GES_WORKLET_NAME } from '../../utils/constants';
+import { GEE_WORKLET_NAME } from '../../utils/constants';
 
-import { GigaEdgeSpenchBaseWorkletProcessor } from './GigaEdgeSpenchBaseWorkletProcessor';
+import { GigaEdgeEnhanceBaseWorkletProcessor } from './GigaEdgeEnhanceBaseWorkletProcessor';
 
-class GigaEdgeSpenchWorkletProcessor extends GigaEdgeSpenchBaseWorkletProcessor {}
+class GigaEdgeEnhanceWorkletProcessor extends GigaEdgeEnhanceBaseWorkletProcessor {}
 
-registerProcessor(GES_WORKLET_NAME, GigaEdgeSpenchWorkletProcessor);
+registerProcessor(GEE_WORKLET_NAME, GigaEdgeEnhanceWorkletProcessor);

@@ -23,26 +23,26 @@
             android:text="@string/settings_help"
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
 
-        <TextView style="@style/GigaEdgeSpenchDemoSettingsLabel" android:text="@string/setting_low_performance_window_seconds" />
-        <EditText android:id="@+id/lowPerformanceWindowSecondsEdit" style="@style/GigaEdgeSpenchDemoSettingsEdit" />
+        <TextView style="@style/GigaEdgeEnhanceDemoSettingsLabel" android:text="@string/setting_low_performance_window_seconds" />
+        <EditText android:id="@+id/lowPerformanceWindowSecondsEdit" style="@style/GigaEdgeEnhanceDemoSettingsEdit" />
 
-        <TextView style="@style/GigaEdgeSpenchDemoSettingsLabel" android:text="@string/setting_low_performance_max_refill_times" />
-        <EditText android:id="@+id/lowPerformanceMaxRefillTimesEdit" style="@style/GigaEdgeSpenchDemoSettingsEdit" android:inputType="number" />
+        <TextView style="@style/GigaEdgeEnhanceDemoSettingsLabel" android:text="@string/setting_low_performance_max_refill_times" />
+        <EditText android:id="@+id/lowPerformanceMaxRefillTimesEdit" style="@style/GigaEdgeEnhanceDemoSettingsEdit" android:inputType="number" />
 
-        <TextView style="@style/GigaEdgeSpenchDemoSettingsLabel" android:text="@string/setting_low_performance_max_refill_time_factor" />
-        <EditText android:id="@+id/lowPerformanceMaxRefillTimeFactorEdit" style="@style/GigaEdgeSpenchDemoSettingsEdit" />
+        <TextView style="@style/GigaEdgeEnhanceDemoSettingsLabel" android:text="@string/setting_low_performance_max_refill_time_factor" />
+        <EditText android:id="@+id/lowPerformanceMaxRefillTimeFactorEdit" style="@style/GigaEdgeEnhanceDemoSettingsEdit" />
 
-        <TextView style="@style/GigaEdgeSpenchDemoSettingsLabel" android:text="@string/setting_min_latency" />
-        <EditText android:id="@+id/minLatencyEdit" style="@style/GigaEdgeSpenchDemoSettingsEdit" />
+        <TextView style="@style/GigaEdgeEnhanceDemoSettingsLabel" android:text="@string/setting_min_latency" />
+        <EditText android:id="@+id/minLatencyEdit" style="@style/GigaEdgeEnhanceDemoSettingsEdit" />
 
-        <TextView style="@style/GigaEdgeSpenchDemoSettingsLabel" android:text="@string/setting_latency_increase_step" />
-        <EditText android:id="@+id/latencyIncreaseStepEdit" style="@style/GigaEdgeSpenchDemoSettingsEdit" />
+        <TextView style="@style/GigaEdgeEnhanceDemoSettingsLabel" android:text="@string/setting_latency_increase_step" />
+        <EditText android:id="@+id/latencyIncreaseStepEdit" style="@style/GigaEdgeEnhanceDemoSettingsEdit" />
 
-        <TextView style="@style/GigaEdgeSpenchDemoSettingsLabel" android:text="@string/setting_max_processing_chunk_seconds" />
-        <EditText android:id="@+id/maxProcessingChunkSecondsEdit" style="@style/GigaEdgeSpenchDemoSettingsEdit" />
+        <TextView style="@style/GigaEdgeEnhanceDemoSettingsLabel" android:text="@string/setting_max_processing_chunk_seconds" />
+        <EditText android:id="@+id/maxProcessingChunkSecondsEdit" style="@style/GigaEdgeEnhanceDemoSettingsEdit" />
 
-        <TextView style="@style/GigaEdgeSpenchDemoSettingsLabel" android:text="@string/setting_telemetry_rounding_milliseconds" />
-        <EditText android:id="@+id/telemetryRoundingMillisecondsEdit" style="@style/GigaEdgeSpenchDemoSettingsEdit" />
+        <TextView style="@style/GigaEdgeEnhanceDemoSettingsLabel" android:text="@string/setting_telemetry_rounding_milliseconds" />
+        <EditText android:id="@+id/telemetryRoundingMillisecondsEdit" style="@style/GigaEdgeEnhanceDemoSettingsEdit" />
 
         <CheckBox
             android:id="@+id/useVadNormalizationCheckbox"
@@ -57,10 +57,10 @@
             android:layout_height="wrap_content"
             android:text="@string/setting_reverse_processing_order" />
 
-        <TextView style="@style/GigaEdgeSpenchDemoSettingsLabel" android:text="@string/setting_custom_normalization_config" />
+        <TextView style="@style/GigaEdgeEnhanceDemoSettingsLabel" android:text="@string/setting_custom_normalization_config" />
         <EditText
             android:id="@+id/customNormalizationConfigEdit"
-            style="@style/GigaEdgeSpenchDemoSettingsEdit"
+            style="@style/GigaEdgeEnhanceDemoSettingsEdit"
             android:gravity="top|start"
             android:inputType="textMultiLine"
             android:minLines="3"

@@ -6,7 +6,7 @@ title: Core SDK
 
 The native SDK processes mono floating-point audio through configurable denoising, normalization,
 and echo-cancellation stages. It exposes stable C and C++ public headers under
-`core/include/spench/`.
+`core/include/enhance/`.
 
 Use the C++ API for native applications and the C API for ABI-oriented integrations. Existing
 exported names are compatibility constraints and are not renamed for style. The
@@ -15,7 +15,7 @@ YAML, packed models, return codes, DSP, and echo cancellation.
 
 ## Integration
 
-Link against an installed or packaged GigaEdge Spench build and include only the supported public
+Link against an installed or packaged GigaEdge Enhance build and include only the supported public
 headers. Create models, configurations, and processing state before entering the real-time callback;
 the callback should only pass mono floating-point buffers through an already-prepared pipeline.
 

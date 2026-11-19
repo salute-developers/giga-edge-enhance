@@ -5,15 +5,15 @@ implementation in `sdk/src/main/cpp` and the Kotlin API.
 
 ## Layers
 
-1. **Kotlin API** (`com.gigaedge.spench.Processor`) — the public surface. It validates
+1. **Kotlin API** (`com.gigaedge.enhance.Processor`) — the public surface. It validates
    arguments and lifecycle state, holds a read/write lock for the native handle, and marshals
    results (telemetry, low-performance events) into Kotlin types.
 2. **Thin JNI bridge** (`jni.cpp`) — maps each `nativeXxx` call to the matching native
    instance, converts arguments, translates C++ exceptions into Java exceptions, and constructs the
    `NativeTelemetry` and `LowPerformanceEvent` objects. It holds no long-lived state.
 3. **Native processor** (`processor.cpp` / `processor.h`) — owns the DSP, a dedicated
-   worker thread, the ring buffers, and the adaptive-latency monitor. The GigaEdge Spench C++ core is linked
-   **statically** into `libgigaedge-spench-sdk.so`.
+   worker thread, the ring buffers, and the adaptive-latency monitor. The GigaEdge Enhance C++ core is linked
+   **statically** into `libgigaedge-enhance-sdk.so`.
 
 There is **one native instance per `Processor`** (one worker thread, one pair of ring
 buffers). The native handle is never exposed to app code.
@@ -73,8 +73,8 @@ for settings validity — an invalid instance cannot be constructed.
 
 ## Source map
 
-- `sdk/src/main/java/com/gigaedge/spench/Processor.kt` — public API and lock.
+- `sdk/src/main/java/com/gigaedge/enhance/Processor.kt` — public API and lock.
 - `sdk/src/main/cpp/jni.cpp` — JNI bridge and exception mapping.
 - `sdk/src/main/cpp/processor.cpp` — worker thread, stages, adaptive latency.
 - `sdk/src/main/cpp/ring_buffer.cpp` — lock-free SPSC ring buffer.
-- `sdk/CMakeLists.txt` — native build; links the GigaEdge Spench core statically.
+- `sdk/CMakeLists.txt` — native build; links the GigaEdge Enhance core statically.

@@ -14,8 +14,8 @@
         "dist/*",
         "generated/*",
         "wasm/*",
-        "lib/gigaedge-spench.js",
-        "lib/gigaedge-spench.dsp.js"
+        "lib/gigaedge-enhance.js",
+        "lib/gigaedge-enhance.dsp.js"
     ],
     "settings": {
         "import/resolver": {

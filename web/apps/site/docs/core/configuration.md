@@ -61,29 +61,29 @@ The roles and package ids are in [Models](../models.md).
 
 ## Packed models
 
-A `.ges` file is a little-endian package: `uint32` configuration size, YAML bytes, `uint32` model
+A `.enhance` file is a little-endian package: `uint32` configuration size, YAML bytes, `uint32` model
 size, then the model bytes. The file ends at the model payload. `PackedModelReader` accepts a path
 or a memory buffer and exposes `config()` and `model()`. Pass `std::make_shared<PackedModelReader>(...)`
 to `Denoiser`.
 
 ## Return codes
 
-`GigaEdgeSpenchRetCode` is an unscoped enum. `SUCCESS` is `0`. Check `code < SUCCESS` in C and
-`code < GigaEdgeSpenchRetCode::SUCCESS` in C++.
+`GigaEdgeEnhanceRetCode` is an unscoped enum. `SUCCESS` is `0`. Check `code < SUCCESS` in C and
+`code < GigaEdgeEnhanceRetCode::SUCCESS` in C++.
 
 `CONTEXT_ACCUMULATION` (`1`), `RESAMPLING_INPUT_BUFFER_ACCUMULATION` (`2`), and
 `RESAMPLING_OUTPUT_BUFFER_ACCUMULATION` (`3`) mean the call succeeded and the output may be empty
 while the model or a resampler fills its window. Negative values are failures, including a bad
 configuration path, a model that the selected engine cannot start, an allocation failure, and a
-resample or inference error. The names are in `spench/errors.h`.
+resample or inference error. The names are in `enhance/errors.h`.
 
 ## C API ownership
 
-`GigaEdgeSpenchDenoiseInit` and `GigaEdgeSpenchDenoiseCreateContext` write handles through pointer
-arguments. `GigaEdgeSpenchDenoiseProcessChunkFp` and `GigaEdgeSpenchDenoiseGetFinalChunkFp` allocate
+`GigaEdgeEnhanceDenoiseInit` and `GigaEdgeEnhanceDenoiseCreateContext` write handles through pointer
+arguments. `GigaEdgeEnhanceDenoiseProcessChunkFp` and `GigaEdgeEnhanceDenoiseGetFinalChunkFp` allocate
 the output buffer. `output_size` is a byte count. `free` that buffer after every call, including a
-call that returns an accumulation code. `GigaEdgeSpenchDenoiseDestroyContext` runs before
-`GigaEdgeSpenchDenoiseFree`. The `Int` variants convert PCM16 and follow the same ownership.
+call that returns an accumulation code. `GigaEdgeEnhanceDenoiseDestroyContext` runs before
+`GigaEdgeEnhanceDenoiseFree`. The `Int` variants convert PCM16 and follow the same ownership.
 
 ## Normalization
 

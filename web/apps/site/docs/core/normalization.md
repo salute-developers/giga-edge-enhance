@@ -32,13 +32,13 @@ do not drive gain adaptation. The resulting gain still applies to the full audio
 stream. VAD is off by default.
 
 ```cpp
-#include <spench.h>
+#include <enhance.h>
 
 #include <vector>
 
 // Create once per stream, before processing 48 kHz audio.
 struct SpeechNormalizer {
-  gigaedge::spench::AudioProcessor speech;
+  gigaedge::enhance::AudioProcessor speech;
 
   SpeechNormalizer() {
     speech.AddLC(48000, /*target LUFS=*/-23.0f, /*bypass seconds=*/3.0f,
@@ -48,7 +48,7 @@ struct SpeechNormalizer {
   }
 
   // Call for each new block of mono float PCM in [-1, 1].
-  GigaEdgeSpenchRetCode process(const std::vector<float>& input, std::vector<float>& output) {
+  GigaEdgeEnhanceRetCode process(const std::vector<float>& input, std::vector<float>& output) {
     return speech.ProcessChunk(input, output);
   }
 };
@@ -63,9 +63,9 @@ separate `AddDRC` and `AddLim` calls.
 ## Gate quiet input before automatic gain control
 
 ```cpp
-#include <spench.h>
+#include <enhance.h>
 
-gigaedge::spench::AudioProcessor levels;
+gigaedge::enhance::AudioProcessor levels;
 levels.AddNG(48000, /*threshold dB=*/-45.0f)
       .AddAGC(48000)
       .AddLim(48000, /*threshold dB=*/-3.0f);

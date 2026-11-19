@@ -1,4 +1,4 @@
-#include "spench/audio_processor.h"
+#include "enhance/audio_processor.h"
 
 #include <spdlog/spdlog.h>
 
@@ -28,29 +28,29 @@ void validate_finite(float value, const char* message) { require_parameter(std::
 
 }  // namespace
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 AudioProcessor::AudioProcessor() : dsp_(nullptr) {
-  dsp_ = std::make_unique<gigaedge::spench::AudioProcessorHandler>(
-      std::make_shared<gigaedge::spench::AudioProcessorConfig>());
+  dsp_ = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(
+      std::make_shared<gigaedge::enhance::AudioProcessorConfig>());
 }
 
 AudioProcessor::AudioProcessor(const char* config) : dsp_(nullptr) {
   std::string config_file(config);
   if (!config_file.empty()) {
-    dsp_ = std::make_unique<gigaedge::spench::AudioProcessorHandler>(
-        std::make_shared<gigaedge::spench::AudioProcessorConfig>(gigaedge::spench::FileConfigReader(config)));
+    dsp_ = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(
+        std::make_shared<gigaedge::enhance::AudioProcessorConfig>(gigaedge::enhance::FileConfigReader(config)));
   } else {
     spdlog::info("AudioProcessor input config is empty. Use default values");
-    dsp_ = std::make_unique<gigaedge::spench::AudioProcessorHandler>(
-        std::make_shared<gigaedge::spench::AudioProcessorConfig>());
+    dsp_ = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(
+        std::make_shared<gigaedge::enhance::AudioProcessorConfig>());
   }
-  spdlog::info("Create GigaEdgeSpench audio processor from a configuration file");
+  spdlog::info("Create GigaEdgeEnhance audio processor from a configuration file");
 }
 
 AudioProcessor::AudioProcessor(const std::string& yaml_conf) : dsp_(nullptr) {
-  dsp_ = std::make_unique<gigaedge::spench::AudioProcessorHandler>(
-      std::make_shared<gigaedge::spench::AudioProcessorConfig>(gigaedge::spench::StringConfigReader(yaml_conf)));
-  spdlog::info("Create GigaEdgeSpench audio processor from yaml string");
+  dsp_ = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(
+      std::make_shared<gigaedge::enhance::AudioProcessorConfig>(gigaedge::enhance::StringConfigReader(yaml_conf)));
+  spdlog::info("Create GigaEdgeEnhance audio processor from yaml string");
 }
 
 AudioProcessor::~AudioProcessor() { dsp_.reset(); }
@@ -69,18 +69,18 @@ std::vector<int16_t> AudioProcessor::process(const std::vector<int16_t>& chunk16
   return ret16;
 }
 
-GigaEdgeSpenchRetCode AudioProcessor::ProcessChunk(const std::vector<float>& chunk, std::vector<float>& ret,
-                                                   Context<float>* ctx) {
+GigaEdgeEnhanceRetCode AudioProcessor::ProcessChunk(const std::vector<float>& chunk, std::vector<float>& ret,
+                                                    Context<float>* ctx) {
   (void)ctx;
   this->process(chunk, ret);
-  return GigaEdgeSpenchRetCode::SUCCESS;
+  return GigaEdgeEnhanceRetCode::SUCCESS;
 }
 
-GigaEdgeSpenchRetCode AudioProcessor::ProcessChunk(const std::vector<int16_t>& chunk16, std::vector<int16_t>& ret16,
-                                                   Context<float>* ctx) {
+GigaEdgeEnhanceRetCode AudioProcessor::ProcessChunk(const std::vector<int16_t>& chunk16, std::vector<int16_t>& ret16,
+                                                    Context<float>* ctx) {
   (void)ctx;
   this->process(chunk16, ret16);
-  return GigaEdgeSpenchRetCode::SUCCESS;
+  return GigaEdgeEnhanceRetCode::SUCCESS;
 }
 
 std::vector<float> AudioProcessor::operator()(const std::vector<float>& chunk, std::vector<float>& ret,
@@ -95,14 +95,14 @@ std::vector<int16_t> AudioProcessor::operator()(const std::vector<int16_t>& chun
   return this->process(chunk16, ret16);
 }
 
-GigaEdgeSpenchRetCode AudioProcessor::GetFinalChunk(std::vector<float>& in, Context<float>* ctx) {
+GigaEdgeEnhanceRetCode AudioProcessor::GetFinalChunk(std::vector<float>& in, Context<float>* ctx) {
   (*this)(in);
-  return GigaEdgeSpenchRetCode::SUCCESS;
+  return GigaEdgeEnhanceRetCode::SUCCESS;
 }
 
-GigaEdgeSpenchRetCode AudioProcessor::GetFinalChunk(std::vector<int16_t>& in16, Context<float>* ctx) {
+GigaEdgeEnhanceRetCode AudioProcessor::GetFinalChunk(std::vector<int16_t>& in16, Context<float>* ctx) {
   (*this)(in16);
-  return GigaEdgeSpenchRetCode::SUCCESS;
+  return GigaEdgeEnhanceRetCode::SUCCESS;
 }
 
 std::vector<float> AudioProcessor::operator()(std::vector<float>& in, Context<float>* ctx) {
@@ -230,4 +230,4 @@ AudioProcessor& AudioProcessor::AddDRC(uint32_t audio_sample_rate, float thresho
   dsp_->add_dr_compressor({audio_sample_rate, threshold_db, ratio, knee_width, attack_time, release_time});
   return *this;
 }
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance
