@@ -1,8 +1,8 @@
 #pragma once
 /**
- * \file enhance_c_api.h
+ * \file c_api.h
  * \defgroup group_c C API
- * \brief Plain C wrapper for the GigaEdgeEnhance audio processing C++ library.
+ * \brief Plain C wrapper for the GigaEdge Enhance audio processing C++ library.
  */
 
 #include <stdint.h>
