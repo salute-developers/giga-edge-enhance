@@ -46,7 +46,7 @@ final class ModelCatalogTests: XCTestCase {
             "CFBundlePackageType": "BNDL",
             "EnhanceModelID": "test-model",
             "EnhanceModelFileName": "model",
-            "EnhanceModelFileExtension": "ges"
+            "EnhanceModelFileExtension": "enhance"
         ]
         let infoPlist = try PropertyListSerialization.data(fromPropertyList: metadata,
                                                            format: .xml,

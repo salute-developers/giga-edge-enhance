@@ -17,7 +17,7 @@
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>EnhanceModelFileExtension</key>
-    <string>ges</string>
+    <string>enhance</string>
     <key>EnhanceModelFileName</key>
     <string>hybrid48</string>
     <key>EnhanceModelID</key>

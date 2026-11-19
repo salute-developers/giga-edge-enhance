@@ -12,6 +12,7 @@ Version 2.0 deliberately changes product identifiers and breaks source and binar
 | Build flags / environment | `GEE_*` |
 | Android | `com.gigaedge.enhance`; `Processor`, `Settings`, `Features` |
 | Swift | `EnhanceAudioKit`; `EnhanceProcessor`, `EnhanceSettings`, `EnhanceAVAudioUnit` |
+| Audio Unit | component subtype `enha`, manufacturer `GgEd` |
 | Web | `@gigaedge/enhance-web-sdk`; `GigaEdgeEnhanceSDK.create` |
 | Model resources | `enhance/models/<id>.enhance` on Android; `.enhance` files on iOS/Web |
 
