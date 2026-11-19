@@ -1,7 +1,7 @@
-# GigaEdge Spench website
+# GigaEdge Enhance website
 
 This workspace builds the static Docusaurus website used for the interactive Web SDK workbench and
-repository documentation. The demo consumes the packed `@gigaedge/spench-web-sdk` package, including
+repository documentation. The demo consumes the packed `@gigaedge/enhance-web-sdk` package, including
 its validated WebAssembly, workers, worklets, models, and type definitions.
 
 ## Development
@@ -12,7 +12,7 @@ Use the Node.js version in `web/.nvmrc`, then install from the web workspace roo
 cd web
 nvm use
 npm ci
-npm start --workspace=@gigaedge/spench-site
+npm start --workspace=@gigaedge/enhance-site
 ```
 
 The development server runs at `http://127.0.0.1:5173/`. The SDK watcher and Docusaurus server run in
@@ -31,7 +31,7 @@ To build only the website after validated Web SDK assets already exist:
 
 ```bash
 cd web
-npm run build --workspace=@gigaedge/spench-site
+npm run build --workspace=@gigaedge/enhance-site
 ```
 
 Static files are written to `apps/site/build/`.
@@ -45,7 +45,7 @@ files are not staged.
 
 ```bash
 cd web
-npm run pw:test --workspace=@gigaedge/spench-site
+npm run pw:test --workspace=@gigaedge/enhance-site
 ```
 
 Playwright starts the production build automatically unless `PUBLIC_INDEX_URL` points to an existing
@@ -53,11 +53,11 @@ deployment. The suite covers the denoiser in processing, benchmark, MOS, and fea
 
 ## GitHub Pages
 
-Set `GES_SITE_BASE` to the repository path, including surrounding slashes, when building a project
+Set `GEE_SITE_BASE` to the repository path, including surrounding slashes, when building a project
 site. For example:
 
 ```bash
-GES_SITE_BASE=/spench/ npm run build --workspace=@gigaedge/spench-site
+GEE_SITE_BASE=/enhance/ npm run build --workspace=@gigaedge/enhance-site
 ```
 
 GitHub Pages does not expose COOP/COEP response-header configuration. The built site therefore

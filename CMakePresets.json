@@ -29,7 +29,7 @@
       "name": "native-debug-onnx-options",
       "hidden": true,
       "cacheVariables": {
-        "GES_PROFILE": "native",
+        "GEE_PROFILE": "native",
         "CMAKE_BUILD_TYPE": "Debug",
         "BUILD_ONNX_ENGINE": "ON",
         "BUILD_TFLITE_ENGINE": "OFF",
@@ -41,7 +41,7 @@
       "name": "native-release-onnx-options",
       "hidden": true,
       "cacheVariables": {
-        "GES_PROFILE": "native",
+        "GEE_PROFILE": "native",
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_ONNX_ENGINE": "ON",
         "BUILD_TFLITE_ENGINE": "OFF",
@@ -53,7 +53,7 @@
       "name": "native-release-tflite-options",
       "hidden": true,
       "cacheVariables": {
-        "GES_PROFILE": "native",
+        "GEE_PROFILE": "native",
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_ONNX_ENGINE": "OFF",
         "BUILD_TFLITE_ENGINE": "ON",
@@ -65,7 +65,7 @@
       "name": "native-debug-tflite-options",
       "hidden": true,
       "cacheVariables": {
-        "GES_PROFILE": "native",
+        "GEE_PROFILE": "native",
         "CMAKE_BUILD_TYPE": "Debug",
         "BUILD_ONNX_ENGINE": "OFF",
         "BUILD_TFLITE_ENGINE": "ON",
@@ -194,7 +194,7 @@
       "displayName": "Native Model Packer",
       "inherits": "native-base",
       "cacheVariables": {
-        "GES_PROFILE": "model-packer",
+        "GEE_PROFILE": "model-packer",
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_ONNX_ENGINE": "OFF",
         "BUILD_TFLITE_ENGINE": "OFF",
@@ -307,7 +307,7 @@
       "displayName": "WebAssembly Release",
       "inherits": "base",
       "cacheVariables": {
-        "GES_PROFILE": "wasm",
+        "GEE_PROFILE": "wasm",
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
         "BUILD_ONNX_ENGINE": "ON",
@@ -349,7 +349,7 @@
       "inherits": "base",
       "generator": "Xcode",
       "cacheVariables": {
-        "GES_PROFILE": "ios",
+        "GEE_PROFILE": "ios",
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/ios/cmake/ios.toolchain.cmake",
         "PLATFORM": "OS64",
         "DEPLOYMENT_TARGET": "15.0",
@@ -536,46 +536,46 @@
     {
       "name": "wasm-release",
       "configurePreset": "wasm-release",
-      "targets": ["spench_wasm"]
+      "targets": ["enhance_wasm"]
     },
     {
       "name": "wasm-debug",
       "configurePreset": "wasm-debug",
-      "targets": ["spench_wasm"]
+      "targets": ["enhance_wasm"]
     },
     {
       "name": "wasm-dsp-release",
       "configurePreset": "wasm-dsp-release",
-      "targets": ["spench_wasm"]
+      "targets": ["enhance_wasm"]
     },
     {
       "name": "wasm-dsp-debug",
       "configurePreset": "wasm-dsp-debug",
-      "targets": ["spench_wasm"]
+      "targets": ["enhance_wasm"]
     },
     {
       "name": "ios-device-release",
       "configurePreset": "ios-device-release",
       "configuration": "Release",
-      "targets": ["gigaedge-spench"]
+      "targets": ["gigaedge-enhance"]
     },
     {
       "name": "ios-device-debug",
       "configurePreset": "ios-device-debug",
       "configuration": "Debug",
-      "targets": ["gigaedge-spench"]
+      "targets": ["gigaedge-enhance"]
     },
     {
       "name": "ios-simulator-release",
       "configurePreset": "ios-simulator-release",
       "configuration": "Release",
-      "targets": ["gigaedge-spench"]
+      "targets": ["gigaedge-enhance"]
     },
     {
       "name": "ios-simulator-debug",
       "configurePreset": "ios-simulator-debug",
       "configuration": "Debug",
-      "targets": ["gigaedge-spench"]
+      "targets": ["gigaedge-enhance"]
     }
   ],
   "testPresets": [

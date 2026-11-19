@@ -1,5 +1,5 @@
 import { SELF_WORKER_MESSAGES } from '../utils/ipc';
-import GigaEdgeSpenchWorker, { getTransferableModelRepresentation } from '../worker';
+import GigaEdgeEnhanceWorker, { getTransferableModelRepresentation } from '../worker';
 import { Logger } from '../utils/logger';
 import { Telemetry } from '../utils/telemetry';
 import { Settings, ModelsTmpl } from '../utils/common';
@@ -124,7 +124,7 @@ describe('getTransferableModelRepresentation', () => {
         const raw = {
             noiseCancellation: {
                 custom: new ArrayBuffer(4),
-                quality48: new URL('https://example.com/quality48.ges'),
+                quality48: new URL('https://example.com/quality48.enhance'),
             },
         } as unknown as ModelsTmpl<string | ArrayBuffer>;
 
@@ -140,7 +140,7 @@ describe('getTransferableModelRepresentation', () => {
         expect(models).toMatchObject({
             noiseCancellation: {
                 custom: trans[0],
-                quality48: 'https://example.com/quality48.ges',
+                quality48: 'https://example.com/quality48.enhance',
             },
         });
     });
@@ -148,10 +148,10 @@ describe('getTransferableModelRepresentation', () => {
 });
 
 /* -------------------------------------------------------------------------- */
-/*  Tests for GigaEdgeSpenchWorker                                                    */
+/*  Tests for GigaEdgeEnhanceWorker                                                    */
 /* -------------------------------------------------------------------------- */
 
-describe('GigaEdgeSpenchWorker', () => {
+describe('GigaEdgeEnhanceWorker', () => {
     const dummyLogger = { debug: jest.fn(), verbosity: 'verbose' } as any as Logger;
     const dummyTelemetry = {} as Telemetry;
 
@@ -159,11 +159,11 @@ describe('GigaEdgeSpenchWorker', () => {
         const rawModels = {
             noiseCancellation: {
                 custom: new ArrayBuffer(4),
-                quality48: new URL('https://example.com/model.ges'),
+                quality48: new URL('https://example.com/model.enhance'),
             },
         } as unknown as ModelsTmpl<string | ArrayBuffer>;
 
-        const worker = new GigaEdgeSpenchWorker(dummyLogger, dummyTelemetry, dummySettings, rawModels);
+        const worker = new GigaEdgeEnhanceWorker(dummyLogger, dummyTelemetry, dummySettings, rawModels);
 
         // The mock Worker instance lives on the `worker` field of the class.
         const mockWorker = worker as unknown as MockWorker;
@@ -183,7 +183,7 @@ describe('GigaEdgeSpenchWorker', () => {
         expect(msg.resources.models).toMatchObject({
             noiseCancellation: {
                 custom: transfer[0],
-                quality48: 'https://example.com/model.ges',
+                quality48: 'https://example.com/model.enhance',
             },
         });
 
@@ -194,7 +194,7 @@ describe('GigaEdgeSpenchWorker', () => {
     });
 
     test('createPort returns a port that is destroyed when the last client closes', async () => {
-        const worker = new GigaEdgeSpenchWorker(dummyLogger, dummyTelemetry, dummySettings, undefined);
+        const worker = new GigaEdgeEnhanceWorker(dummyLogger, dummyTelemetry, dummySettings, undefined);
 
         // Spy on the worker's destroy method.
         const destroySpy = jest.spyOn(worker, 'destroy');

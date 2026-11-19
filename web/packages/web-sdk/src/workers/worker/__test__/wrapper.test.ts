@@ -2,13 +2,13 @@
 /**
  * @jest-environment node
  */
-import { GigaEdgeSpenchWrapper, GigaEdgeSpenchDspWrapper } from '../wrapper';
+import { GigaEdgeEnhanceWrapper, GigaEdgeEnhanceDspWrapper } from '../wrapper';
 import { LoadError } from '../loader';
 import getHashCode from '../../../utils/hash';
 import { getDefaultAECConfig, getDefaultNormalizationConfig } from '../../../utils/constants';
 import { Settings } from '../../../utils/common';
 
-jest.mock('../../../../generated/wasm/gigaedge-spench', () => {
+jest.mock('../../../../generated/wasm/gigaedge-enhance', () => {
     const bridge = {
         _malloc: jest.fn((size: number) => size / Float32Array.BYTES_PER_ELEMENT),
         _free: jest.fn(),
@@ -21,7 +21,7 @@ jest.mock('../../../../generated/wasm/gigaedge-spench', () => {
     return () => bridge;
 }, { virtual: true });
 
-jest.mock('../../../../generated/wasm/gigaedge-spench.dsp', () => {
+jest.mock('../../../../generated/wasm/gigaedge-enhance.dsp', () => {
     const bridge = {
         _malloc: jest.fn((size: number) => size / Float32Array.BYTES_PER_ELEMENT),
         _free: jest.fn(),
@@ -77,8 +77,8 @@ class DummyLoader {
 
 }
 
-describe('GigaEdgeSpenchWrapper', () => {
-    let wrapper: GigaEdgeSpenchWrapper;
+describe('GigaEdgeEnhanceWrapper', () => {
+    let wrapper: GigaEdgeEnhanceWrapper;
     const loader = new DummyLoader() as any;
     const logger = new DummyLogger() as any;
     const heavyStart = jest.fn();
@@ -87,30 +87,30 @@ describe('GigaEdgeSpenchWrapper', () => {
     beforeEach(async () => {
         heavyStart.mockClear();
         heavyEnd.mockClear();
-        wrapper = (await GigaEdgeSpenchWrapper.create({
+        wrapper = (await GigaEdgeEnhanceWrapper.create({
             sampleRate: 48000,
             logger,
             loader,
             onHeavyLoadStart: heavyStart,
             onHeavyLoadEnd: heavyEnd,
-        })) as GigaEdgeSpenchWrapper;
+        })) as GigaEdgeEnhanceWrapper;
     });
 
     test('create succeeds with wasm', async () => {
-        const instance = await GigaEdgeSpenchWrapper.create({
+        const instance = await GigaEdgeEnhanceWrapper.create({
             sampleRate: 48000,
             logger,
             loader,
             onHeavyLoadStart: heavyStart,
             onHeavyLoadEnd: heavyEnd,
         });
-        expect(instance).toBeInstanceOf(GigaEdgeSpenchWrapper);
+        expect(instance).toBeInstanceOf(GigaEdgeEnhanceWrapper);
     });
 
     test('create fails with LoadError', async () => {
         const badLoader = new DummyLoader() as any;
         badLoader.loadWasm = jest.fn(() => Promise.resolve(new LoadError('bad')));
-        const result = await GigaEdgeSpenchWrapper.create({
+        const result = await GigaEdgeEnhanceWrapper.create({
             sampleRate: 48000,
             logger,
             loader: badLoader,
@@ -189,7 +189,7 @@ describe('GigaEdgeSpenchWrapper', () => {
     test('addNoiseCanceller propagates Loader errors', async () => {
         const badLoader = new DummyLoader() as any;
         badLoader.loadNoiseCancellationModel = jest.fn(() => Promise.resolve(new LoadError('bad model')));
-        const res = await GigaEdgeSpenchWrapper.create({
+        const res = await GigaEdgeEnhanceWrapper.create({
             sampleRate: 48000,
             logger,
             loader: badLoader,
@@ -204,35 +204,35 @@ describe('GigaEdgeSpenchWrapper', () => {
     });
 });
 
-describe('GigaEdgeSpenchDspWrapper', () => {
-    let wrapper: GigaEdgeSpenchDspWrapper;
+describe('GigaEdgeEnhanceDspWrapper', () => {
+    let wrapper: GigaEdgeEnhanceDspWrapper;
     const settings = {} as Settings;
     const loader = new DummyLoader() as any;
     const logger = new DummyLogger() as any;
 
     beforeEach(async () => {
-        wrapper = (await GigaEdgeSpenchDspWrapper.create({
+        wrapper = (await GigaEdgeEnhanceDspWrapper.create({
             sampleRate: 48000,
             logger,
             loader,
             settings,
-        })) as GigaEdgeSpenchDspWrapper;
+        })) as GigaEdgeEnhanceDspWrapper;
     });
 
     test('create succeeds with DSP wasm', async () => {
-        const instance = await GigaEdgeSpenchDspWrapper.create({
+        const instance = await GigaEdgeEnhanceDspWrapper.create({
             sampleRate: 48000,
             logger,
             loader,
             settings,
         });
-        expect(instance).toBeInstanceOf(GigaEdgeSpenchDspWrapper);
+        expect(instance).toBeInstanceOf(GigaEdgeEnhanceDspWrapper);
     });
 
     test('create fails with LoadError', async () => {
         const badLoader = new DummyLoader() as any;
         badLoader.loadDSPWasm = jest.fn(() => Promise.resolve(new LoadError('bad')));
-        const result = await GigaEdgeSpenchDspWrapper.create({
+        const result = await GigaEdgeEnhanceDspWrapper.create({
             sampleRate: 48000,
             logger,
             loader: badLoader,

@@ -5,14 +5,14 @@ plugins {
 }
 
 android {
-    namespace = "com.gigaedge.spench.demo"
+    namespace = "com.gigaedge.enhance.demo"
     compileSdk = 35
-    val androidTestBuildType = providers.gradleProperty("gigaEdgeSpenchAndroidTestBuildType")
+    val androidTestBuildType = providers.gradleProperty("gigaEdgeEnhanceAndroidTestBuildType")
         .getOrElse("debug")
     testBuildType = androidTestBuildType
 
     defaultConfig {
-        applicationId = "com.gigaedge.spench.demo"
+        applicationId = "com.gigaedge.enhance.demo"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -50,9 +50,9 @@ detekt {
 }
 
 dependencies {
-    implementation(project(":gigaedge-spench-sdk"))
-    implementation(project(":gigaedge-spench-model-quality48"))
-    implementation(project(":gigaedge-spench-model-hybrid48"))
+    implementation(project(":gigaedge-enhance-sdk"))
+    implementation(project(":gigaedge-enhance-model-quality48"))
+    implementation(project(":gigaedge-enhance-model-hybrid48"))
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

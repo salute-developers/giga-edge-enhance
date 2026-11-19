@@ -1,5 +1,5 @@
-import { GES_DSP_WORKLET_NAME } from '../../utils/constants';
+import { GEE_DSP_WORKLET_NAME } from '../../utils/constants';
 
-import { GigaEdgeSpenchDspWorkletProcessor } from './GigaEdgeSpenchDspWorkletProcessor';
+import { GigaEdgeEnhanceDspWorkletProcessor } from './GigaEdgeEnhanceDspWorkletProcessor';
 
-registerProcessor(GES_DSP_WORKLET_NAME, GigaEdgeSpenchDspWorkletProcessor);
+registerProcessor(GEE_DSP_WORKLET_NAME, GigaEdgeEnhanceDspWorkletProcessor);

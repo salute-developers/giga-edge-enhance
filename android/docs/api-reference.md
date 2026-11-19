@@ -1,7 +1,7 @@
 # API reference
 
-The public API lives in the package `com.gigaedge.spench` (SDK) and
-`com.gigaedge.spench.models` (model name constants). Every member carries KDoc in source; this page
+The public API lives in the package `com.gigaedge.enhance` (SDK) and
+`com.gigaedge.enhance.models` (model name constants). Every member carries KDoc in source; this page
 mirrors it for quick reference.
 
 Units used throughout: **latencies in seconds**, **telemetry buckets and means in milliseconds**,
@@ -105,7 +105,7 @@ The set of stages to run. The default disables both, matching a fresh processor.
 
 - `normalization` — enables the normalization stage.
 - `noiseSuppression` — model name, or `null` to disable. Must resolve to a merged asset
-  `spench/models/{name}.ges` and may contain only letters, digits, `.`, `_`, and `-`.
+  `enhance/models/{name}.enhance` and may contain only letters, digits, `.`, `_`, and `-`.
 
 ## `Telemetry`
 
@@ -151,14 +151,14 @@ object Models {
 }
 ```
 
-- `available(context)` — returns the packaged model names, **sorted**, with the `.ges` suffix
+- `available(context)` — returns the packaged model names, **sorted**, with the `.enhance` suffix
   stripped. Returns an empty list when no model assets are present. A returned name can be used as
   `Features.noiseSuppression`.
 
-## Model name constants (`com.gigaedge.spench.models`)
+## Model name constants (`com.gigaedge.enhance.models`)
 
-- `Quality48Model.NAME` == `"quality48"` (from `:gigaedge-spench-model-quality48`).
-- `Hybrid48Model.NAME` == `"hybrid48"` (from `:gigaedge-spench-model-hybrid48`).
+- `Quality48Model.NAME` == `"quality48"` (from `:gigaedge-enhance-model-quality48`).
+- `Hybrid48Model.NAME` == `"hybrid48"` (from `:gigaedge-enhance-model-hybrid48`).
 
 ## Internal (not public API)
 

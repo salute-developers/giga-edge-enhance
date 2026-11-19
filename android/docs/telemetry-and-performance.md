@@ -77,7 +77,7 @@ Set `onLowPerformance`. Delivery follows the [threading contract](threading.md):
 
 ```kotlin
 processor.onLowPerformance = { event ->
-    Log.i("GigaEdge Spench", "latency=${event.currentLatencySeconds}s refills=${event.refillCount}")
+    Log.i("GigaEdge Enhance", "latency=${event.currentLatencySeconds}s refills=${event.refillCount}")
 }
 ```
 

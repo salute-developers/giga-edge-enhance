@@ -45,11 +45,11 @@ const sidebars: SidebarsConfig = {
             label: 'iOS SDK',
             link: { type: 'doc', id: 'ios' },
             items: [
-                'source/ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/QuickStart',
-                'source/ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/ModelBundles',
-                'source/ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/ThreadingAndLifecycle',
-                'source/ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/Telemetry',
-                'source/ios/Sources/GigaEdgeSpenchAudioKit/Documentation.docc/ErrorHandling',
+                'source/ios/Sources/EnhanceAudioKit/Documentation.docc/QuickStart',
+                'source/ios/Sources/EnhanceAudioKit/Documentation.docc/ModelBundles',
+                'source/ios/Sources/EnhanceAudioKit/Documentation.docc/ThreadingAndLifecycle',
+                'source/ios/Sources/EnhanceAudioKit/Documentation.docc/Telemetry',
+                'source/ios/Sources/EnhanceAudioKit/Documentation.docc/ErrorHandling',
             ],
         },
         'models',
@@ -58,7 +58,7 @@ const sidebars: SidebarsConfig = {
         {
             type: 'category',
             label: 'Development',
-            items: ['development/build-and-test', 'development/ci-and-releases', 'development/style'],
+            items: ['development/build-and-test', 'development/ci-and-releases', 'development/style', 'development/upgrade'],
         },
     ],
 };

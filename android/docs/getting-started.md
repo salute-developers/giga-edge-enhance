@@ -1,6 +1,6 @@
 # Getting started
 
-This guide gets the GigaEdge Spench Android Audio SDK running in your app.
+This guide gets the GigaEdge Enhance Android Audio SDK running in your app.
 
 ## What the SDK does
 
@@ -31,9 +31,9 @@ Add the SDK plus every model package your app needs to your app module's `build.
 
 ```kotlin
 dependencies {
-    implementation(project(":gigaedge-spench-sdk"))
-    implementation(project(":gigaedge-spench-model-quality48"))
-    implementation(project(":gigaedge-spench-model-hybrid48"))
+    implementation(project(":gigaedge-enhance-sdk"))
+    implementation(project(":gigaedge-enhance-model-quality48"))
+    implementation(project(":gigaedge-enhance-model-hybrid48"))
 }
 ```
 
@@ -46,8 +46,8 @@ Create a processor, enable features, process a chunk, and close it. `Processor` 
 `Closeable`, so `use { }` guarantees native resources are released.
 
 ```kotlin
-import com.gigaedge.spench.Features
-import com.gigaedge.spench.Processor
+import com.gigaedge.enhance.Features
+import com.gigaedge.enhance.Processor
 
 fun processOneChunk(context: Context, sampleRateHz: Int, input: FloatArray) {
     Processor(context, sampleRateHz).use { processor ->
@@ -80,7 +80,7 @@ See [Telemetry and performance](telemetry-and-performance.md).
 ## Discovering models at runtime
 
 ```kotlin
-import com.gigaedge.spench.Models
+import com.gigaedge.enhance.Models
 
 val modelIds = Models.available(context) // sorted, e.g. ["hybrid48", "quality48"]
 processor.setFeatures(Features(noiseSuppression = modelIds.firstOrNull()))
@@ -88,7 +88,7 @@ processor.setFeatures(Features(noiseSuppression = modelIds.firstOrNull()))
 
 ## First-run checklist
 
-1. The SDK and at least one `:gigaedge-spench-model-*` module are on your app's `implementation` classpath.
+1. The SDK and at least one `:gigaedge-enhance-model-*` module are on your app's `implementation` classpath.
 2. You construct `Processor` with the **actual input sample rate** in Hz (`> 0`).
 3. You call `setFeatures(...)` — a fresh processor has all stages **disabled**.
 4. Noise-suppression names come from [`Models.available(context)`](models.md) (or the
@@ -102,7 +102,7 @@ processor.setFeatures(Features(noiseSuppression = modelIds.firstOrNull()))
 Use the Gradle wrapper for reproducible builds:
 
 ```bash
-./gradlew :gigaedge-spench-sdk:assembleDebug
+./gradlew :gigaedge-enhance-sdk:assembleDebug
 ./gradlew :demo-app:assembleDebug
 ```
 

@@ -12,7 +12,7 @@ add_library(${PROJECT_NAME} STATIC
     resampler.cpp
 )
 
-ges_apply_build_config(${PROJECT_NAME})
+gee_apply_build_config(${PROJECT_NAME})
 
 if (NOT WIN32)
   target_compile_options(${PROJECT_NAME} PRIVATE -Wno-sign-compare)

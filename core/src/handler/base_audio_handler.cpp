@@ -6,16 +6,16 @@
 
 #include "src/logger.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
-GigaEdgeSpenchRetCode BaseAudioHandler::process_frame(struct gigaedge::spench::Context<float>*,
-                                                      const std::vector<float>&, std::vector<float>&) {
-  return GigaEdgeSpenchRetCode::ERR_NOT_IMPLEMENTED;
+GigaEdgeEnhanceRetCode BaseAudioHandler::process_frame(struct gigaedge::enhance::Context<float>*,
+                                                       const std::vector<float>&, std::vector<float>&) {
+  return GigaEdgeEnhanceRetCode::ERR_NOT_IMPLEMENTED;
 }
 
-GigaEdgeSpenchRetCode BaseAudioHandler::process_frame(struct gigaedge::spench::Context<float>* ctx,
-                                                      const std::vector<float>& mic_frame,
-                                                      const std::vector<float>& lbk_frame, std::vector<float>& out) {
+GigaEdgeEnhanceRetCode BaseAudioHandler::process_frame(struct gigaedge::enhance::Context<float>* ctx,
+                                                       const std::vector<float>& mic_frame,
+                                                       const std::vector<float>& lbk_frame, std::vector<float>& out) {
   // Default: ignore lbk and call single-input version.
   // Derived classes that need lbk (AEC) will override this.
   (void)lbk_frame;
@@ -23,8 +23,8 @@ GigaEdgeSpenchRetCode BaseAudioHandler::process_frame(struct gigaedge::spench::C
 }
 
 BaseAudioHandler::BaseAudioHandler(std::shared_ptr<PipelineConfig> config) : config_(std::move(config)) {
-  GigaEdgeSpenchRetCode ret_code = start();
-  if (ret_code != GigaEdgeSpenchRetCode::SUCCESS) {
+  GigaEdgeEnhanceRetCode ret_code = start();
+  if (ret_code != GigaEdgeEnhanceRetCode::SUCCESS) {
     spdlog::error("Handler could not be created! {}", std::to_string(static_cast<int32_t>(ret_code)));
     throw std::runtime_error("Handler creation failed. ret_code=" + std::to_string(static_cast<int32_t>(ret_code)));
   }
@@ -35,20 +35,20 @@ BaseAudioHandler::BaseAudioHandler(BaseAudioHandler&& orig_handler) noexcept
 
 BaseAudioHandler::~BaseAudioHandler() { stop(); }
 
-GigaEdgeSpenchRetCode BaseAudioHandler::start() {
+GigaEdgeEnhanceRetCode BaseAudioHandler::start() {
   // Common pre-start steps can go here; leave config loading to subclasses if needed.
   return do_start();
 }
 
 void BaseAudioHandler::stop() { do_stop(); }
 
-GigaEdgeSpenchRetCode BaseAudioHandler::restart() {
+GigaEdgeEnhanceRetCode BaseAudioHandler::restart() {
   stop();
   return start();
 }
 
-GigaEdgeSpenchRetCode BaseAudioHandler::do_start() { return GigaEdgeSpenchRetCode::SUCCESS; }
+GigaEdgeEnhanceRetCode BaseAudioHandler::do_start() { return GigaEdgeEnhanceRetCode::SUCCESS; }
 
 void BaseAudioHandler::do_stop() {}
 
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

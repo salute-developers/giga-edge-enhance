@@ -11,11 +11,11 @@
 #include <valarray>
 #include <vector>
 
-#include "spench/stream_stat.h"
+#include "enhance/stream_stat.h"
 #include "src/denoiser_model_adviser.h"
 #include "util/sound/sound_stream.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 template <typename T>
 struct ComplexNumber {
@@ -172,10 +172,10 @@ struct ComplexNumber {
 };
 
 template <typename T>
-static inline void unpack_complex_mask(const T* src,                                // ORT buffer: [F, T, 2]
-                                       std::size_t num_feats,                       // F
-                                       std::size_t num_frames,                      // T
-                                       gigaedge::spench::ComplexNumber<float>& dst  // stores time-major: [t * F + f]
+static inline void unpack_complex_mask(const T* src,                                 // ORT buffer: [F, T, 2]
+                                       std::size_t num_feats,                        // F
+                                       std::size_t num_frames,                       // T
+                                       gigaedge::enhance::ComplexNumber<float>& dst  // stores time-major: [t * F + f]
 ) {
   const std::size_t total = num_feats * num_frames;
   dst.real.resize(total);
@@ -240,4 +240,4 @@ struct DenoiseContextDiscriminativeNb : public Context<T> {
   std::vector<float> noisy_mag;
 };
 
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

@@ -4,7 +4,7 @@
 
 #include <cmath>
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 namespace fe {
 template <typename T>
 IFftCalculator<T>::IFftCalculator(const uint32_t feature_size, const uint32_t nfft, const uint32_t frames_num_for_istft)
@@ -112,4 +112,4 @@ IFftCalculator<T>::~IFftCalculator() {}
 
 template class IFftCalculator<fft::BufferType>;
 }  // namespace fe
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

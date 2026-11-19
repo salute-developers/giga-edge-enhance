@@ -1,5 +1,5 @@
 import UIKit
-import GigaEdgeSpenchAudioKit
+import EnhanceAudioKit
 
 final class SettingsViewController: UIViewController {
     private let scrollView = UIScrollView()
@@ -17,9 +17,9 @@ final class SettingsViewController: UIViewController {
     private let useVadNormalizationSwitch = UISwitch()
     private let reverseProcessingOrderSwitch = UISwitch()
 
-    private let onSave: (Settings) -> Void
+    private let onSave: (EnhanceSettings) -> Void
 
-    init(settings: Settings, onSave: @escaping (Settings) -> Void) {
+    init(settings: EnhanceSettings, onSave: @escaping (EnhanceSettings) -> Void) {
         self.onSave = onSave
         super.init(nibName: nil, bundle: nil)
         apply(settings: settings)
@@ -33,7 +33,7 @@ final class SettingsViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
-        navigationItem.title = "Settings"
+        navigationItem.title = "EnhanceSettings"
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Save",
                                                             style: .done,
                                                             target: self,
@@ -88,7 +88,7 @@ final class SettingsViewController: UIViewController {
                                                        field: maxProcessingChunkSecondsField,
                                                        identifier: "maxProcessingChunkSecondsField",
                                                        keyboardType: .decimalPad))
-        stackView.addArrangedSubview(makeTextFieldRow(title: "Telemetry rounding (ms)",
+        stackView.addArrangedSubview(makeTextFieldRow(title: "EnhanceTelemetry rounding (ms)",
                                                       field: telemetryRoundingMillisecondsField,
                                                       identifier: "telemetryRoundingMillisecondsField",
                                                       keyboardType: .decimalPad))
@@ -128,7 +128,7 @@ final class SettingsViewController: UIViewController {
         ])
     }
 
-    private func apply(settings: Settings) {
+    private func apply(settings: EnhanceSettings) {
         lowPerformanceWindowField.text = Self.string(from: settings.lowPerformanceWindowSeconds)
         lowPerformanceMaxRefillTimesField.text = String(settings.lowPerformanceMaxRefillTimes)
         lowPerformanceMaxRefillTimeFactorField.text = Self.string(from: settings.lowPerformanceMaxRefillTimeFactor)
@@ -151,10 +151,10 @@ final class SettingsViewController: UIViewController {
         }
     }
 
-    private func buildSettings() throws -> Settings {
+    private func buildSettings() throws -> EnhanceSettings {
         let customConfig = customConfigView.text.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let settings = Settings(
+        let settings = EnhanceSettings(
             lowPerformanceWindowSeconds: try requiredDouble(from: lowPerformanceWindowField, name: "Window seconds"),
             lowPerformanceMaxRefillTimes: try requiredInt(from: lowPerformanceMaxRefillTimesField, name: "Max refill times"),
             lowPerformanceMaxRefillTimeFactor: try requiredDouble(from: lowPerformanceMaxRefillTimeFactorField,
@@ -162,7 +162,7 @@ final class SettingsViewController: UIViewController {
             minLatency: try requiredDouble(from: minLatencyField, name: "Min latency"),
             latencyIncreaseStep: try requiredDouble(from: latencyIncreaseStepField, name: "Latency increase step"),
             telemetryRoundingMilliseconds: try requiredDouble(from: telemetryRoundingMillisecondsField,
-                                                               name: "Telemetry rounding"),
+                                                               name: "EnhanceTelemetry rounding"),
             useVadNormalization: useVadNormalizationSwitch.isOn,
             unstableReverseProcessingOrder: reverseProcessingOrderSwitch.isOn,
             unstableCustomNormalizationConfig: customConfig.isEmpty ? nil : customConfig,
@@ -213,7 +213,7 @@ final class SettingsViewController: UIViewController {
         guard let text = field.text?.trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty,
               let value = Double(text) else {
-            throw NSError(domain: "AudioDemoApp.Settings",
+            throw NSError(domain: "AudioDemoApp.EnhanceSettings",
                           code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "\(name) must be a number"])
         }
@@ -224,7 +224,7 @@ final class SettingsViewController: UIViewController {
         guard let text = field.text?.trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty,
               let value = Int(text) else {
-            throw NSError(domain: "AudioDemoApp.Settings",
+            throw NSError(domain: "AudioDemoApp.EnhanceSettings",
                           code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "\(name) must be an integer"])
         }

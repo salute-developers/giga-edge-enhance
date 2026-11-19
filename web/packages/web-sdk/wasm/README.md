@@ -1,4 +1,4 @@
-# GigaEdge Spench WebAssembly
+# GigaEdge Enhance WebAssembly
 
 ## Model packing
 
@@ -7,11 +7,11 @@ pack the configuration and model with the native `model_packer` executable:
 
 ```shell
 <build-dir>/core/cli/model_packer/model_packer \
-  --pack path/to/config.yaml path/to/output/model.ges
+  --pack path/to/config.yaml path/to/output/model.enhance
 ```
 
 Build `<build-dir>` with the `native-model-packer` preset. Put the resulting
-`.ges` file in the web SDK's `models/` directory or distribute it with the
+`.enhance` file in the web SDK's `models/` directory or distribute it with the
 application.
 
 ## Builds

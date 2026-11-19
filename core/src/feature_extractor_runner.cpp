@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 uint64_t FeatureExtractorRunner::get_frame_size_ms() const { return params_.frame_size_ms; }
 
@@ -23,25 +23,25 @@ uint64_t FeatureExtractorRunner::get_frame_hop_size_samples() const { return par
 
 uint64_t FeatureExtractorRunner::get_pow_spec_feat_size_samples() const { return params_.pow_spec_feat_sz(); }
 
-void FeatureExtractorRunner::read_config(std::shared_ptr<gigaedge::spench::NetworkConfig> config) {
+void FeatureExtractorRunner::read_config(std::shared_ptr<gigaedge::enhance::NetworkConfig> config) {
   params_.read_feature_params_node(config);
   model_output_is_spectrum_ =
       config->params()["inference"]["model_type"].as<std::string>("") == "denoiser_hybrid_web_model";
 }
 
-gigaedge::spench::ComplexNumber<float> FeatureExtractorRunner::merge_input_spectrogram(
-    const std::vector<gigaedge::spench::ComplexNumber<float>>& frames) {
-  return gigaedge::spench::ComplexNumber<float>::concat_parts(frames);
+gigaedge::enhance::ComplexNumber<float> FeatureExtractorRunner::merge_input_spectrogram(
+    const std::vector<gigaedge::enhance::ComplexNumber<float>>& frames) {
+  return gigaedge::enhance::ComplexNumber<float>::concat_parts(frames);
 }
 
-void FeatureExtractorRunner::calc_enhanced_spectrogram(const gigaedge::spench::ComplexNumber<float>& merged_spec,
-                                                       gigaedge::spench::ComplexNumber<float>& out_new_spec) {
+void FeatureExtractorRunner::calc_enhanced_spectrogram(const gigaedge::enhance::ComplexNumber<float>& merged_spec,
+                                                       gigaedge::enhance::ComplexNumber<float>& out_new_spec) {
   // Computes enhanced parts (masking, etc.) into out_new_spec.
   feature_extractor_ptr_->calc_enhanced_parts_in_place(merged_spec, out_new_spec);
 }
 
 uint32_t FeatureExtractorRunner::validate_and_get_feat_num(uint32_t input_chunk_num,
-                                                           const gigaedge::spench::ComplexNumber<float>& new_spec) {
+                                                           const gigaedge::enhance::ComplexNumber<float>& new_spec) {
   if (input_chunk_num == 0) {
     throw std::runtime_error("ValidateAndGetFeatNum: input_chunk_num == 0");
   }
@@ -62,12 +62,12 @@ uint32_t FeatureExtractorRunner::validate_and_get_feat_num(uint32_t input_chunk_
   return real_size / input_chunk_num;
 }
 
-bool FeatureExtractorRunner::has_prev_spectrogram(const gigaedge::spench::Context<float>& ctx) {
+bool FeatureExtractorRunner::has_prev_spectrogram(const gigaedge::enhance::Context<float>& ctx) {
   return ctx.prev_spectrogram.real.size() != 0;
 }
 
-gigaedge::spench::ComplexNumber<float> FeatureExtractorRunner::build_concat_with_prev(
-    const gigaedge::spench::ComplexNumber<float>& prev_spec, const gigaedge::spench::ComplexNumber<float>& new_spec,
+gigaedge::enhance::ComplexNumber<float> FeatureExtractorRunner::build_concat_with_prev(
+    const gigaedge::enhance::ComplexNumber<float>& prev_spec, const gigaedge::enhance::ComplexNumber<float>& new_spec,
     uint32_t input_chunk_num, uint32_t feat_num) {
   if (prev_spec.real.size() != feat_num || prev_spec.imag.size() != feat_num) {
     throw std::runtime_error("BuildConcatWithPrev: prev_spec size mismatch");
@@ -76,11 +76,11 @@ gigaedge::spench::ComplexNumber<float> FeatureExtractorRunner::build_concat_with
     throw std::runtime_error("BuildConcatWithPrev: new_spec size mismatch");
   }
 
-  return gigaedge::spench::ComplexNumber<float>::concat_with_head(prev_spec, new_spec);
+  return gigaedge::enhance::ComplexNumber<float>::concat_with_head(prev_spec, new_spec);
 }
 
-void FeatureExtractorRunner::update_prev_from_new_spec(gigaedge::spench::Context<float>& ctx,
-                                                       const gigaedge::spench::ComplexNumber<float>& new_spec,
+void FeatureExtractorRunner::update_prev_from_new_spec(gigaedge::enhance::Context<float>& ctx,
+                                                       const gigaedge::enhance::ComplexNumber<float>& new_spec,
                                                        uint32_t input_chunk_num, uint32_t feat_num) {
   // Always keep the last "new" frame as prev for the next iteration.
   if (input_chunk_num == 0) {
@@ -94,12 +94,12 @@ void FeatureExtractorRunner::update_prev_from_new_spec(gigaedge::spench::Context
   new_spec.copy_frame_to(ctx.prev_spectrogram, feat_num, input_chunk_num - 1);
 }
 
-void FeatureExtractorRunner::fill_warming_up_output(gigaedge::spench::Task* task) {
+void FeatureExtractorRunner::fill_warming_up_output(gigaedge::enhance::Task* task) {
   task->data.enhanced_wav.resize(params_.num_frame_stride_samples());
   task->state.advance_to(PipelineStage::enhanced_ready);
 }
 
-void FeatureExtractorRunner::handle_model_output(gigaedge::spench::Task* task) {
+void FeatureExtractorRunner::handle_model_output(gigaedge::enhance::Task* task) {
   if (task->state.is(ChunkOutcome::warming_up)) {
     fill_warming_up_output(task);
     return;
@@ -150,23 +150,23 @@ void FeatureExtractorRunner::handle_model_output(gigaedge::spench::Task* task) {
   task->state.advance_to(PipelineStage::enhanced_ready);
 }
 
-void FeatureExtractorRunner::handle_waveform(gigaedge::spench::Task* task) {
-  auto& spench_data = task->data;
+void FeatureExtractorRunner::handle_waveform(gigaedge::enhance::Task* task) {
+  auto& enhance_data = task->data;
 
-  if (spench_data.waveform.empty()) {
+  if (enhance_data.waveform.empty()) {
     throw std::runtime_error("Input signal is empty!");
   }
 
-  feature_extractor_ptr_->stft_apply(spench_data.waveform, spench_data.input_spectrogram);
+  feature_extractor_ptr_->stft_apply(enhance_data.waveform, enhance_data.input_spectrogram);
 
-  if (spench_data.input_spectrogram.empty()) {
+  if (enhance_data.input_spectrogram.empty()) {
     throw std::runtime_error("Spectrogram is calculated incorrectly! Something with input data!");
   }
 
   task->state.advance_to(PipelineStage::input_spectrum_ready);
 }
 
-void FeatureExtractorRunner::run(gigaedge::spench::Task* task) {
+void FeatureExtractorRunner::run(gigaedge::enhance::Task* task) {
   if (!task) {
     throw std::invalid_argument("FeatureExtractorRunner::run: task is null");
   }
@@ -188,10 +188,10 @@ void FeatureExtractorRunner::run(gigaedge::spench::Task* task) {
 }
 
 void FeatureExtractorRunner::warm_up() {
-  gigaedge::spench::Task denoise_task;
-  std::unique_ptr<gigaedge::spench::Context<float>> ctx(new gigaedge::spench::Context<float>);
+  gigaedge::enhance::Task denoise_task;
+  std::unique_ptr<gigaedge::enhance::Context<float>> ctx(new gigaedge::enhance::Context<float>);
   denoise_task.data.context = ctx.get();
   denoise_task.data.waveform.resize(get_frame_size_samples(), 0.0);
   run(&denoise_task);
 }
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

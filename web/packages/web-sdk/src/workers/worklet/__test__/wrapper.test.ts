@@ -1,5 +1,5 @@
 /* eslint-disable no-var */
-import { GigaEdgeSpenchDspWorkletWrapper } from '../wrapper';
+import { GigaEdgeEnhanceDspWorkletWrapper } from '../wrapper';
 import { Logger } from '../../../utils/logger';
 import { Settings } from '../../../utils/common';
 import { getDefaultNormalizationConfig } from '../../../utils/constants';
@@ -23,7 +23,7 @@ jest.mock('../../../utils/constants', () => ({
 // 2. Mock hash function (deterministic)
 jest.mock('../../../utils/hash', () => () => 'mockedHash');
 
-jest.mock('../../../../generated/wasm/gigaedge-spench.dsp', () => {
+jest.mock('../../../../generated/wasm/gigaedge-enhance.dsp', () => {
     return {
         __esModule: true,
         default: () => ({
@@ -55,7 +55,7 @@ jest.mock('../../../../generated/wasm/gigaedge-spench.dsp', () => {
 // ---------------------------------------------------------------------------
 
 /**
- * Small utility to expose protected members of GigaEdgeSpenchDspWorkletWrapper
+ * Small utility to expose protected members of GigaEdgeEnhanceDspWorkletWrapper
  * for assertion purposes.  The wrapper itself is a thin wrapper, so
  * we don't need a full subclass – we just use a type cast to `any`.
  */
@@ -78,13 +78,13 @@ beforeEach(() => {
     (globalThis as any).currentTime = 0;
 });
 
-describe('GigaEdgeSpenchDspWorkletWrapper', () => {
+describe('GigaEdgeEnhanceDspWorkletWrapper', () => {
     // -----------------------------------------------------------------------
     // Constructor
     // -----------------------------------------------------------------------
     test('constructor allocates heap and stores bridge', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new GigaEdgeSpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
+        const wrapper = new GigaEdgeEnhanceDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         // _malloc should be called twice with HEAP_SIZE * 4
         const expectedBytes = 64 * Float32Array.BYTES_PER_ELEMENT; // 256
@@ -106,7 +106,7 @@ describe('GigaEdgeSpenchDspWorkletWrapper', () => {
     test('addNormalizer creates a new normalizer when not cached (default)', () => {
         const wasm = new ArrayBuffer(8);
         const settings = {} as Settings;
-        const wrapper = new GigaEdgeSpenchDspWorkletWrapper(wasm, 48000, mockLogger, settings);
+        const wrapper = new GigaEdgeEnhanceDspWorkletWrapper(wasm, 48000, mockLogger, settings);
 
         wrapper.addNormalizer(); // no config
 
@@ -124,7 +124,7 @@ describe('GigaEdgeSpenchDspWorkletWrapper', () => {
 
     test('addNormalizer creates a new normalizer when not cached', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new GigaEdgeSpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
+        const wrapper = new GigaEdgeEnhanceDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         wrapper.addNormalizer('aba');
 
@@ -141,7 +141,7 @@ describe('GigaEdgeSpenchDspWorkletWrapper', () => {
 
     test('addNormalizer re‑uses a cached normalizer', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new GigaEdgeSpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
+        const wrapper = new GigaEdgeEnhanceDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         // Pre‑populate the cache
         const cachedElement = { resetContext: jest.fn(), delete: jest.fn() };
@@ -163,7 +163,7 @@ describe('GigaEdgeSpenchDspWorkletWrapper', () => {
     // -----------------------------------------------------------------------
     test('addEchoCanceller creates a new AEC when not cached (default)', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new GigaEdgeSpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
+        const wrapper = new GigaEdgeEnhanceDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         wrapper.addEchoCanceller(); // no config
 
@@ -177,7 +177,7 @@ describe('GigaEdgeSpenchDspWorkletWrapper', () => {
 
     test('addEchoCanceller creates a new AEC when not cached', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new GigaEdgeSpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
+        const wrapper = new GigaEdgeEnhanceDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         wrapper.addEchoCanceller('aba');
 
@@ -194,7 +194,7 @@ describe('GigaEdgeSpenchDspWorkletWrapper', () => {
     // -----------------------------------------------------------------------
     test('pop removes the last element, stores it in cache and timeout', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new GigaEdgeSpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
+        const wrapper = new GigaEdgeEnhanceDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         // Insert a dummy element manually
         const dummy = { delete: jest.fn(), resetContext: jest.fn(), process: jest.fn() };
@@ -227,7 +227,7 @@ describe('GigaEdgeSpenchDspWorkletWrapper', () => {
 
     test('pop returns false when pipeline is empty', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new GigaEdgeSpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
+        const wrapper = new GigaEdgeEnhanceDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
         expect(wrapper.pop()).toBe(false);
     });
 
@@ -236,7 +236,7 @@ describe('GigaEdgeSpenchDspWorkletWrapper', () => {
     // -----------------------------------------------------------------------
     test('tick removes stale cache entries and deletes elements', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new GigaEdgeSpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
+        const wrapper = new GigaEdgeEnhanceDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         // Add a dummy element and pop it
         const dummy = { delete: jest.fn(), resetContext: jest.fn(), process: jest.fn() };
@@ -264,7 +264,7 @@ describe('GigaEdgeSpenchDspWorkletWrapper', () => {
     // -----------------------------------------------------------------------
     test('destroy frees heap and deletes pipeline elements', () => {
         const wasm = new ArrayBuffer(8);
-        const wrapper = new GigaEdgeSpenchDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
+        const wrapper = new GigaEdgeEnhanceDspWorkletWrapper(wasm, 48000, mockLogger, {} as Settings);
 
         // Add two dummy elements
         const el1 = { delete: jest.fn(), resetContext: jest.fn(), process: jest.fn() };

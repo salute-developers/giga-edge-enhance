@@ -1,11 +1,11 @@
 import { ModelsTmpl } from './common';
 
-export const WASM_URL = new URL('../../generated/wasm/gigaedge-spench.wasm', import.meta.url);
-export const WASM_DSP_URL = new URL('../../generated/wasm/gigaedge-spench.dsp.wasm', import.meta.url);
+export const WASM_URL = new URL('../../generated/wasm/gigaedge-enhance.wasm', import.meta.url);
+export const WASM_DSP_URL = new URL('../../generated/wasm/gigaedge-enhance.dsp.wasm', import.meta.url);
 
-const DENOISE_FAST_8_MODEL_URL = new URL('../../models/fast8.ges', import.meta.url);
-const DENOISE_QUALITY_48_MODEL_URL = new URL('../../models/quality48.ges', import.meta.url);
-const DENOISE_HYBRID_48_MODEL_URL = new URL('../../models/hybrid48.ges', import.meta.url);
+const DENOISE_FAST_8_MODEL_URL = new URL('../../models/fast8.enhance', import.meta.url);
+const DENOISE_QUALITY_48_MODEL_URL = new URL('../../models/quality48.enhance', import.meta.url);
+const DENOISE_HYBRID_48_MODEL_URL = new URL('../../models/hybrid48.enhance', import.meta.url);
 
 export const DEFAULT_MODELS = {
     noiseCancellation: {

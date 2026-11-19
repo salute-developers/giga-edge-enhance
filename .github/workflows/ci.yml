@@ -17,7 +17,7 @@ concurrency:
 env:
   # Build records are implicit Actions artifacts; keep Docker summaries but never upload records.
   DOCKER_BUILD_RECORD_UPLOAD: 'false'
-  GES_ARTIFACT_RETENTION_DAYS: ${{ github.event_name == 'pull_request' && (vars.PR_ARTIFACT_RETENTION_DAYS || '1') || (vars.MASTER_ARTIFACT_RETENTION_DAYS || '3') }}
+  GEE_ARTIFACT_RETENTION_DAYS: ${{ github.event_name == 'pull_request' && (vars.PR_ARTIFACT_RETENTION_DAYS || '1') || (vars.MASTER_ARTIFACT_RETENTION_DAYS || '3') }}
 
 jobs:
   tools-tests:
@@ -248,10 +248,10 @@ jobs:
       - run: npm ci
         working-directory: web
       - name: Lint Web SDK
-        run: npm run lint --workspace=@gigaedge/spench-web-sdk
+        run: npm run lint --workspace=@gigaedge/enhance-web-sdk
         working-directory: web
       - name: Lint documentation and demo
-        run: npm run lint --workspace=@gigaedge/spench-site
+        run: npm run lint --workspace=@gigaedge/enhance-site
         working-directory: web
 
   android-lint:
@@ -382,7 +382,7 @@ jobs:
         with:
           preset: native-release-onnx
           upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
-          artifact-retention-days: ${{ env.GES_ARTIFACT_RETENTION_DAYS }}
+          artifact-retention-days: ${{ env.GEE_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-native.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -407,7 +407,7 @@ jobs:
         with:
           preset: native-release-tflite
           upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
-          artifact-retention-days: ${{ env.GES_ARTIFACT_RETENTION_DAYS }}
+          artifact-retention-days: ${{ env.GEE_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-native.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -467,19 +467,19 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build Web
         env:
-          GES_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
-          GES_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
-          GES_SITE_BASE: ${{ github.event_name == 'pull_request' && format('/spench/pr/{0}/', github.event.number) || '/spench/' }}
+          GEE_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
+          GEE_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
+          GEE_SITE_BASE: ${{ github.event_name == 'pull_request' && format('/enhance/pr/{0}/', github.event.number) || '/enhance/' }}
         run: tools/build web
       - name: Test Web SDK unit
         env:
-          GES_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
-          GES_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
+          GEE_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
+          GEE_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
         run: tools/test web
       - name: Package Web SDK
         env:
-          GES_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
-          GES_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
+          GEE_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
+          GEE_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
         run: tools/package web
       - name: Upload Web SDK package
         if: vars.ENABLE_ARTIFACT_UPLOADS != 'false'
@@ -488,7 +488,7 @@ jobs:
           name: gdn-web-sdk-${{ github.sha }}
           path: out/artifacts/web/*.tgz
           if-no-files-found: error
-          retention-days: ${{ env.GES_ARTIFACT_RETENTION_DAYS }}
+          retention-days: ${{ env.GEE_ARTIFACT_RETENTION_DAYS }}
       - name: Upload Web site
         if: vars.ENABLE_ARTIFACT_UPLOADS != 'false'
         uses: actions/upload-artifact@v7
@@ -537,12 +537,12 @@ jobs:
           package="$(find "$GITHUB_WORKSPACE/out/artifacts/web" -maxdepth 1 -name '*.tgz' -print -quit)"
           test -n "$package"
           npm install --no-save --package-lock=false --workspaces=false --prefix apps/site "$package"
-          test -f apps/site/node_modules/@gigaedge/spench-web-sdk/dist/index.d.ts
+          test -f apps/site/node_modules/@gigaedge/enhance-web-sdk/dist/index.d.ts
       - name: Test Web Playwright
         env:
-          GES_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
-          GES_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
-          GES_PLAYWRIGHT_BROWSERS: chromium
+          GEE_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
+          GEE_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
+          GEE_PLAYWRIGHT_BROWSERS: chromium
         run: tools/test web-playwright
       - name: Upload Playwright diagnostics
         if: failure() && vars.ENABLE_ARTIFACT_UPLOADS != 'false'
@@ -658,12 +658,12 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build Android Release
         env:
-          GES_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-android.outputs.identity }}
-          GES_CONTAINER_IMAGE_ANDROID: ${{ needs.toolchain-android.outputs.image }}
+          GEE_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-android.outputs.identity }}
+          GEE_CONTAINER_IMAGE_ANDROID: ${{ needs.toolchain-android.outputs.image }}
         run: tools/build android
       - name: Test Android Release
         env:
-          GES_CONTAINER_IMAGE_ANDROID: ${{ needs.toolchain-android.outputs.image }}
+          GEE_CONTAINER_IMAGE_ANDROID: ${{ needs.toolchain-android.outputs.image }}
         run: tools/test android
       - name: Enable KVM access
         run: |
@@ -671,7 +671,7 @@ jobs:
           sudo chmod 666 /dev/kvm
       - name: Test Android Release UI
         env:
-          GES_CONTAINER_IMAGE_ANDROID_UI: ${{ needs.toolchain-android.outputs.ui_image }}
+          GEE_CONTAINER_IMAGE_ANDROID_UI: ${{ needs.toolchain-android.outputs.ui_image }}
         run: tools/test android-ui
       - name: Upload Android UI test diagnostics
         if: failure() && vars.ENABLE_ARTIFACT_UPLOADS != 'false'
@@ -694,7 +694,7 @@ jobs:
             android/model-quality48/build/outputs/aar/*-release.aar
             android/model-hybrid48/build/outputs/aar/*-release.aar
           if-no-files-found: error
-          retention-days: ${{ env.GES_ARTIFACT_RETENTION_DAYS }}
+          retention-days: ${{ env.GEE_ARTIFACT_RETENTION_DAYS }}
 
   deps-macos-arm64-onnx:
     name: Build macOS arm64 ONNX Release dependency OCI
@@ -765,7 +765,7 @@ jobs:
         with:
           preset: macos-arm64-release-onnx
           upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
-          artifact-retention-days: ${{ env.GES_ARTIFACT_RETENTION_DAYS }}
+          artifact-retention-days: ${{ env.GEE_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -786,7 +786,7 @@ jobs:
         with:
           preset: macos-arm64-release-tflite
           upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
-          artifact-retention-days: ${{ env.GES_ARTIFACT_RETENTION_DAYS }}
+          artifact-retention-days: ${{ env.GEE_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -859,7 +859,7 @@ jobs:
         with:
           preset: macos-x86_64-release-onnx
           upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
-          artifact-retention-days: ${{ env.GES_ARTIFACT_RETENTION_DAYS }}
+          artifact-retention-days: ${{ env.GEE_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -880,7 +880,7 @@ jobs:
         with:
           preset: macos-x86_64-release-tflite
           upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
-          artifact-retention-days: ${{ env.GES_ARTIFACT_RETENTION_DAYS }}
+          artifact-retention-days: ${{ env.GEE_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -953,7 +953,7 @@ jobs:
         with:
           preset: windows-x64-release-onnx
           upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
-          artifact-retention-days: ${{ env.GES_ARTIFACT_RETENTION_DAYS }}
+          artifact-retention-days: ${{ env.GEE_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -974,7 +974,7 @@ jobs:
         with:
           preset: windows-x64-release-tflite
           upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
-          artifact-retention-days: ${{ env.GES_ARTIFACT_RETENTION_DAYS }}
+          artifact-retention-days: ${{ env.GEE_ARTIFACT_RETENTION_DAYS }}
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -1038,11 +1038,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build iOS Release
         env:
-          GES_TOOLCHAIN_IDENTITY: ${{ steps.toolchain.outputs.identity }}
+          GEE_TOOLCHAIN_IDENTITY: ${{ steps.toolchain.outputs.identity }}
         run: tools/build ios
       - name: Test iOS Release
         env:
-          GES_TOOLCHAIN_IDENTITY: ${{ steps.toolchain.outputs.identity }}
+          GEE_TOOLCHAIN_IDENTITY: ${{ steps.toolchain.outputs.identity }}
         run: tools/test ios
       - name: Upload iOS artifacts
         if: vars.ENABLE_ARTIFACT_UPLOADS != 'false'
@@ -1050,9 +1050,9 @@ jobs:
         with:
           name: gdn-ios-${{ github.sha }}
           path: |
-            ios/build/xcframework/GigaEdgeSpenchAudioKit.xcframework
-            ios/build/xcframework/GigaEdgeSpenchModelFast8.bundle
-            ios/build/xcframework/GigaEdgeSpenchModelQuality48.bundle
-            ios/build/xcframework/GigaEdgeSpenchModelHybrid48.bundle
+            ios/build/xcframework/EnhanceAudioKit.xcframework
+            ios/build/xcframework/EnhanceModelFast8.bundle
+            ios/build/xcframework/EnhanceModelQuality48.bundle
+            ios/build/xcframework/EnhanceModelHybrid48.bundle
           if-no-files-found: error
-          retention-days: ${{ env.GES_ARTIFACT_RETENTION_DAYS }}
+          retention-days: ${{ env.GEE_ARTIFACT_RETENTION_DAYS }}

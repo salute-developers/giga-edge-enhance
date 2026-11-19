@@ -29,10 +29,10 @@ class BaseOnnxRunner {
 
   virtual ~BaseOnnxRunner();
 
-  virtual void infer(gigaedge::spench::Task* denoise_task) = 0;
+  virtual void infer(gigaedge::enhance::Task* denoise_task) = 0;
   // change two last arguments
   virtual void prepare_input_in_place(std::vector<float>& mag, std::vector<std::vector<float>*>& inputs,
-                                      gigaedge::spench::Context<float>* denoise_context) = 0;
+                                      gigaedge::enhance::Context<float>* denoise_context) = 0;
 
   virtual uint32_t get_future_context_len() { return model_params_.network_input_ctx_len; }
 
@@ -54,7 +54,7 @@ class BaseOnnxRunner {
   }
 
   void load_model_io_metadata();
-  void init_model(const std::shared_ptr<gigaedge::spench::NetworkConfig> config, const uint32_t num_threads, bool gpu);
+  void init_model(const std::shared_ptr<gigaedge::enhance::NetworkConfig> config, const uint32_t num_threads, bool gpu);
 
   template <typename T>
   void run(const std::vector<std::vector<T>*>& inputs, std::vector<Ort::Value>& outputs,
@@ -111,7 +111,7 @@ class BaseOnnxRunner {
   // This is a readability optimization based on contract: only time is dynamic.
   std::vector<int32_t> time_axis_in_;
 
-  gigaedge::spench::DenoiseModelParams model_params_;
+  gigaedge::enhance::DenoiseModelParams model_params_;
 };
 
 }  // namespace onnx

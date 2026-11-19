@@ -1,15 +1,15 @@
 import { downloadFileAsBuffer, ModelKey, retry, Settings } from '../../utils/common';
 import { WorkerTelemetry } from '../../utils/telemetry';
 import { ResourceUrls } from '../../utils/ipc';
-import GigaEdgeSpenchError from '../../utils/error';
+import GigaEdgeEnhanceError from '../../utils/error';
 
-export class LoadError extends GigaEdgeSpenchError {
+export class LoadError extends GigaEdgeEnhanceError {
     override get name() {
         return 'LoadError';
     }
 }
 
-export class ModelNotFoundError extends GigaEdgeSpenchError {
+export class ModelNotFoundError extends GigaEdgeEnhanceError {
     override get name() {
         return 'ModelNotFoundError';
     }

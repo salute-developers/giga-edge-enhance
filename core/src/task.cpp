@@ -6,7 +6,7 @@
 
 #include "src/logger.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 #if defined(_MSC_VER)
 // msvc-specific workaround. shamelessly stolen from stackoverflow
@@ -88,4 +88,4 @@ void convert_pcm16_to_float32(const std::vector<int16_t>& input, std::vector<flo
 }
 }  // namespace tools
 
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

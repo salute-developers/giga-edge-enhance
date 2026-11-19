@@ -2,6 +2,7 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 function(ConfigInstallTarget TARGET)
+    set_target_properties(${TARGET} PROPERTIES EXPORT_NAME enhance)
     install(TARGETS ${TARGET}
         EXPORT ${TARGET}Targets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -12,7 +13,7 @@ function(ConfigInstallTarget TARGET)
 
     install(EXPORT ${TARGET}Targets
         FILE ${TARGET}Targets.cmake
-        NAMESPACE ${TARGET}::
+        NAMESPACE gigaedge::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${TARGET}
     )
 

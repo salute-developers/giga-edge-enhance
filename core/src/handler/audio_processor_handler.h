@@ -11,13 +11,13 @@
 #include <utility>
 #include <vector>
 
-#include "spench/errors.h"
+#include "enhance/errors.h"
 #include "src/handler/base_audio_handler.h"
 #include "util/sound/loudness_control.h"
 #include "util/sound/range_control.h"
 #include "util/sound/stat_collector.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 typedef struct Parameters {
   Parameters() = default;
@@ -360,15 +360,15 @@ class AudioProcessorHandler : public BaseAudioHandler {
   AudioProcessorHandler& add_lc();
   AudioProcessorHandler& add_lc(const LoudnessParameters& parameters);
 
-  GigaEdgeSpenchRetCode process_frame(struct gigaedge::spench::Context<float>* ctx,
-                                      const std::vector<float>& input_audio_frame,
-                                      std::vector<float>& enhanced_audio_frame) override;
+  GigaEdgeEnhanceRetCode process_frame(struct gigaedge::enhance::Context<float>* ctx,
+                                       const std::vector<float>& input_audio_frame,
+                                       std::vector<float>& enhanced_audio_frame) override;
 
  protected:
-  GigaEdgeSpenchRetCode do_start() override;
+  GigaEdgeEnhanceRetCode do_start() override;
   void do_stop() override;
 
  private:
   std::vector<std::unique_ptr<AudioProcItem>> sequence_vec_;
 };
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

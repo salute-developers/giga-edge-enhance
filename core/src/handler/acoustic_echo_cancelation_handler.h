@@ -5,12 +5,12 @@
 #include <utility>
 #include <vector>
 
-#include "spench/errors.h"
+#include "enhance/errors.h"
 #include "src/config_reader.h"
 #include "src/handler/base_audio_handler.h"
 #include "util/echo/echo_canceler.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 class AudioEchoCancelationHandler : public BaseAudioHandler {
  public:
@@ -35,13 +35,14 @@ class AudioEchoCancelationHandler : public BaseAudioHandler {
 
 
   // BaseAudioHandler integration
-  GigaEdgeSpenchRetCode process_frame(struct gigaedge::spench::Context<float>* ctx, const std::vector<float>& mic_frame,
-                                      const std::vector<float>& lbk_frame, std::vector<float>& out) override;
+  GigaEdgeEnhanceRetCode process_frame(struct gigaedge::enhance::Context<float>* ctx,
+                                       const std::vector<float>& mic_frame, const std::vector<float>& lbk_frame,
+                                       std::vector<float>& out) override;
 
   // Explicitly mark single-input as unsupported for AEC
-  GigaEdgeSpenchRetCode process_frame(struct gigaedge::spench::Context<float>*, const std::vector<float>&,
-                                      std::vector<float>&) override {
-    return GigaEdgeSpenchRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
+  GigaEdgeEnhanceRetCode process_frame(struct gigaedge::enhance::Context<float>*, const std::vector<float>&,
+                                       std::vector<float>&) override {
+    return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
 
   const uint32_t get_sample_rate();
@@ -49,11 +50,11 @@ class AudioEchoCancelationHandler : public BaseAudioHandler {
   const uint16_t get_frame_length();
 
  protected:
-  GigaEdgeSpenchRetCode do_start() override;
+  GigaEdgeEnhanceRetCode do_start() override;
   void do_stop() override;
 
  private:
   std::unique_ptr<util::echo::IEchoCanceler> canceler_;
-  GigaEdgeSpenchRetCode load_configuration(const std::string& config_path);
+  GigaEdgeEnhanceRetCode load_configuration(const std::string& config_path);
 };
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

@@ -19,7 +19,7 @@
 #include <spdlog/sinks/syslog_sink.h>
 #endif
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 namespace {
 
@@ -100,9 +100,9 @@ void set_log_level(unsigned int level) {
 std::shared_ptr<::spdlog::logger> get_logger() {
   std::lock_guard<std::mutex> lock(logger_mutex);
   if (!logger_instance) {
-    logger_instance = make_logger(static_cast<uint32_t>(LogLevel::info), "GigaEdgeSpench", {});
+    logger_instance = make_logger(static_cast<uint32_t>(LogLevel::info), "GigaEdgeEnhance", {});
   }
   return logger_instance;
 }
 
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

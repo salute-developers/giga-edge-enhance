@@ -11,7 +11,7 @@ if(NOT VERSION_NUMBER)
   message(FATAL_ERROR "VERSION_NUMBER must contain a SemVer core version (for example 1.0.0).")
 endif()
 
-project(gigaedge-spench VERSION "${VERSION_NUMBER}" LANGUAGES C CXX)
+project(gigaedge-enhance VERSION "${VERSION_NUMBER}" LANGUAGES C CXX)
 
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0115 OLD)
@@ -29,7 +29,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompilerCache.cmake")
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/BuildConfig.cmake")
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Dependencies.cmake")
 
-if(GES_PROFILE STREQUAL "model-packer")
+if(GEE_PROFILE STREQUAL "model-packer")
   add_subdirectory(core/util/packed_model)
   add_subdirectory(core/cli/model_packer)
 else()
@@ -47,12 +47,12 @@ else()
   endif()
 
   if(EMSCRIPTEN)
-    message(STATUS "Building gigaedge-spench for WebAssembly")
+    message(STATUS "Building gigaedge-enhance for WebAssembly")
     add_subdirectory(web/packages/web-sdk/wasm)
   endif()
 endif()
 
-if(NOT GES_PROFILE STREQUAL "model-packer")
+if(NOT GEE_PROFILE STREQUAL "model-packer")
   include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Install.cmake")
 endif()
 

@@ -1,13 +1,13 @@
 ---
 sidebar_position: 1
 slug: /
-title: GigaEdge Spench documentation
+title: GigaEdge Enhance documentation
 description: Build real-time speech enhancement into native, mobile, and web applications.
 ---
 
-# GigaEdge Spench documentation
+# GigaEdge Enhance documentation
 
-GigaEdge Spench is a cross-platform speech-enhancement SDK. Noise suppression and
+GigaEdge Enhance is a cross-platform speech-enhancement SDK. Noise suppression and
 normalization are available on every SDK. Acoustic echo cancellation is available
 in the native and Web SDKs. The [capability matrix](capabilities.md) lists the
 models and features for each platform.
@@ -26,7 +26,7 @@ Repository contributors restore model and test assets through Git LFS before bui
 
 ## Acknowledgement
 
-GigaEdge Spench includes work by people who contributed to the product at different times:
+GigaEdge Enhance includes work by people who contributed to the product at different times:
 
 - Artem Sokolov
 - Artem Khaidarov

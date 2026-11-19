@@ -31,14 +31,14 @@ class BaseTfliteRunner {
   BaseTfliteRunner& operator=(const BaseTfliteRunner&) = delete;
   BaseTfliteRunner(const BaseTfliteRunner&) = delete;
 
-  BaseTfliteRunner(const std::shared_ptr<gigaedge::spench::NetworkConfig> config, const uint32_t num_threads,
+  BaseTfliteRunner(const std::shared_ptr<gigaedge::enhance::NetworkConfig> config, const uint32_t num_threads,
                    bool on_gpu = false);
   virtual ~BaseTfliteRunner();
 
-  virtual void infer(gigaedge::spench::Task* denoise_task) = 0;
+  virtual void infer(gigaedge::enhance::Task* denoise_task) = 0;
   // change two last arguments
   virtual void prepare_input_in_place(std::vector<float>& mag, std::vector<std::vector<float>*>& inputs,
-                                      gigaedge::spench::Context<float>* denoise_context) = 0;
+                                      gigaedge::enhance::Context<float>* denoise_context) = 0;
   template <typename T>
   void test_run(std::vector<std::vector<T>*>& inputs) {
     std::lock_guard<std::mutex> lock(model_run_mutex_);
@@ -49,7 +49,7 @@ class BaseTfliteRunner {
  protected:
   void read_config(const YAML::Node& yaml_config) { model_params_.read_model_node(yaml_config); }
 
-  void init_model(const std::shared_ptr<gigaedge::spench::NetworkConfig> config, const uint32_t num_threads,
+  void init_model(const std::shared_ptr<gigaedge::enhance::NetworkConfig> config, const uint32_t num_threads,
                   bool on_gpu);
   void set_model_io_order(const std::vector<std::string>& input_names, const std::vector<std::string>& output_names);
 
@@ -63,7 +63,7 @@ class BaseTfliteRunner {
 
   void resize_if_needed_in_place(std::vector<float>& to_check, uint32_t shape);
   void resize_if_needed_in_place(std::valarray<float>& to_check, uint32_t shape);
-  void init_output_tensors(gigaedge::spench::TaskData& data, uint32_t size);
+  void init_output_tensors(gigaedge::enhance::TaskData& data, uint32_t size);
 
   static int32_t get_single_dynamic_axis(const TfLiteTensor* tensor, const char* tensor_debug_name);
   static void set_time_dim_if_dynamic(std::vector<int32_t>& shape, int32_t time_axis, int32_t num_frames);
@@ -91,7 +91,7 @@ class BaseTfliteRunner {
   std::vector<TfLiteTensor*> model_inputs_;
   std::vector<const TfLiteTensor*> model_outputs_;
   tflite::SignatureRunner* signature_runner_;
-  gigaedge::spench::DenoiseModelParams model_params_;
+  gigaedge::enhance::DenoiseModelParams model_params_;
   std::vector<std::vector<int32_t>> model_input_shapes_;
   std::vector<std::vector<int32_t>> model_output_shapes_;
   std::vector<int32_t> time_axis_in_;
@@ -104,34 +104,34 @@ class DenoiserDiscriminativeHqTfliteRunner : public BaseTfliteRunner {
  public:
   DenoiserDiscriminativeHqTfliteRunner() = delete;
   virtual ~DenoiserDiscriminativeHqTfliteRunner() = default;
-  explicit DenoiserDiscriminativeHqTfliteRunner(const std::shared_ptr<gigaedge::spench::NetworkConfig> config,
+  explicit DenoiserDiscriminativeHqTfliteRunner(const std::shared_ptr<gigaedge::enhance::NetworkConfig> config,
                                                 uint32_t inference_engine_threads = 1, bool on_gpu = false);
-  void infer(gigaedge::spench::Task* denoise_task);
+  void infer(gigaedge::enhance::Task* denoise_task);
 
  protected:
   template <typename T>
   void warm_up();
   void prepare_input_in_place(std::vector<float>& mag, std::vector<std::vector<float>*>& inputs,
-                              gigaedge::spench::Context<float>* context);
+                              gigaedge::enhance::Context<float>* context);
   template <typename T>
-  void parse_results(gigaedge::spench::TaskData& data);
+  void parse_results(gigaedge::enhance::TaskData& data);
 };
 
 class DenoiserHybridTfliteRunner : public BaseTfliteRunner {
  public:
   DenoiserHybridTfliteRunner() = delete;
   virtual ~DenoiserHybridTfliteRunner() = default;
-  explicit DenoiserHybridTfliteRunner(const std::shared_ptr<gigaedge::spench::NetworkConfig> config,
+  explicit DenoiserHybridTfliteRunner(const std::shared_ptr<gigaedge::enhance::NetworkConfig> config,
                                       uint32_t inference_engine_threads = 1, bool on_gpu = false);
-  void infer(gigaedge::spench::Task* denoise_task);
+  void infer(gigaedge::enhance::Task* denoise_task);
 
  protected:
   template <typename T>
   void warm_up();
   void prepare_input_in_place(std::vector<float>& mag, std::vector<std::vector<float>*>& inputs,
-                              gigaedge::spench::Context<float>* context);
+                              gigaedge::enhance::Context<float>* context);
   template <typename T>
-  void parse_results(gigaedge::spench::TaskData& data);
+  void parse_results(gigaedge::enhance::TaskData& data);
 };
 
 }  // namespace tf_lite

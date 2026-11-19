@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22.1)
-project(spench_native_tests LANGUAGES CXX)
+project(enhance_native_tests LANGUAGES CXX)
 
-set(GES_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../..")
+set(GEE_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../..")
 
 set(BUILD_TFLITE_ENGINE ON CACHE BOOL "Build with tflite inference engine." FORCE)
 set(BUILD_ONNX_ENGINE OFF CACHE BOOL "Build with onnx inference engine." FORCE)
@@ -9,15 +9,15 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build all libraries dynamically." FORCE)
 set(BUILD_CLI OFF CACHE BOOL "Build command-line tools and demos." FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "Build tests." FORCE)
 set(BUILD_RESAMPLER ON CACHE BOOL "Build with libsoxr audio resampling." FORCE)
-if(DEFINED ENV{GES_PREBUILT_DEPENDENCIES_ROOT})
-  set(GES_PREBUILT_DEPENDENCIES_ROOT "$ENV{GES_PREBUILT_DEPENDENCIES_ROOT}"
+if(DEFINED ENV{GEE_PREBUILT_DEPENDENCIES_ROOT})
+  set(GEE_PREBUILT_DEPENDENCIES_ROOT "$ENV{GEE_PREBUILT_DEPENDENCIES_ROOT}"
     CACHE PATH "Root containing target-specific prebuilt dependency bundles." FORCE)
 endif()
 
-add_subdirectory("${GES_ROOT_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/gigaedge-spench-core")
+add_subdirectory("${GEE_ROOT_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/gigaedge-enhance-core")
 
 add_executable(
-    gigaedge-spench-native-tests
+    gigaedge-enhance-native-tests
     ring_buffer_test.cpp
     processor_async_test.cpp
     ../ring_buffer.cpp
@@ -25,22 +25,22 @@ add_executable(
 )
 
 target_include_directories(
-    gigaedge-spench-native-tests
+    gigaedge-enhance-native-tests
     PRIVATE
     ../include
-    "${GES_ROOT_DIR}"
+    "${GEE_ROOT_DIR}"
 )
 
-target_compile_features(gigaedge-spench-native-tests PRIVATE cxx_std_20)
+target_compile_features(gigaedge-enhance-native-tests PRIVATE cxx_std_20)
 target_compile_definitions(
-    gigaedge-spench-native-tests
+    gigaedge-enhance-native-tests
     PRIVATE
-    GES_TEST_MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/assets/quality48.ges"
+    GEE_TEST_MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/assets/quality48.enhance"
 )
 
 target_link_libraries(
-    gigaedge-spench-native-tests
+    gigaedge-enhance-native-tests
     PRIVATE
-    gigaedge-spench
+    gigaedge-enhance
     util::packed_model
 )

@@ -1,20 +1,20 @@
 /**
- * Base error type used throughout the GigaEdgeSpench SDK.
+ * Base error type used throughout the GigaEdgeEnhance SDK.
  *
  * @extends Error
  *
  * @remarks
  * The constructor can be called in two ways:
- * 1. `new GigaEdgeSpenchError(error: Error)` – wraps an existing error,
+ * 1. `new GigaEdgeEnhanceError(error: Error)` – wraps an existing error,
  *    preserving its stack trace and setting `cause` to the original error.
- * 2. `new GigaEdgeSpenchError(message: string)` – creates a new error with the
+ * 2. `new GigaEdgeEnhanceError(message: string)` – creates a new error with the
  *    supplied message.
  *
- * The `name` getter returns the actual constructor name (`GigaEdgeSpenchError`
+ * The `name` getter returns the actual constructor name (`GigaEdgeEnhanceError`
  * or any subclass) and the `message` getter guarantees a non‑empty
  * string by falling back to `'Unknown error'`.
  */
-class GigaEdgeSpenchError extends Error {
+class GigaEdgeEnhanceError extends Error {
     /** @type {Error | undefined} */
     cause: Error | undefined;
 
@@ -37,7 +37,7 @@ class GigaEdgeSpenchError extends Error {
 
     /** @override */
     override get name() {
-        return 'GigaEdgeSpenchError';
+        return 'GigaEdgeEnhanceError';
     }
 
     /** @override */
@@ -46,8 +46,8 @@ class GigaEdgeSpenchError extends Error {
     }
 }
 
-/** @extends GigaEdgeSpenchError */
-class AssertionError extends GigaEdgeSpenchError {
+/** @extends GigaEdgeEnhanceError */
+class AssertionError extends GigaEdgeEnhanceError {
     override get name() {
         return 'AssertionError';
     }
@@ -68,4 +68,4 @@ export function assert(condition: any, message?: string): asserts condition {
     }
 }
 
-export default GigaEdgeSpenchError;
+export default GigaEdgeEnhanceError;

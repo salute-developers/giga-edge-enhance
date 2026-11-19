@@ -6,98 +6,98 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include("${CMAKE_CURRENT_LIST_DIR}/InstallTools.cmake")
 
-if(GES_SHARED_LIBS)
-  set(_ges_config_static OFF)
+if(GEE_SHARED_LIBS)
+  set(_gee_config_static OFF)
 else()
-  set(_ges_config_static ON)
+  set(_gee_config_static ON)
 endif()
-ConfigInstallTarget(gigaedge-spench)
+ConfigInstallTarget(gigaedge-enhance)
 
-if(NOT GES_SHARED_LIBS)
+if(NOT GEE_SHARED_LIBS)
   # Preserve subdirectories because independent dependencies can produce archives
   # with the same filename. Discover them at install time so only built archives
   # are copied and no dependency build-tree directories leak into the package.
   install(CODE "
     cmake_policy(SET CMP0009 NEW)
-    file(GLOB_RECURSE _ges_archives LIST_DIRECTORIES false
+    file(GLOB_RECURSE _gee_archives LIST_DIRECTORIES false
       \"${CMAKE_BINARY_DIR}/*${CMAKE_STATIC_LIBRARY_SUFFIX}\")
-    foreach(_ges_archive IN LISTS _ges_archives)
-      file(RELATIVE_PATH _ges_archive_relative \"${CMAKE_BINARY_DIR}\" \"\${_ges_archive}\")
-      if(_ges_archive_relative STREQUAL \"core/${CMAKE_STATIC_LIBRARY_PREFIX}gigaedge-spench${CMAKE_STATIC_LIBRARY_SUFFIX}\")
+    foreach(_gee_archive IN LISTS _gee_archives)
+      file(RELATIVE_PATH _gee_archive_relative \"${CMAKE_BINARY_DIR}\" \"\${_gee_archive}\")
+      if(_gee_archive_relative STREQUAL \"core/${CMAKE_STATIC_LIBRARY_PREFIX}gigaedge-enhance${CMAKE_STATIC_LIBRARY_SUFFIX}\")
         continue()
       endif()
-      get_filename_component(_ges_archive_directory \"\${_ges_archive_relative}\" DIRECTORY)
+      get_filename_component(_gee_archive_directory \"\${_gee_archive_relative}\" DIRECTORY)
       file(INSTALL
-        DESTINATION \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/spench/deps/\${_ges_archive_directory}\"
+        DESTINATION \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/enhance/deps/\${_gee_archive_directory}\"
         TYPE FILE
-        FILES \"\${_ges_archive}\")
+        FILES \"\${_gee_archive}\")
     endforeach()
-  " COMPONENT ges_runtime)
+  " COMPONENT gee_runtime)
 endif()
 
-if(BUILD_ONNX_ENGINE AND GES_PREBUILT_ORT_ROOT)
-  install(DIRECTORY "${GES_PREBUILT_ORT_ROOT}/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-  install(DIRECTORY "${GES_PREBUILT_ORT_ROOT}/lib/" DESTINATION "${CMAKE_INSTALL_LIBDIR}")
-elseif(BUILD_TFLITE_ENGINE AND GES_RESOLVED_PREBUILT_TFLITE_ROOT)
-  install(DIRECTORY "${GES_RESOLVED_PREBUILT_TFLITE_ROOT}/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-  install(DIRECTORY "${GES_RESOLVED_PREBUILT_TFLITE_ROOT}/lib/" DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+if(BUILD_ONNX_ENGINE AND GEE_PREBUILT_ORT_ROOT)
+  install(DIRECTORY "${GEE_PREBUILT_ORT_ROOT}/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+  install(DIRECTORY "${GEE_PREBUILT_ORT_ROOT}/lib/" DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+elseif(BUILD_TFLITE_ENGINE AND GEE_RESOLVED_PREBUILT_TFLITE_ROOT)
+  install(DIRECTORY "${GEE_RESOLVED_PREBUILT_TFLITE_ROOT}/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+  install(DIRECTORY "${GEE_RESOLVED_PREBUILT_TFLITE_ROOT}/lib/" DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 endif()
 
-if(GES_SHARED_LIBS)
-  set(_ges_runtime_dependencies soxr)
+if(GEE_SHARED_LIBS)
+  set(_gee_runtime_dependencies soxr)
   if(BUILD_ONNX_ENGINE)
     if(TARGET onnxruntime::onnxruntime)
-      list(APPEND _ges_runtime_dependencies onnxruntime::onnxruntime)
+      list(APPEND _gee_runtime_dependencies onnxruntime::onnxruntime)
     elseif(TARGET onnxruntime)
-      list(APPEND _ges_runtime_dependencies onnxruntime)
+      list(APPEND _gee_runtime_dependencies onnxruntime)
     endif()
   elseif(BUILD_TFLITE_ENGINE)
     if(TARGET tensorflow-lite::tensorflow-lite)
-      list(APPEND _ges_runtime_dependencies tensorflow-lite::tensorflow-lite)
+      list(APPEND _gee_runtime_dependencies tensorflow-lite::tensorflow-lite)
     elseif(TARGET tensorflow-lite)
-      list(APPEND _ges_runtime_dependencies tensorflow-lite)
+      list(APPEND _gee_runtime_dependencies tensorflow-lite)
     endif()
   endif()
 
-  foreach(_ges_dependency IN LISTS _ges_runtime_dependencies)
-    if(TARGET ${_ges_dependency})
-      get_target_property(_ges_dependency_type ${_ges_dependency} TYPE)
-      if(_ges_dependency_type STREQUAL "SHARED_LIBRARY" OR _ges_dependency_type STREQUAL "MODULE_LIBRARY")
+  foreach(_gee_dependency IN LISTS _gee_runtime_dependencies)
+    if(TARGET ${_gee_dependency})
+      get_target_property(_gee_dependency_type ${_gee_dependency} TYPE)
+      if(_gee_dependency_type STREQUAL "SHARED_LIBRARY" OR _gee_dependency_type STREQUAL "MODULE_LIBRARY")
         if(WIN32)
-          set(_ges_runtime_destination "${CMAKE_INSTALL_BINDIR}")
+          set(_gee_runtime_destination "${CMAKE_INSTALL_BINDIR}")
         else()
-          set(_ges_runtime_destination "${CMAKE_INSTALL_LIBDIR}")
+          set(_gee_runtime_destination "${CMAKE_INSTALL_LIBDIR}")
         endif()
-        install(FILES "$<TARGET_FILE:${_ges_dependency}>" DESTINATION "${_ges_runtime_destination}")
+        install(FILES "$<TARGET_FILE:${_gee_dependency}>" DESTINATION "${_gee_runtime_destination}")
       endif()
     endif()
   endforeach()
 endif()
 
 install(
-  FILES "${CMAKE_SOURCE_DIR}/core/include/spench.h"
+  FILES "${CMAKE_SOURCE_DIR}/core/include/enhance.h"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  COMPONENT ges_dev
+  COMPONENT gee_dev
 )
 
 install(
-  DIRECTORY "${CMAKE_SOURCE_DIR}/core/include/spench"
+  DIRECTORY "${CMAKE_SOURCE_DIR}/core/include/enhance"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  COMPONENT ges_dev
+  COMPONENT gee_dev
   FILES_MATCHING PATTERN "*.h"
 )
 
-if(TARGET ges_demo)
-  set(_ges_cli_install_targets ges_demo)
-  foreach(_ges_legacy_demo demo_cpp demo_c demo_dsp)
-    if(TARGET ${_ges_legacy_demo})
-      list(APPEND _ges_cli_install_targets ${_ges_legacy_demo})
+if(TARGET gee_demo)
+  set(_gee_cli_install_targets gee_demo)
+  foreach(_gee_legacy_demo demo_cpp demo_c demo_dsp)
+    if(TARGET ${_gee_legacy_demo})
+      list(APPEND _gee_cli_install_targets ${_gee_legacy_demo})
     endif()
   endforeach()
   install(
-    TARGETS ${_ges_cli_install_targets}
+    TARGETS ${_gee_cli_install_targets}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    COMPONENT ges_demo
+    COMPONENT gee_demo
   )
 endif()
 
@@ -105,7 +105,7 @@ if(TARGET model_packer)
   install(
     TARGETS model_packer
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    COMPONENT ges_tools
+    COMPONENT gee_tools
   )
 endif()
 
@@ -114,19 +114,19 @@ endif()
 # before publishing binaries that statically link non-MIT dependencies.
 install(
   FILES "${CMAKE_SOURCE_DIR}/LICENSE"
-  DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/spench"
+  DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/enhance"
 )
 
-set(CPACK_PACKAGE_NAME gigaedge-spench)
-set(_ges_default_artifact_version "${PROJECT_VERSION}")
-if(DEFINED ENV{GES_ARTIFACT_VERSION})
-  set(_ges_default_artifact_version "$ENV{GES_ARTIFACT_VERSION}")
+set(CPACK_PACKAGE_NAME gigaedge-enhance)
+set(_gee_default_artifact_version "${PROJECT_VERSION}")
+if(DEFINED ENV{GEE_ARTIFACT_VERSION})
+  set(_gee_default_artifact_version "$ENV{GEE_ARTIFACT_VERSION}")
 endif()
-set(GES_ARTIFACT_VERSION "${_ges_default_artifact_version}" CACHE STRING
+set(GEE_ARTIFACT_VERSION "${_gee_default_artifact_version}" CACHE STRING
     "Version used in distributable artifact names; may include a SemVer prerelease suffix." FORCE)
-set(CPACK_PACKAGE_VERSION ${GES_ARTIFACT_VERSION})
+set(CPACK_PACKAGE_VERSION ${GEE_ARTIFACT_VERSION})
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
 
 # CPack captures the CPACK_* variables when it is included, so this must stay last. Including
-# it earlier silently discarded the GES_ARTIFACT_VERSION override above.
+# it earlier silently discarded the GEE_ARTIFACT_VERSION override above.
 include(CPack)

@@ -1,4 +1,4 @@
-name: Build GigaEdgeSpench dependency bundle
+name: Build GigaEdgeEnhance dependency bundle
 description: Build and publish one concrete engine bundle to GHCR with ORAS.
 
 inputs:
@@ -48,10 +48,10 @@ runs:
       id: metadata
       shell: bash
       env:
-        GES_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
-        GES_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
-        GES_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
-        GES_CONTAINER_IMAGE_ANDROID: ${{ inputs.toolchain-image }}
+        GEE_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        GEE_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        GEE_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
+        GEE_CONTAINER_IMAGE_ANDROID: ${{ inputs.toolchain-image }}
         TARGET: ${{ inputs.target }}
         DOCKER_CONFIG: ${{ runner.temp }}/gdn-oras
       run: |
@@ -91,17 +91,17 @@ runs:
         print(f"::add-mask::{encoded}")
         print(f"::add-mask::{header}")
         with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
-            output.write(f"GES_GITHUB_AUTH_HEADER={header}\n")
+            output.write(f"GEE_GITHUB_AUTH_HEADER={header}\n")
         PY
 
     - name: Build dependency bundle
       if: steps.metadata.outputs.exists != 'true'
       shell: bash
       env:
-        GES_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
-        GES_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
-        GES_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
-        GES_CONTAINER_IMAGE_ANDROID: ${{ inputs.toolchain-image }}
+        GEE_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        GEE_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        GEE_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
+        GEE_CONTAINER_IMAGE_ANDROID: ${{ inputs.toolchain-image }}
         TARGET: ${{ inputs.target }}
       run: |
         python_command=python3
@@ -114,7 +114,7 @@ runs:
       if: steps.metadata.outputs.exists != 'true'
       shell: bash
       env:
-        GES_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        GEE_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
         TARGET: ${{ inputs.target }}
         REFERENCE: ${{ steps.metadata.outputs.reference }}
         DOCKER_CONFIG: ${{ runner.temp }}/gdn-oras

@@ -1,6 +1,6 @@
-#include "spench/ring_buffer.h"
+#include "enhance/ring_buffer.h"
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 RingBuffer::RingBuffer(std::size_t capacity)
     : storage_(next_power_of_two(std::max<std::size_t>(capacity, 2U)), 0.0f),
@@ -84,4 +84,4 @@ std::size_t RingBuffer::next_power_of_two(std::size_t value) {
   return value + 1U;
 }
 
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance

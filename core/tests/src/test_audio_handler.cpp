@@ -1,4 +1,4 @@
-#include <spench/errors.h>
+#include <enhance/errors.h>
 
 #include <catch.hpp>
 #include <cmath>
@@ -10,7 +10,7 @@
 #include "tests/src/utils.h"
 
 struct TestHandler {
-  std::unique_ptr<gigaedge::spench::NeuralNetworkAudioHandler> handler;
+  std::unique_ptr<gigaedge::enhance::NeuralNetworkAudioHandler> handler;
 
   const std::string data_root = "data/";
   std::vector<float> wav_data;
@@ -26,12 +26,12 @@ struct TestHandler {
 
   template <class Handler, class NetReader>
   TestHandler& InitHandlerFromFile(const std::filesystem::path& rel_cfg) {
-    return initWith<Handler, NetReader, gigaedge::spench::FileConfigReader>(cfgPath(rel_cfg));
+    return initWith<Handler, NetReader, gigaedge::enhance::FileConfigReader>(cfgPath(rel_cfg));
   }
 
   template <class Handler, class NetReader>
   TestHandler& InitHandlerFromYaml(std::string yaml_config) {
-    return initWith<Handler, NetReader, gigaedge::spench::StringConfigReader>(std::move(yaml_config));
+    return initWith<Handler, NetReader, gigaedge::enhance::StringConfigReader>(std::move(yaml_config));
   }
 
   TestHandler& SetWav(const std::string& wav_path) {
@@ -56,7 +56,7 @@ struct TestHandler {
  private:
   template <class Handler, class NetReader, class Reader, class... Args>
   TestHandler& initWith(Args&&... args) {
-    static_assert(std::is_base_of_v<gigaedge::spench::NeuralNetworkAudioHandler, Handler>,
+    static_assert(std::is_base_of_v<gigaedge::enhance::NeuralNetworkAudioHandler, Handler>,
                   "Handler must derive from NeuralNetworkAudioHandler");
     handler = std::make_unique<Handler>(std::make_shared<NetReader>(Reader(std::forward<Args>(args)...)));
     return *this;
@@ -70,21 +70,21 @@ struct TestHandler {
 
 TEST_CASE("FAIL Run denoiser handler with exception from fe runner [denoiser handler]") {
   REQUIRE_THROWS_WITH(
-      (TestHandler().InitHandlerFromFile<gigaedge::spench::DenoiserAudioHandler, gigaedge::spench::DenoiserConfig>(
+      (TestHandler().InitHandlerFromFile<gigaedge::enhance::DenoiserAudioHandler, gigaedge::enhance::DenoiserConfig>(
           "test_configuration_with_incorrect_sampling_freq.yaml")),
       "Config reading error. Sampling frequency is not a scalar!");
 }
 
 TEST_CASE("FAIL Run denoiser handler with exception from inference runner [denoiser handler]") {
   REQUIRE_THROWS_WITH(
-      (TestHandler().InitHandlerFromFile<gigaedge::spench::DenoiserAudioHandler, gigaedge::spench::DenoiserConfig>(
+      (TestHandler().InitHandlerFromFile<gigaedge::enhance::DenoiserAudioHandler, gigaedge::enhance::DenoiserConfig>(
           "test_configuration_with_incorrect_model_path.yaml")),
       "Config reading error. Model path parameter is not a single string!");
 }
 
 TEST_CASE("FAIL Run denoiser handler with exception for incorrect config path [denoiser handler]") {
   REQUIRE_THROWS_WITH(
-      (TestHandler().InitHandlerFromFile<gigaedge::spench::DenoiserAudioHandler, gigaedge::spench::DenoiserConfig>(
+      (TestHandler().InitHandlerFromFile<gigaedge::enhance::DenoiserAudioHandler, gigaedge::enhance::DenoiserConfig>(
           "config.json")),
       "Config file load error: bad file: data/config/config.json");
 }
@@ -94,28 +94,28 @@ TEST_CASE("SUCCEED Create frame [denoiser handler]") {
   std::vector<float> gt_reversed_chunk = {0,     255.0, 254.0, 253.0, 252.0, 251.0, 250.0,
                                           249.0, 250.0, 251.0, 252.0, 253.0, 254.0, 255.0};
   std::vector<float> reversed_chunk;
-  gigaedge::spench::tools::prepare_first_input_frame(input_chunk, reversed_chunk, input_chunk.size());
+  gigaedge::enhance::tools::prepare_first_input_frame(input_chunk, reversed_chunk, input_chunk.size());
   IsVectorsClose(reversed_chunk, gt_reversed_chunk, 1.0);
 }
 
 TEST_CASE("FAIL Run denoiser handler with error for small input length [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
-      TestHandler().InitHandlerFromFile<gigaedge::spench::DenoiserAudioHandler, gigaedge::spench::DenoiserConfig>(
+      TestHandler().InitHandlerFromFile<gigaedge::enhance::DenoiserAudioHandler, gigaedge::enhance::DenoiserConfig>(
           "default_configuration_discr_web_tflite_48khz.yaml"));
 #else
   auto scheduler_test_env = std::move(
-      TestHandler().InitHandlerFromFile<gigaedge::spench::DenoiserAudioHandler, gigaedge::spench::DenoiserConfig>(
+      TestHandler().InitHandlerFromFile<gigaedge::enhance::DenoiserAudioHandler, gigaedge::enhance::DenoiserConfig>(
           "default_configuration_discr_web_onnx_48khz.yaml"));
 #endif
 
-  gigaedge::spench::Context<float>* ctx = scheduler_test_env.handler->create_context();
+  gigaedge::enhance::Context<float>* ctx = scheduler_test_env.handler->create_context();
 
   const std::vector<float> input(128, 0.5);
   std::vector<float> output{42.0F};
 
-  GigaEdgeSpenchRetCode ret_code = scheduler_test_env.handler->process_frame(ctx, input, output);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_FRAME_SIZE);
+  GigaEdgeEnhanceRetCode ret_code = scheduler_test_env.handler->process_frame(ctx, input, output);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_FRAME_SIZE);
   CHECK(output.empty());
   scheduler_test_env.handler->destroy_context(&ctx);
 }
@@ -123,21 +123,21 @@ TEST_CASE("FAIL Run denoiser handler with error for small input length [denoiser
 TEST_CASE("FAIL Run denoiser handler with error for incorrect input length [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
-      TestHandler().InitHandlerFromFile<gigaedge::spench::DenoiserAudioHandler, gigaedge::spench::DenoiserConfig>(
+      TestHandler().InitHandlerFromFile<gigaedge::enhance::DenoiserAudioHandler, gigaedge::enhance::DenoiserConfig>(
           "default_configuration_discr_web_tflite_48khz.yaml"));
 #else
   auto scheduler_test_env = std::move(
-      TestHandler().InitHandlerFromFile<gigaedge::spench::DenoiserAudioHandler, gigaedge::spench::DenoiserConfig>(
+      TestHandler().InitHandlerFromFile<gigaedge::enhance::DenoiserAudioHandler, gigaedge::enhance::DenoiserConfig>(
           "default_configuration_discr_web_onnx_48khz.yaml"));
 #endif
 
-  gigaedge::spench::Context<float>* ctx = scheduler_test_env.handler->create_context();
+  gigaedge::enhance::Context<float>* ctx = scheduler_test_env.handler->create_context();
 
   const std::vector<float> input(800, 0.5);
   std::vector<float> output{42.0F};
 
-  GigaEdgeSpenchRetCode ret_code = scheduler_test_env.handler->process_frame(ctx, input, output);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::ERR_INVALID_FRAME_SIZE);
+  GigaEdgeEnhanceRetCode ret_code = scheduler_test_env.handler->process_frame(ctx, input, output);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::ERR_INVALID_FRAME_SIZE);
   CHECK(output.empty());
   scheduler_test_env.handler->destroy_context(&ctx);
 }
@@ -174,9 +174,8 @@ TEST_CASE("SUCCEED Run denoiser 48kHz model with yaml string config [denoiser ha
       " model_type: denoiser_discr_web_model\n";
 
   TestHandler scheduler_test_env;
-  REQUIRE_NOTHROW(
-      scheduler_test_env.InitHandlerFromYaml<gigaedge::spench::DenoiserAudioHandler, gigaedge::spench::DenoiserConfig>(
-          std::string(yaml_conf)));
+  REQUIRE_NOTHROW(scheduler_test_env.InitHandlerFromYaml<gigaedge::enhance::DenoiserAudioHandler,
+                                                         gigaedge::enhance::DenoiserConfig>(std::string(yaml_conf)));
 }
 
 TEST_CASE(
@@ -184,20 +183,20 @@ TEST_CASE(
     "[denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
-      TestHandler().InitHandlerFromFile<gigaedge::spench::DenoiserAudioHandler, gigaedge::spench::DenoiserConfig>(
+      TestHandler().InitHandlerFromFile<gigaedge::enhance::DenoiserAudioHandler, gigaedge::enhance::DenoiserConfig>(
           "default_configuration_discr_web_tflite_48khz.yaml"));
 #else
   auto scheduler_test_env = std::move(
-      TestHandler().InitHandlerFromFile<gigaedge::spench::DenoiserAudioHandler, gigaedge::spench::DenoiserConfig>(
+      TestHandler().InitHandlerFromFile<gigaedge::enhance::DenoiserAudioHandler, gigaedge::enhance::DenoiserConfig>(
           "default_configuration_discr_web_onnx_48khz.yaml"));
 #endif
 
-  gigaedge::spench::Context<float>* ctx = scheduler_test_env.handler->create_context();
+  gigaedge::enhance::Context<float>* ctx = scheduler_test_env.handler->create_context();
   uint16_t input_frame_size = ctx->input_sound_stream_ptr->input.frame_size_samples();
   std::vector<float> output;
 
-  GigaEdgeSpenchRetCode ret_code = scheduler_test_env.handler->finalize_inference(ctx, output);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::CONTEXT_ACCUMULATION);
+  GigaEdgeEnhanceRetCode ret_code = scheduler_test_env.handler->finalize_inference(ctx, output);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::CONTEXT_ACCUMULATION);
 
   REQUIRE(input_frame_size * 1 == output.size());
   REQUIRE(std::vector<float>(input_frame_size * 1, 0.0) == output);
@@ -207,36 +206,36 @@ TEST_CASE(
 TEST_CASE("SUCCEED Run denoise and check finalize a chunk for the best quality model [denoiser handler]") {
 #ifdef BUILD_TFLITE_ENGINE
   auto scheduler_test_env = std::move(
-      TestHandler().InitHandlerFromFile<gigaedge::spench::DenoiserAudioHandler, gigaedge::spench::DenoiserConfig>(
+      TestHandler().InitHandlerFromFile<gigaedge::enhance::DenoiserAudioHandler, gigaedge::enhance::DenoiserConfig>(
           "default_configuration_discr_web_tflite_48khz.yaml"));
 #else
   auto scheduler_test_env = std::move(
-      TestHandler().InitHandlerFromFile<gigaedge::spench::DenoiserAudioHandler, gigaedge::spench::DenoiserConfig>(
+      TestHandler().InitHandlerFromFile<gigaedge::enhance::DenoiserAudioHandler, gigaedge::enhance::DenoiserConfig>(
           "default_configuration_discr_web_onnx_48khz.yaml"));
 #endif
 
-  gigaedge::spench::Context<float>* ctx = scheduler_test_env.handler->create_context();
-  gigaedge::spench::DenoiseContextDiscriminativeHq<float>* ctx_q =
-      dynamic_cast<gigaedge::spench::DenoiseContextDiscriminativeHq<float>*>(ctx);
+  gigaedge::enhance::Context<float>* ctx = scheduler_test_env.handler->create_context();
+  gigaedge::enhance::DenoiseContextDiscriminativeHq<float>* ctx_q =
+      dynamic_cast<gigaedge::enhance::DenoiseContextDiscriminativeHq<float>*>(ctx);
   uint16_t input_frame_size = ctx->input_sound_stream_ptr->input.frame_size_samples();
   const std::vector<float> input1(input_frame_size, 0.5);
   std::vector<float> output;
 
-  GigaEdgeSpenchRetCode ret_code = scheduler_test_env.handler->process_frame(ctx_q, input1, output);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::CONTEXT_ACCUMULATION);
+  GigaEdgeEnhanceRetCode ret_code = scheduler_test_env.handler->process_frame(ctx_q, input1, output);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::CONTEXT_ACCUMULATION);
 
   ret_code = scheduler_test_env.handler->process_frame(ctx_q, input1, output);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
   ret_code = scheduler_test_env.handler->process_frame(ctx_q, input1, output);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
   CHECK(output.size() == input_frame_size);
   REQUIRE(std::vector<float>(input_frame_size, 0.0) != output);
 
   output.resize(0);
 
   ret_code = scheduler_test_env.handler->finalize_inference(ctx_q, output);
-  CHECK(ret_code == GigaEdgeSpenchRetCode::SUCCESS);
+  CHECK(ret_code == GigaEdgeEnhanceRetCode::SUCCESS);
 
   REQUIRE(input_frame_size * 1 == output.size());
   REQUIRE(std::vector<float>(input_frame_size * 1, 0.0) != output);
@@ -245,7 +244,7 @@ TEST_CASE("SUCCEED Run denoise and check finalize a chunk for the best quality m
 
 
 TEST_CASE("Inference configuration rejects invalid model type and context length", "[validation]") {
-  using namespace gigaedge::spench;
+  using namespace gigaedge::enhance;
 #ifdef BUILD_TFLITE_ENGINE
   const std::string model = "data/models/quality_model_48khz.tflite";
 #else
@@ -264,7 +263,7 @@ TEST_CASE("Inference configuration rejects invalid model type and context length
 }
 
 TEST_CASE("SNR adviser validates spectra and maintains its sliding window", "[snr]") {
-  using namespace gigaedge::spench;
+  using namespace gigaedge::enhance;
   DenoiserModelAdviser<float> adviser(48, 16);
   StreamCurrentMetrics<float> metrics;
   SECTION("window becomes available and drops old samples") {
@@ -305,12 +304,12 @@ TEST_CASE("SNR adviser validates spectra and maintains its sliding window", "[sn
 
 TEST_CASE("AEC configuration rejects unsupported canceler types", "[validation]") {
   REQUIRE_THROWS_WITH(
-      gigaedge::spench::AecConfig(gigaedge::spench::StringConfigReader("echo_cancellation:\n  type: unsupported\n")),
+      gigaedge::enhance::AecConfig(gigaedge::enhance::StringConfigReader("echo_cancellation:\n  type: unsupported\n")),
       "Invalid echo canceler type: unsupported");
 }
 
 TEST_CASE("Unknown model identifiers are rejected before loading weights", "[validation]") {
-  auto config = std::make_shared<gigaedge::spench::DenoiserConfig>(gigaedge::spench::StringConfigReader(
+  auto config = std::make_shared<gigaedge::enhance::DenoiserConfig>(gigaedge::enhance::StringConfigReader(
       "model:\n  model_path: unused.onnx\ninference:\n  model_type: unsupported\n"));
-  REQUIRE_THROWS_AS(gigaedge::spench::InferenceRunner(config, 1, false), std::invalid_argument);
+  REQUIRE_THROWS_AS(gigaedge::enhance::InferenceRunner(config, 1, false), std::invalid_argument);
 }

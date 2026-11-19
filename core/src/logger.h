@@ -6,7 +6,7 @@
 #include <string>
 #include <utility>
 
-namespace gigaedge::spench {
+namespace gigaedge::enhance {
 
 // LogLevel definitions (mapped to uint values):
 // 0: Trace  Very detailed, potentially high-volume logs for diagnosing issues.
@@ -18,12 +18,12 @@ namespace gigaedge::spench {
 
 enum class LogLevel : uint32_t { trace = 0, debug, info, warn, error, off };
 
-// Initialize GigaEdgeSpench's logger without changing the host application's logger.
+// Initialize GigaEdgeEnhance's logger without changing the host application's logger.
 // name: logger name, level: minimum log level to output, logfile: optional file path
-void init_logger(uint32_t level = static_cast<unsigned int>(LogLevel::info), const std::string& name = "GigaEdgeSpench",
-                 const std::string& logfile = {});
+void init_logger(uint32_t level = static_cast<unsigned int>(LogLevel::info),
+                 const std::string& name = "GigaEdgeEnhance", const std::string& logfile = {});
 
-// Flush and release only GigaEdgeSpench's logger.
+// Flush and release only GigaEdgeEnhance's logger.
 void shutdown_logger();
 
 // Change the log level at runtime (0=Trace ... 5=Off)
@@ -31,7 +31,7 @@ void set_log_level(uint32_t level);
 
 std::shared_ptr<::spdlog::logger> get_logger();
 
-// Keep existing internal spdlog-style calls scoped to GigaEdgeSpench's own logger.
+// Keep existing internal spdlog-style calls scoped to GigaEdgeEnhance's own logger.
 namespace spdlog {  // NOLINT(readability-identifier-naming)
 template <typename... Args>
 void trace(Args&&... args) {
@@ -63,4 +63,4 @@ void critical(Args&&... args) {
   get_logger()->critical(std::forward<Args>(args)...);
 }
 }  // namespace spdlog
-}  // namespace gigaedge::spench
+}  // namespace gigaedge::enhance
