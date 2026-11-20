@@ -96,15 +96,26 @@ CPMDeclarePackage(spdlog
   EXCLUDE_FROM_ALL ON
 )
 
-string_option(ONNXRUNTIME_URL "https://github.com/microsoft/onnxruntime.git")
+# Temporary Intel mirror while microsoft/onnxruntime is unavailable
+# (onnx/onnx#8842). Keep the original ONNX Runtime 1.20.1 commit.
+string_option(ONNXRUNTIME_URL "https://github.com/intel/onnxruntime.git")
 file(SHA256 "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/onnxruntime.patch"
   ONNXRUNTIME_PATCH_SHA256)
+file(SHA256 "${CMAKE_CURRENT_LIST_FILE}" ONNXRUNTIME_LOCK_SHA256)
+string(SHA256 ONNXRUNTIME_SOURCE_CACHE_SHA256
+  "${ONNXRUNTIME_LOCK_SHA256};${ONNXRUNTIME_PATCH_SHA256}")
 CPMDeclarePackage(onnxruntime
   NAME onnxruntime
+  VERSION 1.20.1
   PATCHES "${CMAKE_CURRENT_LIST_DIR}/cmake/patches/onnxruntime.patch"
-  GIT_TAG v1.20.1
+  GIT_TAG 5c1b7ccbff7e5141c1da7a9d963d660e5741c319
+  GIT_SHALLOW FALSE
+  # The mirror can serve this commit without advertising a branch or tag for it.
+  # Include it in the initial clone so CMake's subsequent checkout can find it.
+  GIT_CONFIG
+    "remote.origin.fetch=+5c1b7ccbff7e5141c1da7a9d963d660e5741c319:refs/remotes/origin/pinned-1.20.1"
   GIT_REPOSITORY ${ONNXRUNTIME_URL}
-  CUSTOM_CACHE_KEY "v1.20.1-${ONNXRUNTIME_PATCH_SHA256}"
+  CUSTOM_CACHE_KEY "v1.20.1-${ONNXRUNTIME_SOURCE_CACHE_SHA256}"
   SOURCE_SUBDIR cmake
   EXCLUDE_FROM_ALL OFF
 )
