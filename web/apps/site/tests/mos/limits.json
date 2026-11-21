@@ -20,14 +20,24 @@
         "processed": 1.952576
       }
     },
+    "normhybrid48": {
+      "test1_24_noised.wav": {
+        "control": 1.937393,
+        "processed": 2.571007
+      },
+      "test1_48_noised.wav": {
+        "control": 1.715631,
+        "processed": 2.393149
+      }
+    },
     "normfast8": {
       "test1_24_noised.wav": {
         "control": 1.937393,
-        "processed": 2.290457
+        "processed": 2.213934
       },
       "test1_48_noised.wav": {
         "control": 1.71563,
-        "processed": 2.055943
+        "processed": 2.139065
       }
     }
   },
@@ -52,14 +62,24 @@
         "processed": 1.26187
       }
     },
+    "normhybrid48": {
+      "test1_24_noised.wav": {
+        "control": 1.937393,
+        "processed": 1.209722
+      },
+      "test1_48_noised.wav": {
+        "control": 1.715631,
+        "processed": 1.130934
+      }
+    },
     "normfast8": {
       "test1_24_noised.wav": {
         "control": 1.937393,
-        "processed": 2.112953
+        "processed": 2.026115
       },
       "test1_48_noised.wav": {
         "control": 1.71563,
-        "processed": 1.904908
+        "processed": 2.023303
       }
     }
   },
@@ -84,14 +104,24 @@
         "processed": 1.937187
       }
     },
+    "normhybrid48": {
+      "test1_24_noised.wav": {
+        "control": 1.937393,
+        "processed": 2.354029
+      },
+      "test1_48_noised.wav": {
+        "control": 1.715631,
+        "processed": 2.236076
+      }
+    },
     "normfast8": {
       "test1_24_noised.wav": {
         "control": 1.937393,
-        "processed": 1.632805
+        "processed": 1.77032
       },
       "test1_48_noised.wav": {
         "control": 1.71563,
-        "processed": 1.611196
+        "processed": 1.701402
       }
     }
   }

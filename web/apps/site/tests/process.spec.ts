@@ -141,6 +141,13 @@ for (const fileName of sourceFiles) {
         denoiserQuality48: true,
     });
 
+    runSingleFeatureTest('normhybrid48', fileName, {
+        transportSelect: 'shared',
+        normalizationToggle: true,
+        aecToggle: false,
+        denoiserHybrid48: true,
+    });
+
     runSingleFeatureTest('normfast8', fileName, {
         transportSelect: 'shared',
         sampleRateInput: '8000',
