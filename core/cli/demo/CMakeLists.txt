@@ -23,7 +23,7 @@ set(DEMO_DSP_SRC_CPP
 
 if(NOT WIN32)
   # These legacy examples use POSIX getopt and Unix file APIs. The supported
-  # `gigaedge-enhance` CLI below is the cross-platform command-line application.
+  # `giga-edge-enhance` CLI below is the cross-platform command-line application.
   add_executable(demo_cpp ${DEMO_SRC_CPP})
   add_executable(demo_c ${DEMO_SRC_C})
   add_executable(demo_dsp ${DEMO_DSP_SRC_CPP})
@@ -66,7 +66,7 @@ add_executable(${PROJECT_NAME} enhance_cli.cpp utils.cpp)
 gee_apply_build_config(${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/..")
 target_link_libraries(${PROJECT_NAME} PRIVATE ${DEMO_LIBS} argparse dsplib fmt)
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "gigaedge-enhance")
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "giga-edge-enhance")
 
 # This directory calls project(), which resets PROJECT_VERSION, so report the top-level
 # GigaEdgeEnhance version from VERSION_NUMBER instead of a separately maintained literal.

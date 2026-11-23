@@ -331,7 +331,7 @@ class DenoiseCommand : public IParseCommand {
 };
 
 int32_t main(int32_t argc, char const* argv[]) {
-  argparse::ArgumentParser program("gigaedge-enhance-tool", GEE_CLI_VERSION);
+  argparse::ArgumentParser program("giga-edge-enhance", GEE_CLI_VERSION);
 
   EchoCommand echo;
   program.add_subparser(echo.parser());

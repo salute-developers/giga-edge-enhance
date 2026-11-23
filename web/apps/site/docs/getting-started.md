@@ -54,7 +54,7 @@ in its package reference shows how to create an audio node from a release build.
 5. Destroy the context before releasing the denoiser.
 
 The complete calls and the runnable demos are in the [C and C++ quickstart](core/quickstart.md).
-File processing is also available through [gigaedge-enhance](core/cli.md).
+File processing is also available through [giga-edge-enhance](core/cli.md).
 
 ## Web
 
