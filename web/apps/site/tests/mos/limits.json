@@ -13,11 +13,11 @@
     "normquality48": {
       "test1_24_noised.wav": {
         "control": 1.937393,
-        "processed": 2.059912
+        "processed": 2.326227
       },
       "test1_48_noised.wav": {
         "control": 1.71563,
-        "processed": 1.952576
+        "processed": 2.182256
       }
     },
     "normhybrid48": {
@@ -55,11 +55,11 @@
     "normquality48": {
       "test1_24_noised.wav": {
         "control": 1.937393,
-        "processed": 1.042024
+        "processed": 1.495632
       },
       "test1_48_noised.wav": {
         "control": 1.71563,
-        "processed": 1.26187
+        "processed": 1.307879
       }
     },
     "normhybrid48": {
@@ -97,11 +97,11 @@
     "normquality48": {
       "test1_24_noised.wav": {
         "control": 1.937393,
-        "processed": 2.077633
+        "processed": 2.281588
       },
       "test1_48_noised.wav": {
         "control": 1.71563,
-        "processed": 1.937187
+        "processed": 2.082725
       }
     },
     "normhybrid48": {

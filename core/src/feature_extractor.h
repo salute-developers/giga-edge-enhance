@@ -30,7 +30,8 @@ class FeatureExtractor {
 
   // apply mask to real and imaginary parts
   // last 2 vectors (real, imag) of input_spec will be changed
-  void calc_enhanced_parts_in_place(const ComplexNumber<T>& input_spec, ComplexNumber<T>& predicted_mask);
+  void calc_enhanced_parts_in_place(const ComplexNumber<T>& input_spec, ComplexNumber<T>& predicted_mask,
+                                    bool use_complex_mask = false);
 
  protected:
   void stft_impl(const std::vector<T>& frames, std::vector<ComplexNumber<T>>& result);
