@@ -65,6 +65,7 @@ class FeatureExtractorRunner {
                                         uint32_t input_chunk_num, uint32_t feat_num);
 
   bool model_output_is_spectrum_ = false;
+  bool use_complex_mask_ = false;
   gigaedge::enhance::fe::FeatureParams params_;
   std::unique_ptr<gigaedge::enhance::fe::FeatureExtractor<float>> feature_extractor_ptr_;
 };

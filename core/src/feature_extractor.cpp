@@ -213,7 +213,7 @@ void FeatureExtractor<T>::decompress_cirm_in_place(ComplexNumber<T>& predicted_m
 
 template <typename T>
 void FeatureExtractor<T>::calc_enhanced_parts_in_place(const ComplexNumber<T>& input_spec,
-                                                       ComplexNumber<T>& enhanced_spec) {
+                                                       ComplexNumber<T>& enhanced_spec, bool use_complex_mask) {
   if (input_spec.real.size() == 0 || input_spec.imag.size() == 0 || enhanced_spec.real.size() == 0 ||
       enhanced_spec.imag.size() == 0) {
     return;
@@ -228,9 +228,19 @@ void FeatureExtractor<T>::calc_enhanced_parts_in_place(const ComplexNumber<T>& i
   if (enhanced_spec.size() != input_spec.size()) {
     throw std::runtime_error("calc_enhanced_parts_in_place: enhanced_spec size != input_spec size");
   }
+  const auto abs_mask = enhanced_spec.get_magnitude();
+  if (use_complex_mask) {
+    for (uint32_t i = 0; i < enhanced_spec.real.size(); ++i) {
+      const auto scale = std::max(abs_mask[i], 1.0f);
+      const auto mask_real = enhanced_spec.real[i] / scale;
+      const auto mask_imag = enhanced_spec.imag[i] / scale;
+      enhanced_spec.real[i] = input_spec.real[i] * mask_real - input_spec.imag[i] * mask_imag;
+      enhanced_spec.imag[i] = input_spec.real[i] * mask_imag + input_spec.imag[i] * mask_real;
+    }
+    return;
+  }
   // Use only the module of the complex mask.
   // This will help prevent anomalies at the frame boundaries caused by the influence of the phase.
-  const auto abs_mask = enhanced_spec.get_magnitude();
   for (uint32_t i = 0; i < abs_mask.size(); ++i) {
     auto mult = std::min(abs_mask[i], 1.0f);
     enhanced_spec.real[i] = input_spec.real[i] * mult;
