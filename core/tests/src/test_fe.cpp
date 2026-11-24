@@ -3,6 +3,7 @@
 
 #include <catch.hpp>
 #include <chrono>  // NOLINT
+#include <cmath>
 #include <memory>
 
 #include "src/feature_extractor.h"
@@ -385,4 +386,26 @@ TEST_CASE("SUCCEED Run calcEnhancedParts with empty input [feature extractor]") 
   feature_extractor.feature_extractor->calc_enhanced_parts_in_place(empty_mask, empty_spec);
   REQUIRE(empty_spec.real.size() == 0);
   REQUIRE(empty_spec.imag.size() == 0);
+}
+
+TEST_CASE("SUCCEED Apply complex mask with unit gain limit [feature extractor]") {
+  auto feature_extractor = std::move(TestFE().InitFE(DefaultSpeechFeatureParams16kHz()));
+  const gigaedge::enhance::ComplexNumber<float> input_spec(std::vector<float>{3.0f, 3.0f},
+                                                           std::vector<float>{4.0f, 4.0f});
+  gigaedge::enhance::ComplexNumber<float> complex_mask(
+      std::vector<float>{10.0f * std::tanh(0.1f), 10.0f * std::tanh(0.025f)},
+      std::vector<float>{10.0f * std::tanh(0.05f), 0.0f});
+  auto magnitude_mask = complex_mask;
+
+  feature_extractor.feature_extractor->calc_enhanced_parts_in_place(input_spec, complex_mask, true);
+  REQUIRE(complex_mask.real[0] == Approx(2.0f / std::sqrt(5.0f)).margin(1e-5f));
+  REQUIRE(complex_mask.imag[0] == Approx(11.0f / std::sqrt(5.0f)).margin(1e-5f));
+  REQUIRE(complex_mask.real[1] == Approx(1.5f).margin(1e-5f));
+  REQUIRE(complex_mask.imag[1] == Approx(2.0f).margin(1e-5f));
+
+  feature_extractor.feature_extractor->calc_enhanced_parts_in_place(input_spec, magnitude_mask);
+  REQUIRE(magnitude_mask.real[0] == 3.0f);
+  REQUIRE(magnitude_mask.imag[0] == 4.0f);
+  REQUIRE(magnitude_mask.real[1] == Approx(1.5f).margin(1e-5f));
+  REQUIRE(magnitude_mask.imag[1] == Approx(2.0f).margin(1e-5f));
 }

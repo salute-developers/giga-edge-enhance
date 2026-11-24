@@ -339,5 +339,6 @@ state contamination. Hybrid coverage uses reproducible identity fixtures generat
 Model identifiers are `denoiser_discr_hq_model` (8 kHz quantized ONNX), `denoiser_discr_web_model`
 (discriminative 48 kHz FP32), and `denoiser_hybrid_web_model` (hybrid 48 kHz FP32). Default Web denoising is
 the discriminative 48 kHz model. Distribute `hybrid48` through the same platform model resources as `quality48`.
+Apply the decompressed `quality48` mask by complex multiplication to match training, capping its magnitude at one.
 Repack public model assets whenever their embedded configuration changes, preserving
 and verifying the exact network payload; the packed file format itself remains unchanged.

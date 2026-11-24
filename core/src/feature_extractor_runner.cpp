@@ -25,8 +25,9 @@ uint64_t FeatureExtractorRunner::get_pow_spec_feat_size_samples() const { return
 
 void FeatureExtractorRunner::read_config(std::shared_ptr<gigaedge::enhance::NetworkConfig> config) {
   params_.read_feature_params_node(config);
-  model_output_is_spectrum_ =
-      config->params()["inference"]["model_type"].as<std::string>("") == "denoiser_hybrid_web_model";
+  const auto model_type = config->params()["inference"]["model_type"].as<std::string>("");
+  model_output_is_spectrum_ = model_type == "denoiser_hybrid_web_model";
+  use_complex_mask_ = model_type == "denoiser_discr_web_model";
 }
 
 gigaedge::enhance::ComplexNumber<float> FeatureExtractorRunner::merge_input_spectrogram(
@@ -37,7 +38,7 @@ gigaedge::enhance::ComplexNumber<float> FeatureExtractorRunner::merge_input_spec
 void FeatureExtractorRunner::calc_enhanced_spectrogram(const gigaedge::enhance::ComplexNumber<float>& merged_spec,
                                                        gigaedge::enhance::ComplexNumber<float>& out_new_spec) {
   // Computes enhanced parts (masking, etc.) into out_new_spec.
-  feature_extractor_ptr_->calc_enhanced_parts_in_place(merged_spec, out_new_spec);
+  feature_extractor_ptr_->calc_enhanced_parts_in_place(merged_spec, out_new_spec, use_complex_mask_);
 }
 
 uint32_t FeatureExtractorRunner::validate_and_get_feat_num(uint32_t input_chunk_num,
