@@ -58,7 +58,7 @@ const sidebars: SidebarsConfig = {
         {
             type: 'category',
             label: 'Development',
-            items: ['development/build-and-test', 'development/ci-and-releases', 'development/style', 'development/upgrade'],
+            items: ['development/build-and-test', 'development/ci-and-releases', 'development/style'],
         },
     ],
 };

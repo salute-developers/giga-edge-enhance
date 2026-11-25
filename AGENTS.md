@@ -10,18 +10,18 @@ CMake target `giga-edge-enhance`, the `GEE_` prefix, and the `.enhance` packed-m
 extension. The feature class remains `Denoiser`. The GitHub repository slug
 stays `gigadenoiser`.
 
-Version 2.0 is the approved breaking product/API rename. C++ classes remain short in
+C++ classes use short names in
 `giga_edge::enhance`; C symbols use `GigaEdgeEnhance`, the installed CMake target is
 `giga-edge::enhance`, and the Swift module/types use `EnhanceAudioKit` / `Enhance*`.
-There are no legacy aliases. The repository slug and public dependency revisions stay unchanged.
+The repository slug and public dependency revisions stay unchanged.
 The release manifest records the last released 1.0.0 until Release Please prepares the 2.0 release;
-`VERSION_NUMBER`, SDK metadata and package contents are prepared for 2.0.0. Do not publish from this rename task.
+`VERSION_NUMBER`, SDK metadata and package contents are prepared for 2.0.0.
 
 The umbrella C++ header is `giga-edge-enhance.h`. The native library and CMake
-package use `giga-edge-enhance` to match the requested hyphenated SDK name;
-C++ uses the valid identifier `giga_edge` for its root namespace. This is part
-of the breaking 2.0 rename: consumers must update includes, namespaces and CMake
-links and rebuild together, without compatibility aliases.
+package use `giga-edge-enhance`; C++ uses `giga_edge` for its root namespace.
+Public documentation describes the current SDK interface. Internal branding
+history and migration notes belong in private team documentation, not in the
+public documentation or release notes.
 
 ## Repository map
 

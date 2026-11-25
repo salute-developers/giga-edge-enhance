@@ -59,7 +59,7 @@ Avoid `const` on non-static data members when possible — clang-tidy treats the
 
 ### C API (stable within a major version)
 
-Exported C symbols in `core/include/enhance/c_api.h` keep the existing `GigaEdgeEnhance` + `PascalCase` convention (`GigaEdgeEnhanceDenoiseInit`). **No style-driven renames**. Version 2.0 deliberately introduces the approved product/API rename without legacy aliases; subsequent incompatible changes require a new compatibility plan and major version.
+Exported C symbols in `core/include/enhance/c_api.h` keep the existing `GigaEdgeEnhance` + `PascalCase` convention (`GigaEdgeEnhanceDenoiseInit`). **No style-driven renames**. Incompatible changes require a compatibility plan and major version.
 
 ### C++ public API (stable surface)
 
