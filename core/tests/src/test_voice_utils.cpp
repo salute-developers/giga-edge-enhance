@@ -174,6 +174,66 @@ TEST_CASE("SUCCEED Create RangeControl and check process method [sound]") {
 }
 
 #ifdef BUILD_RESAMPLER
+TEST_CASE("Empty resampler chunks do not finalize a live stream [sound]") {
+  util::sound::Resampler interrupted(44100, 16000, 1);
+  util::sound::Resampler reference(44100, 16000, 1);
+  std::vector<float> frame(706, 0.1F);
+  std::vector<float> actual;
+  std::vector<float> expected;
+  for (uint32_t i = 0; i < 8; ++i) {
+    REQUIRE(interrupted.process({}).empty());
+    const auto output = interrupted.process(frame);
+    const auto control = reference.process(frame);
+    actual.insert(actual.end(), output.begin(), output.end());
+    expected.insert(expected.end(), control.begin(), control.end());
+  }
+  const auto tail = interrupted.flush();
+  const auto reference_tail = reference.flush();
+  actual.insert(actual.end(), tail.begin(), tail.end());
+  expected.insert(expected.end(), reference_tail.begin(), reference_tail.end());
+  REQUIRE_FALSE(actual.empty());
+  REQUIRE(actual == expected);
+}
+
+TEST_CASE("Variable-rate resampler drains the complete tail [sound]") {
+  util::sound::Resampler resampler(48000, 44100, 1);
+  const std::vector<float> input(1536, 0.1F);
+  const auto output = resampler.process(input);
+  const auto tail = resampler.flush();
+  const auto expected = static_cast<size_t>(std::llround(input.size() * 44100.0 / 48000.0));
+  const auto actual = output.size() + tail.size();
+  REQUIRE(actual + 1 >= expected);
+  REQUIRE(actual <= expected + 1);
+}
+
+TEST_CASE("Stereo resampler preserves independent interleaved channels [sound]") {
+  util::sound::Resampler stereo(16000, 48000, 2);
+  util::sound::Resampler left(16000, 48000, 1);
+  util::sound::Resampler right(16000, 48000, 1);
+  std::vector<float> first(257, 0.1F);
+  std::vector<float> second(257, -0.2F);
+  std::vector<float> interleaved;
+  for (size_t i = 0; i < first.size(); ++i) {
+    interleaved.push_back(first[i]);
+    interleaved.push_back(second[i]);
+  }
+  auto actual = stereo.process(interleaved);
+  auto a = left.process(first);
+  auto b = right.process(second);
+  const auto stereo_tail = stereo.flush();
+  const auto left_tail = left.flush();
+  const auto right_tail = right.flush();
+  actual.insert(actual.end(), stereo_tail.begin(), stereo_tail.end());
+  a.insert(a.end(), left_tail.begin(), left_tail.end());
+  b.insert(b.end(), right_tail.begin(), right_tail.end());
+  REQUIRE(actual.size() == 2 * a.size());
+  REQUIRE(a.size() == b.size());
+  for (size_t i = 0; i < a.size(); ++i) {
+    REQUIRE(actual[2 * i] == Approx(a[i]).margin(1e-6F));
+    REQUIRE(actual[2 * i + 1] == Approx(b[i]).margin(1e-6F));
+  }
+}
+
 TEST_CASE("SUCCEED Resampler identity when sample rates match [sound]") {
   auto voice_utils = std::move(TestVoiceUtils().Init(16, 16, 48000, 48000));
 

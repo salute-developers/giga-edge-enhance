@@ -42,7 +42,7 @@ GigaEdgeEnhanceRetCode AudioEchoCancelationHandler::do_start() {
                     .set_type(aec->type())
                     .set_residual_echo_suppression(aec->residual_echo_suppression_enabled())
                     .set_delay_compensator(aec->delay_compensator_enabled())
-                    .set_echo_premute(aec->echo_premute())
+                    .set_echo_premute(static_cast<float>(aec->echo_premute()) / 1000.0F)
                     .create();
 
     if (!canceler_) {

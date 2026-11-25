@@ -5,11 +5,12 @@
 #include <util/sound/resampler_fwd.h>
 #endif
 
-#include <spdlog/spdlog.h>
-
+#include <algorithm>
 #include <memory>
 #include <stdexcept>
 #include <string>
+
+#include "src/logger.h"
 
 namespace util {
 namespace sound {
@@ -18,11 +19,15 @@ namespace sound {
 
 class ResamplerImpl {
  public:
-  ResamplerImpl(size_t in_rate, size_t out_rate, size_t channels) : in_rate_{in_rate}, out_rate_{out_rate} {
+  ResamplerImpl(size_t in_rate, size_t out_rate, size_t channels)
+      : in_rate_{in_rate}, out_rate_{out_rate}, channels_{channels} {
+    if (in_rate == 0 || out_rate == 0 || channels == 0) {
+      throw std::invalid_argument("Resampler rates and channel count must be positive");
+    }
     // Same rate: pass-through (SoundStream always owns a Resampler; soxr is unnecessary).
     if (in_rate == out_rate) {
       pass_through_ = true;
-      spdlog::info(
+      giga_edge::enhance::spdlog::info(
           "Resampler pass-through: input rate equals output rate ({} Hz); soxr not constructed "
           "({} channel(s))",
           in_rate, channels);
@@ -61,6 +66,14 @@ class ResamplerImpl {
   }
 
   std::vector<float> process(const std::vector<float>& v) {
+    // soxr treats a null input pointer as end-of-stream. An empty chunk must
+    // remain a no-op so a later nonempty chunk can continue the same stream.
+    if (v.empty()) {
+      return {};
+    }
+    if (v.size() % channels_ != 0) {
+      throw std::invalid_argument("Resampler input must contain complete interleaved frames");
+    }
     if (pass_through_) {
       return v;
     }
@@ -68,29 +81,29 @@ class ResamplerImpl {
       throw std::runtime_error("ResampleVec: resampler is null!");
     }
 
-    double ratio = 0;
-    size_t out_len = 1;
-    size_t input_len = 0;
     std::vector<float> resampled;
-
-    // TODO(?): wtf
-    if (in_rate_ < out_rate_) {
-      ratio = static_cast<double>(out_rate_) / static_cast<double>(in_rate_);
-      // a trick for accurate resampling with 44.1 sample rate case.
-      resampled = std::vector<float>(static_cast<size_t>(static_cast<double>(v.size() * ratio) + 0.0f));
-    } else {
-      ratio = static_cast<double>(in_rate_) / static_cast<double>(out_rate_);
-      resampled = std::vector<float>(static_cast<size_t>(static_cast<double>(v.size() / ratio) + 0.5f));
-    }
-
-    soxr_error_t err =
-        soxr_process(rsmp_.get(), v.data(), v.size(), &input_len, resampled.data(), resampled.size(), &out_len);
-    if (err) {
-      throw std::runtime_error("Error during soxr process");
-    }
-
-    if (resampled.size() != static_cast<size_t>(out_len)) {
-      resampled.resize(out_len);
+    const size_t input_frames = v.size() / channels_;
+    // Preserve the established per-call output budget used by SoundStream.
+    // A nonzero budget also allows one-sample downsampling calls to consume input.
+    const double ratio = static_cast<double>(out_rate_) / static_cast<double>(in_rate_);
+    const size_t block_frames = std::max<size_t>(
+        1, static_cast<size_t>(static_cast<double>(input_frames) * ratio + (in_rate_ < out_rate_ ? 0.0 : 0.5)));
+    std::vector<float> block(block_frames * channels_);
+    size_t consumed = 0;
+    while (consumed < input_frames) {
+      size_t input_len = 0;
+      size_t out_len = 0;
+      const auto err = soxr_process(rsmp_.get(), v.data() + consumed * channels_, input_frames - consumed, &input_len,
+                                    block.data(), block_frames, &out_len);
+      if (err) {
+        throw std::runtime_error(std::string("Error during soxr process: ") + soxr_strerror(err));
+      }
+      if (input_len == 0 && out_len == 0) {
+        throw std::runtime_error("Resampler made no progress");
+      }
+      consumed += input_len;
+      resampled.insert(resampled.end(), block.begin(),
+                       block.begin() + static_cast<std::ptrdiff_t>(out_len * channels_));
     }
     return resampled;
   }
@@ -102,17 +115,22 @@ class ResamplerImpl {
     if (!rsmp_) {
       throw std::runtime_error("ResampleVec: resampler is null!");
     }
-    size_t out_len = 1;
-    double delayed_samples = soxr_delay((rsmp_.get()));
-    std::vector<float> resampled(static_cast<size_t>(delayed_samples) + 1);
-    soxr_error_t err;
-
-    err = soxr_process(rsmp_.get(), NULL, 0, NULL, resampled.data(), resampled.size(), &out_len);
-    if (err) {
-      throw std::runtime_error("ResampleVec: soxr internal error occurred!");
-    }
-    if (resampled.size() != static_cast<size_t>(out_len)) {
-      resampled.resize(out_len);
+    // Variable-rate soxr reports an estimated delay (100 samples in 0.1.3),
+    // not an upper bound. Drain until empty rather than truncating to that estimate.
+    constexpr size_t block_frames = 4096;
+    std::vector<float> block(block_frames * channels_);
+    std::vector<float> resampled;
+    for (;;) {
+      size_t out_len = 0;
+      const auto err = soxr_process(rsmp_.get(), nullptr, 0, nullptr, block.data(), block_frames, &out_len);
+      if (err) {
+        throw std::runtime_error("ResampleVec: soxr internal error occurred!");
+      }
+      if (out_len == 0) {
+        break;
+      }
+      resampled.insert(resampled.end(), block.begin(),
+                       block.begin() + static_cast<std::ptrdiff_t>(out_len * channels_));
     }
     return resampled;
   }
@@ -136,6 +154,7 @@ class ResamplerImpl {
   std::shared_ptr<soxr> rsmp_;
   size_t in_rate_{1};
   size_t out_rate_{1};
+  size_t channels_{1};
 };
 
 #else
