@@ -7,6 +7,8 @@ const siteDirectory = resolve(scriptDirectory, '..');
 const repositoryRoot = resolve(siteDirectory, '../../..');
 const generatedDirectory = resolve(siteDirectory, '.generated-docs');
 const sourceDirectory = resolve(generatedDirectory, 'source');
+const siteBase = (process.env.GEE_SITE_BASE ?? '').replace(/^\/+|\/+$/g, '');
+const siteImages = siteBase ? `/${siteBase}/img/` : '/img/';
 const coiServiceWorkerSource = resolve(siteDirectory, '../../node_modules/coi-serviceworker/coi-serviceworker.min.js');
 const coiServiceWorkerDestination = resolve(siteDirectory, 'static/coi-serviceworker.min.js');
 
@@ -45,6 +47,7 @@ function normalizeForDocusaurus(content, sourcePath) {
     const toolsLink = sourcePath.endsWith(`${sep}CONTRIBUTING.md`) ? '../tools/' : './tools/';
     const sdk = 'https://github.com/salute-developers/giga-edge-enhance/blob/master';
     const normalizedLinks = content
+        .replace('src="web/apps/site/static/img/', `src="${siteImages}`)
         .replace('(LICENSE.txt)', '(./LICENSE.md)')
         .replace('(samples/README.md)', `(${sdk}/samples/README.md)`)
         .replace('(python/readme.md#quick-start)', `(${sdk}/python/readme.md#quick-start)`)
