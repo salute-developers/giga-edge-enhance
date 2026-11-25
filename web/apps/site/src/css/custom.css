@@ -51,6 +51,11 @@ html {
     scroll-behavior: smooth;
 }
 
+[data-theme='light'] a[href$='#gh-dark-mode-only'],
+[data-theme='dark'] a[href$='#gh-light-mode-only'] {
+    display: none;
+}
+
 body {
     background: var(--gigaedge-enhance-canvas);
     color: var(--gigaedge-enhance-ink);
