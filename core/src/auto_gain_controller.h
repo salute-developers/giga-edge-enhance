@@ -10,7 +10,7 @@
 #include "enhance/errors.h"
 #include "util/sound/range_control.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 class AutoGainController {
  private:
@@ -43,4 +43,4 @@ class AutoGainController {
   reset_auto_gain_ctrl_parameters(float gain_target_level = 1, float max_gain = 60.0, uint32_t average_len = 100,
                                   float t_rise = 0.01, float t_fall = 0.01);
 }
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

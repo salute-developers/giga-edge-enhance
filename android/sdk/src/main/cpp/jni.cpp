@@ -12,7 +12,7 @@
 
 namespace {
 
-using gigaedge::enhance::Processor;
+using giga_edge::enhance::Processor;
 
 constexpr const char* illegal_argument_exception = "java/lang/IllegalArgumentException";
 constexpr const char* illegal_state_exception = "java/lang/IllegalStateException";
@@ -115,7 +115,7 @@ extern "C" JNIEXPORT jlong JNICALL Java_com_gigaedge_enhance_Processor_nativeCre
     if (sample_rate_hz <= 0) {
       throw std::invalid_argument("sampleRateHz must be greater than zero");
     }
-    gigaedge::enhance::ProcessorSettings settings;
+    giga_edge::enhance::ProcessorSettings settings;
     settings.low_performance_window_seconds = low_performance_window_seconds;
     settings.low_performance_max_refill_times = low_performance_max_refill_times;
     settings.low_performance_max_refill_time_factor = low_performance_max_refill_time_factor;
@@ -212,7 +212,7 @@ extern "C" JNIEXPORT jobject JNICALL Java_com_gigaedge_enhance_Processor_nativeG
     if (processor == nullptr) {
       return nullptr;
     }
-    const gigaedge::enhance::TelemetrySnapshot snapshot = processor->telemetry_snapshot();
+    const giga_edge::enhance::TelemetrySnapshot snapshot = processor->telemetry_snapshot();
     std::vector<double> normalization_buckets;
     std::vector<jint> normalization_counts;
     std::vector<double> noise_buckets;
@@ -253,7 +253,7 @@ Java_com_gigaedge_enhance_Processor_nativeDrainLowPerformanceEvents(JNIEnv* env,
     if (processor == nullptr) {
       return nullptr;
     }
-    const std::vector<gigaedge::enhance::LowPerformanceEventNative> events = processor->drain_low_performance_events();
+    const std::vector<giga_edge::enhance::LowPerformanceEventNative> events = processor->drain_low_performance_events();
     jclass event_class = env->FindClass("com/gigaedge/enhance/LowPerformanceEvent");
     if (event_class == nullptr) {
       return nullptr;  // Pending exception; class likely stripped/renamed by R8 without keep rules.
@@ -313,7 +313,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_enhance_Processor_nativeSetF
     }
 
     std::string model_name;
-    std::shared_ptr<gigaedge::enhance::PackedModelReader> model_reader;
+    std::shared_ptr<giga_edge::enhance::PackedModelReader> model_reader;
     if (noise_suppression != nullptr) {
       if (asset_manager_object == nullptr) {
         throw std::invalid_argument("AssetManager must be non-null");
@@ -326,7 +326,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_gigaedge_enhance_Processor_nativeSetF
       model_name = get_java_string(env, noise_suppression);
       const std::string asset_path = std::string(model_asset_prefix) + model_name + model_asset_suffix;
       const std::vector<std::uint8_t> model_data = read_asset(asset_manager, asset_path);
-      model_reader = std::make_shared<gigaedge::enhance::PackedModelReader>(model_data);
+      model_reader = std::make_shared<giga_edge::enhance::PackedModelReader>(model_data);
     }
 
     processor->set_features(normalization == JNI_TRUE, model_name, model_reader);

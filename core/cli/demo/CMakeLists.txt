@@ -3,7 +3,7 @@ project(gee_demo LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(DEMO_LIBS gigaedge-enhance yaml-cpp util::sound)
+set(DEMO_LIBS giga-edge-enhance yaml-cpp util::sound)
 
 # legacy demo app
 set(DEMO_SRC_CPP
@@ -23,7 +23,7 @@ set(DEMO_DSP_SRC_CPP
 
 if(NOT WIN32)
   # These legacy examples use POSIX getopt and Unix file APIs. The supported
-  # `gigaedge-enhance` CLI below is the cross-platform command-line application.
+  # `giga-edge-enhance` CLI below is the cross-platform command-line application.
   add_executable(demo_cpp ${DEMO_SRC_CPP})
   add_executable(demo_c ${DEMO_SRC_C})
   add_executable(demo_dsp ${DEMO_DSP_SRC_CPP})
@@ -66,8 +66,8 @@ add_executable(${PROJECT_NAME} enhance_cli.cpp utils.cpp)
 gee_apply_build_config(${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/..")
 target_link_libraries(${PROJECT_NAME} PRIVATE ${DEMO_LIBS} argparse dsplib fmt)
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "gigaedge-enhance")
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "giga-edge-enhance")
 
 # This directory calls project(), which resets PROJECT_VERSION, so report the top-level
 # GigaEdgeEnhance version from VERSION_NUMBER instead of a separately maintained literal.
-target_compile_definitions(${PROJECT_NAME} PRIVATE GEE_CLI_VERSION="${gigaedge-enhance_VERSION}")
+target_compile_definitions(${PROJECT_NAME} PRIVATE GEE_CLI_VERSION="${giga-edge-enhance_VERSION}")

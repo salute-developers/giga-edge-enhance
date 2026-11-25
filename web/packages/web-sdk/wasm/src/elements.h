@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "enhance.h"
 #include "enhance/packed_model.h"
+#include "giga-edge-enhance.h"
 
 class PipelineElement {
  protected:
@@ -28,7 +28,7 @@ class PipelineElement {
 class AudioProcessPipelineElement : public PipelineElement {
  private:
   std::string m_yaml_config;
-  std::unique_ptr<gigaedge::enhance::AudioProcessor> m_normalizer;
+  std::unique_ptr<giga_edge::enhance::AudioProcessor> m_normalizer;
 
  public:
   AudioProcessPipelineElement(const std::string& yaml_config, uint32_t sample_rate = 0);
@@ -41,7 +41,7 @@ class AudioProcessPipelineElement : public PipelineElement {
 class EchoCancellationElement : public PipelineElement {
  private:
   std::string m_yaml_config;
-  std::unique_ptr<gigaedge::enhance::EchoCanceller> m_aec;
+  std::unique_ptr<giga_edge::enhance::EchoCanceller> m_aec;
   std::vector<float> m_loopback;
 
  public:
@@ -59,11 +59,11 @@ class EchoCancellationElement : public PipelineElement {
 
 class DenoisePipelineElement : public PipelineElement {
  private:
-  gigaedge::enhance::Denoiser m_denoiser;
-  gigaedge::enhance::Context<float>* ctx;
+  giga_edge::enhance::Denoiser m_denoiser;
+  giga_edge::enhance::Context<float>* ctx;
 
  public:
-  DenoisePipelineElement(uint32_t sample_rate, std::shared_ptr<gigaedge::enhance::PackedModelReader> model);
+  DenoisePipelineElement(uint32_t sample_rate, std::shared_ptr<giga_edge::enhance::PackedModelReader> model);
   ~DenoisePipelineElement() override;
   uint32_t process(uintptr_t src_ptr, const uint32_t chunk_size) noexcept final;
 

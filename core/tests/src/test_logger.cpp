@@ -11,11 +11,11 @@ TEST_CASE("GigaEdgeEnhance logger does not modify host logging state [logger]") 
   host_logger->set_level(spdlog::level::warn);
   spdlog::set_default_logger(host_logger);
 
-  gigaedge::enhance::init_logger(static_cast<uint32_t>(gigaedge::enhance::LogLevel::off), "gigaedge-enhance-test");
+  giga_edge::enhance::init_logger(static_cast<uint32_t>(giga_edge::enhance::LogLevel::off), "gigaedge-enhance-test");
   REQUIRE(spdlog::default_logger() == host_logger);
   REQUIRE(host_logger->level() == spdlog::level::warn);
 
-  gigaedge::enhance::shutdown_logger();
+  giga_edge::enhance::shutdown_logger();
   REQUIRE(spdlog::default_logger() == host_logger);
   REQUIRE(host_logger->level() == spdlog::level::warn);
 }

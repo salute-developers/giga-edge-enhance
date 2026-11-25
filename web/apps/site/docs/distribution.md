@@ -29,9 +29,9 @@ release also includes `SHA256SUMS`.
 | `gigaedge-enhance-ios` | iOS XCFramework and model bundles |
 | `gigaedge-enhance-web-sdk` | npm tarball of `@gigaedge/enhance-web-sdk` |
 
-Native archives export the CMake package `gigaedge-enhance`. After unpacking one,
-configure the consumer with `find_package(gigaedge-enhance CONFIG REQUIRED)` and
-link `gigaedge::enhance`.
+Native archives export the CMake package `giga-edge-enhance`. After unpacking one,
+configure the consumer with `find_package(giga-edge-enhance CONFIG REQUIRED)` and
+link `giga-edge::enhance`.
 
 The same archives can be built locally with `tools/package` for a concrete
 target. Release publication uses the CI archives, not a package rebuilt from a

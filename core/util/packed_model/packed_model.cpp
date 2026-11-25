@@ -7,7 +7,7 @@
 
 #include "util/packed_model/packed_model_writer.h"
 
-namespace gigaedge::enhance::util {
+namespace giga_edge::enhance::util {
 
 uint32_t read_uint32_le(const uint8_t* ptr) {
   if (ptr == nullptr) {
@@ -47,9 +47,9 @@ std::vector<uint8_t> write_packed_model(const std::string& config, const std::ve
   return buffer;
 }
 
-}  // namespace gigaedge::enhance::util
+}  // namespace giga_edge::enhance::util
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 PackedModelReader::PackedModelReader(const std::string& file_path) {
   std::ifstream stream(file_path, std::ios::binary | std::ios::ate);
@@ -112,4 +112,4 @@ void PackedModelReader::parse_packed_data(const uint8_t* data, size_t data_size)
   }
 }
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

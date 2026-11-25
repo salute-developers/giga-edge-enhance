@@ -67,9 +67,9 @@ This creates `GigaEdgeEnhanceSDK.xcodeproj`.
 Outputs:
 
 - Simulator fat static library (`arm64 + x86_64`):
-  `build/core/simulator/libgigaedge-enhance.a`
+  `build/core/simulator/libgiga-edge-enhance.a`
 - Device static library (`arm64`):
-  `build/core/device/libgigaedge-enhance.a`
+  `build/core/device/libgiga-edge-enhance.a`
 
 ### 2) Build XCFramework
 

@@ -13,7 +13,7 @@
 
 #include "demo/utils.hpp"
 #include "fmt/core.h"
-#include "include/enhance.h"
+#include "include/giga-edge-enhance.h"
 #include "util/echo/echo_canceler.h"
 #include "util/sound/loudness_control.h"
 #include "util/sound/voice_activity.h"
@@ -206,7 +206,7 @@ class EchoCommand : public IParseCommand {
     const std::vector<float> mic = load_channel(input_file, info, static_cast<uint16_t>(micmap[0]));
     const std::vector<float> spk = load_channel(input_file, info, static_cast<uint16_t>(micmap[1]));
 
-    auto echo = std::make_unique<gigaedge::enhance::EchoCanceller>(config_file.c_str());
+    auto echo = std::make_unique<giga_edge::enhance::EchoCanceller>(config_file.c_str());
     const uint16_t frame_len = echo->GetFrameLength();
     const uint32_t fs = echo->GetSampleRate();
     const uint16_t filter_len = echo->GetFilterLength();
@@ -271,7 +271,7 @@ class DenoiseCommand : public IParseCommand {
 
     audio::WavInfo info;
     const std::vector<float> input = load_channel(input_file, info, 0);
-    auto denoiser = std::make_unique<gigaedge::enhance::Denoiser>(config_file.c_str());
+    auto denoiser = std::make_unique<giga_edge::enhance::Denoiser>(config_file.c_str());
     const uint32_t model_fs = denoiser->GetModelSampleRate();
     auto* ctx = denoiser->CreateContext(info.sample_rate, model_fs);
     const uint32_t frame_size = denoiser->GetModelInputFrameSize();
@@ -331,7 +331,7 @@ class DenoiseCommand : public IParseCommand {
 };
 
 int32_t main(int32_t argc, char const* argv[]) {
-  argparse::ArgumentParser program("gigaedge-enhance-tool", GEE_CLI_VERSION);
+  argparse::ArgumentParser program("giga-edge-enhance", GEE_CLI_VERSION);
 
   EchoCommand echo;
   program.add_subparser(echo.parser());

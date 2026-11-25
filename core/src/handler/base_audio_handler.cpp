@@ -6,14 +6,14 @@
 
 #include "src/logger.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
-GigaEdgeEnhanceRetCode BaseAudioHandler::process_frame(struct gigaedge::enhance::Context<float>*,
+GigaEdgeEnhanceRetCode BaseAudioHandler::process_frame(struct giga_edge::enhance::Context<float>*,
                                                        const std::vector<float>&, std::vector<float>&) {
   return GigaEdgeEnhanceRetCode::ERR_NOT_IMPLEMENTED;
 }
 
-GigaEdgeEnhanceRetCode BaseAudioHandler::process_frame(struct gigaedge::enhance::Context<float>* ctx,
+GigaEdgeEnhanceRetCode BaseAudioHandler::process_frame(struct giga_edge::enhance::Context<float>* ctx,
                                                        const std::vector<float>& mic_frame,
                                                        const std::vector<float>& lbk_frame, std::vector<float>& out) {
   // Default: ignore lbk and call single-input version.
@@ -51,4 +51,4 @@ GigaEdgeEnhanceRetCode BaseAudioHandler::do_start() { return GigaEdgeEnhanceRetC
 
 void BaseAudioHandler::do_stop() {}
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

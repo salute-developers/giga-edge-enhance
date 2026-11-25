@@ -8,7 +8,7 @@
 
 #include "src/logger.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::shared_ptr<NetworkConfig> config)
     : BaseAudioHandler(std::move(config)), feature_extractor_runner_ptr_(nullptr), inference_runner_ptr_(nullptr) {
@@ -19,7 +19,7 @@ NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(std::shared_ptr<NetworkConf
     throw std::runtime_error("A neural network handler module creation failed. ret_code=" +
                              std::to_string(static_cast<int32_t>(ret_code)));
   }
-  skip_zero_chunk_ = dynamic_cast<gigaedge::enhance::NetworkConfig*>(config_.get())->skip_zeroed_chunks();
+  skip_zero_chunk_ = dynamic_cast<giga_edge::enhance::NetworkConfig*>(config_.get())->skip_zeroed_chunks();
 }
 
 NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(NeuralNetworkAudioHandler&& orig) noexcept
@@ -30,7 +30,7 @@ NeuralNetworkAudioHandler::NeuralNetworkAudioHandler(NeuralNetworkAudioHandler&&
 NeuralNetworkAudioHandler::~NeuralNetworkAudioHandler() = default;
 
 uint32_t NeuralNetworkAudioHandler::get_engine_threads_num() {
-  return std::dynamic_pointer_cast<gigaedge::enhance::NetworkConfig>(config_)->num_threads();
+  return std::dynamic_pointer_cast<giga_edge::enhance::NetworkConfig>(config_)->num_threads();
 }
 
 uint64_t NeuralNetworkAudioHandler::get_model_sample_rate() {
@@ -62,8 +62,8 @@ GigaEdgeEnhanceRetCode NeuralNetworkAudioHandler::launch_feature_extractor_runne
   try {
     if (!feature_extractor_runner_ptr_) {
       feature_extractor_runner_ptr_ =
-          std::unique_ptr<gigaedge::enhance::FeatureExtractorRunner>(new gigaedge::enhance::FeatureExtractorRunner(
-              std::dynamic_pointer_cast<gigaedge::enhance::NetworkConfig>(config_)));
+          std::unique_ptr<giga_edge::enhance::FeatureExtractorRunner>(new giga_edge::enhance::FeatureExtractorRunner(
+              std::dynamic_pointer_cast<giga_edge::enhance::NetworkConfig>(config_)));
     }
   } catch (const std::exception& e) {
     spdlog::error("{}", e.what());
@@ -79,8 +79,8 @@ GigaEdgeEnhanceRetCode NeuralNetworkAudioHandler::launch_inference_runner() {
   try {
     if (!inference_runner_ptr_) {
       inference_runner_ptr_ =
-          std::unique_ptr<gigaedge::enhance::InferenceRunner>(new gigaedge::enhance::InferenceRunner(
-              std::dynamic_pointer_cast<gigaedge::enhance::NetworkConfig>(config_), inference_engine_threads, false));
+          std::unique_ptr<giga_edge::enhance::InferenceRunner>(new giga_edge::enhance::InferenceRunner(
+              std::dynamic_pointer_cast<giga_edge::enhance::NetworkConfig>(config_), inference_engine_threads, false));
     }
   } catch (const std::exception& e) {
     spdlog::error("{}", e.what());
@@ -121,4 +121,4 @@ void prepare_first_input_frame(const std::vector<float>& current_chunk, std::vec
 
 }  // namespace tools
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

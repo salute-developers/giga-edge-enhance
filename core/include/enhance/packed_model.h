@@ -6,7 +6,7 @@
 
 #include "enhance/export.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 class GEE_API PackedModelReader {
  public:
@@ -28,4 +28,4 @@ class GEE_API PackedModelReader {
   void parse_packed_data(const uint8_t* data, size_t data_size);
 };
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

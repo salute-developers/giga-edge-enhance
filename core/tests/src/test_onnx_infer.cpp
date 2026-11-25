@@ -87,16 +87,16 @@ struct TestOnnxRunner {
 
   TestOnnxRunner& InitRunner(const std::string& yaml_config_name) {
     std::string file_path = data_root + "config/" + yaml_config_name;
-    auto reader = gigaedge::enhance::FileConfigReader(file_path);
+    auto reader = giga_edge::enhance::FileConfigReader(file_path);
     bool on_gpu = reader.params()["inference"]["gpu"].as<bool>(false);
     std::string model_type = reader.params()["inference"]["model_type"].as<std::string>("denoiser_discr_web_model");
 
     if (model_type == "denoiser_discr_hq_model") {
-      auto config = std::make_shared<gigaedge::enhance::DenoiserConfig>(reader);
+      auto config = std::make_shared<giga_edge::enhance::DenoiserConfig>(reader);
       enhance_model_runner = std::unique_ptr<util::onnx::BaseOnnxRunner>(
           new util::onnx::DenoiserDiscriminativeNbOnnxRunner(config, 1, on_gpu));
     } else if (model_type == "denoiser_discr_web_model") {
-      auto config = std::make_shared<gigaedge::enhance::DenoiserConfig>(reader);
+      auto config = std::make_shared<giga_edge::enhance::DenoiserConfig>(reader);
       enhance_model_runner = std::unique_ptr<util::onnx::BaseOnnxRunner>(
           new util::onnx::DenoiserDiscriminativeHqOnnxRunner(config, 1, on_gpu));
     }
@@ -360,6 +360,6 @@ TEST_CASE("FAIL Run cpu onnx runner with null pointer task and zeroed hidden lay
 
 TEST_CASE("FAIL Run cpu onnx runner with null pointer context and zeroed hidden layer [onnx runner]") {
   auto data = std::move(TestOnnxRunner().InitRunner("default_configuration_discr_web_onnx_48khz.yaml"));
-  gigaedge::enhance::Task denoise_task;
+  giga_edge::enhance::Task denoise_task;
   CHECK_THROWS_WITH(data.enhance_model_runner->infer(&denoise_task), "Task data or context are not initialized!");
 }

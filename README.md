@@ -27,12 +27,12 @@ models each SDK exposes. Release archives and the Web SDK npm tarball are
 described in [Distribution](web/apps/site/docs/distribution.md).
 
 ```cpp
-#include <enhance.h>
+#include <giga-edge-enhance.h>
 
 #include <vector>
 
 int main() {
-  gigaedge::enhance::Denoiser denoiser("models/quality48/onnx/config.yaml");
+  giga_edge::enhance::Denoiser denoiser("models/quality48/onnx/config.yaml");
   auto* context = denoiser.CreateContext(48000, 48000);
 
   std::vector<float> input;  // Mono PCM in [-1, 1], at the context input rate.
@@ -53,11 +53,11 @@ Pin a [GitHub Release](https://github.com/salute-developers/gigadenoiser/release
 contains the tested native, Android, iOS, and Web SDK archives. The Web SDK archive is an npm
 tarball. The release workflow does not publish that tarball to the npm registry.
 
-A native archive exports the CMake package `gigaedge-enhance`:
+A native archive exports the CMake package `giga-edge-enhance`:
 
 ```cmake
-find_package(gigaedge-enhance CONFIG REQUIRED)
-target_link_libraries(your_app PRIVATE gigaedge::enhance)
+find_package(giga-edge-enhance CONFIG REQUIRED)
+target_link_libraries(your_app PRIVATE giga-edge::enhance)
 ```
 
 Android and iOS packages are consumed as described in their SDK guides. The repository build can

@@ -11,17 +11,17 @@
 #include "src/logger.h"
 #include "src/task.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 EchoCanceller::EchoCanceller(const char* config) : aec_(nullptr) {
   std::string config_file(config);
   if (!config_file.empty() && std::filesystem::exists(config_file)) {
-    aec_ = std::make_unique<gigaedge::enhance::AudioEchoCancelationHandler>(
-        std::make_shared<gigaedge::enhance::AecConfig>(gigaedge::enhance::FileConfigReader(config)));
+    aec_ = std::make_unique<giga_edge::enhance::AudioEchoCancelationHandler>(
+        std::make_shared<giga_edge::enhance::AecConfig>(giga_edge::enhance::FileConfigReader(config)));
   } else if (config_file.empty()) {
     spdlog::info("EchoCanceller input config is empty. Use default values");
-    aec_ = std::make_unique<gigaedge::enhance::AudioEchoCancelationHandler>(
-        std::make_shared<gigaedge::enhance::AecConfig>());
+    aec_ = std::make_unique<giga_edge::enhance::AudioEchoCancelationHandler>(
+        std::make_shared<giga_edge::enhance::AecConfig>());
   } else {
     spdlog::error("Invalid or missing config file.");
     throw std::invalid_argument("Invalid or missing config file.");
@@ -30,8 +30,8 @@ EchoCanceller::EchoCanceller(const char* config) : aec_(nullptr) {
 }
 
 EchoCanceller::EchoCanceller(const std::string& yaml_conf) : aec_(nullptr) {
-  aec_ = std::make_unique<gigaedge::enhance::AudioEchoCancelationHandler>(
-      std::make_shared<gigaedge::enhance::AecConfig>(gigaedge::enhance::StringConfigReader(yaml_conf)));
+  aec_ = std::make_unique<giga_edge::enhance::AudioEchoCancelationHandler>(
+      std::make_shared<giga_edge::enhance::AecConfig>(giga_edge::enhance::StringConfigReader(yaml_conf)));
 
   spdlog::info("Create GigaEdgeEnhance echo cancelation from yaml string");
 }
@@ -164,4 +164,4 @@ void EchoCanceller::convertFromInterleaved(const std::vector<float>& interlvd, s
 const uint32_t EchoCanceller::GetSampleRate() { return this->aec_->get_sample_rate(); }
 const uint16_t EchoCanceller::GetFilterLength() { return this->aec_->get_filter_length(); }
 const uint16_t EchoCanceller::GetFrameLength() { return this->aec_->get_frame_length(); }
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

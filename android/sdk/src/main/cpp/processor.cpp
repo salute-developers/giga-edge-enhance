@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <utility>
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 namespace {
 
@@ -550,4 +550,4 @@ std::size_t Processor::ring_capacity_for_sample_rate(std::uint32_t sample_rate_h
   return std::max(default_ring_capacity, static_cast<std::size_t>(std::ceil(sample_rate_hz * capacity_seconds)));
 }
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

@@ -1,4 +1,4 @@
-#include <enhance.h>
+#include <giga-edge-enhance.h>
 
 #include <algorithm>
 #include <catch.hpp>
@@ -13,8 +13,8 @@
 
 struct TestFixture {
   std::vector<float> wav_data;
-  std::unique_ptr<gigaedge::enhance::Denoiser> denoiser;
-  std::unique_ptr<gigaedge::enhance::AudioProcessor> dsp;
+  std::unique_ptr<giga_edge::enhance::Denoiser> denoiser;
+  std::unique_ptr<giga_edge::enhance::AudioProcessor> dsp;
 
   const std::string data_root = "data/";
 
@@ -40,12 +40,12 @@ struct TestFixture {
     std::filesystem::path config_path = data_root + "config/";
     config_path += config_name;
     const std::string cfg = config_path.string();  // narrow on Windows
-    denoiser = std::make_unique<gigaedge::enhance::Denoiser>(cfg.c_str());
+    denoiser = std::make_unique<giga_edge::enhance::Denoiser>(cfg.c_str());
     return *this;
   }
 
   TestFixture& InitDenoiser(const std::string& yaml) {
-    denoiser = std::make_unique<gigaedge::enhance::Denoiser>(yaml);
+    denoiser = std::make_unique<giga_edge::enhance::Denoiser>(yaml);
     return *this;
   }
 
@@ -54,17 +54,17 @@ struct TestFixture {
     config_path += config_name;
     const std::string cfg = config_path.string();  // narrow on Windows
 
-    dsp = std::make_unique<gigaedge::enhance::AudioProcessor>(cfg.c_str());
+    dsp = std::make_unique<giga_edge::enhance::AudioProcessor>(cfg.c_str());
     return *this;
   }
 
   TestFixture& InitAudioProcessor(const std::string& yaml) {
-    dsp = std::make_unique<gigaedge::enhance::AudioProcessor>(yaml);
+    dsp = std::make_unique<giga_edge::enhance::AudioProcessor>(yaml);
     return *this;
   }
 
   TestFixture& InitAudioProcessor() {
-    dsp = std::make_unique<gigaedge::enhance::AudioProcessor>();
+    dsp = std::make_unique<giga_edge::enhance::AudioProcessor>();
     return *this;
   }
 };
@@ -74,7 +74,7 @@ TEST_CASE("SUCCEED Convert pcm to float point [gigaedge-enhance c++ api]") {
   std::vector<float> ref_float = {0.0, 1.0, -1.0, 0.06103, -0.1526};
   std::vector<float> converted_float;
 
-  gigaedge::enhance::tools::convert_pcm16_to_float32(pcm16, converted_float);
+  giga_edge::enhance::tools::convert_pcm16_to_float32(pcm16, converted_float);
 
   IsVectorsClose(ref_float, converted_float, 0.001);
 }
@@ -84,7 +84,7 @@ TEST_CASE("SUCCEED Convert float point to pcm [gigaedge-enhance c++ api]") {
   std::vector<int16_t> ref_pcm = {0, 32767, -32767, 2000, -5000};
   std::vector<int16_t> converted_pcm;
 
-  gigaedge::enhance::tools::convert_float32_to_pcm16(float_point32, converted_pcm);
+  giga_edge::enhance::tools::convert_float32_to_pcm16(float_point32, converted_pcm);
 
   REQUIRE(ref_pcm == converted_pcm);
 }
@@ -97,7 +97,7 @@ TEST_CASE("SUCCEED Create context [gigaedge-enhance c++ api]") {
   auto test_data =
       std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml")));
 #endif
-  gigaedge::enhance::Context<float>* ctx = nullptr;
+  giga_edge::enhance::Context<float>* ctx = nullptr;
   ctx = test_data.denoiser->CreateContext();
   REQUIRE(ctx != nullptr);
 
@@ -136,7 +136,7 @@ TEST_CASE("SUCCEED Set and retrieve a context id [gigaedge-enhance c++ api]") {
       std::move(TestFixture().InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml")));
 #endif
 
-  gigaedge::enhance::Context<float>* ctx = nullptr;
+  giga_edge::enhance::Context<float>* ctx = nullptr;
   ctx = test_data.denoiser->CreateContext();
 
   test_data.denoiser->SetContextId(ctx, 1000);
@@ -159,7 +159,7 @@ TEST_CASE("SUCCEED Run inference with 100 tensors [gigaedge-enhance c++ api]") {
                                  .SetWav("test1_48_noised.wav"));
 #endif
 
-  gigaedge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext();
+  giga_edge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext();
   const uint32_t chunks_to_compare = 100;
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
@@ -190,7 +190,7 @@ TEST_CASE("SUCCEED Run hybrid inference with 100 tensors [gigaedge-enhance c++ a
                                  .SetWav("test1_48_noised.wav"));
 #endif
 
-  gigaedge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext();
+  giga_edge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext();
   const uint32_t chunks_to_compare = 100;
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
@@ -221,7 +221,7 @@ TEST_CASE("SUCCEED Get statistic information [gigaedge-enhance c++ api]") {
                                  .SetWav("test1_48_noised.wav"));
 #endif
 
-  gigaedge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext();
+  giga_edge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext();
   const uint32_t chunks_to_compare = 400;
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
@@ -270,7 +270,7 @@ TEST_CASE("SUCCEED Run inference with 100 tensors and default context arguments 
                                  .SetWav("test1_48_noised.wav"));
 #endif
 
-  gigaedge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext(0, 0);
+  giga_edge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext(0, 0);
   const uint32_t chunks_to_compare = 100;
   const uint32_t chunk_size = 16;
   const uint32_t chunk_stride = 16;
@@ -316,8 +316,8 @@ TEST_CASE("SUCCEED Run inference with the best quality 48 kHz model and 2 contex
 
   std::vector<float> predictions1;
   std::vector<float> predictions2;
-  gigaedge::enhance::Context<float>* ctx1 = test_data.denoiser->CreateContext();
-  gigaedge::enhance::Context<float>* ctx2 = test_data.denoiser->CreateContext();
+  giga_edge::enhance::Context<float>* ctx1 = test_data.denoiser->CreateContext();
+  giga_edge::enhance::Context<float>* ctx2 = test_data.denoiser->CreateContext();
   CHECK(ctx1 != ctx2);
   const uint32_t chunks_to_compare = 100;
   const uint32_t chunk_size = 16;
@@ -356,8 +356,8 @@ TEST_CASE("SUCCEED Run inference with 48 kHz model and 2 context with default pa
 
   std::vector<float> predictions1;
   std::vector<float> predictions2;
-  gigaedge::enhance::Context<float>* ctx1 = test_data.denoiser->CreateContext();
-  gigaedge::enhance::Context<float>* ctx2 = test_data.denoiser->CreateContext(0, 0);
+  giga_edge::enhance::Context<float>* ctx1 = test_data.denoiser->CreateContext();
+  giga_edge::enhance::Context<float>* ctx2 = test_data.denoiser->CreateContext(0, 0);
   CHECK(ctx1 != ctx2);
   const uint32_t chunks_to_compare = 100;
   const uint32_t chunk_size = 16;
@@ -401,11 +401,11 @@ TEST_CASE(
   const uint32_t chunk_stride = 16;
   std::vector<std::vector<float>> predictions(context_count);
   std::vector<std::thread> pool;
-  std::vector<gigaedge::enhance::Context<float>*> contexts;
+  std::vector<giga_edge::enhance::Context<float>*> contexts;
   auto chunks = ChunkWav<float>(test_data.wav_data, test_data.denoiser->GetModelSampleRate(), chunk_size, chunk_stride);
   chunks.resize(chunks_to_compare);
 
-  auto functor = [&test_data, &chunks](gigaedge::enhance::Context<float>* ctx,
+  auto functor = [&test_data, &chunks](giga_edge::enhance::Context<float>* ctx,
                                        std::vector<float>& predictions) -> void {
     for (auto& chunk : chunks) {
       std::vector<float> ret;
@@ -416,7 +416,7 @@ TEST_CASE(
   };
 
   for (uint32_t i = 0; i < context_count; ++i) {
-    gigaedge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext();
+    giga_edge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext();
     test_data.denoiser->SetContextId(ctx, i);
     contexts.emplace_back(ctx);
     pool.emplace_back(std::thread(functor, contexts.back(), std::ref(predictions.at(i))));
@@ -449,7 +449,7 @@ TEST_CASE("FAIL Run inference with invalid chunk size [gigaedge-enhance c++ api]
 #endif
 
   std::vector<float> predictions;
-  gigaedge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext(48000, 48000);
+  giga_edge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext(48000, 48000);
   const uint32_t chunk_size = 20;
   const uint32_t chunk_stride = 10;
   const uint32_t chunks_to_compare = 5;
@@ -473,7 +473,7 @@ TEST_CASE("SUCCEED Run inference with model 48kHz on huge single chunk (4000 fra
                                  .SetWav("test1_48_noised.wav"));
 #endif
 
-  gigaedge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext();
+  giga_edge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext();
 
   const uint32_t chunk_size = 16;  // ms
   const uint32_t chunk_stride = chunk_size;
@@ -515,7 +515,7 @@ TEST_CASE("ONNX dynamic buffers shrink after a larger chunk [gigaedge-enhance c+
   auto test_data = std::move(TestFixture()
                                  .InitDenoiser(std::filesystem::path("default_configuration_discr_web_onnx_48khz.yaml"))
                                  .SetWav("test1_48_noised.wav"));
-  gigaedge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext();
+  giga_edge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext();
   const auto chunks = ChunkWav<float>(test_data.wav_data, test_data.denoiser->GetModelSampleRate(), 16, 16);
   REQUIRE(chunks.size() >= 7);
 
@@ -565,7 +565,7 @@ TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model [gigaedge-enhance c++ a
   auto test_data = std::move(TestFixture().InitDenoiser(std::string(hq_8khz_yaml)).SetWav("test1_24_noised.wav"));
   REQUIRE(test_data.denoiser->GetModelSampleRate() == 8000);
 
-  gigaedge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
+  giga_edge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
   auto chunks = ChunkWav<float>(test_data.wav_data, 8000, 16, 16);
   REQUIRE(chunks.size() >= 20);
   chunks.resize(20);
@@ -595,7 +595,7 @@ TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model and 32 ms chunks [gigae
   auto test_data = std::move(TestFixture().InitDenoiser(std::string(hq_8khz_yaml)).SetWav("test1_24_noised.wav"));
   const uint64_t hop = test_data.denoiser->GetModelInputFrameSize();
   REQUIRE(hop == 128);
-  gigaedge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
+  giga_edge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
   auto chunks = ChunkWav<float>(test_data.wav_data, 8000, 32, 32);
   REQUIRE(chunks.size() >= 10);
   chunks.resize(10);
@@ -620,7 +620,7 @@ TEST_CASE("SUCCEED Run inference with the 8 kHz HQ model and variable chunk size
   auto test_data = std::move(TestFixture().InitDenoiser(std::string(hq_8khz_yaml)).SetWav("test1_24_noised.wav"));
   const uint64_t hop = test_data.denoiser->GetModelInputFrameSize();
   REQUIRE(hop == 128);
-  gigaedge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
+  giga_edge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext(8000, 8000);
   auto chunks = ChunkWav<float>(test_data.wav_data, 8000, 16, 16);
   const uint32_t factors[] = {2, 4, 3, 8, 2};
   std::size_t cursor = 0;
@@ -652,7 +652,7 @@ TEST_CASE(
     "SUCCEED Run inference with the super fast 8 kHz on huge single chunk (16000 frames) [gigaedge-enhance c++ api]") {
   auto test_data = std::move(TestFixture().InitDenoiser(std::string(hq_8khz_yaml)).SetWav("test1_24_noised.wav"));
 
-  gigaedge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext(24000, 8000);
+  giga_edge::enhance::Context<float>* ctx = test_data.denoiser->CreateContext(24000, 8000);
 
   const uint32_t chunk_size = 16;  // ms
   const uint32_t chunk_stride = chunk_size;
@@ -1208,7 +1208,7 @@ TEST_CASE("SUCCEED Run AudioProcessing with reading DRC parameters from config [
   REQUIRE(greater_than_0_75.size() == 0);
 }
 TEST_CASE("SUCCESS AudioProcessing accepts YAML string and can process a small frame [gigaedge-enhance c++ api]") {
-  const std::string yaml = gigaedge::enhance::default_audio_processing_config_yaml;
+  const std::string yaml = giga_edge::enhance::default_audio_processing_config_yaml;
 
   // Construct from YAML string
   auto fx = std::move(TestFixture().InitAudioProcessor(yaml));

@@ -8,25 +8,25 @@
 #include "src/logger.h"
 #include "src/task.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 Denoiser::Denoiser(const char* config_file)
     : Sequencer(),
       handler_(std::make_unique<DenoiserAudioHandler>(
-          std::make_shared<gigaedge::enhance::DenoiserConfig>(FileConfigReader(std::string(config_file))))) {
+          std::make_shared<giga_edge::enhance::DenoiserConfig>(FileConfigReader(std::string(config_file))))) {
   spdlog::info("Create GigaEdgeEnhance denoiser from config file {}", config_file);
 }
 
 Denoiser::Denoiser(const std::string& yaml_str)
     : Sequencer(),
       handler_(std::make_unique<DenoiserAudioHandler>(
-          std::make_shared<gigaedge::enhance::DenoiserConfig>(StringConfigReader(yaml_str)))) {
+          std::make_shared<giga_edge::enhance::DenoiserConfig>(StringConfigReader(yaml_str)))) {
   spdlog::info("Create GigaEdgeEnhance denoiser from YAML string config");
 }
 
-Denoiser::Denoiser(std::shared_ptr<gigaedge::enhance::PackedModelReader> bundle)
+Denoiser::Denoiser(std::shared_ptr<giga_edge::enhance::PackedModelReader> bundle)
     : Sequencer(),
-      handler_(std::make_unique<DenoiserAudioHandler>(std::make_shared<gigaedge::enhance::DenoiserConfig>(bundle))) {
+      handler_(std::make_unique<DenoiserAudioHandler>(std::make_shared<giga_edge::enhance::DenoiserConfig>(bundle))) {
   spdlog::info("Create GigaEdgeEnhance denoiser from packed model");
 }
 
@@ -107,4 +107,4 @@ std::vector<int16_t> Denoiser::operator()(const std::vector<int16_t>& chunk16, s
   this->ProcessChunk(chunk16, ret16, ctx);
   return ret16;
 }
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

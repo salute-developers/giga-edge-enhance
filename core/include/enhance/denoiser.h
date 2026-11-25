@@ -12,7 +12,7 @@
 #include "enhance/packed_model.h"
 #include "enhance/sequencer.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 class DenoiserAudioHandler;
 
@@ -48,7 +48,7 @@ class GEE_API Denoiser : public Sequencer {
    *  \return: None
    *  \ingroup group_cpp
    */
-  explicit Denoiser(std::shared_ptr<gigaedge::enhance::PackedModelReader> bundle);
+  explicit Denoiser(std::shared_ptr<giga_edge::enhance::PackedModelReader> bundle);
 
   /**
    *  \brief: Destructor.
@@ -193,4 +193,4 @@ class GEE_API Denoiser : public Sequencer {
  private:
   std::unique_ptr<DenoiserAudioHandler> handler_;
 };
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

@@ -1,8 +1,8 @@
 #include "src/inference_runner.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
-InferenceRunner::InferenceRunner(std::shared_ptr<gigaedge::enhance::NetworkConfig> config,
+InferenceRunner::InferenceRunner(std::shared_ptr<giga_edge::enhance::NetworkConfig> config,
                                  uint32_t inference_engine_threads, bool gpu) {
   model_type_ = string_to_model_type_enum(config->params()["inference"]["model_type"].as<std::string>(""));
 #ifdef BUILD_TFLITE_ENGINE
@@ -31,11 +31,11 @@ InferenceRunner::InferenceRunner(std::shared_ptr<gigaedge::enhance::NetworkConfi
 
 InferenceRunner::~InferenceRunner() { engine_runner_ptr_.reset(); }
 
-void InferenceRunner::infer(gigaedge::enhance::Task* denoise_task) {
+void InferenceRunner::infer(giga_edge::enhance::Task* denoise_task) {
   if (denoise_task == nullptr) {
     throw std::invalid_argument("Task data is not initialized.");
   }
   engine_runner_ptr_->infer(denoise_task);
 }
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

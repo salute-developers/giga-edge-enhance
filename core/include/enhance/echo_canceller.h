@@ -11,7 +11,7 @@
 #include "enhance/export.h"
 #include "enhance/sequencer.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 class AudioEchoCancelationHandler;
 
@@ -181,4 +181,4 @@ class GEE_API EchoCanceller : public Sequencer {
   void convertFromInterleaved(const std::vector<float>& interlvd, std::vector<float>& mic, std::vector<float>& lbk);
   std::unique_ptr<AudioEchoCancelationHandler> aec_;
 };
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

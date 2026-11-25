@@ -9,8 +9,8 @@
 #include "tests/src/utils.h"
 
 struct TestFERunner {
-  std::unique_ptr<gigaedge::enhance::FeatureExtractorRunner> fe_runner_ptr;
-  std::shared_ptr<gigaedge::enhance::DenoiserConfig> cfg_ptr;
+  std::unique_ptr<giga_edge::enhance::FeatureExtractorRunner> fe_runner_ptr;
+  std::shared_ptr<giga_edge::enhance::DenoiserConfig> cfg_ptr;
   const std::size_t num_attempts = 1000;
   std::vector<float> wav_data;
   const std::string data_root = "data/";
@@ -59,14 +59,14 @@ struct TestFERunner {
 
   void InitYAMLReader(const std::string& yaml_config_name) {
     std::string file_path = data_root + "config/" + yaml_config_name;
-    cfg_ptr = std::make_shared<gigaedge::enhance::DenoiserConfig>(gigaedge::enhance::FileConfigReader(file_path));
+    cfg_ptr = std::make_shared<giga_edge::enhance::DenoiserConfig>(giga_edge::enhance::FileConfigReader(file_path));
     // return YAML::LoadFile(file_path);
   }
 
   TestFERunner& InitFERunner(const std::string& yaml_config_name) {
     InitYAMLReader(yaml_config_name);
-    fe_runner_ptr = std::unique_ptr<gigaedge::enhance::FeatureExtractorRunner>(
-        new gigaedge::enhance::FeatureExtractorRunner(cfg_ptr));
+    fe_runner_ptr = std::unique_ptr<giga_edge::enhance::FeatureExtractorRunner>(
+        new giga_edge::enhance::FeatureExtractorRunner(cfg_ptr));
     return *this;
   }
 };

@@ -9,12 +9,12 @@
 #include "src/handler/base_audio_handler.h"
 #include "src/inference_runner.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 class NeuralNetworkAudioHandler : public BaseAudioHandler {
  protected:
-  std::unique_ptr<gigaedge::enhance::FeatureExtractorRunner> feature_extractor_runner_ptr_;
-  std::unique_ptr<gigaedge::enhance::InferenceRunner> inference_runner_ptr_;
+  std::unique_ptr<giga_edge::enhance::FeatureExtractorRunner> feature_extractor_runner_ptr_;
+  std::unique_ptr<giga_edge::enhance::InferenceRunner> inference_runner_ptr_;
   bool skip_zero_chunk_ = false;
 
  public:
@@ -34,10 +34,10 @@ class NeuralNetworkAudioHandler : public BaseAudioHandler {
   virtual Context<float>* create_context(uint32_t input_sample_rate = 0, uint32_t output_sample_rate = 0) = 0;
   virtual void destroy_context(Context<float>** ctx) = 0;
 
-  virtual GigaEdgeEnhanceRetCode finalize_inference(struct gigaedge::enhance::Context<float>* ctx,
+  virtual GigaEdgeEnhanceRetCode finalize_inference(struct giga_edge::enhance::Context<float>* ctx,
                                                     std::vector<float>& enhanced_audio_frame) = 0;
 
-  virtual StatInfo get_stat_info(const struct gigaedge::enhance::Context<float>* ctx) = 0;
+  virtual StatInfo get_stat_info(const struct giga_edge::enhance::Context<float>* ctx) = 0;
 
  protected:
   // Startup/shutdown for NN resources.
@@ -49,11 +49,11 @@ class NeuralNetworkAudioHandler : public BaseAudioHandler {
   GigaEdgeEnhanceRetCode launch_inference_runner();
 
   // fill_in_data_for_processing moved here; still abstract for final handlers.
-  virtual void fill_in_data_for_processing(std::unique_ptr<gigaedge::enhance::Task>& task_ptr,
+  virtual void fill_in_data_for_processing(std::unique_ptr<giga_edge::enhance::Task>& task_ptr,
                                            std::vector<float>& input) = 0;
 
   // Still abstract here; concrete handlers implement the algorithm.
-  virtual GigaEdgeEnhanceRetCode infer_frame(std::unique_ptr<gigaedge::enhance::Task>& task_ptr) = 0;
+  virtual GigaEdgeEnhanceRetCode infer_frame(std::unique_ptr<giga_edge::enhance::Task>& task_ptr) = 0;
 
   bool is_zeroed_vector(const std::vector<float>& v, float epsilon = 0.0f) noexcept;
 };
@@ -62,4 +62,4 @@ namespace tools {
 void prepare_first_input_frame(const std::vector<float>& current_chunk, std::vector<float>& frame, uint32_t frame_size);
 }  // namespace tools
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

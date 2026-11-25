@@ -10,7 +10,7 @@
 #include "src/feature_params.h"
 #include "tests/src/utils.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 namespace fe {
 template <typename T>
 class FeatureExtractorUnlocked : public FeatureExtractor<T> {
@@ -22,30 +22,30 @@ class FeatureExtractorUnlocked : public FeatureExtractor<T> {
 };
 
 }  // namespace fe
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance
 
-static gigaedge::enhance::fe::FeatureParams DefaultSpeechFeatureParams16kHz() {
-  gigaedge::enhance::fe::FeatureParams params;
+static giga_edge::enhance::fe::FeatureParams DefaultSpeechFeatureParams16kHz() {
+  giga_edge::enhance::fe::FeatureParams params;
 
   params.sampling_freq = 16000;
   params.frame_size_ms = 32;
   params.frame_stride_ms = 16;
-  params.window_type = gigaedge::enhance::fe::WindowType::hanning;
+  params.window_type = giga_edge::enhance::fe::WindowType::hanning;
   return params;
 }
 
-static gigaedge::enhance::fe::FeatureParams DefaultSpeechFeatureParams24kHz() {
-  gigaedge::enhance::fe::FeatureParams params;
+static giga_edge::enhance::fe::FeatureParams DefaultSpeechFeatureParams24kHz() {
+  giga_edge::enhance::fe::FeatureParams params;
 
   params.sampling_freq = 24000;
   params.frame_size_ms = 32;
   params.frame_stride_ms = 16;
-  params.window_type = gigaedge::enhance::fe::WindowType::hanning;
+  params.window_type = giga_edge::enhance::fe::WindowType::hanning;
   return params;
 }
 
 struct TestFE {
-  std::unique_ptr<gigaedge::enhance::fe::FeatureExtractorUnlocked<float>> feature_extractor;
+  std::unique_ptr<giga_edge::enhance::fe::FeatureExtractorUnlocked<float>> feature_extractor;
   const std::size_t num_attempts = 1000;
   std::vector<float> wav_data;
   const std::string data_root = "data/";
@@ -87,9 +87,9 @@ struct TestFE {
     return *this;
   }
 
-  TestFE& InitFE(const gigaedge::enhance::fe::FeatureParams& params) {
-    feature_extractor = std::unique_ptr<gigaedge::enhance::fe::FeatureExtractorUnlocked<float>>(
-        new gigaedge::enhance::fe::FeatureExtractorUnlocked<float>(params));
+  TestFE& InitFE(const giga_edge::enhance::fe::FeatureParams& params) {
+    feature_extractor = std::unique_ptr<giga_edge::enhance::fe::FeatureExtractorUnlocked<float>>(
+        new giga_edge::enhance::fe::FeatureExtractorUnlocked<float>(params));
     return *this;
   }
 
@@ -100,13 +100,13 @@ struct TestFE {
 };
 
 TEST_CASE("SUCCEED Run STFT with dummy zero vector (audio 16kHz) [feature extractor]") {
-  gigaedge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
+  giga_edge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
 
   const std::vector<float> const_input(params.nfft(), 0.0);
   std::vector<float> reference_real(params.pow_spec_feat_sz(), 0.0);
   std::vector<float> reference_imag(params.pow_spec_feat_sz(), 0.0);
-  std::vector<gigaedge::enhance::ComplexNumber<float>> result;
+  std::vector<giga_edge::enhance::ComplexNumber<float>> result;
   feature_extractor.feature_extractor->stft_apply(const_input, result);
 
   REQUIRE(result.size() >= 1);
@@ -115,14 +115,14 @@ TEST_CASE("SUCCEED Run STFT with dummy zero vector (audio 16kHz) [feature extrac
 }
 
 TEST_CASE("SUCCEED Run 1000 STFT with dummy zero vector for speed measure (audio 16kHz) [feature extractor]") {
-  gigaedge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
+  giga_edge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   const std::vector<float> const_input(params.nfft(), 0.0);
   std::vector<size_t> timings(feature_extractor.num_attempts);
 
   auto ts_1 = std::chrono::steady_clock::now();
   for (size_t i = 0; i < feature_extractor.num_attempts; ++i) {
-    std::vector<gigaedge::enhance::ComplexNumber<float>> result;
+    std::vector<giga_edge::enhance::ComplexNumber<float>> result;
     feature_extractor.feature_extractor->stft_apply(const_input, result);
     REQUIRE(result.size() >= 1);
   }
@@ -138,14 +138,14 @@ TEST_CASE("SUCCEED Run 1000 STFT with dummy zero vector for speed measure (audio
 }
 
 TEST_CASE("SUCCEED Run 1000 STFT with dummy zero vector for speed measure (audio 24kHz) [feature extractor]") {
-  gigaedge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
+  giga_edge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   const std::vector<float> const_input(params.nfft(), 0.0);
   std::vector<size_t> timings(feature_extractor.num_attempts);
 
   auto ts_1 = std::chrono::steady_clock::now();
   for (size_t i = 0; i < feature_extractor.num_attempts; ++i) {
-    std::vector<gigaedge::enhance::ComplexNumber<float>> result;
+    std::vector<giga_edge::enhance::ComplexNumber<float>> result;
     feature_extractor.feature_extractor->stft_apply(const_input, result);
     REQUIRE(result.size() >= 1);
   }
@@ -161,7 +161,7 @@ TEST_CASE("SUCCEED Run 1000 STFT with dummy zero vector for speed measure (audio
 }
 
 TEST_CASE("SUCCEED Run STFT with single real vector (audio 16kHz) [feature extractor]") {
-  gigaedge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
+  giga_edge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
 
   const std::vector<float> const_input = {
@@ -299,7 +299,7 @@ TEST_CASE("SUCCEED Run STFT with single real vector (audio 16kHz) [feature extra
       8.6743e-05,  6.9726e-05,  -8.8085e-05, -3.7007e-04, 3.7584e-04,  2.3769e-04,  -3.3803e-04, 7.5349e-05,
       -1.2613e-04, 4.4333e-04,  -6.3304e-04, 2.8680e-04,  -3.5757e-05, 7.5996e-07,  3.2257e-04,  -3.1243e-04,
       0.0000e+00};
-  std::vector<gigaedge::enhance::ComplexNumber<float>> result;
+  std::vector<giga_edge::enhance::ComplexNumber<float>> result;
   feature_extractor.feature_extractor->stft_apply(const_input, result);
   REQUIRE(result.size() >= 1);
 
@@ -309,7 +309,7 @@ TEST_CASE("SUCCEED Run STFT with single real vector (audio 16kHz) [feature extra
 
 
 TEST_CASE("SUCCEED Run iSTFT with dummy complex zero vector (audio 16kHz) [gigaedge-enhance]") {
-  gigaedge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
+  giga_edge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   // To get 256 samples we need to provide more for context
   const std::vector<float> reference_signal(params.num_frame_stride_samples(), 0.0);
@@ -317,20 +317,20 @@ TEST_CASE("SUCCEED Run iSTFT with dummy complex zero vector (audio 16kHz) [gigae
   std::vector<float> imag_input(params.pow_spec_feat_sz() * 2, 0.0);
 
   std::vector<float> result;
-  gigaedge::enhance::ComplexNumber<float> input_complex(real_input, imag_input);
+  giga_edge::enhance::ComplexNumber<float> input_complex(real_input, imag_input);
   feature_extractor.feature_extractor->istft_apply(input_complex, result);
   IsVectorsClose(reference_signal, result, 0.0001);
 }
 
 TEST_CASE("SUCCEED Run 1000 iSTFT with dummy zero vector for speed measure (audio 16kHz) [feature extractor]") {
-  gigaedge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
+  giga_edge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   // To get M reference samples we need to provide more for context
   const std::vector<float> reference_signal(params.num_frame_stride_samples(), 0.0);
   std::vector<float> real_input(params.pow_spec_feat_sz() * 2, 0.0);
   std::vector<float> imag_input(params.pow_spec_feat_sz() * 2, 0.0);
 
-  gigaedge::enhance::ComplexNumber<float> input_complex(real_input, imag_input);
+  giga_edge::enhance::ComplexNumber<float> input_complex(real_input, imag_input);
   std::vector<size_t> timings(feature_extractor.num_attempts);
 
   auto ts_1 = std::chrono::steady_clock::now();
@@ -351,14 +351,14 @@ TEST_CASE("SUCCEED Run 1000 iSTFT with dummy zero vector for speed measure (audi
 }
 
 TEST_CASE("SUCCEED Run 1000 iSTFT with dummy zero vector for speed measure (audio 24kHz) [feature extractor]") {
-  gigaedge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
+  giga_edge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams24kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
   // To get M reference samples we need to provide more for context
   const std::vector<float> reference_signal(params.num_frame_stride_samples(), 0.0);
   std::vector<float> real_input(params.pow_spec_feat_sz() * 2, 0.0);
   std::vector<float> imag_input(params.pow_spec_feat_sz() * 2, 0.0);
 
-  gigaedge::enhance::ComplexNumber<float> input_complex(real_input, imag_input);
+  giga_edge::enhance::ComplexNumber<float> input_complex(real_input, imag_input);
   std::vector<size_t> timings(feature_extractor.num_attempts);
 
   auto ts_1 = std::chrono::steady_clock::now();
@@ -379,10 +379,10 @@ TEST_CASE("SUCCEED Run 1000 iSTFT with dummy zero vector for speed measure (audi
 }
 
 TEST_CASE("SUCCEED Run calcEnhancedParts with empty input [feature extractor]") {
-  gigaedge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
+  giga_edge::enhance::fe::FeatureParams params = DefaultSpeechFeatureParams16kHz();
   auto feature_extractor = std::move(TestFE().InitFE(params));
-  gigaedge::enhance::ComplexNumber<float> empty_mask;
-  gigaedge::enhance::ComplexNumber<float> empty_spec;
+  giga_edge::enhance::ComplexNumber<float> empty_mask;
+  giga_edge::enhance::ComplexNumber<float> empty_spec;
   feature_extractor.feature_extractor->calc_enhanced_parts_in_place(empty_mask, empty_spec);
   REQUIRE(empty_spec.real.size() == 0);
   REQUIRE(empty_spec.imag.size() == 0);
@@ -390,9 +390,9 @@ TEST_CASE("SUCCEED Run calcEnhancedParts with empty input [feature extractor]") 
 
 TEST_CASE("SUCCEED Apply complex mask with unit gain limit [feature extractor]") {
   auto feature_extractor = std::move(TestFE().InitFE(DefaultSpeechFeatureParams16kHz()));
-  const gigaedge::enhance::ComplexNumber<float> input_spec(std::vector<float>{3.0f, 3.0f},
-                                                           std::vector<float>{4.0f, 4.0f});
-  gigaedge::enhance::ComplexNumber<float> complex_mask(
+  const giga_edge::enhance::ComplexNumber<float> input_spec(std::vector<float>{3.0f, 3.0f},
+                                                            std::vector<float>{4.0f, 4.0f});
+  giga_edge::enhance::ComplexNumber<float> complex_mask(
       std::vector<float>{10.0f * std::tanh(0.1f), 10.0f * std::tanh(0.025f)},
       std::vector<float>{10.0f * std::tanh(0.05f), 0.0f});
   auto magnitude_mask = complex_mask;

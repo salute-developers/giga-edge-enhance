@@ -24,14 +24,14 @@ EMSCRIPTEN_BINDINGS(enhance) {
     .function("process", &EchoCancellationElement::processMono)
     .function("resetContext", &EchoCancellationElement::resetContext);
 #else
-  emscripten::class_<gigaedge::enhance::PackedModelReader>("PackedModelReader")
+  emscripten::class_<giga_edge::enhance::PackedModelReader>("PackedModelReader")
       .smart_ptr_constructor("PackedModelReader",
-                             &std::make_shared<gigaedge::enhance::PackedModelReader, const uintptr_t, uint32_t>);
+                             &std::make_shared<giga_edge::enhance::PackedModelReader, const uintptr_t, uint32_t>);
   emscripten::class_<DenoisePipelineElement>("DenoisePipelineElement")
-      .constructor<uint32_t, std::shared_ptr<gigaedge::enhance::PackedModelReader> >()
+      .constructor<uint32_t, std::shared_ptr<giga_edge::enhance::PackedModelReader> >()
       .function("process", &DenoisePipelineElement::process)
       .function("resetContext", &DenoisePipelineElement::resetContext);
 #endif
-  emscripten::function("SetLogLevel", &gigaedge::enhance::set_log_level);
-  emscripten::function("InitLogger", &gigaedge::enhance::init_logger);
+  emscripten::function("SetLogLevel", &giga_edge::enhance::set_log_level);
+  emscripten::function("InitLogger", &giga_edge::enhance::init_logger);
 }

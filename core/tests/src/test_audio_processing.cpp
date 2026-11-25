@@ -10,7 +10,7 @@
 #include "tests/src/utils.h"
 
 struct TestAudioProcessing {
-  std::unique_ptr<gigaedge::enhance::AudioProcessorHandler> audio_proc;
+  std::unique_ptr<giga_edge::enhance::AudioProcessorHandler> audio_proc;
 
   const std::string data_root = "data/";
   std::vector<float> wav_data;
@@ -25,28 +25,28 @@ struct TestAudioProcessing {
     orig.audio_proc = nullptr;
   }
 
-  gigaedge::enhance::AudioProcessorHandler& getAudioProc() { return *(audio_proc.get()); }
+  giga_edge::enhance::AudioProcessorHandler& getAudioProc() { return *(audio_proc.get()); }
 
   // Default init: use config reader with default settings.
   TestAudioProcessing& InitAudioProcessing() {
     // Use default-constructed AudioProcessorConfig (no path).
-    auto reader = std::make_unique<gigaedge::enhance::AudioProcessorConfig>();
-    audio_proc = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(std::move(reader));
+    auto reader = std::make_unique<giga_edge::enhance::AudioProcessorConfig>();
+    audio_proc = std::make_unique<giga_edge::enhance::AudioProcessorHandler>(std::move(reader));
     return *this;
   }
 
   // Init with a specific YAML config file under data/config/.
   TestAudioProcessing& InitAudioProcessing(const std::string& yaml_conf) {
     auto reader =
-        std::make_unique<gigaedge::enhance::AudioProcessorConfig>(gigaedge::enhance::StringConfigReader(yaml_conf));
-    audio_proc = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(std::move(reader));
+        std::make_unique<giga_edge::enhance::AudioProcessorConfig>(giga_edge::enhance::StringConfigReader(yaml_conf));
+    audio_proc = std::make_unique<giga_edge::enhance::AudioProcessorHandler>(std::move(reader));
     return *this;
   }
 
   TestAudioProcessing& InitAudioProcessing(const std::filesystem::path& config_name) {
-    auto reader = std::make_unique<gigaedge::enhance::AudioProcessorConfig>(
-        gigaedge::enhance::FileConfigReader(cfgPath(config_name)));
-    audio_proc = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(std::move(reader));
+    auto reader = std::make_unique<giga_edge::enhance::AudioProcessorConfig>(
+        giga_edge::enhance::FileConfigReader(cfgPath(config_name)));
+    audio_proc = std::make_unique<giga_edge::enhance::AudioProcessorHandler>(std::move(reader));
     return *this;
   }
 

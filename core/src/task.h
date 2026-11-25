@@ -11,11 +11,11 @@
 #include "src/context.h"
 #include "src/pipeline_stage.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 class Task;
 
-using TaskPtr = std::shared_ptr<gigaedge::enhance::Task>;
+using TaskPtr = std::shared_ptr<giga_edge::enhance::Task>;
 
 struct TaskData {
   TaskData() : context(nullptr) {}
@@ -76,4 +76,4 @@ __declspec(dllexport)
 #endif
 void convert_pcm16_to_float32(const std::vector<int16_t>&, std::vector<float>&);
 }  // namespace tools
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance
