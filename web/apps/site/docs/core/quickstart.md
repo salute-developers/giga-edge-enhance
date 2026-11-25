@@ -11,7 +11,7 @@ with file I/O in the repository demos:
 - [`core/cli/demo/2-c_denoiser_api_demo.c`](https://github.com/salute-developers/gigadenoiser/blob/master/core/cli/demo/2-c_denoiser_api_demo.c)
 - [`core/cli/demo/3-cpp_dsp_api_demo.cpp`](https://github.com/salute-developers/gigadenoiser/blob/master/core/cli/demo/3-cpp_dsp_api_demo.cpp)
 
-Link `gigaedge::enhance` and include only the public headers. Create the denoiser and
+Link `giga-edge::enhance` and include only the public headers. Create the denoiser and
 its context before entering a real-time callback.
 
 ## Model configuration
@@ -26,14 +26,14 @@ buffers are already at the model rate and no resampling is required.
 ## C++
 
 ```cpp
-#include <enhance.h>
+#include <giga-edge-enhance.h>
 
 #include <iostream>
 #include <vector>
 
 int main() {
-  gigaedge::enhance::Denoiser denoiser("models/quality48/onnx/config.yaml");
-  gigaedge::enhance::Context<float>* context = denoiser.CreateContext(48000, 48000);
+  giga_edge::enhance::Denoiser denoiser("models/quality48/onnx/config.yaml");
+  giga_edge::enhance::Context<float>* context = denoiser.CreateContext(48000, 48000);
 
   std::vector<float> input;  // Replace with one mono chunk in [-1, 1].
   std::vector<float> output;
@@ -111,5 +111,5 @@ enumerators are in `enhance/errors.h`.
 ## DSP and echo cancellation
 
 Normalization and acoustic echo cancellation use `AudioProcessor` and `EchoCanceller` from
-`<enhance.h>`. The DSP demo builds a loudness, noise-gate, and limiter chain before denoising.
+`<giga-edge-enhance.h>`. The DSP demo builds a loudness, noise-gate, and limiter chain before denoising.
 Configuration fields are described in [Configuration](configuration.md).

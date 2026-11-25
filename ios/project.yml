@@ -26,7 +26,7 @@ targets:
         BUILD_LIBRARY_FOR_DISTRIBUTION: YES
         GENERATE_INFOPLIST_FILE: YES
         MODULEMAP_PRIVATE_FILE: "$(SRCROOT)/Sources/EnhanceAudioKit/include/EnhanceAudioKit.private.modulemap"
-        OTHER_LDFLAGS: "$(inherited) -lgigaedge-enhance"
+        OTHER_LDFLAGS: "$(inherited) -lgiga-edge-enhance"
         HEADER_SEARCH_PATHS:
           - "$(inherited)"
           - "$(SRCROOT)/../core/include"

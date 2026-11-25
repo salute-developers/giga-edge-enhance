@@ -38,7 +38,7 @@ target_include_directories(enhance_tests SYSTEM PRIVATE
 gee_apply_build_config(enhance_tests)
 
 target_link_libraries(enhance_tests PRIVATE
-  gigaedge-enhance
+  giga-edge-enhance
   util::packed_model
   yaml-cpp
   util::sound

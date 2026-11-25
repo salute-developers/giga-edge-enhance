@@ -12,7 +12,7 @@
 #include "enhance/export.h"
 #include "enhance/stream_stat.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 template <typename T>
 struct Context;
 
@@ -46,4 +46,4 @@ class GEE_API Sequencer {
 
   virtual std::vector<int16_t> operator()(std::vector<int16_t>& ret16, Context<float>* ctx = nullptr) = 0;
 };
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

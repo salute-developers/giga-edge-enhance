@@ -19,7 +19,7 @@
 
 #include "enhance/ring_buffer.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 struct ProcessorSettings {
   double low_performance_window_seconds = 1.0;
@@ -138,6 +138,6 @@ class Processor {
   bool stopping_;
 };
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance
 
 #endif

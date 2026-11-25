@@ -9,12 +9,12 @@
 #include "src/denoiser_model_adviser.h"
 #include "src/logger.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 DenoiserAudioHandler::DenoiserAudioHandler(std::shared_ptr<DenoiserConfig> config)
     : NeuralNetworkAudioHandler(std::move(config)), adviser_(nullptr) {
   // Construction guarantees DenoiserConfig; avoid private final-type RTTI across shared libraries.
-  float frame_shift_ms = static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms();
+  float frame_shift_ms = static_cast<giga_edge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms();
   static constexpr float window_duration_ms = 1000 * 5;
   adviser_ = std::make_unique<DenoiserModelAdviser<float>>(window_duration_ms, frame_shift_ms);
 }
@@ -37,10 +37,10 @@ Context<float>* DenoiserAudioHandler::create_context(uint32_t input_sample_rate,
   ctx->snr_adviser->reset();
 
   if (input_sample_rate == 0) {
-    input_sample_rate = static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq();
+    input_sample_rate = static_cast<giga_edge::enhance::DenoiserConfig*>(config_.get())->sampling_freq();
   }
   if (output_sample_rate == 0) {
-    output_sample_rate = static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq();
+    output_sample_rate = static_cast<giga_edge::enhance::DenoiserConfig*>(config_.get())->sampling_freq();
   }
 
   GigaEdgeEnhanceRetCode ret_code = init_audio_streams(ctx, input_sample_rate, output_sample_rate);
@@ -63,14 +63,14 @@ GigaEdgeEnhanceRetCode DenoiserAudioHandler::init_audio_streams(Context<float>* 
     try {
       if (!ctx->input_sound_stream_ptr) {
         ctx->input_sound_stream_ptr = util::sound::build_sound_stream(
-            input_sample_rate, static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq(),
-            static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms(),
+            input_sample_rate, static_cast<giga_edge::enhance::DenoiserConfig*>(config_.get())->sampling_freq(),
+            static_cast<giga_edge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms(),
             util::sound::TemplateType::input);
       }
       if (!ctx->output_sound_stream_ptr) {
         ctx->output_sound_stream_ptr = util::sound::build_sound_stream(
-            static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->sampling_freq(), output_sample_rate,
-            static_cast<gigaedge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms(),
+            static_cast<giga_edge::enhance::DenoiserConfig*>(config_.get())->sampling_freq(), output_sample_rate,
+            static_cast<giga_edge::enhance::DenoiserConfig*>(config_.get())->frame_stride_ms(),
             util::sound::TemplateType::output);
       }
     } catch (const std::exception& e) {
@@ -95,7 +95,7 @@ GigaEdgeEnhanceRetCode DenoiserAudioHandler::destroy_audio_streams(Context<float
   return GigaEdgeEnhanceRetCode::SUCCESS;
 }
 
-GigaEdgeEnhanceRetCode DenoiserAudioHandler::infer_frame(std::unique_ptr<gigaedge::enhance::Task>& task_ptr) {
+GigaEdgeEnhanceRetCode DenoiserAudioHandler::infer_frame(std::unique_ptr<giga_edge::enhance::Task>& task_ptr) {
   GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 
   if (task_ptr->data.context == nullptr) {
@@ -141,7 +141,7 @@ GigaEdgeEnhanceRetCode DenoiserAudioHandler::infer_frame(std::unique_ptr<gigaedg
   return ret_code;
 }
 
-void DenoiserAudioHandler::fill_in_data_for_processing(std::unique_ptr<gigaedge::enhance::Task>& task_ptr,
+void DenoiserAudioHandler::fill_in_data_for_processing(std::unique_ptr<giga_edge::enhance::Task>& task_ptr,
                                                        std::vector<float>& input) {
   auto& ctx = *task_ptr->data.context;
   auto& waveform = task_ptr->data.waveform;
@@ -157,7 +157,7 @@ void DenoiserAudioHandler::fill_in_data_for_processing(std::unique_ptr<gigaedge:
   ctx.prev_input_chunk.assign(input.end() - keep, input.end());
 }
 
-GigaEdgeEnhanceRetCode DenoiserAudioHandler::process_frame(struct gigaedge::enhance::Context<float>* ctx,
+GigaEdgeEnhanceRetCode DenoiserAudioHandler::process_frame(struct giga_edge::enhance::Context<float>* ctx,
                                                            const std::vector<float>& input_audio_frame,
                                                            std::vector<float>& enhanced_audio_frame) {
   return process_frame_internal(ctx, input_audio_frame, enhanced_audio_frame, true);
@@ -169,7 +169,7 @@ GigaEdgeEnhanceRetCode DenoiserAudioHandler::process_frame_internal(Context<floa
                                                                     bool allow_zero_shortcut) {
   enhanced_audio_frame.clear();
   GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
-  std::unique_ptr<gigaedge::enhance::Task> task_ptr(new gigaedge::enhance::Task());
+  std::unique_ptr<giga_edge::enhance::Task> task_ptr(new giga_edge::enhance::Task());
   task_ptr->data.context = ctx;
   static constexpr double delay_warn_ms = 300.0;
   static constexpr double warn_interval_ms = 30000.0;  // 30 seconds
@@ -261,7 +261,7 @@ GigaEdgeEnhanceRetCode DenoiserAudioHandler::process_frame_internal(Context<floa
   return ret_code;
 }
 
-GigaEdgeEnhanceRetCode DenoiserAudioHandler::finalize_inference(struct gigaedge::enhance::Context<float>* ctx,
+GigaEdgeEnhanceRetCode DenoiserAudioHandler::finalize_inference(struct giga_edge::enhance::Context<float>* ctx,
                                                                 std::vector<float>& enhanced_audio_frames) {
   GigaEdgeEnhanceRetCode ret_code = GigaEdgeEnhanceRetCode::SUCCESS;
 
@@ -287,7 +287,7 @@ GigaEdgeEnhanceRetCode DenoiserAudioHandler::finalize_inference(struct gigaedge:
     for (uint32_t i = 0; last_input_resampled_data.size() >
                          (i + number_of_zero_contexts) * feature_extractor_runner_ptr_->get_frame_hop_size_samples();
          ++i) {
-      std::unique_ptr<gigaedge::enhance::Task> task_ptr(new gigaedge::enhance::Task());
+      std::unique_ptr<giga_edge::enhance::Task> task_ptr(new giga_edge::enhance::Task());
       task_ptr->data.context = ctx;
       std::vector<float> input_audio_frame(
           last_input_resampled_data.begin() + feature_extractor_runner_ptr_->get_frame_hop_size_samples() * i,
@@ -322,7 +322,7 @@ GigaEdgeEnhanceRetCode DenoiserAudioHandler::finalize_inference(struct gigaedge:
   return ret_code;
 }
 
-StatInfo DenoiserAudioHandler::get_stat_info(const struct gigaedge::enhance::Context<float>* ctx) {
+StatInfo DenoiserAudioHandler::get_stat_info(const struct giga_edge::enhance::Context<float>* ctx) {
   if (ctx != nullptr) {
     return ctx->stat;
   } else {
@@ -330,4 +330,4 @@ StatInfo DenoiserAudioHandler::get_stat_info(const struct gigaedge::enhance::Con
   }
 }
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

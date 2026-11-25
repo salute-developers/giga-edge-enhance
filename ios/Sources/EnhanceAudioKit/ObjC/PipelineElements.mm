@@ -16,7 +16,7 @@
 
 NSErrorDomain const EnhanceErrorDomain = @"com.gigaedge.EnhanceAudioKit.EnhanceError";
 
-namespace gigaedge::enhance_ios {
+namespace giga_edge::enhance_ios {
 
 // Matches EnhanceAUAudioUnit.maximumFramesToRender so render calls do not grow
 // the wrapper's scratch vectors.
@@ -52,13 +52,13 @@ class PipelineElementCore {
 class AudioProcessPipelineElementCore final : public PipelineElementCore {
    private:
     std::string yamlConfig_;
-    std::unique_ptr<gigaedge::enhance::AudioProcessor> processor_;
+    std::unique_ptr<giga_edge::enhance::AudioProcessor> processor_;
 
    public:
     AudioProcessPipelineElementCore(const std::string& yamlConfig, uint32_t sampleRate)
         : PipelineElementCore(sampleRate),
           yamlConfig_(yamlConfig),
-          processor_(std::make_unique<gigaedge::enhance::AudioProcessor>(yamlConfig)) {
+          processor_(std::make_unique<giga_edge::enhance::AudioProcessor>(yamlConfig)) {
         processor_->AddLC().AddNG().AddLim();
     }
 
@@ -82,7 +82,7 @@ class AudioProcessPipelineElementCore final : public PipelineElementCore {
 
     void resetContext() noexcept final {
         try {
-            auto processor = std::make_unique<gigaedge::enhance::AudioProcessor>(yamlConfig_);
+            auto processor = std::make_unique<giga_edge::enhance::AudioProcessor>(yamlConfig_);
             processor->AddLC().AddNG().AddLim();
             processor_ = std::move(processor);
             input_.clear();
@@ -93,8 +93,8 @@ class AudioProcessPipelineElementCore final : public PipelineElementCore {
 
 class DenoisePipelineElementCore final : public PipelineElementCore {
    private:
-    gigaedge::enhance::Denoiser denoiser_;
-    gigaedge::enhance::Context<float>* context_ = nullptr;
+    giga_edge::enhance::Denoiser denoiser_;
+    giga_edge::enhance::Context<float>* context_ = nullptr;
     std::array<char, 256> lastProcessingError_{};
 
     void setProcessingError(const char* message) noexcept {
@@ -107,7 +107,7 @@ class DenoisePipelineElementCore final : public PipelineElementCore {
    public:
     DenoisePipelineElementCore(const std::string& modelPath, uint32_t sampleRate)
         : PipelineElementCore(sampleRate),
-          denoiser_(std::make_shared<gigaedge::enhance::PackedModelReader>(modelPath)) {
+          denoiser_(std::make_shared<giga_edge::enhance::PackedModelReader>(modelPath)) {
         context_ = denoiser_.CreateContext(sampleRate_, sampleRate_);
     }
 
@@ -198,20 +198,20 @@ NSError* EnhanceErrorFromException(const std::exception& exception) {
     return [NSError errorWithDomain:EnhanceErrorDomain code:code userInfo:userInfo];
 }
 
-}  // namespace gigaedge::enhance_ios
+}  // namespace giga_edge::enhance_ios
 
 @interface PipelineElement () {
    @protected
-    std::unique_ptr<gigaedge::enhance_ios::PipelineElementCore> _core;
+    std::unique_ptr<giga_edge::enhance_ios::PipelineElementCore> _core;
 }
 
-- (nullable instancetype)initWithCore:(std::unique_ptr<gigaedge::enhance_ios::PipelineElementCore>)core;
+- (nullable instancetype)initWithCore:(std::unique_ptr<giga_edge::enhance_ios::PipelineElementCore>)core;
 
 @end
 
 @implementation PipelineElement
 
-- (nullable instancetype)initWithCore:(std::unique_ptr<gigaedge::enhance_ios::PipelineElementCore>)core {
+- (nullable instancetype)initWithCore:(std::unique_ptr<giga_edge::enhance_ios::PipelineElementCore>)core {
     self = [super init];
     if (self == nil) {
         return nil;
@@ -243,14 +243,14 @@ NSError* EnhanceErrorFromException(const std::exception& exception) {
                                  sampleRate:(float)sampleRate
                                       error:(NSError* _Nullable __autoreleasing*)error {
     try {
-        gigaedge::enhance_ios::ValidateSampleRate(sampleRate);
+        giga_edge::enhance_ios::ValidateSampleRate(sampleRate);
         std::string yaml([yamlConfig UTF8String]);
-        auto core = std::make_unique<gigaedge::enhance_ios::AudioProcessPipelineElementCore>(
+        auto core = std::make_unique<giga_edge::enhance_ios::AudioProcessPipelineElementCore>(
             yaml, static_cast<uint32_t>(std::lround(sampleRate)));
         return [super initWithCore:std::move(core)];
     } catch (const std::exception& exception) {
         if (error != nil) {
-            *error = gigaedge::enhance_ios::EnhanceErrorFromException(exception);
+            *error = giga_edge::enhance_ios::EnhanceErrorFromException(exception);
         }
         return nil;
     }
@@ -265,7 +265,7 @@ NSError* EnhanceErrorFromException(const std::exception& exception) {
 @implementation DenoisePipelineElement
 
 - (nullable NSString*)lastProcessingError {
-    const auto* core = dynamic_cast<const gigaedge::enhance_ios::DenoisePipelineElementCore*>(_core.get());
+    const auto* core = dynamic_cast<const giga_edge::enhance_ios::DenoisePipelineElementCore*>(_core.get());
     if (core == nullptr || core->lastProcessingError()[0] == '\0') {
         return nil;
     }
@@ -276,17 +276,17 @@ NSError* EnhanceErrorFromException(const std::exception& exception) {
                                 sampleRate:(float)sampleRate
                                      error:(NSError* _Nullable __autoreleasing*)error {
     try {
-        gigaedge::enhance_ios::ValidateSampleRate(sampleRate);
+        giga_edge::enhance_ios::ValidateSampleRate(sampleRate);
         if (modelPath.length == 0) {
             throw std::invalid_argument("modelPath must not be empty");
         }
 
-        auto core = std::make_unique<gigaedge::enhance_ios::DenoisePipelineElementCore>(
+        auto core = std::make_unique<giga_edge::enhance_ios::DenoisePipelineElementCore>(
             std::string(modelPath.UTF8String), static_cast<uint32_t>(std::lround(sampleRate)));
         return [super initWithCore:std::move(core)];
     } catch (const std::exception& exception) {
         if (error != nil) {
-            *error = gigaedge::enhance_ios::EnhanceErrorFromException(exception);
+            *error = giga_edge::enhance_ios::EnhanceErrorFromException(exception);
         }
         return nil;
     }

@@ -78,7 +78,7 @@ class WorkflowsTest(unittest.TestCase):
                 def create_package(command, **_kwargs):
                     output_dir = Path(command[command.index("-B") + 1])
                     (output_dir / "_CPack_Packages").mkdir(parents=True)
-                    (output_dir / "gigaedge-enhance-0.0.1-Linux.tar.gz").touch()
+                    (output_dir / "giga-edge-enhance-0.0.1-Linux.tar.gz").touch()
 
                 with mock.patch.object(workflows, "ROOT", root), \
                      mock.patch.object(workflows, "compiler_cache_environment", return_value={}), \
@@ -87,7 +87,7 @@ class WorkflowsTest(unittest.TestCase):
 
                 self.assertEqual(
                     [path.name for path in package_dir.iterdir()],
-                    ["gigaedge-enhance-0.0.1-Linux.tar.gz"])
+                    ["giga-edge-enhance-0.0.1-Linux.tar.gz"])
                 self.assertFalse((root / "out/build/package" / preset).exists())
 
     def test_macos_x86_install_verifies_matching_consumer_architecture(self):

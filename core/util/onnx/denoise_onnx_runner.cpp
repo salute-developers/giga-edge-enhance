@@ -7,7 +7,7 @@ namespace util {
 namespace onnx {
 
 DenoiserDiscriminativeHqOnnxRunner::DenoiserDiscriminativeHqOnnxRunner(
-    const std::shared_ptr<gigaedge::enhance::NetworkConfig> config, uint32_t inference_engine_threads, bool on_gpu) {
+    const std::shared_ptr<giga_edge::enhance::NetworkConfig> config, uint32_t inference_engine_threads, bool on_gpu) {
   read_config(config->params()["model"]);
   init_model(config, inference_engine_threads, on_gpu);
   load_model_io_metadata();
@@ -16,12 +16,12 @@ DenoiserDiscriminativeHqOnnxRunner::DenoiserDiscriminativeHqOnnxRunner(
 
 void DenoiserDiscriminativeHqOnnxRunner::prepare_input_in_place(std::vector<float>& mag,
                                                                 std::vector<std::vector<float>*>& inputs,
-                                                                gigaedge::enhance::Context<float>* context) {
+                                                                giga_edge::enhance::Context<float>* context) {
   if (context == nullptr) {
     throw std::runtime_error("Context is not allocated!");
   }
-  gigaedge::enhance::DenoiseContextDiscriminativeHq<float>* denoise_context =
-      dynamic_cast<gigaedge::enhance::DenoiseContextDiscriminativeHq<float>*>(context);
+  giga_edge::enhance::DenoiseContextDiscriminativeHq<float>* denoise_context =
+      dynamic_cast<giga_edge::enhance::DenoiseContextDiscriminativeHq<float>*>(context);
   if (!denoise_context) {
     throw std::runtime_error("Invalid context type for DenoiserDiscriminativeHqOnnxRunner");
   }
@@ -63,12 +63,12 @@ void DenoiserDiscriminativeHqOnnxRunner::prepare_input_in_place(std::vector<floa
   inputs.push_back(&denoise_context->fb_conv3_buf);
 }
 
-void DenoiserDiscriminativeHqOnnxRunner::init_output_tensors(gigaedge::enhance::TaskData& data, uint32_t out_shape) {
+void DenoiserDiscriminativeHqOnnxRunner::init_output_tensors(giga_edge::enhance::TaskData& data, uint32_t out_shape) {
   resize_if_needed_in_place(data.new_spectrogram.real, {out_shape}, 2);
   resize_if_needed_in_place(data.new_spectrogram.imag, {out_shape}, 2);
 }
 
-void DenoiserDiscriminativeHqOnnxRunner::infer(gigaedge::enhance::Task* denoise_task) {
+void DenoiserDiscriminativeHqOnnxRunner::infer(giga_edge::enhance::Task* denoise_task) {
   if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
     throw std::runtime_error("Task data or context are not initialized!");
   }
@@ -81,7 +81,7 @@ void DenoiserDiscriminativeHqOnnxRunner::infer(gigaedge::enhance::Task* denoise_
     denoise_context->prev_features.pop();
   }
 
-  denoise_task->state.require(gigaedge::enhance::PipelineStage::input_spectrum_ready);
+  denoise_task->state.require(giga_edge::enhance::PipelineStage::input_spectrum_ready);
 
   std::vector<std::vector<float>*> inputs;
   std::vector<float> mag;
@@ -107,34 +107,34 @@ void DenoiserDiscriminativeHqOnnxRunner::infer(gigaedge::enhance::Task* denoise_
   parse_results<float>(outputs, denoise_data);
 
   if (denoise_context->prev_features.size() < model_params_.network_input_ctx_len) {
-    denoise_task->state.set_outcome(gigaedge::enhance::ChunkOutcome::warming_up);
+    denoise_task->state.set_outcome(giga_edge::enhance::ChunkOutcome::warming_up);
   }
-  denoise_task->state.advance_to(gigaedge::enhance::PipelineStage::model_output_ready);
+  denoise_task->state.advance_to(giga_edge::enhance::PipelineStage::model_output_ready);
   denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
 }
 
 DenoiserDiscriminativeNbOnnxRunner::DenoiserDiscriminativeNbOnnxRunner(
-    const std::shared_ptr<gigaedge::enhance::NetworkConfig> config, uint32_t inference_engine_threads, bool on_gpu) {
+    const std::shared_ptr<giga_edge::enhance::NetworkConfig> config, uint32_t inference_engine_threads, bool on_gpu) {
   read_config(config->params()["model"]);
   init_model(config, inference_engine_threads, on_gpu);
   load_model_io_metadata();
   warm_up<float>();
 }
 
-void DenoiserDiscriminativeNbOnnxRunner::init_output_tensors(gigaedge::enhance::TaskData& data, uint32_t out_shape) {
+void DenoiserDiscriminativeNbOnnxRunner::init_output_tensors(giga_edge::enhance::TaskData& data, uint32_t out_shape) {
   resize_if_needed_in_place(data.new_spectrogram.real, {out_shape}, 2);
   resize_if_needed_in_place(data.new_spectrogram.imag, {out_shape}, 2);
 }
 
 void DenoiserDiscriminativeNbOnnxRunner::prepare_input_in_place(std::vector<float>& mag,
                                                                 std::vector<std::vector<float>*>& inputs,
-                                                                gigaedge::enhance::Context<float>* context) {
+                                                                giga_edge::enhance::Context<float>* context) {
   if (context == nullptr) {
     throw std::runtime_error("Context is not allocated!");
   }
 
-  gigaedge::enhance::DenoiseContextDiscriminativeNb<float>* denoise_context =
-      dynamic_cast<gigaedge::enhance::DenoiseContextDiscriminativeNb<float>*>(context);
+  giga_edge::enhance::DenoiseContextDiscriminativeNb<float>* denoise_context =
+      dynamic_cast<giga_edge::enhance::DenoiseContextDiscriminativeNb<float>*>(context);
   if (!denoise_context) {
     throw std::runtime_error("Invalid context type for DenoiserDiscriminativeNbOnnxRunner");
   }
@@ -172,7 +172,7 @@ void DenoiserDiscriminativeNbOnnxRunner::prepare_input_in_place(std::vector<floa
   inputs.push_back(&denoise_context->fb_conv3_buf);
 }
 
-void DenoiserDiscriminativeNbOnnxRunner::infer(gigaedge::enhance::Task* denoise_task) {
+void DenoiserDiscriminativeNbOnnxRunner::infer(giga_edge::enhance::Task* denoise_task) {
   if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
     throw std::runtime_error("Task data or context are not initialized!");
   }
@@ -188,7 +188,7 @@ void DenoiserDiscriminativeNbOnnxRunner::infer(gigaedge::enhance::Task* denoise_
   }
   denoise_context->prev_features.push(denoise_data.input_spectrogram[0]);
 
-  denoise_task->state.require(gigaedge::enhance::PipelineStage::input_spectrum_ready);
+  denoise_task->state.require(giga_edge::enhance::PipelineStage::input_spectrum_ready);
 
   std::vector<std::vector<float>*> inputs;
   std::vector<float> mag;
@@ -215,9 +215,9 @@ void DenoiserDiscriminativeNbOnnxRunner::infer(gigaedge::enhance::Task* denoise_
   if (denoise_context->prev_features.size() > model_params_.network_input_ctx_len + 1) {
     throw std::runtime_error("Incorrect number of previous states!");
   }
-  denoise_task->state.advance_to(gigaedge::enhance::PipelineStage::model_output_ready);
+  denoise_task->state.advance_to(giga_edge::enhance::PipelineStage::model_output_ready);
 }
-DenoiserHybridOnnxRunner::DenoiserHybridOnnxRunner(const std::shared_ptr<gigaedge::enhance::NetworkConfig> config,
+DenoiserHybridOnnxRunner::DenoiserHybridOnnxRunner(const std::shared_ptr<giga_edge::enhance::NetworkConfig> config,
                                                    uint32_t inference_engine_threads, bool on_gpu) {
   read_config(config->params()["model"]);
   init_model(config, inference_engine_threads, on_gpu);
@@ -246,13 +246,13 @@ DenoiserHybridOnnxRunner::DenoiserHybridOnnxRunner(const std::shared_ptr<gigaedg
 
 void DenoiserHybridOnnxRunner::prepare_input_in_place(std::vector<float>& noisy_ri,
                                                       std::vector<std::vector<float>*>& inputs,
-                                                      gigaedge::enhance::Context<float>* context) {
+                                                      giga_edge::enhance::Context<float>* context) {
   if (context == nullptr) {
     throw std::runtime_error("Context is not allocated!");
   }
 
-  gigaedge::enhance::DenoiseContextHybrid<float>* denoise_context =
-      dynamic_cast<gigaedge::enhance::DenoiseContextHybrid<float>*>(context);
+  giga_edge::enhance::DenoiseContextHybrid<float>* denoise_context =
+      dynamic_cast<giga_edge::enhance::DenoiseContextHybrid<float>*>(context);
   if (!denoise_context) {
     throw std::runtime_error("Invalid context type for DenoiserHybridOnnxRunner");
   }
@@ -297,7 +297,7 @@ void DenoiserHybridOnnxRunner::prepare_input_in_place(std::vector<float>& noisy_
   inputs.push_back(&denoise_context->stage2_hidden);
 }
 
-void DenoiserHybridOnnxRunner::infer(gigaedge::enhance::Task* denoise_task) {
+void DenoiserHybridOnnxRunner::infer(giga_edge::enhance::Task* denoise_task) {
   if (denoise_task == nullptr || denoise_task->data.context == nullptr) {
     throw std::runtime_error("Task data or context are not initialized!");
   }
@@ -327,7 +327,7 @@ void DenoiserHybridOnnxRunner::infer(gigaedge::enhance::Task* denoise_task) {
     denoise_context->prev_features.pop();
   }
 
-  denoise_task->state.require(gigaedge::enhance::PipelineStage::input_spectrum_ready);
+  denoise_task->state.require(giga_edge::enhance::PipelineStage::input_spectrum_ready);
 
   std::vector<float> noisy_ri(num_feats * num_frames * 2);
   for (size_t t = 0; t < num_frames; ++t) {
@@ -348,10 +348,10 @@ void DenoiserHybridOnnxRunner::infer(gigaedge::enhance::Task* denoise_task) {
   parse_results<float>(outputs, denoise_data);
 
   if (denoise_context->prev_features.size() < model_params_.network_input_ctx_len) {
-    denoise_task->state.set_outcome(gigaedge::enhance::ChunkOutcome::warming_up);
+    denoise_task->state.set_outcome(giga_edge::enhance::ChunkOutcome::warming_up);
   }
 
-  denoise_task->state.advance_to(gigaedge::enhance::PipelineStage::model_output_ready);
+  denoise_task->state.advance_to(giga_edge::enhance::PipelineStage::model_output_ready);
   denoise_context->prev_features.push(specs.front());
 }
 

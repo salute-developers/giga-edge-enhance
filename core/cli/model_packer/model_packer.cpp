@@ -69,7 +69,7 @@ int32_t main(int32_t argc, char* argv[]) {
       std::vector<uint8_t> model_bytes = read_file(model_path);
 
       // form bundle content
-      std::vector<uint8_t> packed_data = gigaedge::enhance::util::write_packed_model(config_text, model_bytes);
+      std::vector<uint8_t> packed_data = giga_edge::enhance::util::write_packed_model(config_text, model_bytes);
 
       // write output
       write_file(output_path, packed_data);
@@ -80,7 +80,7 @@ int32_t main(int32_t argc, char* argv[]) {
 
       std::vector<uint8_t> packed_data = read_file(input_path);
 
-      gigaedge::enhance::PackedModelReader reader(packed_data);
+      giga_edge::enhance::PackedModelReader reader(packed_data);
 
       // ensure the output directory exists
       fs::create_directories(output_path);

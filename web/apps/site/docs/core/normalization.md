@@ -32,13 +32,13 @@ do not drive gain adaptation. The resulting gain still applies to the full audio
 stream. VAD is off by default.
 
 ```cpp
-#include <enhance.h>
+#include <giga-edge-enhance.h>
 
 #include <vector>
 
 // Create once per stream, before processing 48 kHz audio.
 struct SpeechNormalizer {
-  gigaedge::enhance::AudioProcessor speech;
+  giga_edge::enhance::AudioProcessor speech;
 
   SpeechNormalizer() {
     speech.AddLC(48000, /*target LUFS=*/-23.0f, /*bypass seconds=*/3.0f,
@@ -63,9 +63,9 @@ separate `AddDRC` and `AddLim` calls.
 ## Gate quiet input before automatic gain control
 
 ```cpp
-#include <enhance.h>
+#include <giga-edge-enhance.h>
 
-gigaedge::enhance::AudioProcessor levels;
+giga_edge::enhance::AudioProcessor levels;
 levels.AddNG(48000, /*threshold dB=*/-45.0f)
       .AddAGC(48000)
       .AddLim(48000, /*threshold dB=*/-3.0f);

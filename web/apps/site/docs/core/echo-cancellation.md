@@ -30,13 +30,13 @@ blocks of another size, buffer both streams and extract paired frames of that
 length. The native Speex implementation throws on a frame size mismatch.
 
 ```cpp
-#include <enhance.h>
+#include <giga-edge-enhance.h>
 
 #include <string>
 #include <vector>
 
 struct CallAudio {
-  gigaedge::enhance::EchoCanceller aec{std::string{R"yaml(
+  giga_edge::enhance::EchoCanceller aec{std::string{R"yaml(
 echo_cancellation:
   sample_rate: 16000
   filter_len: 1024
@@ -45,7 +45,7 @@ echo_cancellation:
   delay_compensator_enabled: true
   type: speex
 )yaml"}};
-  gigaedge::enhance::AudioProcessor levels;
+  giga_edge::enhance::AudioProcessor levels;
   std::vector<float> cleaned;
 
   CallAudio() {

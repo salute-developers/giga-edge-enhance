@@ -1,8 +1,8 @@
 /**
  * \example 1-cpp_api_demo.cpp
  */
-#include <enhance.h>
 #include <getopt.h>
+#include <giga-edge-enhance.h>
 
 #include <cstring>
 #include <fstream>
@@ -132,7 +132,7 @@ int32_t main(int32_t argc, char* argv[]) {
 
   uint32_t sample_rate = info.sample_rate;
 
-  std::unique_ptr<gigaedge::enhance::Denoiser> denoiser;
+  std::unique_ptr<giga_edge::enhance::Denoiser> denoiser;
   if (!args.packed_model_path.empty()) {
     std::ifstream packed_in(args.packed_model_path, std::ios::binary);
     if (!packed_in) {
@@ -140,15 +140,15 @@ int32_t main(int32_t argc, char* argv[]) {
       return 1;
     }
     const std::vector<uint8_t> packed_data{std::istreambuf_iterator<char>(packed_in), std::istreambuf_iterator<char>()};
-    auto bundle = std::make_shared<gigaedge::enhance::PackedModelReader>(packed_data);
-    denoiser = std::make_unique<gigaedge::enhance::Denoiser>(bundle);
+    auto bundle = std::make_shared<giga_edge::enhance::PackedModelReader>(packed_data);
+    denoiser = std::make_unique<giga_edge::enhance::Denoiser>(bundle);
   } else {
-    denoiser = std::make_unique<gigaedge::enhance::Denoiser>(args.config_path.c_str());
+    denoiser = std::make_unique<giga_edge::enhance::Denoiser>(args.config_path.c_str());
   }
 
 
-  auto input_audio_processor = std::unique_ptr<gigaedge::enhance::AudioProcessor>(
-      new gigaedge::enhance::AudioProcessor(make_audio_process_config_yaml(sample_rate)));
+  auto input_audio_processor = std::unique_ptr<giga_edge::enhance::AudioProcessor>(
+      new giga_edge::enhance::AudioProcessor(make_audio_process_config_yaml(sample_rate)));
 
   if (!args.use_resampling && info.sample_rate != denoiser->GetModelSampleRate()) {
     std::cerr << "The sample rate (" << info.sample_rate << ") does not match model rate ("
@@ -157,7 +157,7 @@ int32_t main(int32_t argc, char* argv[]) {
   }
 
   // Input/output context rates are the WAV rate; resampling to/from model rate is internal.
-  gigaedge::enhance::Context<float>* ctx = denoiser->CreateContext(sample_rate, sample_rate);
+  giga_edge::enhance::Context<float>* ctx = denoiser->CreateContext(sample_rate, sample_rate);
 
   input_audio_processor->AddLC().AddNG().AddLim();
 

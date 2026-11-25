@@ -11,11 +11,11 @@
 #include "src/context.h"
 #include "src/task.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 class BaseAudioHandler {
  protected:
-  std::shared_ptr<gigaedge::enhance::PipelineConfig> config_;
+  std::shared_ptr<giga_edge::enhance::PipelineConfig> config_;
 
   // ToDo(artsokol): remove and use config directly
   const YAML::Node& params() { return config_->params(); }
@@ -32,11 +32,11 @@ class BaseAudioHandler {
 
   GigaEdgeEnhanceRetCode reload_config() { return restart(); }
 
-  virtual GigaEdgeEnhanceRetCode process_frame(struct gigaedge::enhance::Context<float>* ctx,
+  virtual GigaEdgeEnhanceRetCode process_frame(struct giga_edge::enhance::Context<float>* ctx,
                                                const std::vector<float>& input_audio_frame,
                                                std::vector<float>& enhanced_audio_frame);
 
-  virtual GigaEdgeEnhanceRetCode process_frame(struct gigaedge::enhance::Context<float>* ctx,
+  virtual GigaEdgeEnhanceRetCode process_frame(struct giga_edge::enhance::Context<float>* ctx,
                                                const std::vector<float>& mic_frame, const std::vector<float>& lbk_frame,
                                                std::vector<float>& out);
 
@@ -51,4 +51,4 @@ class BaseAudioHandler {
   virtual void do_stop();                  // default no-op
 };
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

@@ -6,7 +6,7 @@
 #include <string>
 #include <utility>
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 // LogLevel definitions (mapped to uint values):
 // 0: Trace  Very detailed, potentially high-volume logs for diagnosing issues.
@@ -63,4 +63,4 @@ void critical(Args&&... args) {
   get_logger()->critical(std::forward<Args>(args)...);
 }
 }  // namespace spdlog
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

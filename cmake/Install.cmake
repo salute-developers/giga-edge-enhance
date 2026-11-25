@@ -11,7 +11,7 @@ if(GEE_SHARED_LIBS)
 else()
   set(_gee_config_static ON)
 endif()
-ConfigInstallTarget(gigaedge-enhance)
+ConfigInstallTarget(giga-edge-enhance)
 
 if(NOT GEE_SHARED_LIBS)
   # Preserve subdirectories because independent dependencies can produce archives
@@ -23,7 +23,7 @@ if(NOT GEE_SHARED_LIBS)
       \"${CMAKE_BINARY_DIR}/*${CMAKE_STATIC_LIBRARY_SUFFIX}\")
     foreach(_gee_archive IN LISTS _gee_archives)
       file(RELATIVE_PATH _gee_archive_relative \"${CMAKE_BINARY_DIR}\" \"\${_gee_archive}\")
-      if(_gee_archive_relative STREQUAL \"core/${CMAKE_STATIC_LIBRARY_PREFIX}gigaedge-enhance${CMAKE_STATIC_LIBRARY_SUFFIX}\")
+      if(_gee_archive_relative STREQUAL \"core/${CMAKE_STATIC_LIBRARY_PREFIX}giga-edge-enhance${CMAKE_STATIC_LIBRARY_SUFFIX}\")
         continue()
       endif()
       get_filename_component(_gee_archive_directory \"\${_gee_archive_relative}\" DIRECTORY)
@@ -75,7 +75,7 @@ if(GEE_SHARED_LIBS)
 endif()
 
 install(
-  FILES "${CMAKE_SOURCE_DIR}/core/include/enhance.h"
+  FILES "${CMAKE_SOURCE_DIR}/core/include/giga-edge-enhance.h"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   COMPONENT gee_dev
 )
@@ -117,7 +117,7 @@ install(
   DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/enhance"
 )
 
-set(CPACK_PACKAGE_NAME gigaedge-enhance)
+set(CPACK_PACKAGE_NAME giga-edge-enhance)
 set(_gee_default_artifact_version "${PROJECT_VERSION}")
 if(DEFINED ENV{GEE_ARTIFACT_VERSION})
   set(_gee_default_artifact_version "$ENV{GEE_ARTIFACT_VERSION}")

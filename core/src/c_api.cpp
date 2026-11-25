@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "include/enhance.h"
+#include "include/giga-edge-enhance.h"
 
 namespace ctools {
 
@@ -133,7 +133,7 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseInit(const char* config_file, GigaE
     if (config_file == nullptr) {
       return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *model = static_cast<void*>(new gigaedge::enhance::Denoiser(config_file));
+    *model = static_cast<void*>(new giga_edge::enhance::Denoiser(config_file));
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -141,7 +141,7 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseInit(const char* config_file, GigaE
 void GigaEdgeEnhanceDenoiseFree(GigaEdgeEnhanceDenoise* model) {
   ctools::guard_void([&] {
     if (model != nullptr) {
-      delete static_cast<gigaedge::enhance::Denoiser*>(*model);
+      delete static_cast<giga_edge::enhance::Denoiser*>(*model);
       *model = nullptr;
     }
   });
@@ -157,7 +157,7 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseCreateContext(GigaEdgeEnhanceDenois
     if (model == nullptr) {
       return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *ctx = static_cast<gigaedge::enhance::Denoiser*>(model)->CreateContext(in_audio_sr, out_audio_sr);
+    *ctx = static_cast<giga_edge::enhance::Denoiser*>(model)->CreateContext(in_audio_sr, out_audio_sr);
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -165,8 +165,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseCreateContext(GigaEdgeEnhanceDenois
 void GigaEdgeEnhanceDenoiseDestroyContext(GigaEdgeEnhanceDenoise model, GigaEdgeEnhanceContext* ctx) {
   ctools::guard_void([&] {
     if (model != nullptr && ctx != nullptr && *ctx != nullptr) {
-      static_cast<gigaedge::enhance::Denoiser*>(model)->DestroyContext(
-          reinterpret_cast<gigaedge::enhance::Context<float>**>(ctx));
+      static_cast<giga_edge::enhance::Denoiser*>(model)->DestroyContext(
+          reinterpret_cast<giga_edge::enhance::Context<float>**>(ctx));
     }
   });
 }
@@ -178,8 +178,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseGetContextId(GigaEdgeEnhanceDenoise
     if (model == nullptr || ctx == nullptr || id == nullptr) {
       return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *id = static_cast<gigaedge::enhance::Denoiser*>(model)->GetContextId(
-        static_cast<const gigaedge::enhance::Context<float>*>(ctx));
+    *id = static_cast<giga_edge::enhance::Denoiser*>(model)->GetContextId(
+        static_cast<const giga_edge::enhance::Context<float>*>(ctx));
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -190,8 +190,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseSetContextId(GigaEdgeEnhanceDenoise
     if (model == nullptr || ctx == nullptr) {
       return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    static_cast<gigaedge::enhance::Denoiser*>(model)->SetContextId(static_cast<gigaedge::enhance::Context<float>*>(ctx),
-                                                                   id);
+    static_cast<giga_edge::enhance::Denoiser*>(model)->SetContextId(
+        static_cast<giga_edge::enhance::Context<float>*>(ctx), id);
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -204,8 +204,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseGetStreamStat(GigaEdgeEnhanceDenois
     if (model == nullptr || ctx == nullptr || stream_stat == nullptr) {
       return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *stream_stat = static_cast<gigaedge::enhance::Denoiser*>(model)->GetStreamStat(
-        static_cast<const gigaedge::enhance::Context<float>*>(ctx));
+    *stream_stat = static_cast<giga_edge::enhance::Denoiser*>(model)->GetStreamStat(
+        static_cast<const giga_edge::enhance::Context<float>*>(ctx));
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -217,7 +217,7 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseGetEngineThreads(const GigaEdgeEnha
     if (model == nullptr || engine_threads == nullptr) {
       return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *engine_threads = static_cast<gigaedge::enhance::Denoiser*>(model)->GetEngineThreads();
+    *engine_threads = static_cast<giga_edge::enhance::Denoiser*>(model)->GetEngineThreads();
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -229,7 +229,7 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseGetInputFrameSize(const GigaEdgeEnh
     if (model == nullptr || input_size == nullptr) {
       return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *input_size = static_cast<gigaedge::enhance::Denoiser*>(model)->GetModelInputFrameSize();
+    *input_size = static_cast<giga_edge::enhance::Denoiser*>(model)->GetModelInputFrameSize();
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -240,7 +240,7 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseGetSampleRate(const GigaEdgeEnhance
     if (model == nullptr || sample_rate == nullptr) {
       return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *sample_rate = static_cast<gigaedge::enhance::Denoiser*>(model)->GetModelSampleRate();
+    *sample_rate = static_cast<giga_edge::enhance::Denoiser*>(model)->GetModelSampleRate();
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -256,8 +256,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseProcessChunkFp(GigaEdgeEnhanceDenoi
       return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     return ctools::process_bytes<float>(input, input_size, output, output_size, [&](const auto& samples, auto& result) {
-      return static_cast<gigaedge::enhance::Denoiser*>(model)->ProcessChunk(
-          samples, result, static_cast<gigaedge::enhance::Context<float>*>(ctx));
+      return static_cast<giga_edge::enhance::Denoiser*>(model)->ProcessChunk(
+          samples, result, static_cast<giga_edge::enhance::Context<float>*>(ctx));
     });
   });
 }
@@ -274,8 +274,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseProcessChunkInt(GigaEdgeEnhanceDeno
     }
     return ctools::process_bytes<int16_t>(input, input_size, output, output_size,
                                           [&](const auto& samples, auto& result) {
-                                            return static_cast<gigaedge::enhance::Denoiser*>(model)->ProcessChunk(
-                                                samples, result, static_cast<gigaedge::enhance::Context<float>*>(ctx));
+                                            return static_cast<giga_edge::enhance::Denoiser*>(model)->ProcessChunk(
+                                                samples, result, static_cast<giga_edge::enhance::Context<float>*>(ctx));
                                           });
   });
 }
@@ -290,8 +290,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseGetFinalChunkFp(GigaEdgeEnhanceDeno
       return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     return ctools::final_bytes<float>(output, output_size, [&](auto& result) {
-      return static_cast<gigaedge::enhance::Denoiser*>(model)->GetFinalChunk(
-          result, static_cast<gigaedge::enhance::Context<float>*>(ctx));
+      return static_cast<giga_edge::enhance::Denoiser*>(model)->GetFinalChunk(
+          result, static_cast<giga_edge::enhance::Context<float>*>(ctx));
     });
   });
 }
@@ -306,8 +306,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceDenoiseGetFinalChunkInt(GigaEdgeEnhanceDen
       return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
     return ctools::final_bytes<int16_t>(output, output_size, [&](auto& result) {
-      return static_cast<gigaedge::enhance::Denoiser*>(model)->GetFinalChunk(
-          result, static_cast<gigaedge::enhance::Context<float>*>(ctx));
+      return static_cast<giga_edge::enhance::Denoiser*>(model)->GetFinalChunk(
+          result, static_cast<giga_edge::enhance::Context<float>*>(ctx));
     });
   });
 }
@@ -321,13 +321,13 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceAudioProcessInit(const char* config_file, 
     if (config_file == nullptr) {
       return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     }
-    *model = static_cast<void*>(new gigaedge::enhance::AudioProcessor(config_file));
+    *model = static_cast<void*>(new giga_edge::enhance::AudioProcessor(config_file));
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
 
 void GigaEdgeEnhanceAudioProcessFree(GigaEdgeEnhanceAudioProcess model) {
-  ctools::guard_void([&] { delete static_cast<gigaedge::enhance::AudioProcessor*>(model); });
+  ctools::guard_void([&] { delete static_cast<giga_edge::enhance::AudioProcessor*>(model); });
 }
 
 #define GEE_AUDIO_PROCESS_ADD(function_name, method_name)                               \
@@ -336,7 +336,7 @@ void GigaEdgeEnhanceAudioProcessFree(GigaEdgeEnhanceAudioProcess model) {
       if (model == nullptr) {                                                           \
         return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;                 \
       }                                                                                 \
-      static_cast<gigaedge::enhance::AudioProcessor*>(model)->method_name();            \
+      static_cast<giga_edge::enhance::AudioProcessor*>(model)->method_name();           \
       return GigaEdgeEnhanceRetCode::SUCCESS;                                           \
     });                                                                                 \
   }
@@ -355,8 +355,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceAudioProcessAddAgcWithParam(GigaEdgeEnhanc
                                                                   float max_power_gain) {
   return ctools::guard(GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
     if (model == nullptr) return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-    static_cast<gigaedge::enhance::AudioProcessor*>(model)->AddAGC(sample_rate, target_power_level, max_power_gain,
-                                                                   1e-2F, 1e-2F);
+    static_cast<giga_edge::enhance::AudioProcessor*>(model)->AddAGC(sample_rate, target_power_level, max_power_gain,
+                                                                    1e-2F, 1e-2F);
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -367,8 +367,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceAudioProcessAddRcWithParam(GigaEdgeEnhance
                                                                  float release_time, float hold_time) {
   return ctools::guard(GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
     if (model == nullptr) return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-    static_cast<gigaedge::enhance::AudioProcessor*>(model)->AddRC(sample_rate, target_level_db, max_gain_db,
-                                                                  attack_time, release_time, hold_time);
+    static_cast<giga_edge::enhance::AudioProcessor*>(model)->AddRC(sample_rate, target_level_db, max_gain_db,
+                                                                   attack_time, release_time, hold_time);
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -379,8 +379,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceAudioProcessAddLcWithParam(GigaEdgeEnhance
                                                                  uint32_t post_processing) {
   return ctools::guard(GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
     if (model == nullptr) return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-    static_cast<gigaedge::enhance::AudioProcessor*>(model)->AddLC(sample_rate, target_level_db, bypass_time,
-                                                                  max_gain_db, use_vad != 0, post_processing != 0);
+    static_cast<giga_edge::enhance::AudioProcessor*>(model)->AddLC(sample_rate, target_level_db, bypass_time,
+                                                                   max_gain_db, use_vad != 0, post_processing != 0);
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -391,8 +391,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceAudioProcessAddNgWithParam(GigaEdgeEnhance
                                                                  float hold_time) {
   return ctools::guard(GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
     if (model == nullptr) return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-    static_cast<gigaedge::enhance::AudioProcessor*>(model)->AddNG(sample_rate, threshold_db, attack_time, release_time,
-                                                                  hold_time);
+    static_cast<giga_edge::enhance::AudioProcessor*>(model)->AddNG(sample_rate, threshold_db, attack_time, release_time,
+                                                                   hold_time);
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -403,8 +403,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceAudioProcessAddLimWithParam(GigaEdgeEnhanc
                                                                   float release_time) {
   return ctools::guard(GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
     if (model == nullptr) return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-    static_cast<gigaedge::enhance::AudioProcessor*>(model)->AddLim(sample_rate, threshold_db, knee_width, attack_time,
-                                                                   release_time);
+    static_cast<giga_edge::enhance::AudioProcessor*>(model)->AddLim(sample_rate, threshold_db, knee_width, attack_time,
+                                                                    release_time);
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -415,8 +415,8 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceAudioProcessAddDrcWithParam(GigaEdgeEnhanc
                                                                   float release_time) {
   return ctools::guard(GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT, [&] {
     if (model == nullptr) return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
-    static_cast<gigaedge::enhance::AudioProcessor*>(model)->AddDRC(sample_rate, threshold_db, ratio, knee_width,
-                                                                   attack_time, release_time);
+    static_cast<giga_edge::enhance::AudioProcessor*>(model)->AddDRC(sample_rate, threshold_db, ratio, knee_width,
+                                                                    attack_time, release_time);
     return GigaEdgeEnhanceRetCode::SUCCESS;
   });
 }
@@ -430,7 +430,7 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceAudioProcessChunkFp(GigaEdgeEnhanceAudioPr
     }
     if (model == nullptr) return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     return ctools::process_bytes<float>(input, input_size, output, output_size, [&](const auto& samples, auto& result) {
-      return static_cast<gigaedge::enhance::AudioProcessor*>(model)->ProcessChunk(samples, result, nullptr);
+      return static_cast<giga_edge::enhance::AudioProcessor*>(model)->ProcessChunk(samples, result, nullptr);
     });
   });
 }
@@ -445,7 +445,7 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceAudioProcessChunkInt(GigaEdgeEnhanceAudioP
     if (model == nullptr) return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     return ctools::process_bytes<int16_t>(
         input, input_size, output, output_size, [&](const auto& samples, auto& result) {
-          return static_cast<gigaedge::enhance::AudioProcessor*>(model)->ProcessChunk(samples, result, nullptr);
+          return static_cast<giga_edge::enhance::AudioProcessor*>(model)->ProcessChunk(samples, result, nullptr);
         });
   });
 }
@@ -458,7 +458,7 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceAudioProcessGetFinalChunkFp(GigaEdgeEnhanc
     }
     if (model == nullptr) return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     return ctools::final_bytes<float>(output, output_size, [&](auto& result) {
-      return static_cast<gigaedge::enhance::AudioProcessor*>(model)->GetFinalChunk(result, nullptr);
+      return static_cast<giga_edge::enhance::AudioProcessor*>(model)->GetFinalChunk(result, nullptr);
     });
   });
 }
@@ -471,7 +471,7 @@ GigaEdgeEnhanceRetCode GigaEdgeEnhanceAudioProcessGetFinalChunkInt(GigaEdgeEnhan
     }
     if (model == nullptr) return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
     return ctools::final_bytes<int16_t>(output, output_size, [&](auto& result) {
-      return static_cast<gigaedge::enhance::AudioProcessor*>(model)->GetFinalChunk(result, nullptr);
+      return static_cast<giga_edge::enhance::AudioProcessor*>(model)->GetFinalChunk(result, nullptr);
     });
   });
 }

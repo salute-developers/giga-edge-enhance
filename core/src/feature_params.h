@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 class NetworkConfig;
 namespace fe {
 namespace fft {
@@ -37,9 +37,11 @@ class FeatureParams {
   WindowType window_type = WindowType::hanning;
 
   FeatureParams() = default;
-  explicit FeatureParams(std::shared_ptr<gigaedge::enhance::NetworkConfig> config) { read_feature_params_node(config); }
+  explicit FeatureParams(std::shared_ptr<giga_edge::enhance::NetworkConfig> config) {
+    read_feature_params_node(config);
+  }
 
-  void read_feature_params_node(std::shared_ptr<gigaedge::enhance::NetworkConfig> config);
+  void read_feature_params_node(std::shared_ptr<giga_edge::enhance::NetworkConfig> config);
 
   inline uint64_t num_frame_size_samples() const {
     return static_cast<uint64_t>(round(1e-3 * frame_size_ms * sampling_freq));
@@ -72,4 +74,4 @@ class FeatureParams {
   WindowType string_to_window_type_enum(const std::string& window);
 };
 }  // namespace fe
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

@@ -10,7 +10,7 @@ PipelineElement:: PipelineElement(uint32_t sample_rate) noexcept
 AudioProcessPipelineElement::AudioProcessPipelineElement(const std::string& yaml_config, uint32_t sample_rate)
     : PipelineElement(sample_rate),
       m_yaml_config(yaml_config),
-      m_normalizer(std::make_unique<gigaedge::enhance::AudioProcessor>(yaml_config)) {
+      m_normalizer(std::make_unique<giga_edge::enhance::AudioProcessor>(yaml_config)) {
   m_normalizer->AddLC().AddNG().AddLim();
 }
 
@@ -36,7 +36,7 @@ uint32_t AudioProcessPipelineElement::process(uintptr_t src_ptr, const uint32_t 
 
 void AudioProcessPipelineElement::resetContext() noexcept {
   try {
-    auto normalizer = std::make_unique<gigaedge::enhance::AudioProcessor>(m_yaml_config);
+    auto normalizer = std::make_unique<giga_edge::enhance::AudioProcessor>(m_yaml_config);
     normalizer->AddLC().AddNG().AddLim();
     m_normalizer = std::move(normalizer);
     m_input.clear();
@@ -48,7 +48,7 @@ void AudioProcessPipelineElement::resetContext() noexcept {
 EchoCancellationElement::EchoCancellationElement(const std::string& yaml_config)
     : PipelineElement(0),
       m_yaml_config(yaml_config),
-      m_aec(std::make_unique<gigaedge::enhance::EchoCanceller>(yaml_config)) {}
+      m_aec(std::make_unique<giga_edge::enhance::EchoCanceller>(yaml_config)) {}
 
 uint32_t EchoCancellationElement::process(uintptr_t src_ptr, const uint32_t chunk_size) noexcept {
   try {
@@ -96,7 +96,7 @@ uint32_t EchoCancellationElement::processMono(uintptr_t src_ptr,
 
 void EchoCancellationElement::resetContext() noexcept {
   try {
-    auto aec = std::make_unique<gigaedge::enhance::EchoCanceller>(m_yaml_config);
+    auto aec = std::make_unique<giga_edge::enhance::EchoCanceller>(m_yaml_config);
     m_aec = std::move(aec);
     m_input.clear();
     m_loopback.clear();
@@ -110,7 +110,7 @@ void EchoCancellationElement::resetContext() noexcept {
 #ifndef BUILD_DSP
 
 DenoisePipelineElement::DenoisePipelineElement(uint32_t sample_rate,
-                                               std::shared_ptr<gigaedge::enhance::PackedModelReader> model)
+                                               std::shared_ptr<giga_edge::enhance::PackedModelReader> model)
     : PipelineElement(sample_rate), m_denoiser(model) {
   ctx = m_denoiser.CreateContext(sample_rate, sample_rate);
 }

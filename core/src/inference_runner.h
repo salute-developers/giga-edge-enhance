@@ -13,7 +13,7 @@
 #include "src/context.h"
 #include "src/task.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 class InferenceRunner {
  public:
@@ -28,11 +28,11 @@ class InferenceRunner {
   InferenceRunner& operator=(const InferenceRunner&) = delete;
   InferenceRunner(const InferenceRunner&) = delete;
 
-  InferenceRunner(std::shared_ptr<gigaedge::enhance::NetworkConfig> config, uint32_t inference_engine_threads,
+  InferenceRunner(std::shared_ptr<giga_edge::enhance::NetworkConfig> config, uint32_t inference_engine_threads,
                   bool gpu);
   ~InferenceRunner();
 
-  void infer(gigaedge::enhance::Task* denoise_task);
+  void infer(giga_edge::enhance::Task* denoise_task);
 
   ModelType get_model_type() const { return model_type_; }
   uint32_t get_model_future_context_len() const { return engine_runner_ptr_->get_future_context_len(); }
@@ -60,4 +60,4 @@ class InferenceRunner {
   }
 };
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

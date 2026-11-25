@@ -1,6 +1,6 @@
 #pragma once
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 // Denoiser defaults
 static constexpr char default_denoiser_config_yaml[] = R"(
 model:
@@ -74,4 +74,4 @@ sound_processing:
     release_time: 0.2
 )";
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

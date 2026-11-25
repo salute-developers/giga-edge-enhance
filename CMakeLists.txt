@@ -11,7 +11,7 @@ if(NOT VERSION_NUMBER)
   message(FATAL_ERROR "VERSION_NUMBER must contain a SemVer core version (for example 1.0.0).")
 endif()
 
-project(gigaedge-enhance VERSION "${VERSION_NUMBER}" LANGUAGES C CXX)
+project(giga-edge-enhance VERSION "${VERSION_NUMBER}" LANGUAGES C CXX)
 
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0115 OLD)
@@ -47,7 +47,7 @@ else()
   endif()
 
   if(EMSCRIPTEN)
-    message(STATUS "Building gigaedge-enhance for WebAssembly")
+    message(STATUS "Building giga-edge-enhance for WebAssembly")
     add_subdirectory(web/packages/web-sdk/wasm)
   endif()
 endif()

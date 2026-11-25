@@ -35,7 +35,7 @@ find_library(android-lib android)
 target_link_libraries(
     gigaedge-enhance-sdk
     PRIVATE
-    gigaedge-enhance
+    giga-edge-enhance
     ${log-lib}
     ${android-lib}
 )

@@ -17,7 +17,7 @@ target_include_directories(enhance_wasm PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR})
 
-target_link_libraries(enhance_wasm PRIVATE gigaedge-enhance spdlog_header_only)
+target_link_libraries(enhance_wasm PRIVATE giga-edge-enhance spdlog_header_only)
 
 # Emscripten's executable target produces a JavaScript loader plus companion
 # WebAssembly and TypeScript declaration files.  Install all three so
