@@ -30,7 +30,7 @@ if(@_gee_config_static@)
     # Static ONNX/Abseil objects use NSLog and Core Foundation time-zone APIs.
     list(APPEND _enhance_system_link_libraries "-framework Foundation" "-framework CoreFoundation")
   endif()
-  set_property(TARGET gigaedge::enhance APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+  set_property(TARGET giga-edge::enhance APPEND PROPERTY INTERFACE_LINK_LIBRARIES
     "${_enhance_static_link_libraries};${_enhance_system_link_libraries}")
 endif()
 

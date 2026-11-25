@@ -19,7 +19,7 @@
 #include <spdlog/sinks/syslog_sink.h>
 #endif
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 namespace {
 
@@ -105,4 +105,4 @@ std::shared_ptr<::spdlog::logger> get_logger() {
   return logger_instance;
 }
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

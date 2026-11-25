@@ -8,7 +8,7 @@
 #include <cstring>
 #include <vector>
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 class RingBuffer {
  public:
@@ -32,6 +32,6 @@ class RingBuffer {
   std::atomic<std::uint32_t> tail_;
 };
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance
 
 #endif

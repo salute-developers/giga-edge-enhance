@@ -20,16 +20,16 @@ archive_contains_onnxruntime() {
 }
 
 core_is_current() {
-  [[ -f "$ARTIFACT_DIR/device/libgigaedge-enhance.a" ]] || return 1
-  [[ -f "$ARTIFACT_DIR/simulator/libgigaedge-enhance.a" ]] || return 1
+  [[ -f "$ARTIFACT_DIR/device/libgiga-edge-enhance.a" ]] || return 1
+  [[ -f "$ARTIFACT_DIR/simulator/libgiga-edge-enhance.a" ]] || return 1
   [[ -d "$REPO_DIR/out/build/ios-device-release" ]] || return 1
   [[ -d "$REPO_DIR/out/build/ios-simulator-release" ]] || return 1
-  archive_contains_onnxruntime "$ARTIFACT_DIR/device/libgigaedge-enhance.a" || return 1
-  archive_contains_onnxruntime "$ARTIFACT_DIR/simulator/libgigaedge-enhance.a" || return 1
+  archive_contains_onnxruntime "$ARTIFACT_DIR/device/libgiga-edge-enhance.a" || return 1
+  archive_contains_onnxruntime "$ARTIFACT_DIR/simulator/libgiga-edge-enhance.a" || return 1
 
   local reference="$CORE_STAMP"
   if [[ ! -f "$reference" ]]; then
-    reference="$ARTIFACT_DIR/device/libgigaedge-enhance.a"
+    reference="$ARTIFACT_DIR/device/libgiga-edge-enhance.a"
   fi
 
   [[ -z "$(find "${CORE_INPUTS[@]}" -newer "$reference" -print -quit)" ]]
@@ -89,15 +89,15 @@ build_target ios-simulator-release
 
 merge_archives \
   "$REPO_DIR/out/build/ios-device-release" \
-  "$ARTIFACT_DIR/device/libgigaedge-enhance.a" \
+  "$ARTIFACT_DIR/device/libgiga-edge-enhance.a" \
   "${GEE_PREBUILT_ORT_DEVICE_ROOT:-}"
 merge_archives \
   "$REPO_DIR/out/build/ios-simulator-release" \
-  "$ARTIFACT_DIR/simulator/libgigaedge-enhance.a" \
+  "$ARTIFACT_DIR/simulator/libgiga-edge-enhance.a" \
   "${GEE_PREBUILT_ORT_SIMULATOR_ROOT:-}"
 touch "$CORE_STAMP"
 
-echo "Built device static library: $ARTIFACT_DIR/device/libgigaedge-enhance.a"
-echo "Built simulator static library: $ARTIFACT_DIR/simulator/libgigaedge-enhance.a"
-lipo -info "$ARTIFACT_DIR/device/libgigaedge-enhance.a"
-lipo -info "$ARTIFACT_DIR/simulator/libgigaedge-enhance.a"
+echo "Built device static library: $ARTIFACT_DIR/device/libgiga-edge-enhance.a"
+echo "Built simulator static library: $ARTIFACT_DIR/simulator/libgiga-edge-enhance.a"
+lipo -info "$ARTIFACT_DIR/device/libgiga-edge-enhance.a"
+lipo -info "$ARTIFACT_DIR/simulator/libgiga-edge-enhance.a"

@@ -10,7 +10,7 @@
 #include "src/handler/base_audio_handler.h"
 #include "util/echo/echo_canceler.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 class AudioEchoCancelationHandler : public BaseAudioHandler {
  public:
@@ -35,12 +35,12 @@ class AudioEchoCancelationHandler : public BaseAudioHandler {
 
 
   // BaseAudioHandler integration
-  GigaEdgeEnhanceRetCode process_frame(struct gigaedge::enhance::Context<float>* ctx,
+  GigaEdgeEnhanceRetCode process_frame(struct giga_edge::enhance::Context<float>* ctx,
                                        const std::vector<float>& mic_frame, const std::vector<float>& lbk_frame,
                                        std::vector<float>& out) override;
 
   // Explicitly mark single-input as unsupported for AEC
-  GigaEdgeEnhanceRetCode process_frame(struct gigaedge::enhance::Context<float>*, const std::vector<float>&,
+  GigaEdgeEnhanceRetCode process_frame(struct giga_edge::enhance::Context<float>*, const std::vector<float>&,
                                        std::vector<float>&) override {
     return GigaEdgeEnhanceRetCode::ERR_INVALID_API_PASSED_ARGUMENT;
   }
@@ -57,4 +57,4 @@ class AudioEchoCancelationHandler : public BaseAudioHandler {
   std::unique_ptr<util::echo::IEchoCanceler> canceler_;
   GigaEdgeEnhanceRetCode load_configuration(const std::string& config_path);
 };
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

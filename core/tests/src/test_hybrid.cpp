@@ -12,36 +12,36 @@
 #include "src/inference_runner.h"
 
 namespace {
-std::shared_ptr<gigaedge::enhance::DenoiserConfig> hybrid_config() {
+std::shared_ptr<giga_edge::enhance::DenoiserConfig> hybrid_config() {
 #ifdef BUILD_TFLITE_ENGINE
   const std::string extension = "tflite";
 #else
   const std::string extension = "onnx";
 #endif
-  return std::make_shared<gigaedge::enhance::DenoiserConfig>(gigaedge::enhance::StringConfigReader(
+  return std::make_shared<giga_edge::enhance::DenoiserConfig>(giga_edge::enhance::StringConfigReader(
       "model:\n  model_path: data/models/hybrid_identity." + extension +
       "\n  model_input_ctx_len: 0\ninference:\n  model_type: denoiser_hybrid_web_model\n"
       "feature_params:\n  sampling_freq: 48000\n  frame_size_ms: 32\n  frame_stride_ms: 16\n"));
 }
 
-gigaedge::enhance::Task spectrum_task(gigaedge::enhance::Context<float>& context, uint32_t frames) {
-  gigaedge::enhance::Task task;
+giga_edge::enhance::Task spectrum_task(giga_edge::enhance::Context<float>& context, uint32_t frames) {
+  giga_edge::enhance::Task task;
   task.data.context = &context;
   for (uint32_t t = 0; t < frames; ++t) {
-    gigaedge::enhance::ComplexNumber<float> spectrum(769, 769);
+    giga_edge::enhance::ComplexNumber<float> spectrum(769, 769);
     for (uint32_t f = 0; f < 769; ++f) {
       spectrum.real[f] = 0.01f * static_cast<float>(f + t);
       spectrum.imag[f] = -0.02f * static_cast<float>(f + 2 * t);
     }
     task.data.input_spectrogram.push_back(spectrum);
   }
-  task.state.advance_to(gigaedge::enhance::PipelineStage::input_spectrum_ready);
+  task.state.advance_to(giga_edge::enhance::PipelineStage::input_spectrum_ready);
   return task;
 }
 }  // namespace
 
 TEST_CASE("Hybrid runners preserve complex layout and independent recurrent states", "[hybrid]") {
-  using namespace gigaedge::enhance;
+  using namespace giga_edge::enhance;
   InferenceRunner runner(hybrid_config(), 1, false);
   DenoiseContextHybrid<float> first;
   DenoiseContextHybrid<float> second;
@@ -69,7 +69,7 @@ TEST_CASE("Hybrid runners preserve complex layout and independent recurrent stat
 }
 
 TEST_CASE("Hybrid runners reject invalid contexts and spectra", "[hybrid]") {
-  using namespace gigaedge::enhance;
+  using namespace giga_edge::enhance;
   InferenceRunner runner(hybrid_config(), 1, false);
   Context<float> wrong;
   auto task = spectrum_task(wrong, 1);
@@ -85,7 +85,7 @@ TEST_CASE("Hybrid runners reject invalid contexts and spectra", "[hybrid]") {
 }
 
 TEST_CASE("Hybrid feature extraction reconstructs spectra without applying a mask", "[hybrid]") {
-  using namespace gigaedge::enhance;
+  using namespace giga_edge::enhance;
   auto config = hybrid_config();
   FeatureExtractorRunner runner(config);
   Context<float> context;
@@ -106,7 +106,7 @@ TEST_CASE("Hybrid feature extraction reconstructs spectra without applying a mas
 
 
 TEST_CASE("Hybrid spectrum reconstruction agrees for batched and sequential frames", "[hybrid]") {
-  using namespace gigaedge::enhance;
+  using namespace giga_edge::enhance;
   FeatureExtractorRunner runner(hybrid_config());
   Context<float> batch_context;
   Context<float> stream_context;
@@ -135,7 +135,7 @@ TEST_CASE("Hybrid spectrum reconstruction agrees for batched and sequential fram
 
 
 TEST_CASE("Public denoiser API creates and processes hybrid contexts", "[hybrid]") {
-  using namespace gigaedge::enhance;
+  using namespace giga_edge::enhance;
   Denoiser denoiser(YAML::Dump(hybrid_config()->params()));
   auto* context = denoiser.CreateContext();
   REQUIRE(dynamic_cast<DenoiseContextHybrid<float>*>(context) != nullptr);
@@ -161,7 +161,7 @@ TEST_CASE("Public denoiser API creates and processes hybrid contexts", "[hybrid]
 
 
 TEST_CASE("Hybrid runner handles concurrent streams with different chunk sizes", "[hybrid]") {
-  using namespace gigaedge::enhance;
+  using namespace giga_edge::enhance;
   InferenceRunner runner(hybrid_config(), 1, false);
   auto process = [&runner](uint32_t frames) {
     DenoiseContextHybrid<float> context;
@@ -182,7 +182,7 @@ TEST_CASE("Hybrid runner handles concurrent streams with different chunk sizes",
 }
 
 TEST_CASE("Hybrid model selection rejects discriminative weights", "[hybrid]") {
-  using namespace gigaedge::enhance;
+  using namespace giga_edge::enhance;
   auto params = YAML::Clone(hybrid_config()->params());
 #ifdef BUILD_TFLITE_ENGINE
   params["model"]["model_path"] = "data/models/quality_model_48khz.tflite";

@@ -10,7 +10,7 @@ using ShapeT = std::vector<std::size_t>;
 using StrideT = std::vector<std::ptrdiff_t>;
 }  // namespace pocketfft
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 namespace fe {
 
 template <typename T>
@@ -43,4 +43,4 @@ class IFftCalculator {
 };
 
 }  // namespace fe
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

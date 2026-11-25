@@ -28,28 +28,28 @@ void validate_finite(float value, const char* message) { require_parameter(std::
 
 }  // namespace
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 AudioProcessor::AudioProcessor() : dsp_(nullptr) {
-  dsp_ = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(
-      std::make_shared<gigaedge::enhance::AudioProcessorConfig>());
+  dsp_ = std::make_unique<giga_edge::enhance::AudioProcessorHandler>(
+      std::make_shared<giga_edge::enhance::AudioProcessorConfig>());
 }
 
 AudioProcessor::AudioProcessor(const char* config) : dsp_(nullptr) {
   std::string config_file(config);
   if (!config_file.empty()) {
-    dsp_ = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(
-        std::make_shared<gigaedge::enhance::AudioProcessorConfig>(gigaedge::enhance::FileConfigReader(config)));
+    dsp_ = std::make_unique<giga_edge::enhance::AudioProcessorHandler>(
+        std::make_shared<giga_edge::enhance::AudioProcessorConfig>(giga_edge::enhance::FileConfigReader(config)));
   } else {
     spdlog::info("AudioProcessor input config is empty. Use default values");
-    dsp_ = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(
-        std::make_shared<gigaedge::enhance::AudioProcessorConfig>());
+    dsp_ = std::make_unique<giga_edge::enhance::AudioProcessorHandler>(
+        std::make_shared<giga_edge::enhance::AudioProcessorConfig>());
   }
   spdlog::info("Create GigaEdgeEnhance audio processor from a configuration file");
 }
 
 AudioProcessor::AudioProcessor(const std::string& yaml_conf) : dsp_(nullptr) {
-  dsp_ = std::make_unique<gigaedge::enhance::AudioProcessorHandler>(
-      std::make_shared<gigaedge::enhance::AudioProcessorConfig>(gigaedge::enhance::StringConfigReader(yaml_conf)));
+  dsp_ = std::make_unique<giga_edge::enhance::AudioProcessorHandler>(
+      std::make_shared<giga_edge::enhance::AudioProcessorConfig>(giga_edge::enhance::StringConfigReader(yaml_conf)));
   spdlog::info("Create GigaEdgeEnhance audio processor from yaml string");
 }
 
@@ -230,4 +230,4 @@ AudioProcessor& AudioProcessor::AddDRC(uint32_t audio_sample_rate, float thresho
   dsp_->add_dr_compressor({audio_sample_rate, threshold_db, ratio, knee_width, attack_time, release_time});
   return *this;
 }
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

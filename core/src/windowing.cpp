@@ -9,7 +9,7 @@
 
 #include "src/logger.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 namespace fe {
 
 template <typename T>
@@ -112,4 +112,4 @@ void Windowing<T>::sum_square_in_place(std::vector<T>& input) const {
 
 template class Windowing<fft::BufferType>;
 }  // namespace fe
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

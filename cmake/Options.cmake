@@ -39,15 +39,15 @@ endif()
 set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER CACHE STRING
     "Never satisfy FetchContent dependencies from host packages" FORCE)
 
-# Preserve whether the gigaedge-enhance target itself is shared. CPM dependencies can
+# Preserve whether the giga-edge-enhance target itself is shared. CPM dependencies can
 # reset BUILD_SHARED_LIBS in the cache for third-party static linking.
 set(_gee_build_shared ${BUILD_SHARED_LIBS})
 
 if(_gee_build_shared)
-  set(GEE_SHARED_LIBS ON CACHE INTERNAL "Build the gigaedge-enhance target as a shared library" FORCE)
+  set(GEE_SHARED_LIBS ON CACHE INTERNAL "Build the giga-edge-enhance target as a shared library" FORCE)
   message(STATUS "Library linkage: shared")
 else()
-  set(GEE_SHARED_LIBS OFF CACHE INTERNAL "Build the gigaedge-enhance target as a shared library" FORCE)
+  set(GEE_SHARED_LIBS OFF CACHE INTERNAL "Build the giga-edge-enhance target as a shared library" FORCE)
   message(STATUS "Library linkage: static")
 endif()
 

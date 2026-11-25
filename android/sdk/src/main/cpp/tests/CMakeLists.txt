@@ -41,6 +41,6 @@ target_compile_definitions(
 target_link_libraries(
     gigaedge-enhance-native-tests
     PRIVATE
-    gigaedge-enhance
+    giga-edge-enhance
     util::packed_model
 )

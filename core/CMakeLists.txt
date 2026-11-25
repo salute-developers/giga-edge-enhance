@@ -66,20 +66,20 @@ if(BUILD_RESAMPLER)
 endif()
 
 if(GEE_SHARED_LIBS)
-  add_library(gigaedge-enhance SHARED ${GEE_SOURCES})
+  add_library(giga-edge-enhance SHARED ${GEE_SOURCES})
 else()
-  add_library(gigaedge-enhance STATIC ${GEE_SOURCES})
+  add_library(giga-edge-enhance STATIC ${GEE_SOURCES})
 endif()
 
 if(APPLE)
-  set_target_properties(gigaedge-enhance PROPERTIES INSTALL_RPATH "@loader_path")
+  set_target_properties(giga-edge-enhance PROPERTIES INSTALL_RPATH "@loader_path")
 elseif(UNIX)
-  set_target_properties(gigaedge-enhance PROPERTIES INSTALL_RPATH "$ORIGIN")
+  set_target_properties(giga-edge-enhance PROPERTIES INSTALL_RPATH "$ORIGIN")
 endif()
 
-add_library(gigaedge::enhance ALIAS gigaedge-enhance)
+add_library(giga-edge::enhance ALIAS giga-edge-enhance)
 
-target_include_directories(gigaedge-enhance
+target_include_directories(giga-edge-enhance
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -88,25 +88,25 @@ target_include_directories(gigaedge-enhance
 )
 
 if(WIN32)
-  target_link_libraries(gigaedge-enhance PRIVATE gee_build_config ${GEE_DEPS})
+  target_link_libraries(giga-edge-enhance PRIVATE gee_build_config ${GEE_DEPS})
 else()
-  target_link_libraries(gigaedge-enhance PRIVATE $<BUILD_INTERFACE:gee_build_config>)
+  target_link_libraries(giga-edge-enhance PRIVATE $<BUILD_INTERFACE:gee_build_config>)
   foreach(_gee_dep IN LISTS GEE_DEPS)
-    target_link_libraries(gigaedge-enhance PRIVATE $<BUILD_INTERFACE:${_gee_dep}>)
+    target_link_libraries(giga-edge-enhance PRIVATE $<BUILD_INTERFACE:${_gee_dep}>)
   endforeach()
 endif()
 
 if(ANDROID)
-  message(STATUS "Applying 16KB page alignment for Android (gigaedge-enhance)")
-  target_link_options(gigaedge-enhance PRIVATE "-Wl,-z,max-page-size=16384")
+  message(STATUS "Applying 16KB page alignment for Android (giga-edge-enhance)")
+  target_link_options(giga-edge-enhance PRIVATE "-Wl,-z,max-page-size=16384")
 endif()
 
 if(GEE_SHARED_LIBS)
   if(BUILD_TESTING)
     message(WARNING "Disabling -fvisibility=hidden for shared library build with tests")
   elseif(CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang)$")
-    target_compile_options(gigaedge-enhance PRIVATE -fvisibility=hidden)
-    target_link_options(gigaedge-enhance PRIVATE "-Wl,--exclude-libs=ALL")
-    target_compile_definitions(gigaedge-enhance PUBLIC GEE_DLL=1 GEE_DLL_EXPORTS=1)
+    target_compile_options(giga-edge-enhance PRIVATE -fvisibility=hidden)
+    target_link_options(giga-edge-enhance PRIVATE "-Wl,--exclude-libs=ALL")
+    target_compile_definitions(giga-edge-enhance PUBLIC GEE_DLL=1 GEE_DLL_EXPORTS=1)
   endif()
 endif()

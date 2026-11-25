@@ -86,7 +86,7 @@ Follow [`STYLE.md`](STYLE.md) and the existing platform conventions.
 - C++ implementation functions and methods use `snake_case`.
 - C++ types use `PascalCase`; members use a trailing underscore.
 - Public C symbols retain their `GigaEdge Enhance*` prefix because C has no namespace.
-- Public C++ code uses the `gigaedge::enhance` namespace.
+- Public C++ code uses the `giga_edge::enhance` namespace.
 - Kotlin public types rely on `com.gigaedge.enhance` for product context.
 - Swift public types rely on the `EnhanceAudioKit` module for product context.
 - Web public exports retain `GigaEdgeEnhanceSDK`, `GigaEdgeEnhanceAudioNode`, and

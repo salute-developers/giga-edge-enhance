@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 enum class ChunkOutcome : uint8_t {
   enhanced,
@@ -43,4 +43,4 @@ class TaskState {
   ChunkOutcome outcome_ = ChunkOutcome::enhanced;
 };
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

@@ -4,7 +4,7 @@
 
 #include "src/logger.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 void AudioProcItemWithStats::stats_configure(uint32_t sample_rate, double window_seconds,
                                              std::initializer_list<MetricDef> metrics) {
@@ -365,10 +365,10 @@ std::vector<float>& AudioProcessorHandler::process(const std::vector<float>& in,
   return out;
 }
 
-GigaEdgeEnhanceRetCode AudioProcessorHandler::process_frame(struct gigaedge::enhance::Context<float>*,
+GigaEdgeEnhanceRetCode AudioProcessorHandler::process_frame(struct giga_edge::enhance::Context<float>*,
                                                             const std::vector<float>& input_audio_frame,
                                                             std::vector<float>& enhanced_audio_frame) {
   (void)process(input_audio_frame, enhanced_audio_frame);
   return GigaEdgeEnhanceRetCode::SUCCESS;
 }
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

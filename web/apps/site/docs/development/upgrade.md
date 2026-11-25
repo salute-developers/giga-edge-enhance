@@ -4,11 +4,11 @@ Version 2.0 deliberately changes product identifiers and breaks source and binar
 
 | Surface | New identifier |
 | --- | --- |
-| C++ | `gigaedge::enhance::Denoiser`, `AudioProcessor`, `EchoCanceller`, `Context`, `Sequencer` |
-| Headers | `<enhance.h>`, `<enhance/c_api.h>`, `<enhance/denoiser.h>` |
+| C++ | `giga_edge::enhance::Denoiser`, `AudioProcessor`, `EchoCanceller`, `Context`, `Sequencer` |
+| Headers | `<giga-edge-enhance.h>`, `<enhance/c_api.h>`, `<enhance/denoiser.h>` |
 | C API | `GigaEdgeEnhanceDenoiseInit`, `GigaEdgeEnhanceRetCode` and the `GigaEdgeEnhance*` family |
-| CMake | `find_package(gigaedge-enhance CONFIG REQUIRED)`; link `gigaedge::enhance` |
-| Native library | `libgigaedge-enhance` |
+| CMake | `find_package(giga-edge-enhance CONFIG REQUIRED)`; link `giga-edge::enhance` |
+| Native library | `libgiga-edge-enhance` |
 | Build flags / environment | `GEE_*` |
 | Android | `com.gigaedge.enhance`; `Processor`, `Settings`, `Features` |
 | Swift | `EnhanceAudioKit`; `EnhanceProcessor`, `EnhanceSettings`, `EnhanceAVAudioUnit` |

@@ -557,25 +557,25 @@
       "name": "ios-device-release",
       "configurePreset": "ios-device-release",
       "configuration": "Release",
-      "targets": ["gigaedge-enhance"]
+      "targets": ["giga-edge-enhance"]
     },
     {
       "name": "ios-device-debug",
       "configurePreset": "ios-device-debug",
       "configuration": "Debug",
-      "targets": ["gigaedge-enhance"]
+      "targets": ["giga-edge-enhance"]
     },
     {
       "name": "ios-simulator-release",
       "configurePreset": "ios-simulator-release",
       "configuration": "Release",
-      "targets": ["gigaedge-enhance"]
+      "targets": ["giga-edge-enhance"]
     },
     {
       "name": "ios-simulator-debug",
       "configurePreset": "ios-simulator-debug",
       "configuration": "Debug",
-      "targets": ["gigaedge-enhance"]
+      "targets": ["giga-edge-enhance"]
     }
   ],
   "testPresets": [

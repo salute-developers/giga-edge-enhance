@@ -6,7 +6,7 @@
 
 #include "src/logger.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 AudioEchoCancelationHandler::AudioEchoCancelationHandler() : BaseAudioHandler(std::make_shared<AecConfig>()) {
   auto ret_code = restart();  // run do_start() after derived members are live
@@ -29,7 +29,7 @@ AudioEchoCancelationHandler::AudioEchoCancelationHandler(std::shared_ptr<AecConf
 
 GigaEdgeEnhanceRetCode AudioEchoCancelationHandler::do_start() {
   try {
-    auto* aec = dynamic_cast<gigaedge::enhance::AecConfig*>(config_.get());
+    auto* aec = dynamic_cast<giga_edge::enhance::AecConfig*>(config_.get());
     if (aec == nullptr) {
       spdlog::error("AEC config reader type mismatch");
       return GigaEdgeEnhanceRetCode::ERR_CONF_FILE_PROBLEM;
@@ -84,7 +84,7 @@ void AudioEchoCancelationHandler::process(const std::vector<float>& mic, const s
   canceler_->process(mic, lbk, out);
 }
 
-GigaEdgeEnhanceRetCode AudioEchoCancelationHandler::process_frame(struct gigaedge::enhance::Context<float>*,
+GigaEdgeEnhanceRetCode AudioEchoCancelationHandler::process_frame(struct giga_edge::enhance::Context<float>*,
                                                                   const std::vector<float>& mic_frame,
                                                                   const std::vector<float>& lbk_frame,
                                                                   std::vector<float>& out) {
@@ -101,4 +101,4 @@ GigaEdgeEnhanceRetCode AudioEchoCancelationHandler::process_frame(struct gigaedg
   }
 }
 
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

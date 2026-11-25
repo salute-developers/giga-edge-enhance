@@ -63,7 +63,7 @@ Exported C symbols in `core/include/enhance/c_api.h` keep the existing `GigaEdge
 
 ### C++ public API (stable surface)
 
-Headers under `core/include/enhance/` that define **`GEE_API`** types (e.g. `Denoiser`, `AudioProcessor`, and `Sequencer`) are the **supported C++ SDK** in the `gigaedge::enhance` namespace. They use **PascalCase** methods (`ProcessChunk`, `GetFinalChunk`, `ReloadConfig`).
+Headers under `core/include/enhance/` that define **`GEE_API`** types (e.g. `Denoiser`, `AudioProcessor`, and `Sequencer`) are the **supported C++ SDK** in the `giga_edge::enhance` namespace. They use **PascalCase** methods (`ProcessChunk`, `GetFinalChunk`, `ReloadConfig`).
 
 **Do not rename public C++ methods for style** without a compatibility plan. Renaming breaks source compatibility and often **ABI** (exported symbol names on Windows/Linux shared libs).
 

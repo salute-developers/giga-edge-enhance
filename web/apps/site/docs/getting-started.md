@@ -30,14 +30,14 @@ SDK package name is `@gigaedge/enhance-web-sdk`; it is not published to npm.
 After unpacking a native archive, point CMake at its package config:
 
 ```cmake
-find_package(gigaedge-enhance CONFIG REQUIRED)
+find_package(giga-edge-enhance CONFIG REQUIRED)
 
 add_executable(your_app main.cpp)
-target_link_libraries(your_app PRIVATE gigaedge::enhance)
+target_link_libraries(your_app PRIVATE giga-edge::enhance)
 target_compile_features(your_app PRIVATE cxx_std_17)
 ```
 
-Include `<enhance.h>` from C++ or `<enhance/c_api.h>` from C. Continue with the
+Include `<giga-edge-enhance.h>` from C++ or `<enhance/c_api.h>` from C. Continue with the
 [C and C++ quickstart](core/quickstart.md).
 
 Android applications add the SDK module and only the model modules they ship. iOS applications link
@@ -54,7 +54,7 @@ in its package reference shows how to create an audio node from a release build.
 5. Destroy the context before releasing the denoiser.
 
 The complete calls and the runnable demos are in the [C and C++ quickstart](core/quickstart.md).
-File processing is also available through [gigaedge-enhance](core/cli.md).
+File processing is also available through [giga-edge-enhance](core/cli.md).
 
 ## Web
 

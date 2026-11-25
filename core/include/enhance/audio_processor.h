@@ -11,7 +11,7 @@
 #include "enhance/export.h"
 #include "enhance/sequencer.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 class AudioProcessorHandler;
 
@@ -251,4 +251,4 @@ class GEE_API AudioProcessor : public Sequencer {
 
   std::unique_ptr<AudioProcessorHandler> dsp_;
 };
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

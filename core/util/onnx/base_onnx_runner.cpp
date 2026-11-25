@@ -19,7 +19,7 @@ BaseOnnxRunner::~BaseOnnxRunner() {
   run_options_ptr_.reset();
 }
 
-void BaseOnnxRunner::init_model(const std::shared_ptr<gigaedge::enhance::NetworkConfig> config,
+void BaseOnnxRunner::init_model(const std::shared_ptr<giga_edge::enhance::NetworkConfig> config,
                                 const uint32_t num_threads, bool gpu) {
   // ONNX Runtime uses wchar_t paths on Windows and char paths elsewhere.
   const std::filesystem::path model_path = std::filesystem::u8path(config->model_path());

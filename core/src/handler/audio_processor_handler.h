@@ -17,7 +17,7 @@
 #include "util/sound/range_control.h"
 #include "util/sound/stat_collector.h"
 
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 typedef struct Parameters {
   Parameters() = default;
@@ -360,7 +360,7 @@ class AudioProcessorHandler : public BaseAudioHandler {
   AudioProcessorHandler& add_lc();
   AudioProcessorHandler& add_lc(const LoudnessParameters& parameters);
 
-  GigaEdgeEnhanceRetCode process_frame(struct gigaedge::enhance::Context<float>* ctx,
+  GigaEdgeEnhanceRetCode process_frame(struct giga_edge::enhance::Context<float>* ctx,
                                        const std::vector<float>& input_audio_frame,
                                        std::vector<float>& enhanced_audio_frame) override;
 
@@ -371,4 +371,4 @@ class AudioProcessorHandler : public BaseAudioHandler {
  private:
   std::vector<std::unique_ptr<AudioProcItem>> sequence_vec_;
 };
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

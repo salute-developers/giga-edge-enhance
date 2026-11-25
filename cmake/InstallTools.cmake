@@ -13,7 +13,7 @@ function(ConfigInstallTarget TARGET)
 
     install(EXPORT ${TARGET}Targets
         FILE ${TARGET}Targets.cmake
-        NAMESPACE gigaedge::
+        NAMESPACE giga-edge::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${TARGET}
     )
 

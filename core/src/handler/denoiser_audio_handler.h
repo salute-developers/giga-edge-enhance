@@ -7,7 +7,7 @@
 
 #include "src/denoiser_model_adviser.h"
 #include "src/handler/neural_network_audio_handler.h"
-namespace gigaedge::enhance {
+namespace giga_edge::enhance {
 
 class DenoiserAudioHandler : public NeuralNetworkAudioHandler {
  public:
@@ -29,17 +29,17 @@ class DenoiserAudioHandler : public NeuralNetworkAudioHandler {
 
   ~DenoiserAudioHandler() override;
 
-  GigaEdgeEnhanceRetCode process_frame(struct gigaedge::enhance::Context<float>* ctx,
+  GigaEdgeEnhanceRetCode process_frame(struct giga_edge::enhance::Context<float>* ctx,
                                        const std::vector<float>& input_audio_frame,
                                        std::vector<float>& enhanced_audio_frame) override;
 
-  GigaEdgeEnhanceRetCode finalize_inference(struct gigaedge::enhance::Context<float>* ctx,
+  GigaEdgeEnhanceRetCode finalize_inference(struct giga_edge::enhance::Context<float>* ctx,
                                             std::vector<float>& enhanced_audio_frame) override;
 
-  StatInfo get_stat_info(const struct gigaedge::enhance::Context<float>* ctx) override;
+  StatInfo get_stat_info(const struct giga_edge::enhance::Context<float>* ctx) override;
 
-  gigaedge::enhance::DenoiserModelAdviser<float>* adviser() { return adviser_.get(); }
-  const gigaedge::enhance::DenoiserModelAdviser<float>* adviser() const { return adviser_.get(); }
+  giga_edge::enhance::DenoiserModelAdviser<float>* adviser() { return adviser_.get(); }
+  const giga_edge::enhance::DenoiserModelAdviser<float>* adviser() const { return adviser_.get(); }
 
  private:
   // 30 min restriction
@@ -49,10 +49,10 @@ class DenoiserAudioHandler : public NeuralNetworkAudioHandler {
   GigaEdgeEnhanceRetCode init_audio_streams(Context<float>* ctx, uint32_t input_sample_rate,
                                             uint32_t output_sample_rate);
   GigaEdgeEnhanceRetCode destroy_audio_streams(Context<float>* ctx);
-  GigaEdgeEnhanceRetCode infer_frame(std::unique_ptr<gigaedge::enhance::Task>& task_ptr) override;
+  GigaEdgeEnhanceRetCode infer_frame(std::unique_ptr<giga_edge::enhance::Task>& task_ptr) override;
   GigaEdgeEnhanceRetCode process_frame_internal(Context<float>* ctx, const std::vector<float>& input_audio_frame,
                                                 std::vector<float>& enhanced_audio_frame, bool allow_zero_shortcut);
-  void fill_in_data_for_processing(std::unique_ptr<gigaedge::enhance::Task>& task_ptr,
+  void fill_in_data_for_processing(std::unique_ptr<giga_edge::enhance::Task>& task_ptr,
                                    std::vector<float>& input) override;
 };
-}  // namespace gigaedge::enhance
+}  // namespace giga_edge::enhance

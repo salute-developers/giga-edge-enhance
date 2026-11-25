@@ -1,5 +1,5 @@
 message(STATUS "")
-message(STATUS "gigaedge-enhance ${PROJECT_VERSION} configuration summary")
+message(STATUS "giga-edge-enhance ${PROJECT_VERSION} configuration summary")
 message(STATUS "  Build type ............... ${CMAKE_BUILD_TYPE}")
 message(STATUS "  Shared libraries ......... ${GEE_SHARED_LIBS}")
 if(BUILD_TFLITE_ENGINE)
