@@ -14,8 +14,8 @@ C++ classes use short names in
 `giga_edge::enhance`; C symbols use `GigaEdgeEnhance`, the installed CMake target is
 `giga-edge::enhance`, and the Swift module/types use `EnhanceAudioKit` / `Enhance*`.
 The repository slug and public dependency revisions stay unchanged.
-The release manifest records the last released 1.0.0 until Release Please prepares the 2.0 release;
-`VERSION_NUMBER`, SDK metadata and package contents are prepared for 2.0.0.
+GigaEdge Enhance starts at 1.0.0 across all platforms so the Git tag, packages
+and model catalog agree on the first public SDK version.
 
 The umbrella C++ header is `giga-edge-enhance.h`. The native library and CMake
 package use `giga-edge-enhance`; C++ uses `giga_edge` for its root namespace.
