@@ -91,6 +91,23 @@ outputs are written under `out/`.
 
 Report vulnerabilities privately as described in the [security policy](SECURITY.md).
 
+## Citation
+
+[**GigaEdge Enhance: An SDK for Practical Streaming Speech Enhancement**](https://arxiv.org/abs/2611.13243)
+
+```bibtex
+@misc{giga_edge_enhance,
+  title         = {{GigaEdge Enhance}: An {SDK} for Practical Streaming Speech Enhancement},
+  author        = {Artem Sokolov and Artem Khaidarov and Yana Lysova and
+                   Alexander Gladkikh and Vitaliy Yulis},
+  year          = {2026},
+  eprint        = {2611.13243},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2611.13243}
+}
+```
+
 ## License
 
 GigaEdge Enhance is available under the [MIT License](LICENSE.txt).
