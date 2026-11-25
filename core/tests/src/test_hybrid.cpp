@@ -138,6 +138,7 @@ TEST_CASE("Public denoiser API creates and processes hybrid contexts", "[hybrid]
   using namespace giga_edge::enhance;
   Denoiser denoiser(YAML::Dump(hybrid_config()->params()));
   auto* context = denoiser.CreateContext();
+  CHECK(denoiser.GetStreamStat(context).snr == 0.0F);
   REQUIRE(dynamic_cast<DenoiseContextHybrid<float>*>(context) != nullptr);
   std::vector<float> input(768);
   for (size_t i = 0; i < input.size(); ++i) {

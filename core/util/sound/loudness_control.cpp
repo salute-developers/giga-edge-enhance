@@ -320,6 +320,7 @@ class LoudnessControlImpl : public ILoudnessControl {
     s.last_short_term_lufs = current_db_;
     s.longterm_max_lufs = max_lufs_;
     s.longterm_min_lufs = min_lufs_;
+    s.bypass_active = (skip_counter_ > 0);
     return s;
   }
 
