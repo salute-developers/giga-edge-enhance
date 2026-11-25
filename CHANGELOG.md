@@ -5,7 +5,6 @@
 
 ### ⚠ BREAKING CHANGES
 
-* update SDK product branding
 * **web-sdk:** remove enable/disable methods
 * **web-sdk:** remove ready and error events
 * **web-sdk:** separate DSP SDK core and use logger verbosity
@@ -69,7 +68,6 @@
 * **onnx:** add num_threads and restart_session parameters ([079d975](https://github.com/salute-developers/gigadenoiser/commit/079d975b60baba46111e9d10ebbf7b44f206010e))
 * **onnx:** add wasm build mode ([6bcb627](https://github.com/salute-developers/gigadenoiser/commit/6bcb627e32c2988ac3d2415651ef35f71c09da2a))
 * remove dereverb ([fddf60d](https://github.com/salute-developers/gigadenoiser/commit/fddf60d13086f3d08170dc6c8a89c7fbd91ece3d))
-* update SDK product branding ([02dd301](https://github.com/salute-developers/gigadenoiser/commit/02dd30120ade3a499473d92206c0f649189d0562))
 * **resampler:** add libsoxr resampler ([5c79508](https://github.com/salute-developers/gigadenoiser/commit/5c79508d5cdd8471ce2fd047b82408a864727aae))
 * **resampling:** integrate audio stream resampling into frame processing pipeline ([07f99a6](https://github.com/salute-developers/gigadenoiser/commit/07f99a6c82ae584dfb70421efdfaa36c75fe231c))
 * **sound:** add RangeControl class ([f7fd494](https://github.com/salute-developers/gigadenoiser/commit/f7fd4942f81a97cd5770b24fd9f1d619f1c6f068))
