@@ -62,7 +62,7 @@ class PreMuter {
  public:
   explicit PreMuter(int32_t fs, float threshold_db = -30, float suppress_db = -30, float time = 1)
       : threshold_db_{threshold_db}, target_level_{dsplib::db2mag(suppress_db)} {
-    steps_ = std::round((time * fs) / 1000);
+    steps_ = std::round(time * fs);
     loud_meter_ = std::make_unique<sound::LoudnessMeter>(fs);
   }
 
