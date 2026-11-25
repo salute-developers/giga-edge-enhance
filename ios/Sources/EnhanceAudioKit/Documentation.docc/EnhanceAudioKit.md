@@ -18,7 +18,7 @@ Use EnhanceAudioKit when you want to run GigaEdge Enhance normalization and deno
 - <doc:QuickStart>
 - <doc:ThreadingAndLifecycle>
 - <doc:ModelBundles>
-- <doc:EnhanceTelemetry>
+- <doc:Telemetry>
 - <doc:ErrorHandling>
 
 ### Audio Unit Integration
