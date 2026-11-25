@@ -1,4 +1,4 @@
 generated/
 src/utils/version.ts
-# Staged from the repository-root LICENSE by scripts/stage-license.mjs.
+# Staged from the repository-root LICENSE.txt by scripts/stage-license.mjs.
 LICENSE

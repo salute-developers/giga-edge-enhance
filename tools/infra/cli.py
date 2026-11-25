@@ -13,6 +13,7 @@ from .identity import (
     print_cache_keys,
     toolchain_recipe_digest,
 )
+from .python_workflow import python_workflow
 from .workflows import (
     android_ui_workflow,
     android_workflow,
@@ -24,20 +25,21 @@ from .workflows import (
 
 
 CMAKE_PRESETS = (*PRESET_STAGES, *HOST_ONLY_PRESETS)
-NATIVE_PRESETS = tuple(preset for preset in PRESET_STAGES if preset.startswith("native-"))
+NATIVE_PRESETS = tuple(preset for preset in PRESET_STAGES if preset.startswith(("native-", "python-")))
 WASM_PRESETS = tuple(preset for preset in PRESET_STAGES if preset.startswith("wasm-"))
 DESKTOP_PRESETS = tuple(
     preset for preset in HOST_ONLY_PRESETS if preset.startswith(("macos-", "windows-")))
 IOS_PRESETS = tuple(preset for preset in HOST_ONLY_PRESETS if preset.startswith("ios-"))
 
-BUILD_TARGETS = (*CMAKE_PRESETS, "android", "ios", "web")
+PYTHON_TARGETS = ("python", "python-macos", "python-windows", "python-wheels", "python-sdist", "python-lint")
+BUILD_TARGETS = (*CMAKE_PRESETS, "android", "ios", "web", *(target for target in PYTHON_TARGETS if target != "python-lint"))
 TEST_TARGETS = (
     *(preset for preset in NATIVE_PRESETS if preset != "native-model-packer"),
     *WASM_PRESETS,
     *DESKTOP_PRESETS,
-    "android", "android-ui", "ios", "web", "web-playwright",
+    "android", "android-ui", "ios", "web", "web-playwright", *PYTHON_TARGETS,
 )
-PACKAGE_TARGETS = ("native-release-onnx", "native-release-tflite", "web")
+PACKAGE_TARGETS = ("native-release-onnx", "native-release-tflite", "web", *(target for target in PYTHON_TARGETS if target != "python-lint"))
 INSTALL_TARGETS = (
     *(preset for preset in NATIVE_PRESETS if preset != "native-model-packer"),
     *DESKTOP_PRESETS,
@@ -64,7 +66,7 @@ def _workflow_parser(command: str, targets: tuple[str, ...]) -> argparse.Argumen
 
 def _validate_host(target: str, host: bool) -> None:
     if host and target not in {
-            *PRESET_STAGES, *ANDROID_DEPENDENCY_TARGETS, "android", "web", "web-playwright"}:
+            *PRESET_STAGES, *ANDROID_DEPENDENCY_TARGETS, "android", "web", "web-playwright", "python"}:
         raise SystemExit(f"{target} already uses its required host toolchain; --host is not supported.")
 
 
@@ -72,6 +74,8 @@ def _run_workflow(action: str, target: str, host: bool) -> None:
     _validate_host(target, host)
     if target in CMAKE_PRESETS:
         cmake_workflow(action, target, host)
+    elif target in PYTHON_TARGETS:
+        python_workflow(action, target, host)
     elif target == "android":
         android_workflow(action, host)
     elif target == "android-ui":
@@ -126,8 +130,8 @@ def _add_ci_target(subparsers, action: str, targets: tuple[str, ...], *, artifac
 def ci_main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run CI infrastructure operations.")
     subparsers = parser.add_subparsers(dest="action", required=True)
-    _add_ci_target(subparsers, "image-key", ("native", "web", "android", "android-ui"))
-    _add_ci_target(subparsers, "recipe-key", ("native", "web", "android"))
+    _add_ci_target(subparsers, "image-key", ("native", "web", "android", "android-ui", "python"))
+    _add_ci_target(subparsers, "recipe-key", ("native", "web", "android", "python"))
     _add_ci_target(subparsers, "cache-key", CACHE_TARGETS, host=True)
     _add_ci_target(subparsers, "prepare-deps", (*DEPENDENCY_TARGETS, *DEPENDENCY_GROUPS), host=True)
     _add_ci_target(subparsers, "dependency-key", DEPENDENCY_TARGETS, host=True)

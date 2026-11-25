@@ -173,6 +173,10 @@ elseif(BUILD_ONNX_ENGINE)
       message(WARNING "Ignoring incomplete prebuilt ONNX Runtime bundle at ${GEE_PREBUILT_ORT_ROOT}; falling back to CPM.")
     endif()
     set(onnxruntime_BUILD_UNIT_TESTS OFF)
+    # ONNX Runtime otherwise discovers Eigen from CMake's user package registry,
+    # including incomplete or unrelated TFLite build trees sharing the same HOME.
+    # Always use the Eigen revision pinned by ONNX Runtime's FetchContent recipe.
+    set(CMAKE_DISABLE_FIND_PACKAGE_Eigen3 ON)
 
     if(EMSCRIPTEN)
       set(onnxruntime_BUILD_WEBASSEMBLY_STATIC_LIB ON)
@@ -203,6 +207,13 @@ elseif(BUILD_ONNX_ENGINE)
     set(BUILD_SHARED_LIBS OFF)
     CPMGetPackage(onnxruntime)
     set(BUILD_SHARED_LIBS "${_gee_build_shared_libs}")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
+       CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14 AND TARGET onnxruntime_optimizer)
+      # GCC 14 diagnoses libstdc++'s variant/function copy machinery in the
+      # pinned optimizer. Keep the diagnostic visible without applying ORT's
+      # blanket -Werror to this warning; the SDK's own warning policy is unchanged.
+      target_compile_options(onnxruntime_optimizer PRIVATE -Wno-error=maybe-uninitialized)
+    endif()
     if(GEE_PREPARE_DEPENDENCY_BUNDLE AND NOT EMSCRIPTEN)
       if(GEE_ENGINE_BUNDLE_LINKAGE STREQUAL "static")
         gee_define_dependency_bundle_target(

@@ -47,7 +47,8 @@ def run(command: list[str], *, container_stage: str | None = None,
         environment: dict[str, str] | None = None, workdir: Path = ROOT,
         isolate_web_node_modules: bool = False,
         devices: tuple[str, ...] = (), interactive: bool = False,
-        mount_host_home: bool = False) -> None:
+        mount_host_home: bool = False,
+        additional_mounts: tuple[tuple[Path, str], ...] = ()) -> None:
     if interactive and (not sys.stdin.isatty() or not sys.stdout.isatty()):
         raise SystemExit("The shell action requires an interactive terminal.")
     if container_stage is None:
@@ -68,6 +69,8 @@ def run(command: list[str], *, container_stage: str | None = None,
         "--volume", f"{ROOT}:/workspace",
         "--workdir", f"/workspace/{workdir.relative_to(ROOT)}",
     ]
+    for source, destination in additional_mounts:
+        container_command.extend(("--volume", f"{source}:{destination}"))
     if interactive:
         container_command.extend(("--interactive", "--tty"))
     if mount_host_home:

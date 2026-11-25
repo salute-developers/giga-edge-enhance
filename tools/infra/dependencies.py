@@ -24,16 +24,29 @@ from .identity import (
     dependency_artifact_root,
     dependency_bundle_digest,
     dependency_manifest,
+    dependency_toolchain_identity,
     engine_requirement,
 )
 
 
-def copy_onnx_headers(prefix: Path) -> None:
-    source_roots = sorted((ROOT / "out" / "cache" / "cpm" / "onnxruntime").glob("*/include"))
-    if not source_roots:
-        raise SystemExit("ONNX Runtime source headers were not found in out/cache/cpm after CPM preparation.")
+def dependency_source_directory(build_dir: Path, package: str) -> Path:
+    """Select the exact source tree that produced the compiled dependency."""
+    key = f"CPM_PACKAGE_{package}_SOURCE_DIR:"
+    for line in (build_dir / "CMakeCache.txt").read_text().splitlines():
+        if line.startswith(key):
+            value = line.partition("=")[2]
+            source = (ROOT / value.removeprefix("/workspace/")
+                      if value.startswith("/workspace/") else Path(value))
+            if source.is_dir():
+                return source
+            raise SystemExit(f"Configured {package} source directory is missing: {source}")
+    raise SystemExit(f"No configured {package} source directory in {build_dir}/CMakeCache.txt")
+
+
+def copy_onnx_headers(prefix: Path, build_dir: Path) -> None:
+    source = dependency_source_directory(build_dir, "onnxruntime")
     destination = prefix / "include" / "onnxruntime"
-    shutil.copytree(source_roots[-1] / "onnxruntime", destination, dirs_exist_ok=True)
+    shutil.copytree(source / "include" / "onnxruntime", destination, dirs_exist_ok=True)
 
 
 def copy_header_tree(source: Path, destination: Path) -> None:
@@ -52,18 +65,10 @@ def copy_header_tree(source: Path, destination: Path) -> None:
     print(f"Copied {copied} public headers from {source}.")
 
 
-def copy_tflite_headers(prefix: Path, build_dir: Path | None = None) -> None:
+def copy_tflite_headers(prefix: Path, build_dir: Path) -> None:
     """Copy TFLite's public headers and its header-only public dependencies."""
-    source_roots = []
-    if build_dir is not None:
-        source_roots.extend((build_dir / "_deps").glob("tflite-src/tensorflow"))
-    source_roots.extend((ROOT / "out" / "cache" / "cpm" / "tflite").glob("*/tensorflow"))
-    source_roots = sorted(set(source_roots))
-    if not source_roots:
-        raise SystemExit("TensorFlow Lite headers were not found after CPM preparation.")
-    copy_header_tree(source_roots[-1] / "lite", prefix / "include" / "tensorflow" / "lite")
-    if build_dir is None:
-        return
+    source = dependency_source_directory(build_dir, "tflite")
+    copy_header_tree(source / "tensorflow" / "lite", prefix / "include" / "tensorflow" / "lite")
 
     header_dependencies = {
         "flatbuffers": ("flatbuffers.h", 0),
@@ -255,7 +260,8 @@ def restore_dependency_bundle(target: str, host: bool, archive: Path) -> None:
         raise SystemExit(f"Restored dependency bundle is incomplete: {artifact_root}")
     manifest = json.loads(manifest_path.read_text())
     engine = str(manifest.get("engine"))
-    if manifest.get("dependency_digest") != dependency_bundle_digest(engine):
+    if manifest.get("dependency_digest") != dependency_bundle_digest(
+            engine, toolchain_identity=dependency_toolchain_identity(target)):
         raise SystemExit(f"Restored dependency manifest does not match {target}.")
     requirement = engine_requirement(target)
     target_system, target_arch = cache_target(target, host)
@@ -265,7 +271,7 @@ def restore_dependency_bundle(target: str, host: bool, archive: Path) -> None:
         "linkage": bundle_linkage(target),
         "target_system": target_system,
         "target_architecture": target_arch,
-        "toolchain_identity": os.environ.get("GEE_TOOLCHAIN_IDENTITY", "local-host"),
+        "toolchain_identity": dependency_toolchain_identity(target),
     }
     mismatches = {
         key: (manifest.get(key), value)
@@ -359,14 +365,18 @@ def prepare_dependency(preset: str, host: bool) -> Path | None:
         environment = compiler_cache_environment(container)
         target_system, target_arch = cache_target(preset, host)
         linkage = bundle_linkage(preset)
+        # Compilers can differ for the same OS/arch (Ubuntu native vs manylinux).
+        # Isolate CMake's compiler cache with the same identity as its final bundle.
         build_dir_host = (ROOT / "out" / "build" / "prebuilt" / target_system / target_arch /
-                          engine / build_type.lower() / linkage)
+                          engine / build_type.lower() / linkage / artifact_root.name)
         build_dir = (f"/workspace/{build_dir_host.relative_to(ROOT)}"
                      if container else str(build_dir_host))
         configure_command = [
             "cmake", "--preset", artifact_preset(preset), "-B", build_dir,
             f"-DGEE_ENGINE_BUNDLE_LINKAGE={linkage}",
             "-DGEE_PREPARE_DEPENDENCY_BUNDLE=ON",
+            "-DGEE_PREBUILT_ORT_ROOT=",
+            "-DGEE_PREBUILT_TFLITE_ROOT=",
         ]
         if container and stage in {"native", "web"}:
             configure_command.extend(("-DCMAKE_AR=/usr/bin/llvm-ar",
@@ -376,6 +386,10 @@ def prepare_dependency(preset: str, host: bool) -> Path | None:
         targets = (["libonnxruntime_webassembly.a"]
                    if preset.startswith("wasm-") else ["gee_dependency_bundle"])
         build_command = ["cmake", "--build", build_dir, "--target", *targets, "--parallel"]
+        if jobs := os.environ.get("CMAKE_BUILD_PARALLEL_LEVEL"):
+            if not jobs.isdecimal() or int(jobs) < 1:
+                raise SystemExit("CMAKE_BUILD_PARALLEL_LEVEL must be a positive integer.")
+            build_command.append(jobs)
         build_command.extend(("--config", build_type))
         run(build_command, container_stage=stage, environment=environment)
         if preset.startswith("wasm-") and engine == "onnx":
@@ -388,7 +402,7 @@ def prepare_dependency(preset: str, host: bool) -> Path | None:
             library = copy_engine_library(prefix, engine, build_dir_host)
             write_engine_package_config(prefix, engine, library, linkage)
         if engine == "onnx":
-            copy_onnx_headers(prefix)
+            copy_onnx_headers(prefix, build_dir_host)
         else:
             copy_tflite_headers(prefix, build_dir_host)
 
@@ -418,16 +432,17 @@ def find_prebuilt_dependency(preset: str, host: bool) -> Path | None:
 
 def prebuilt_cmake_arguments(preset: str, host: bool, prefix: Path | None,
                              container: bool) -> list[str]:
-    if prefix is None:
-        return []
     requirement = engine_requirement(preset)
     if requirement is None:
         return []
+    variable = ("GEE_PREBUILT_ORT_ROOT" if requirement[0] == "onnx"
+                else "GEE_PREBUILT_TFLITE_ROOT")
+    if prefix is None:
+        # Clear a previous configure's prefix when its recipe no longer matches.
+        return [f"-D{variable}="]
     root = str(prefix)
     if container:
         root = f"/workspace/{prefix.relative_to(ROOT)}"
-    variable = ("GEE_PREBUILT_ORT_ROOT" if requirement[0] == "onnx"
-                else "GEE_PREBUILT_TFLITE_ROOT")
     return [f"-D{variable}={root}"]
 
 

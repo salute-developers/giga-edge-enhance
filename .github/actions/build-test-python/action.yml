@@ -1,0 +1,91 @@
+name: Build and test Python distributions
+description: Restore both exact dependencies, repair wheels, then test installed products.
+inputs:
+  preset-prefix:
+    description: Exact platform preset prefix shared by both engines.
+    required: true
+  toolchain-identity:
+    description: Identity of the required native toolchain.
+    required: true
+  toolchain-image:
+    description: Required manylinux image on Linux.
+    default: ''
+  artifact-name:
+    description: Concrete platform's artifact name.
+    required: true
+  source-distribution:
+    description: Build and test the canonical source archive.
+    default: 'false'
+  token:
+    description: GitHub token with packages read permission.
+    required: true
+  upload-artifacts:
+    description: Whether deliberate products/diagnostics are uploaded.
+    default: 'true'
+  artifact-retention-days:
+    description: Product retention in days.
+    default: '1'
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/setup-dependency
+      with:
+        target: ${{ inputs.preset-prefix }}-onnx
+        toolchain-identity: ${{ inputs.toolchain-identity }}
+        token: ${{ inputs.token }}
+    - uses: ./.github/actions/setup-dependency
+      with:
+        target: ${{ inputs.preset-prefix }}-tflite
+        toolchain-identity: ${{ inputs.toolchain-identity }}
+        token: ${{ inputs.token }}
+    - name: Build and repair Python wheels
+      shell: bash
+      env:
+        GEE_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        GEE_CONTAINER_IMAGE_PYTHON: ${{ inputs.toolchain-image }}
+      run: python tools/build python-wheels
+    - name: Test installed repaired wheels
+      shell: bash
+      env:
+        GEE_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        GEE_CONTAINER_IMAGE_PYTHON: ${{ inputs.toolchain-image }}
+      run: python tools/test python-wheels
+    - name: Build source distribution
+      if: inputs.source-distribution == 'true'
+      shell: bash
+      run: python tools/build python-sdist
+    - name: Build and test consumer from source distribution
+      if: inputs.source-distribution == 'true'
+      shell: bash
+      env:
+        GEE_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+        GEE_CONTAINER_IMAGE_PYTHON: ${{ inputs.toolchain-image }}
+      run: python tools/test python-sdist
+    - name: Verify products and write manifest
+      shell: bash
+      env:
+        GEE_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
+      run: python tools/package python-wheels
+    - uses: actions/upload-artifact@v7
+      if: success() && inputs.upload-artifacts == 'true'
+      with:
+        name: ${{ inputs.artifact-name }}-${{ github.sha }}
+        path: out/artifacts/python-release/
+        if-no-files-found: error
+        retention-days: ${{ inputs.artifact-retention-days }}
+    - name: Upload Python diagnostics
+      uses: actions/upload-artifact@v7
+      if: failure() && inputs.upload-artifacts == 'true'
+      with:
+        name: ${{ inputs.artifact-name }}-diagnostics-${{ github.sha }}
+        path: |
+          out/python/logs/
+          out/python/**/CMakeConfigureLog.yaml
+          out/python/**/CMakeError.log
+          out/python/**/LastTest.log
+        if-no-files-found: ignore
+        retention-days: 1
+    - name: Summarize Python products
+      if: always()
+      shell: bash
+      run: python python/scripts/summary.py

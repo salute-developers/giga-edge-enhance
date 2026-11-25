@@ -148,8 +148,8 @@ These commands support composite actions and workflows. Contributors normally
 do not need them for source-level work.
 
 ```text
-tools/ci image-key {native|web|android|android-ui}
-tools/ci recipe-key {native|web|android}
+tools/ci image-key {native|web|android|android-ui|python}
+tools/ci recipe-key {native|web|android|python}
 tools/ci cache-key TARGET [--host]
 tools/ci prepare-deps TARGET [--host]
 tools/ci dependency-key TARGET [--host]
@@ -167,7 +167,8 @@ macos
 windows
 ```
 
-Concrete dependency targets are native ONNX/TFLite targets, `wasm-debug`,
+Concrete dependency targets are native ONNX/TFLite targets,
+`python-release-onnx`, `python-release-tflite`, `wasm-debug`,
 `wasm-release`, all macOS and Windows ONNX/TFLite targets, all four iOS slice
 targets, and:
 
@@ -182,6 +183,24 @@ android-release-tflite-x86
 bundles.
 
 ## Common Workflows
+
+### Python SDK
+
+Run the following from a checkout with Git LFS files restored (`git lfs pull`). On Linux, the `python` target uses Docker. On macOS use `python-macos` with Xcode Command Line Tools. On Windows use `python-windows` in x64 Developer PowerShell.
+
+```sh
+python tools/build python
+python tools/test python
+python tools/package python
+```
+
+The development wheel is written to `out/artifacts/<target>/`. Tests install it in a separate environment and compare Python output with the C++ SDK. For a sanitizer build on macOS, set `GEE_PYTHON_SANITIZE=1` for the build and test. Rebuild normally before packaging.
+
+For release wheels, use a Python 3.11+ driver and run `tools/build python-wheels` followed by `tools/test python-wheels`. Linux also requires `tools/build python-sdist` and `tools/test python-sdist` before `tools/package python-wheels`. Run `tools/test python-lint` for formatting and type checks. CI repairs and tests CPython 3.10–3.14 wheels for Linux x86_64, macOS arm64 and x86_64, and Windows x64.
+
+When model files change, run `python python/scripts/update_catalog.py` and review the hashes. The Hub repository uses the same `<model>/<backend>/` directories as `models/`, with the original weights and YAML, a model card and the root `LICENSE.txt`. The catalog ships in the Python package.
+
+### Native, web and mobile SDKs
 
 ```bash
 # Fast native validation

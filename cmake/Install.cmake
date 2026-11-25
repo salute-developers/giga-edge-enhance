@@ -113,7 +113,7 @@ endif()
 # its terms. Third-party dependency notices are tracked separately and are still required
 # before publishing binaries that statically link non-MIT dependencies.
 install(
-  FILES "${CMAKE_SOURCE_DIR}/LICENSE"
+  FILES "${CMAKE_SOURCE_DIR}/LICENSE.txt"
   DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/enhance"
 )
 
@@ -125,7 +125,7 @@ endif()
 set(GEE_ARTIFACT_VERSION "${_gee_default_artifact_version}" CACHE STRING
     "Version used in distributable artifact names; may include a SemVer prerelease suffix." FORCE)
 set(CPACK_PACKAGE_VERSION ${GEE_ARTIFACT_VERSION})
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.txt")
 
 # CPack captures the CPACK_* variables when it is included, so this must stay last. Including
 # it earlier silently discarded the GEE_ARTIFACT_VERSION override above.

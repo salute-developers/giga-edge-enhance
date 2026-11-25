@@ -1,5 +1,6 @@
 set(GEE_DEPS
   util__echo
+  util__packed_model
   util::sound
   yaml-cpp
   spdlog_header_only
@@ -52,7 +53,7 @@ if(BUILD_TFLITE_ENGINE OR BUILD_ONNX_ENGINE OR TARGET onnxruntime::onnxruntime)
     src/denoiser.cpp
     src/c_api.cpp
   )
-  list(APPEND GEE_DEPS util__packed_model ctpl pocketfft)
+  list(APPEND GEE_DEPS ctpl pocketfft)
 endif()
 
 if(BUILD_TFLITE_ENGINE)
