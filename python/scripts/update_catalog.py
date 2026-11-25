@@ -34,8 +34,8 @@ def content() -> str:
                     model_type=model_type,
                     sample_rate=sample_rate,
                     subfolder=f"{name}/{backend}",
-                    minimum_sdk_version="2.0.0",
-                    maximum_sdk_major=2,
+                    minimum_sdk_version="1.0.0",
+                    maximum_sdk_major=1,
                     files=files,
                 )
             )

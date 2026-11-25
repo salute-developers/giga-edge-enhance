@@ -1,6 +1,12 @@
 # Changelog
 
-## [1.0.0](https://github.com/salute-developers/gigadenoiser/compare/v0.0.1...v1.0.0) (2026-09-18)
+## 1.0.0
+
+- Stream speech enhancement with the `fast8`, `quality48`, and `hybrid48` models.
+- Process WAV files and NumPy streams in Python, and load verified ONNX or TensorFlow Lite exports from Hugging Face.
+- Integrate the native SDK into C, C++, Android, iOS, and web applications.
+
+## [Development history through 2026-09-18](https://github.com/salute-developers/giga-edge-enhance/commit/afd6c8570c7d43da8ef60b29db4da4a2b2dc56cb)
 
 
 ### ⚠ BREAKING CHANGES
