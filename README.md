@@ -2,7 +2,7 @@
 
 Version 2.0 introduces a breaking rename. See the [upgrade guide](web/apps/site/docs/development/upgrade.md).
 
-![GigaEdge Enhance](enhance_logo.svg)
+<img src="enhance_logo.svg" alt="GigaEdge Enhance" width="33%">
 
 GigaEdge Enhance is a cross-platform SDK for real-time speech enhancement. It adds neural noise
 suppression, loudness normalization, and, on supported platforms, acoustic echo cancellation to
@@ -10,7 +10,7 @@ native, mobile, and web applications.
 
 ## Research paper
 
-Research paper link will be added later.
+[GigaEdge Enhance: An SDK for Practical Streaming Speech Enhancement](https://arxiv.org/abs/2611.13243).
 
 ## Choose an SDK
 

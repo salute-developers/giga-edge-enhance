@@ -8,7 +8,7 @@ import Foundation
 /// fresh, immutable copy. Use ``-(_:_:)`` to compute a positive delta between
 /// two snapshots when you need windowed statistics.
 ///
-/// See <doc:EnhanceTelemetry> for usage patterns.
+/// See <doc:Telemetry> for usage patterns.
 public struct EnhanceTelemetry: Equatable, Sendable {
     /// Empty snapshot, useful as a baseline placeholder.
     public static let empty = EnhanceTelemetry(audioProcessingCounters: [:], denoiserCounters: [:])
