@@ -14,6 +14,12 @@ target "native" {
   }
 }
 
+target "python" {
+  context    = "."
+  dockerfile = "dockerfiles/Dockerfile.python"
+  platforms  = ["linux/amd64"]
+}
+
 target "web" {
   context    = "."
   dockerfile = "dockerfiles/Dockerfile.web"

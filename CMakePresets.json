@@ -7,6 +7,26 @@
   },
   "configurePresets": [
     {
+      "name": "python-release-onnx",
+      "displayName": "Manylinux Python Release dependency (ONNX)",
+      "inherits": ["base", "native-release-onnx-options"],
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "BUILD_SHARED_LIBS": "ON"
+      }
+    },
+    {
+      "name": "python-release-tflite",
+      "displayName": "Manylinux Python Release dependency (TFLite)",
+      "inherits": ["base", "native-release-tflite-options"],
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "BUILD_SHARED_LIBS": "ON"
+      }
+    },
+    {
       "name": "base",
       "hidden": true,
       "generator": "Ninja",
@@ -386,6 +406,8 @@
     }
   ],
   "buildPresets": [
+    {"name": "python-release-onnx", "configurePreset": "python-release-onnx"},
+    {"name": "python-release-tflite", "configurePreset": "python-release-tflite"},
     {
       "name": "macos-build-base",
       "hidden": true,
@@ -579,6 +601,8 @@
     }
   ],
   "testPresets": [
+    {"name": "python-release-onnx", "configurePreset": "python-release-onnx", "output": {"outputOnFailure": true}},
+    {"name": "python-release-tflite", "configurePreset": "python-release-tflite", "output": {"outputOnFailure": true}},
     {
       "name": "macos-test-base",
       "hidden": true,

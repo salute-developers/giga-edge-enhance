@@ -43,7 +43,11 @@ const repositoryDocumentation = [
 
 function normalizeForDocusaurus(content, sourcePath) {
     const toolsLink = sourcePath.endsWith(`${sep}CONTRIBUTING.md`) ? '../tools/' : './tools/';
+    const sdk = 'https://github.com/salute-developers/giga-edge-enhance/blob/master';
     const normalizedLinks = content
+        .replace('(LICENSE.txt)', '(./LICENSE.md)')
+        .replace('(samples/README.md)', `(${sdk}/samples/README.md)`)
+        .replace('(python/readme.md#quick-start)', `(${sdk}/python/readme.md#quick-start)`)
         .replace(/\(tools\/README\.md\)/g, `(${toolsLink})`)
         .replace(/\(web\/apps\/site\/docs\//g, '(../');
     if (!sourcePath.includes(`${sep}Documentation.docc${sep}`)) {
@@ -56,7 +60,7 @@ function normalizeForDocusaurus(content, sourcePath) {
 await rm(generatedDirectory, { recursive: true, force: true });
 await mkdir(sourceDirectory, { recursive: true });
 await cp(resolve(siteDirectory, 'docs'), generatedDirectory, { recursive: true });
-await cp(resolve(repositoryRoot, 'LICENSE'), resolve(sourceDirectory, 'LICENSE.md'));
+await cp(resolve(repositoryRoot, 'LICENSE.txt'), resolve(sourceDirectory, 'LICENSE.md'));
 // README.md references this file from the repository root. The staged copy
 // resolves that same relative URL from .generated-docs/source/.
 await cp(resolve(repositoryRoot, 'enhance_logo.svg'), resolve(sourceDirectory, 'enhance_logo.svg'));

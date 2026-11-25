@@ -50,6 +50,7 @@ runs:
       env:
         GEE_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
         GEE_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        GEE_CONTAINER_IMAGE_PYTHON: ${{ inputs.toolchain-image }}
         GEE_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
         GEE_CONTAINER_IMAGE_ANDROID: ${{ inputs.toolchain-image }}
         TARGET: ${{ inputs.target }}
@@ -100,6 +101,7 @@ runs:
       env:
         GEE_TOOLCHAIN_IDENTITY: ${{ inputs.toolchain-identity }}
         GEE_CONTAINER_IMAGE_NATIVE: ${{ inputs.toolchain-image }}
+        GEE_CONTAINER_IMAGE_PYTHON: ${{ inputs.toolchain-image }}
         GEE_CONTAINER_IMAGE_WEB: ${{ inputs.toolchain-image }}
         GEE_CONTAINER_IMAGE_ANDROID: ${{ inputs.toolchain-image }}
         TARGET: ${{ inputs.target }}

@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 BAKE_FILE = ROOT / "docker-bake.hcl"
 BASE_DOCKERFILE = ROOT / "dockerfiles/Dockerfile.base"
 TOOLCHAIN_DOCKERFILES = {
+    "python": ROOT / "dockerfiles/Dockerfile.python",
     "native": ROOT / "dockerfiles/Dockerfile.native",
     "web": ROOT / "dockerfiles/Dockerfile.web",
     "android": ROOT / "dockerfiles/Dockerfile.android",
@@ -19,6 +20,8 @@ WEB_IMAGE_INPUTS = (
     ROOT / "web/apps/site/requirements-mos.txt",
 )
 PRESET_STAGES = {
+    "python-release-onnx": "python",
+    "python-release-tflite": "python",
     "native-debug-onnx": "native",
     "native-release-onnx": "native",
     "native-debug-tflite": "native",
@@ -78,6 +81,8 @@ ANDROID_DEPENDENCY_TARGETS = {
 }
 ANDROID_NDK_VERSION = "29.0.14206865"
 NATIVE_PRESETS = {
+    "python-release-onnx",
+    "python-release-tflite",
     "native-debug-onnx",
     "native-release-onnx",
     "native-debug-tflite",

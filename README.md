@@ -6,15 +6,14 @@ GigaEdge Enhance is a cross-platform SDK for real-time speech enhancement. It ad
 suppression, loudness normalization, and, on supported platforms, acoustic echo cancellation to
 native, mobile, and web applications.
 
-## Research paper
-
-[GigaEdge Enhance: An SDK for Practical Streaming Speech Enhancement](https://arxiv.org/abs/2611.13243).
+[Models on Hugging Face](https://huggingface.co/ai-sage/GigaEdge-Enhance) · [Research paper](https://arxiv.org/abs/2611.13243) · [Listen to the 15-second comparison](samples/README.md)
 
 ## Choose an SDK
 
 | Platform | Start here |
 | --- | --- |
 | C and C++ | [Quickstart](web/apps/site/docs/core/quickstart.md) |
+| Python | [Quick start](python/readme.md#quick-start) |
 | Web | [Web SDK](web/packages/web-sdk/README.md) |
 | Android | [Android SDK](android/README.md) |
 | iOS | [Quick Start](ios/Sources/EnhanceAudioKit/Documentation.docc/QuickStart.md) |
@@ -47,7 +46,7 @@ shows the streaming loop, `GetFinalChunk`, and the C API.
 
 ## Use a release
 
-Pin a [GitHub Release](https://github.com/salute-developers/gigadenoiser/releases). Each release
+Pin a [GitHub Release](https://github.com/salute-developers/giga-edge-enhance/releases). Each release
 contains the tested native, Android, iOS, and Web SDK archives. The Web SDK archive is an npm
 tarball. The release workflow does not publish that tarball to the npm registry.
 
@@ -93,7 +92,7 @@ Report vulnerabilities privately as described in the [security policy](SECURITY.
 
 ## License
 
-GigaEdge Enhance is available under the [MIT License](LICENSE).
+GigaEdge Enhance is available under the [MIT License](LICENSE.txt).
 
 ## Acknowledgement
 

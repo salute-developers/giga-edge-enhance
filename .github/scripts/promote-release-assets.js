@@ -14,6 +14,10 @@ const ARTIFACTS = [
     ['gdn-android', 'gigaedge-enhance-android'],
     ['gdn-ios', 'gigaedge-enhance-ios'],
     ['gdn-web-sdk', 'gigaedge-enhance-web-sdk'],
+    ['gdn-python-linux', 'gigaedge-enhance-python-linux'],
+    ['gdn-python-macos-arm64', 'gigaedge-enhance-python-macos-arm64'],
+    ['gdn-python-macos-x86_64', 'gigaedge-enhance-python-macos-x86_64'],
+    ['gdn-python-windows-x86_64', 'gigaedge-enhance-python-windows-x86_64'],
 ];
 
 function asBuffer(data) {
