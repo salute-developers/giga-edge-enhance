@@ -7,8 +7,8 @@
       "model_type": "denoiser_discr_web_model",
       "sample_rate": 48000,
       "subfolder": "quality48/onnx",
-      "minimum_sdk_version": "2.0.0",
-      "maximum_sdk_major": 2,
+      "minimum_sdk_version": "1.0.0",
+      "maximum_sdk_major": 1,
       "files": {
         "config.yaml": "6f8fb18bd7b868d8079265c0c061778a0f5bdc55d942ae30c1c369aeaacb5309",
         "model.onnx": "ff227f44600ca71fb54b4902c5ebe698ce812a110c2d4b400f96d959a69dde85"
@@ -20,8 +20,8 @@
       "model_type": "denoiser_discr_web_model",
       "sample_rate": 48000,
       "subfolder": "quality48/tflite",
-      "minimum_sdk_version": "2.0.0",
-      "maximum_sdk_major": 2,
+      "minimum_sdk_version": "1.0.0",
+      "maximum_sdk_major": 1,
       "files": {
         "config.yaml": "083f3179c3a1d91f3657d92fb9019804ed93840fe4c1455ec041ff734dcece77",
         "model.tflite": "094ab113c095a37daa225862a91ec1f3a40e026b2a42f2d370a7fd782360c137"
@@ -33,8 +33,8 @@
       "model_type": "denoiser_hybrid_web_model",
       "sample_rate": 48000,
       "subfolder": "hybrid48/onnx",
-      "minimum_sdk_version": "2.0.0",
-      "maximum_sdk_major": 2,
+      "minimum_sdk_version": "1.0.0",
+      "maximum_sdk_major": 1,
       "files": {
         "config.yaml": "2b7b388ed0942f0a9297970dfccba134c1733c42b5e79af6e9be35ca53dfd126",
         "model.onnx": "ca56b5a1748032baafe19deb9de22a8925555408af0ee77cb49934f1a3d1bbc3"
@@ -46,8 +46,8 @@
       "model_type": "denoiser_hybrid_web_model",
       "sample_rate": 48000,
       "subfolder": "hybrid48/tflite",
-      "minimum_sdk_version": "2.0.0",
-      "maximum_sdk_major": 2,
+      "minimum_sdk_version": "1.0.0",
+      "maximum_sdk_major": 1,
       "files": {
         "config.yaml": "63e724fdb165cb9c4a629d8fb788a652adc86344e31bd07aea0b6db33293c190",
         "model.tflite": "8d7c363ff09d2a166d863dded87dc763edad6382984dbf178d00d5b78d47a8af"
@@ -59,8 +59,8 @@
       "model_type": "denoiser_discr_hq_model",
       "sample_rate": 8000,
       "subfolder": "fast8/onnx",
-      "minimum_sdk_version": "2.0.0",
-      "maximum_sdk_major": 2,
+      "minimum_sdk_version": "1.0.0",
+      "maximum_sdk_major": 1,
       "files": {
         "config.yaml": "88e14c0eedd76a9d46a4aaa25167f96071531b6f64d1a7881676fd2350f2de54",
         "model.onnx": "2dc29118cf71451eeb15e833df75684ecfee9102cf1e393d627e141acad4bb26"

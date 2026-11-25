@@ -22,10 +22,13 @@ from giga_edge_enhance import (
 )
 
 
-def test_catalog_matches_every_checked_out_export(root):
+def test_catalog_matches_sdk_version_and_checked_out_exports(root):
+    version = tuple(map(int, (root / "VERSION_NUMBER").read_text().strip().split(".")))
     entries = available_models()
     assert len(entries) == 5
     for entry in entries:
+        assert tuple(map(int, entry.minimum_sdk_version.split("."))) <= version
+        assert version[0] <= entry.maximum_sdk_major
         for name, digest in entry.files.items():
             path = root / "models" / entry.subfolder / name
             assert hashlib.sha256(path.read_bytes()).hexdigest() == digest
