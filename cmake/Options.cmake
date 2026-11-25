@@ -6,6 +6,7 @@ option(BUILD_RESAMPLER "Build with libsoxr audio resampling." ON)
 option(BUILD_CLI "Build command-line tools and demos." OFF)
 option(BUILD_DSP "Build the engine-free DSP configuration." OFF)
 option(BUILD_TESTING "Build tests." ON)
+option(GEE_BUILD_PYTHON_BINDINGS "Build an isolated Python backend extension." OFF)
 set(GEE_PREBUILT_ORT_ROOT "" CACHE PATH
   "Install prefix containing a compatible prebuilt ONNX Runtime bundle.")
 set(GEE_PREBUILT_TFLITE_ROOT "" CACHE PATH

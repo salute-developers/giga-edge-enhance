@@ -6,3 +6,6 @@
 **/*.pth filter=lfs diff=lfs merge=lfs -text
 **/*.enhance filter=lfs diff=lfs merge=lfs -text
 **/*.jar filter=lfs diff=lfs merge=lfs -text
+
+# These bytes are verified by the cross-platform Python model catalog.
+models/**/config.yaml text eol=lf

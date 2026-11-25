@@ -8,7 +8,7 @@ user-facing documentation. Code identifiers use the `GigaEdgeEnhance` prefix,
 the C++ namespace `giga_edge::enhance`, the include directory `enhance/`, the
 CMake target `giga-edge-enhance`, the `GEE_` prefix, and the `.enhance` packed-model
 extension. The feature class remains `Denoiser`. The GitHub repository slug
-stays `gigadenoiser`.
+is `giga-edge-enhance`.
 
 C++ classes use short names in
 `giga_edge::enhance`; C symbols use `GigaEdgeEnhance`, the installed CMake target is
@@ -158,6 +158,13 @@ blocker. Do not silently substitute a weaker check.
   The required CI lint uses the same changed-line check. Broader legacy style
   cleanup should be done independently rather than mixed into feature changes.
 
+## Python SDK
+
+- The distribution is `giga-edge-enhance`, imported as `giga_edge_enhance`. Keep public usage in `python/readme.md`, API semantics in `python/reference.md`, and build commands in `tools/README.md`.
+- Reuse the native core. ONNX, TFLite and DSP live in separate extensions with hidden symbols and module-local types. Each stream owns its mutable state. Drain input resampling before finalizing the denoiser.
+- Models are separate from wheels. Verify weights and YAML against the SDK catalog when loading local or Hub exports. Keep native fixtures and test executables out of distributions.
+- Take the package version from `VERSION_NUMBER`. Test installed, repaired wheels with independent C++ consumers on each supported platform. Keep manylinux dependency bundles separate from native Linux builds. Publish Python release artifacts only after all four platforms pass.
+
 ## Web rules
 
 - Treat `web` as an npm workspace. Run workspace commands
@@ -263,6 +270,12 @@ uploaded and downloaded between runners.
 - Treat CPM and compiler caches only as accelerators. A cache miss must remain a
   correct build, and release artifacts must never be published directly from a
   mutable cache.
+- ONNX Runtime uses its pinned FetchContent Eigen revision. Disable its optional
+  `find_package(Eigen3)` lookup so a user's CMake package registry cannot inject
+  headers from an unrelated or still-incomplete TFLite build.
+- With GCC 14+, keep `maybe-uninitialized` as a visible warning on the pinned
+  ONNX optimizer target. Its libstdc++ variant/function copy path triggers this
+  diagnostic under optimization; do not weaken warnings on SDK-owned targets.
 - Build one dependency bundle with `tools/ci prepare-deps <concrete-target>`.
   Package it as a checksummed tar archive and push it to GHCR as an OCI artifact
   with ORAS. Do not wrap dependency files in a runnable Docker image.

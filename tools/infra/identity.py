@@ -39,7 +39,8 @@ def toolchain_recipe_digest(container_stage: str) -> str:
     except KeyError as error:
         raise ValueError(f"Unsupported container stage: {container_stage}") from error
     digest = hashlib.sha256()
-    update_digest_with_file(digest, ROOT / "dockerfiles/Dockerfile.base")
+    if container_stage != "python":
+        update_digest_with_file(digest, ROOT / "dockerfiles/Dockerfile.base")
     update_digest_with_file(digest, dockerfile)
     return digest.hexdigest()[:16]
 
@@ -66,7 +67,8 @@ def container_image_digest(container_stage: str) -> str:
         dockerfile = TOOLCHAIN_DOCKERFILES[container_stage]
     except KeyError as error:
         raise ValueError(f"Unsupported container stage: {container_stage}") from error
-    update_digest_with_file(image_digest, ROOT / "dockerfiles/Dockerfile.base")
+    if container_stage != "python":
+        update_digest_with_file(image_digest, ROOT / "dockerfiles/Dockerfile.base")
     update_digest_with_file(image_digest, dockerfile)
     if container_stage == "web":
         for image_input in WEB_IMAGE_INPUTS:
@@ -109,14 +111,23 @@ def engine_git_tag(engine: str) -> str:
     return tag.group(1)
 
 
-def dependency_bundle_digest(engine: str) -> str:
+def dependency_toolchain_identity(preset: str) -> str:
+    """Keep manylinux bundles distinct from Ubuntu bundles during local runs too."""
+    if configured := os.environ.get("GEE_TOOLCHAIN_IDENTITY"):
+        return configured
+    if preset.startswith("python-release-"):
+        return toolchain_recipe_digest("python")
+    return "local-host"
+
+
+def dependency_bundle_digest(engine: str, *, toolchain_identity: str | None = None) -> str:
     """Return the identity of an engine's compiled binary bundle."""
     if engine not in ENGINE_PATCH:
         raise ValueError(f"Unsupported dependency bundle engine: {engine}")
     digest = hashlib.sha256()
     digest.update(f"format={DEPENDENCY_BUNDLE_FORMAT}".encode())
     digest.update(b"\0")
-    digest.update(os.environ.get("GEE_TOOLCHAIN_IDENTITY", "local-host").encode())
+    digest.update((toolchain_identity or os.environ.get("GEE_TOOLCHAIN_IDENTITY", "local-host")).encode())
     digest.update(b"\0")
     digest.update(engine.encode())
     digest.update(b"\0")
@@ -217,7 +228,7 @@ def dependency_tag(preset: str, host: bool) -> str:
         target_arch,
         build_type.lower(),
         bundle_linkage(preset),
-        dependency_bundle_digest(engine),
+        dependency_bundle_digest(engine, toolchain_identity=dependency_toolchain_identity(preset)),
     )
     return "-".join(parts).replace("_", "-").lower()
 
@@ -228,7 +239,8 @@ def dependency_artifact_root(preset: str, host: bool) -> Path | None:
         return None
     engine, build_type = requirement
     target_system, target_arch = cache_target(preset, host)
-    identity = f"v{DEPENDENCY_BUNDLE_FORMAT}-{dependency_bundle_digest(engine)}"
+    recipe = dependency_bundle_digest(engine, toolchain_identity=dependency_toolchain_identity(preset))
+    identity = f"v{DEPENDENCY_BUNDLE_FORMAT}-{recipe}"
     return (ROOT / "out" / "artifacts" / "dependencies" / target_system /
             target_arch / engine / build_type.lower() / bundle_linkage(preset) / identity)
 
@@ -269,7 +281,7 @@ def dependency_manifest(preset: str, host: bool, prefix: Path) -> dict[str, obje
         "preset": artifact_preset(preset),
         "target_system": target_system,
         "target_architecture": target_arch,
-        "dependency_digest": dependency_bundle_digest(engine),
-        "toolchain_identity": os.environ.get("GEE_TOOLCHAIN_IDENTITY", "local-host"),
+        "dependency_digest": dependency_bundle_digest(engine, toolchain_identity=dependency_toolchain_identity(preset)),
+        "toolchain_identity": dependency_toolchain_identity(preset),
         "prefix": str(prefix.relative_to(ROOT)),
     }

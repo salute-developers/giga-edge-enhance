@@ -1,4 +1,5 @@
 add_library(util__packed_model STATIC packed_model.cpp)
+gee_apply_build_config(util__packed_model)
 
 # Anchor include paths to the GigaEdgeEnhance project root (set by project(giga-edge-enhance)),
 # not CMAKE_SOURCE_DIR. When the Android/iOS wrappers embed GigaEdgeEnhance via

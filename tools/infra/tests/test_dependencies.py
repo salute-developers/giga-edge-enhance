@@ -74,6 +74,35 @@ class DependenciesTest(unittest.TestCase):
             "-DGEE_PREBUILT_TFLITE_ROOT=/workspace/out/artifacts/dependencies/test/prefix"
         ])
 
+    def test_cache_miss_clears_a_previously_configured_dependency_prefix(self):
+        self.assertEqual(
+            dependencies.prebuilt_cmake_arguments("native-release-onnx", False, None, True),
+            ["-DGEE_PREBUILT_ORT_ROOT="],
+        )
+
+    def test_headers_follow_the_configured_source_instead_of_a_sorted_cache(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            chosen = root / "a-correct-source"
+            other = root / "z-unrelated-source"
+            for source, content in ((chosen, "correct"), (other, "unrelated")):
+                headers = source / "include/onnxruntime"
+                headers.mkdir(parents=True)
+                (headers / "api.h").write_text(content)
+            build = root / "build"
+            build.mkdir()
+            (build / "CMakeCache.txt").write_text(
+                f"CPM_PACKAGE_onnxruntime_SOURCE_DIR:INTERNAL={chosen}\n"
+            )
+            prefix = root / "prefix"
+            dependencies.copy_onnx_headers(prefix, build)
+            self.assertEqual((prefix / "include/onnxruntime/api.h").read_text(), "correct")
+            (build / "CMakeCache.txt").write_text(
+                "CPM_PACKAGE_onnxruntime_SOURCE_DIR:INTERNAL=/workspace/a-correct-source\n"
+            )
+            with mock.patch.object(dependencies, "ROOT", root):
+                self.assertEqual(dependencies.dependency_source_directory(build, "onnxruntime"), chosen)
+
     def test_prepare_dependency_builds_renamed_bundle_target(self):
         with tempfile.TemporaryDirectory(dir=dependencies.ROOT) as directory:
             artifact_root = Path(directory) / "artifact"
@@ -84,6 +113,7 @@ class DependenciesTest(unittest.TestCase):
                                   return_value=artifact_root),
                 mock.patch.object(dependencies, "dependency_manifest", return_value={}),
                 mock.patch.object(dependencies, "compiler_cache_environment", return_value={}),
+                mock.patch.dict(dependencies.os.environ, {"CMAKE_BUILD_PARALLEL_LEVEL": "2"}),
                 mock.patch.object(dependencies, "cache_target", return_value=("linux", "x86_64")),
                 mock.patch.object(dependencies, "bundle_linkage", return_value="shared"),
                 mock.patch.object(dependencies, "artifact_preset",
@@ -100,6 +130,10 @@ class DependenciesTest(unittest.TestCase):
             build_command = run_mock.call_args_list[1].args[0]
             self.assertIn("gee_dependency_bundle", build_command)
             self.assertNotIn("enhance_dependency_bundle", build_command)
+            self.assertEqual(build_command[build_command.index("--parallel") + 1], "2")
+            configure_command = run_mock.call_args_list[0].args[0]
+            build_root = configure_command[configure_command.index("-B") + 1]
+            self.assertTrue(build_root.endswith("/shared/artifact"))
 
 
 if __name__ == "__main__":

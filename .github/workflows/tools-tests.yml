@@ -26,12 +26,14 @@ jobs:
               - 'tools/shell'
               - 'tools/ci'
               - 'tools/infra/**'
+              - 'python/scripts/**'
               - 'ios/scripts/prepare_simulator.py'
               - 'ios/scripts/test.sh'
             release:
               - '.github/scripts/promote-release-assets.js'
               - '.github/scripts/promote-release-assets.test.js'
               - '.github/workflows/release-assets.yml'
+              - '.github/workflows/python-wheels.yml'
       - name: Run infrastructure unit tests
         if: steps.changes.outputs.infra == 'true'
         env:

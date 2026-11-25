@@ -20,6 +20,106 @@ env:
   GEE_ARTIFACT_RETENTION_DAYS: ${{ github.event_name == 'pull_request' && (vars.PR_ARTIFACT_RETENTION_DAYS || '1') || (vars.MASTER_ARTIFACT_RETENTION_DAYS || '3') }}
 
 jobs:
+  python-lint:
+    name: Lint and type-check Python SDK
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python tools/test python-lint
+
+  toolchain-python:
+    name: Build manylinux Python toolchain
+    needs: tools-tests
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.toolchain.outputs.image }}
+      identity: ${{ steps.toolchain.outputs.identity }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: toolchain
+        uses: ./.github/actions/build-python-toolchain
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  deps-python:
+    name: Build manylinux ${{ matrix.engine }} dependency OCI
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [onnx, tflite]
+    needs: toolchain-python
+    runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup-cache
+        with:
+          preset: python-release-${{ matrix.engine }}
+      - uses: ./.github/actions/build-dependency
+        with:
+          target: python-release-${{ matrix.engine }}
+          toolchain-identity: ${{ needs.toolchain-python.outputs.identity }}
+          toolchain-image: ${{ needs.toolchain-python.outputs.image }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
+
+  python-linux:
+    needs: [toolchain-python, deps-python]
+    uses: ./.github/workflows/python-wheels.yml
+    with:
+      runner: ${{ vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"' }}
+      preset-prefix: python-release
+      artifact-name: gdn-python-linux
+      toolchain-identity: ${{ needs.toolchain-python.outputs.identity }}
+      toolchain-image: ${{ needs.toolchain-python.outputs.image }}
+      source-distribution: true
+
+  python-macos-arm64:
+    needs: [deps-macos-arm64-onnx, deps-macos-arm64-tflite]
+    if: vars.ENABLE_MACOS_JOBS != 'false'
+    uses: ./.github/workflows/python-wheels.yml
+    with:
+      runner: ${{ vars.RUNNER_MACOS_ARM64 || '"macos-15"' }}
+      preset-prefix: macos-arm64-release
+      artifact-name: gdn-python-macos-arm64
+
+  python-macos-x86_64:
+    needs: [deps-macos-intel-onnx, deps-macos-intel-tflite]
+    if: vars.ENABLE_MACOS_JOBS != 'false'
+    uses: ./.github/workflows/python-wheels.yml
+    with:
+      runner: ${{ vars.RUNNER_MACOS_X64 || '"macos-15-intel"' }}
+      preset-prefix: macos-x86_64-release
+      artifact-name: gdn-python-macos-x86_64
+
+  python-windows:
+    needs: [deps-windows-onnx, deps-windows-tflite]
+    if: vars.ENABLE_WINDOWS_JOBS != 'false'
+    uses: ./.github/workflows/python-wheels.yml
+    with:
+      runner: ${{ vars.RUNNER_WINDOWS_X64 || '"windows-2022"' }}
+      preset-prefix: windows-x64-release
+      artifact-name: gdn-python-windows-x86_64
+
   tools-tests:
     name: Test infrastructure tool
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -226,7 +326,7 @@ jobs:
             --env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=safe.directory --env GIT_CONFIG_VALUE_0=/workspace \
             --volume "$PWD:/workspace" --workdir /workspace "$IMAGE" \
             bash -lc '
-              format_diff="$(git-clang-format --diff "$BASE_SHA" HEAD --extensions c,cc,cpp,h,hpp -- core android ios web)"
+              format_diff="$(git-clang-format --diff "$BASE_SHA" HEAD --extensions c,cc,cpp,h,hpp -- core android ios web python/bindings python/tests)"
               printf "%s\n" "$format_diff"
               if grep -q "^diff --git " <<< "$format_diff"; then
                 exit 1
@@ -794,7 +894,7 @@ jobs:
     name: Build macOS x86_64 ONNX Release dependency OCI
     needs: tools-tests
     if: vars.ENABLE_MACOS_JOBS != 'false' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15"') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
     timeout-minutes: 60
     permissions:
       contents: read
@@ -820,7 +920,7 @@ jobs:
     name: Build macOS x86_64 TFLite Release dependency OCI
     needs: tools-tests
     if: vars.ENABLE_MACOS_JOBS != 'false' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15"') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
     timeout-minutes: 60
     permissions:
       contents: read
@@ -846,7 +946,7 @@ jobs:
     name: Build and test macOS x86_64 Release (ONNX)
     needs: deps-macos-intel-onnx
     if: vars.ENABLE_MACOS_JOBS != 'false'
-    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15"') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
@@ -867,7 +967,7 @@ jobs:
     name: Build and test macOS x86_64 Release (TFLite)
     needs: deps-macos-intel-tflite
     if: vars.ENABLE_MACOS_JOBS != 'false'
-    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15"') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_MACOS_X64 || '"macos-15-intel"') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6

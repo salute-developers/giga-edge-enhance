@@ -1,0 +1,62 @@
+name: Validate Python wheels
+on:
+  workflow_call:
+    inputs:
+      runner:
+        required: true
+        type: string
+      preset-prefix:
+        required: true
+        type: string
+      artifact-name:
+        required: true
+        type: string
+      toolchain-identity:
+        default: ''
+        type: string
+      toolchain-image:
+        default: ''
+        type: string
+      source-distribution:
+        default: false
+        type: boolean
+permissions:
+  contents: read
+  packages: read
+jobs:
+  wheels:
+    name: Build, repair and test Python 3.10–3.14
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    timeout-minutes: 90
+    env:
+      DOCKER_BUILD_RECORD_UPLOAD: 'false'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: docker/login-action@v4
+        if: runner.os == 'Linux'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup-cache
+        with:
+          preset: ${{ inputs.preset-prefix }}-onnx
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: ./.github/actions/verify-lfs
+      - id: host
+        if: runner.os != 'Linux'
+        uses: ./.github/actions/setup-host-toolchain
+      - uses: ./.github/actions/build-test-python
+        with:
+          preset-prefix: ${{ inputs.preset-prefix }}
+          toolchain-identity: ${{ inputs.toolchain-identity || steps.host.outputs.identity }}
+          toolchain-image: ${{ inputs.toolchain-image }}
+          artifact-name: ${{ inputs.artifact-name }}
+          source-distribution: ${{ inputs.source-distribution }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          upload-artifacts: ${{ vars.ENABLE_ARTIFACT_UPLOADS != 'false' }}
+          artifact-retention-days: ${{ github.event_name == 'pull_request' && (vars.PR_ARTIFACT_RETENTION_DAYS || '1') || (vars.MASTER_ARTIFACT_RETENTION_DAYS || '3') }}

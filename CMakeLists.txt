@@ -35,6 +35,10 @@ if(GEE_PROFILE STREQUAL "model-packer")
 else()
   add_subdirectory(core)
 
+  if(GEE_BUILD_PYTHON_BINDINGS)
+    add_subdirectory(python/bindings)
+  endif()
+
   include(CTest)
   enable_testing()
 
