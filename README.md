@@ -1,22 +1,23 @@
-# GigaEdge Enhance
+<h1>
+  <a href="https://github.com/salute-developers/giga-edge-enhance#gh-light-mode-only"><img src="enhance_logo.svg" alt="GigaEdge Enhance" width="180"></a>
+  <a href="https://github.com/salute-developers/giga-edge-enhance#gh-dark-mode-only"><img src="web/apps/site/static/img/enhance-logo-dark.svg" alt="GigaEdge Enhance" width="180"></a>
+</h1>
 
-<img src="enhance_logo.svg" alt="GigaEdge Enhance" width="33%">
+[Audio demo (15 s)](samples/README.md) · [Models](https://huggingface.co/ai-sage/GigaEdge-Enhance) · [Paper](https://arxiv.org/abs/2611.13243)
 
 GigaEdge Enhance is a cross-platform SDK for real-time speech enhancement. It adds neural noise
 suppression, loudness normalization, and, on supported platforms, acoustic echo cancellation to
 native, mobile, and web applications.
 
-[Models on Hugging Face](https://huggingface.co/ai-sage/GigaEdge-Enhance) · [Research paper](https://arxiv.org/abs/2611.13243) · [Listen to the 15-second comparison](samples/README.md)
-
 ## Choose an SDK
 
 | Platform | Start here |
 | --- | --- |
-| C and C++ | [Quickstart](web/apps/site/docs/core/quickstart.md) |
+| C and C++ | [Quick start](web/apps/site/docs/core/quickstart.md) |
 | Python | [Quick start](python/readme.md#quick-start) |
 | Web | [Web SDK](web/packages/web-sdk/README.md) |
 | Android | [Android SDK](android/README.md) |
-| iOS | [Quick Start](ios/Sources/EnhanceAudioKit/Documentation.docc/QuickStart.md) |
+| iOS | [Quick start](ios/Sources/EnhanceAudioKit/Documentation.docc/QuickStart.md) |
 
 The browser demo is published with the documentation site. The
 [capability matrix](web/apps/site/docs/capabilities.md) shows which features and
@@ -32,7 +33,7 @@ int main() {
   giga_edge::enhance::Denoiser denoiser("models/quality48/onnx/config.yaml");
   auto* context = denoiser.CreateContext(48000, 48000);
 
-  std::vector<float> input;  // Mono PCM in [-1, 1], at the context input rate.
+  std::vector<float> input(denoiser.GetModelInputFrameSize());  // Fill with mono PCM in [-1, 1].
   std::vector<float> output;
   const auto code = denoiser.ProcessChunk(input, output, context);
   denoiser.DestroyContext(&context);
@@ -68,7 +69,7 @@ toolchains.
 
 ```bash
 git lfs install
-git lfs checkout
+git lfs pull
 tools/build native-debug-onnx
 tools/test native-debug-onnx
 ```
