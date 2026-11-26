@@ -10,19 +10,8 @@
 namespace util {
 namespace onnx {
 
-static const OrtApi* ort_api_ptr = OrtGetApiBase()->GetApi(ORT_API_VERSION);
 static std::mutex ort_mutex;
 
-void check_status(OrtStatus* status) {
-  if (status != NULL) {
-    const char* msg = ort_api_ptr->GetErrorMessage(status);
-    (void)msg;
-    // VOICE_ERROR() << msg;
-    // Logging::Terminate();
-  }
-}
-
-static std::unique_ptr<Ort::Env> ort_env_ptr;
 static std::unique_ptr<Ort::SessionOptions> ort_sess_options_cpu_ptr;
 static std::unique_ptr<Ort::SessionOptions> ort_sess_options_gpu_ptr;
 static std::unique_ptr<Ort::MemoryInfo> ort_memory_info_cpu_ptr;
@@ -43,18 +32,6 @@ std::mutex& get_gpu_session_mutex() {
     ort_gpu_session_mutex_ptr = std::make_unique<std::mutex>();
   }
   return *ort_gpu_session_mutex_ptr;
-}
-
-void create_default_env() {
-  std::lock_guard<std::mutex> lock(ort_mutex);
-  if (ort_env_ptr) {
-    return;
-  }
-  OrtThreadingOptions* threading_options = nullptr;
-  check_status(ort_api_ptr->CreateThreadingOptions(&threading_options));
-  ort_env_ptr = std::make_unique<Ort::Env>(threading_options, ORT_LOGGING_LEVEL_WARNING, "gigaedge-enhance-onnx");
-  ort_api_ptr->ReleaseThreadingOptions(threading_options);
-  ort_env_ptr->DisableTelemetryEvents();
 }
 
 void create_default_session_options(std::unique_ptr<Ort::SessionOptions>& options_ptr, uint32_t num_threads, bool gpu) {
@@ -100,10 +77,16 @@ void create_default_memory_info(std::unique_ptr<Ort::MemoryInfo>& memory_info_pt
 }
 
 Ort::Env& get_ort_env() {
-  if (!ort_env_ptr) {
-    create_default_env();
-  }
-  return *ort_env_ptr;
+  // Keep the environment for the process lifetime: ReleaseEnv during static
+  // destruction can lock an ORT mutex that has already been destroyed.
+  // Function-local initialization also serializes concurrent first use.
+  static Ort::Env* const env = [] {
+    const Ort::ThreadingOptions threading_options;
+    auto env = std::make_unique<Ort::Env>(threading_options, ORT_LOGGING_LEVEL_WARNING, "gigaedge-enhance-onnx");
+    env->DisableTelemetryEvents();
+    return env.release();
+  }();
+  return *env;
 }
 
 const Ort::SessionOptions& get_ort_session_options_cpu(const uint32_t num_threads, bool restart_session) {
