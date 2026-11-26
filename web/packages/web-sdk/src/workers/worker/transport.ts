@@ -169,7 +169,7 @@ export class SharedMemoryTransport implements AbstractTransport {
 
         this.semaphore = new BinarySemaphore(buffer, offset);
 
-        this.spin().catch(this.onError);
+        Promise.resolve().then(() => this.spin()).catch(this.onError);
     }
 
     push(output: Float32Array): void {

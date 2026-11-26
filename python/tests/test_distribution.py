@@ -120,6 +120,14 @@ def test_linux_cibuildwheel_copies_clean_sources_and_mounts_build_outputs(
         assert cwd != tmp_path and (cwd / "pyproject.toml").is_file()
         assert not (cwd / "out").exists()
         assert f"{tmp_path / 'out'}:/project/out" in environment["CIBW_CONTAINER_ENGINE"]
+        forwarded = environment["CIBW_ENVIRONMENT_PASS_LINUX"].split()
+        for name in (
+            "CMAKE_BUILD_PARALLEL_LEVEL",
+            "EMCC_CORES",
+            "CCACHE_MAXSIZE",
+            "SCCACHE_CACHE_SIZE",
+        ):
+            assert name in forwarded
         output = Path(command[command.index("--output-dir") + 1])
         output.mkdir()
         wheel = output / "test.whl"

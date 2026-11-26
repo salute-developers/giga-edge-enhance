@@ -148,7 +148,8 @@ def build() -> None:
         "*"  # The separate tools/test action tests these exact repaired bytes.
     )
     environment["CIBW_ENVIRONMENT_PASS_LINUX"] = (
-        "CMAKE_ARGS CPM_SOURCE_CACHE GEE_TOOLCHAIN_IDENTITY"
+        "CMAKE_ARGS CPM_SOURCE_CACHE GEE_TOOLCHAIN_IDENTITY "
+        "CMAKE_BUILD_PARALLEL_LEVEL EMCC_CORES CCACHE_MAXSIZE SCCACHE_CACHE_SIZE"
     )
     if target == "linux":
         # cibuildwheel builds as root, while cached sources belong to the runner.

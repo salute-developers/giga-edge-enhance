@@ -61,6 +61,31 @@ describe('SharedMemoryTransport', () => {
         expect((transport as any).outputBuffer.size).toBe(out.length);
     });
 
+    test('buffered input is processed after the owner attaches the transport', async () => {
+        transport.close();
+        const inputSize = getBufferSize(SAMPLE_RATE, getInputBufferSeconds(SETTINGS));
+        const frame = new Float32Array(getBufferSize(SAMPLE_RATE, FRAME_SIZE)).fill(0.5);
+        new RingBuffer(inputSize, buffer).push(frame);
+        new RingBuffer(inputSize, buffer, RingBuffer.getInternalBufferSize(inputSize)).push(frame);
+        const owner: { transport?: SharedMemoryTransport } = {};
+        const onError = jest.fn();
+        owner.transport = new SharedMemoryTransport(
+            buffer,
+            SAMPLE_RATE,
+            SETTINGS,
+            ({ input }) => owner.transport!.push(input),
+            onError,
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(onError).not.toHaveBeenCalled();
+        const output = new Float32Array(frame.length);
+        expect((owner.transport as any).outputBuffer.pull(output)).toBe(frame.length);
+        expect(output).toEqual(frame);
+        owner.transport.close();
+    });
+
     test('close stops the spin loop', async () => {
         // const closeSpy = jest.spyOn(transport as any, 'spin').mockImplementation(async () => {
         //     /* do nothing */
