@@ -100,7 +100,13 @@ def run(command: list[str], *, container_stage: str | None = None,
         "--env", "GRADLE_USER_HOME=/workspace/out/cache/gradle",
         "--env", "npm_config_cache=/workspace/out/cache/npm",
     ))
-    for name, value in (environment or {}).items():
+    build_environment = {
+        name: os.environ[name]
+        for name in ("CMAKE_BUILD_PARALLEL_LEVEL", "EMCC_CORES")
+        if os.environ.get(name)
+    }
+    build_environment.update(environment or {})
+    for name, value in build_environment.items():
         container_command.extend(("--env", f"{name}={value}"))
     container_git_environment = {
         "GIT_CONFIG_COUNT": "1",
@@ -156,11 +162,11 @@ def compiler_cache_environment(container: bool) -> dict[str, str]:
         source_path = str(ROOT)
     return {
         "SCCACHE_DIR": sccache_path,
-        "SCCACHE_CACHE_SIZE": "5G",
+        "SCCACHE_CACHE_SIZE": os.environ.get("SCCACHE_CACHE_SIZE", "5G"),
         "CCACHE_DIR": ccache_path,
         "CCACHE_BASEDIR": source_path,
         "CCACHE_NOHASHDIR": "true",
-        "CCACHE_MAXSIZE": "5G",
+        "CCACHE_MAXSIZE": os.environ.get("CCACHE_MAXSIZE", "5G"),
     }
 
 

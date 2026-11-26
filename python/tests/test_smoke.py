@@ -30,6 +30,13 @@ def test_both_backend_import_orders(order, tmp_path):
     subprocess.run([sys.executable, "-c", code], cwd=tmp_path, check=True, timeout=60)
 
 
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux ELF runtime naming")
+def test_onnx_runtime_is_installed_under_its_soname():
+    runtime = Path(giga_edge_enhance.__file__).resolve().parent / "lib/libonnxruntime.so.1"
+    assert runtime.is_file()
+    assert ctypes.CDLL(str(runtime))
+
+
 def test_backend_exports_are_module_local(backend):
     module = importlib.import_module(f"giga_edge_enhance._{backend}")
     assert module.Model.__module__ == f"giga_edge_enhance._{backend}"
