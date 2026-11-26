@@ -56,7 +56,7 @@ else()
   endif()
 endif()
 
-if(NOT GEE_PROFILE STREQUAL "model-packer")
+if(NOT GEE_PROFILE STREQUAL "model-packer" AND CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Install.cmake")
 endif()
 

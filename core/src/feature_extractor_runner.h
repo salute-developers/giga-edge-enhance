@@ -1,5 +1,4 @@
 #pragma once
-#include <ctpl_stl.h>
 
 #include <memory>
 #include <string>

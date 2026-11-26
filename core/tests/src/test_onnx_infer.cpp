@@ -1,4 +1,3 @@
-#include <onnxruntime/core/session/onnxruntime_cxx_api.h>
 #include <yaml-cpp/yaml.h>
 
 #include <algorithm>
@@ -11,6 +10,7 @@
 #include "src/context.h"
 #include "tests/src/utils.h"
 #include "util/onnx/denoise_onnx_runner.h"
+#include "util/onnx/onnx_env.h"
 
 void CreateConstInputsWithGivenShapes(const std::vector<std::vector<int64_t>>& input_shapes,
                                       std::vector<std::vector<float>>& const_allocated_data,

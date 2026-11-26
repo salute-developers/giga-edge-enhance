@@ -18,8 +18,10 @@ if (NOT WIN32)
   target_compile_options(${PROJECT_NAME} PRIVATE -Wno-sign-compare)
 endif()
 
-
-target_include_directories(${PROJECT_NAME} PRIVATE ${soxr_SOURCE_DIR}/src)
-target_link_libraries(${PROJECT_NAME} PRIVATE spdlog_header_only dsplib rnnoise soxr)
+target_link_libraries(${PROJECT_NAME} PRIVATE spdlog_header_only dsplib rnnoise)
+if(BUILD_RESAMPLER)
+  target_include_directories(${PROJECT_NAME} PRIVATE ${soxr_SOURCE_DIR}/src)
+  target_link_libraries(${PROJECT_NAME} PRIVATE soxr)
+endif()
 
 add_library(util::sound ALIAS ${PROJECT_NAME})
