@@ -149,6 +149,7 @@ blocker. Do not silently substitute a weaker check.
   Changes under `core/include/enhance/` require explicit compatibility review.
 - Keep tests close to the affected behavior under `core/tests/`. Add a
   regression test when fixing a reproducible bug.
+- Add native behavior tests to the existing `enhance_tests` Catch2 unit-test suite.
 - Check changed C/C++ lines against `.clang-format`:
 
   ```bash
@@ -346,6 +347,14 @@ Before reporting completion:
 2. Run the smallest relevant checks from the matrix above.
 3. State which checks passed and which were not run, including the reason.
 4. Call out public API, ABI, model-format, packaging, or cross-platform impact.
+
+## ONNX Runtime lifetime
+
+Keep the lazily initialized default `Ort::Env` alive for the process lifetime.
+Do not register an SDK destructor that calls `ReleaseEnv`: ORT's static mutex
+may already be destroyed during process teardown. Initialization must be
+thread-safe, and temporary threading options must still be released on failure
+and success.
 
 ## Hybrid inference
 
