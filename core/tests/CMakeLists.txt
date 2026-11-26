@@ -47,8 +47,7 @@ target_link_libraries(enhance_tests PRIVATE
   util__metrics
   dsplib
   spdlog_header_only
-  Catch2::Catch2
-  ctpl)
+  Catch2::Catch2)
 
 if(BUILD_RESAMPLER)
   target_link_libraries(enhance_tests PRIVATE soxr)
@@ -70,6 +69,20 @@ endif()
 
 include("${Catch2_SOURCE_DIR}/contrib/Catch.cmake")
 catch_discover_tests(enhance_tests)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT CMAKE_CROSSCOMPILING AND BUILD_ONNX_ENGINE AND
+   GEE_PREBUILT_ORT_ROOT AND EXISTS "${GEE_PREBUILT_ORT_ROOT}/lib/cmake/onnxruntime/onnxruntimeConfig.cmake")
+  add_test(NAME cmake.subproject_consumer
+    COMMAND "${CMAKE_CTEST_COMMAND}" --build-and-test
+      "${CMAKE_CURRENT_SOURCE_DIR}/subproject_consumer" "${CMAKE_CURRENT_BINARY_DIR}/subproject_consumer"
+      --build-generator "${CMAKE_GENERATOR}" --build-noclean
+      --build-options
+        "-Donnxruntime_DIR=${onnxruntime_DIR}"
+        "-DCPM_SOURCE_CACHE=${CPM_SOURCE_CACHE}"
+        "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+        "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+      --test-command "${CMAKE_CTEST_COMMAND}" --output-on-failure)
+endif()
 
 if (BUILD_SHARED_LIBS AND WIN32)
 add_custom_command(TARGET enhance_tests POST_BUILD

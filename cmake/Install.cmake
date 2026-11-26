@@ -23,7 +23,8 @@ if(NOT GEE_SHARED_LIBS)
       \"${CMAKE_BINARY_DIR}/*${CMAKE_STATIC_LIBRARY_SUFFIX}\")
     foreach(_gee_archive IN LISTS _gee_archives)
       file(RELATIVE_PATH _gee_archive_relative \"${CMAKE_BINARY_DIR}\" \"\${_gee_archive}\")
-      if(_gee_archive_relative STREQUAL \"core/${CMAKE_STATIC_LIBRARY_PREFIX}giga-edge-enhance${CMAKE_STATIC_LIBRARY_SUFFIX}\")
+      if(_gee_archive_relative MATCHES \"^core/tests/\" OR
+         _gee_archive_relative STREQUAL \"core/${CMAKE_STATIC_LIBRARY_PREFIX}giga-edge-enhance${CMAKE_STATIC_LIBRARY_SUFFIX}\")
         continue()
       endif()
       get_filename_component(_gee_archive_directory \"\${_gee_archive_relative}\" DIRECTORY)
@@ -75,13 +76,13 @@ if(GEE_SHARED_LIBS)
 endif()
 
 install(
-  FILES "${CMAKE_SOURCE_DIR}/core/include/giga-edge-enhance.h"
+  FILES "${PROJECT_SOURCE_DIR}/core/include/giga-edge-enhance.h"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   COMPONENT gee_dev
 )
 
 install(
-  DIRECTORY "${CMAKE_SOURCE_DIR}/core/include/enhance"
+  DIRECTORY "${PROJECT_SOURCE_DIR}/core/include/enhance"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   COMPONENT gee_dev
   FILES_MATCHING PATTERN "*.h"
@@ -113,7 +114,7 @@ endif()
 # its terms. Third-party dependency notices are tracked separately and are still required
 # before publishing binaries that statically link non-MIT dependencies.
 install(
-  FILES "${CMAKE_SOURCE_DIR}/LICENSE.txt"
+  FILES "${PROJECT_SOURCE_DIR}/LICENSE.txt"
   DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/licenses/enhance"
 )
 
@@ -125,7 +126,7 @@ endif()
 set(GEE_ARTIFACT_VERSION "${_gee_default_artifact_version}" CACHE STRING
     "Version used in distributable artifact names; may include a SemVer prerelease suffix." FORCE)
 set(CPACK_PACKAGE_VERSION ${GEE_ARTIFACT_VERSION})
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.txt")
+set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE.txt")
 
 # CPack captures the CPACK_* variables when it is included, so this must stay last. Including
 # it earlier silently discarded the GEE_ARTIFACT_VERSION override above.
