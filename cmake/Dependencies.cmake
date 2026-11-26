@@ -32,16 +32,6 @@ if(NOT TARGET pocketfft)
     $<BUILD_INTERFACE:${pocketfft_SOURCE_DIR}>)
 endif()
 
-if(BUILD_ONNX_ENGINE OR BUILD_TFLITE_ENGINE)
-  CPMGetPackage(ctpl)
-  if(NOT TARGET ctpl)
-    add_library(ctpl INTERFACE)
-    target_compile_features(ctpl INTERFACE cxx_std_14)
-    target_include_directories(ctpl SYSTEM INTERFACE
-      $<BUILD_INTERFACE:${ctpl_SOURCE_DIR}>)
-  endif()
-endif()
-
 if(BUILD_TESTING)
   CPMGetPackage(Catch2)
 endif()

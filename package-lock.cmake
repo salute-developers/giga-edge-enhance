@@ -53,15 +53,6 @@ CPMDeclarePackage(yaml-cpp
   EXCLUDE_FROM_ALL ON
 )
 
-string_option(CTPL_URL "https://github.com/vit-vit/CTPL.git")
-CPMDeclarePackage(ctpl
-  NAME ctpl
-  VERSION 0.0.2
-  GIT_TAG v.0.0.2
-  GIT_REPOSITORY ${CTPL_URL}
-  DOWNLOAD_ONLY YES
-)
-
 string_option(POCKETFFT_URL "https://github.com/mreineck/pocketfft.git")
 CPMDeclarePackage(pocketfft
   NAME pocketfft
