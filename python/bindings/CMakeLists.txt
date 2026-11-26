@@ -39,13 +39,29 @@ foreach(dependency soxr onnxruntime onnxruntime::onnxruntime tensorflow-lite ten
   if(TARGET ${dependency})
     get_target_property(dependency_type ${dependency} TYPE)
     if(dependency_type STREQUAL "SHARED_LIBRARY")
-      install(FILES "$<TARGET_FILE:${dependency}>" DESTINATION giga_edge_enhance/lib COMPONENT python)
-      if(UNIX)
+      get_target_property(imported ${dependency} IMPORTED)
+      if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND imported)
         # An imported runtime can leave its SONAME unset. In that case
         # TARGET_SONAME_FILE resolves to its parent directory.
         set(soname "$<TARGET_SONAME_FILE_NAME:${dependency}>")
-        install(FILES "$<$<BOOL:${soname}>:$<TARGET_SONAME_FILE:${dependency}>>"
-          DESTINATION giga_edge_enhance/lib COMPONENT python)
+        set(runtime_name "$<IF:$<BOOL:${soname}>,${soname},$<TARGET_FILE_NAME:${dependency}>>")
+        get_target_property(dependency_location ${dependency} IMPORTED_LOCATION)
+        if(dependency_location)
+          execute_process(COMMAND "${CMAKE_OBJDUMP}" -p "${dependency_location}"
+            OUTPUT_VARIABLE runtime_headers COMMAND_ERROR_IS_FATAL ANY)
+          if(runtime_headers MATCHES "[\r\n][ \t]+SONAME[ \t]+([^ \t\r\n]+)")
+            set(runtime_name "${CMAKE_MATCH_1}")
+          endif()
+        endif()
+        install(FILES "$<TARGET_FILE:${dependency}>" DESTINATION giga_edge_enhance/lib
+          RENAME "${runtime_name}" COMPONENT python)
+      else()
+        install(FILES "$<TARGET_FILE:${dependency}>" DESTINATION giga_edge_enhance/lib COMPONENT python)
+        if(UNIX)
+          set(soname "$<TARGET_SONAME_FILE_NAME:${dependency}>")
+          install(FILES "$<$<BOOL:${soname}>:$<TARGET_SONAME_FILE:${dependency}>>"
+            DESTINATION giga_edge_enhance/lib COMPONENT python)
+        endif()
       endif()
     endif()
   endif()

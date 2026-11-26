@@ -65,6 +65,26 @@ class ExecutionTest(unittest.TestCase):
         self.assertIn("KEY=value", command)
         self.assertEqual(command[-2:], ["cmake", "--version"])
 
+    def test_container_run_preserves_build_resource_limits(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             mock.patch.object(execution, "ROOT", Path(directory)), \
+             mock.patch.object(execution, "ensure_container_image", return_value="test"), \
+             mock.patch.object(execution.subprocess, "run") as subprocess_run, \
+             mock.patch.dict(os.environ, {"CMAKE_BUILD_PARALLEL_LEVEL": "2", "EMCC_CORES": "1"}):
+            execution.run(["cmake", "--build", "."], container_stage="web",
+                          workdir=Path(directory))
+        command = subprocess_run.call_args.args[0]
+        self.assertIn("CMAKE_BUILD_PARALLEL_LEVEL=2", command)
+        self.assertIn("EMCC_CORES=1", command)
+
+    def test_compiler_cache_sizes_honor_user_limits(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             mock.patch.object(execution, "ROOT", Path(directory)), \
+             mock.patch.dict(os.environ, {"CCACHE_MAXSIZE": "256M", "SCCACHE_CACHE_SIZE": "128M"}):
+            environment = execution.compiler_cache_environment(True)
+        self.assertEqual(environment["CCACHE_MAXSIZE"], "256M")
+        self.assertEqual(environment["SCCACHE_CACHE_SIZE"], "128M")
+
 
 if __name__ == "__main__":
     unittest.main()
