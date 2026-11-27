@@ -89,6 +89,12 @@ install(
 )
 
 if(TARGET gee_demo)
+  if(WIN32)
+    get_target_property(_gee_fmt_type fmt TYPE)
+    if(_gee_fmt_type STREQUAL "SHARED_LIBRARY")
+      install(FILES "$<TARGET_FILE:fmt>" DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT gee_demo)
+    endif()
+  endif()
   set(_gee_cli_install_targets gee_demo)
   foreach(_gee_legacy_demo demo_cpp demo_c demo_dsp)
     if(TARGET ${_gee_legacy_demo})
