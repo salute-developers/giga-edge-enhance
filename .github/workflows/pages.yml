@@ -10,14 +10,17 @@ permissions:
   actions: read
   contents: write
 
-concurrency:
-  group: pages-master
-  cancel-in-progress: true
-
 jobs:
   publish:
     name: Publish documentation and web demo
-    if: github.event.workflow_run.conclusion == 'success' && vars.ENABLE_ARTIFACT_UPLOADS != 'false'
+    if: >-
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.conclusion == 'success' &&
+      vars.ENABLE_ARTIFACT_UPLOADS != 'false'
+    concurrency:
+      group: pages-master
+      cancel-in-progress: true
     runs-on: ${{ fromJSON(vars.RUNNER_LINUX_X64 || '"ubuntu-24.04"') }}
     steps:
       - uses: actions/download-artifact@v8
