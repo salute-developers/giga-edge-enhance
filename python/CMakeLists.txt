@@ -10,6 +10,12 @@ set(GEE_PYTHON_JOBS 2 CACHE STRING "Parallel jobs per native backend")
 option(GEE_PYTHON_BUILD_TEST_REFERENCE "Build the independent C++ parity consumer" OFF)
 option(GEE_PYTHON_SANITIZE "Instrument native adapters and core with AddressSanitizer" OFF)
 
+# Multi-config generators select the backend configuration at build and install time.
+get_property(multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(multi_config)
+  set(backend_config_args --config "$<CONFIG>")
+endif()
+
 foreach(backend IN LISTS GEE_PYTHON_COMPONENTS)
   if(NOT backend MATCHES "^(onnx|tflite|dsp)$")
     message(FATAL_ERROR "Unknown Python backend: ${backend}")
@@ -64,9 +70,9 @@ foreach(backend IN LISTS GEE_PYTHON_COMPONENTS)
       -DPython_EXECUTABLE=${Python_EXECUTABLE}
       -Dpybind11_DIR=${pybind11_DIR}
     BUILD_COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR>
-      --target ${backend_targets} --config ${CMAKE_BUILD_TYPE} --parallel ${GEE_PYTHON_JOBS}
+      --target ${backend_targets} ${backend_config_args} --parallel ${GEE_PYTHON_JOBS}
     INSTALL_COMMAND "${CMAKE_COMMAND}" --install <BINARY_DIR>
-      --prefix "${CMAKE_CURRENT_BINARY_DIR}/stage" --component python --config ${CMAKE_BUILD_TYPE}
+      --prefix "${CMAKE_CURRENT_BINARY_DIR}/stage" --component python ${backend_config_args}
     BUILD_ALWAYS TRUE
   )
 endforeach()

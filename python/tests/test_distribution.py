@@ -49,6 +49,31 @@ def test_host_wheel_uses_its_own_interpreter(distribution_tools, monkeypatch, tm
     assert commands == [[str(executable), "python/scripts/wheels.py", "test-one", str(wheel)]]
 
 
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS framework Python layout")
+def test_macos_wheel_keeps_interpreter_after_build_venv_cleanup(
+    distribution_tools, monkeypatch, tmp_path
+):
+    tools = distribution_tools
+    monkeypatch.setattr(tools, "WORKSPACE", tmp_path)
+    monkeypatch.setattr(tools, "write_dependency_cache", lambda path: None)
+    install = tmp_path / "framework"
+    version = f"{sys.version_info.major}.{sys.version_info.minor}"
+    base = install / "bin" / f"python{version}"
+    base.parent.mkdir(parents=True)
+    base.symlink_to(sys.executable)
+    launcher = tmp_path / "venv" / "bin" / "python"
+    launcher.parent.mkdir(parents=True)
+    launcher.symlink_to(base)
+    monkeypatch.setattr(sys, "base_prefix", str(install))
+    monkeypatch.setattr(sys, "_base_executable", str(launcher))
+
+    tools.configure()
+    launcher.unlink()
+
+    marker = tmp_path / "interpreters" / f"{tools.interpreter_key()}.txt"
+    assert Path(marker.read_text()).samefile(base)
+
+
 def test_repaired_wheel_audit_rejects_development_files(distribution_tools, tmp_path):
     for extra in (
         None,

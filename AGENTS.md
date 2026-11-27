@@ -167,6 +167,9 @@ blocker. Do not silently substitute a weaker check.
 - Reuse the native core. ONNX, TFLite and DSP live in separate extensions with hidden symbols and module-local types. Each stream owns its mutable state. Drain input resampling before finalizing the denoiser.
 - Models are separate from wheels. Verify weights and YAML against the SDK catalog when loading local or Hub exports. Keep native fixtures and test executables out of distributions.
 - Take the package version from `VERSION_NUMBER`. Test installed, repaired wheels with independent C++ consumers on each supported platform. Keep manylinux dependency bundles separate from native Linux builds. Publish Python release artifacts only after all four platforms pass.
+- On macOS, record the installed CPython interpreter for each wheel ABI and
+  architecture. The separate wheel test step runs after cibuildwheel removes its
+  temporary build environments.
 
 ## Web rules
 
