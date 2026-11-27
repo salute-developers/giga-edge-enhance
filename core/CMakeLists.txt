@@ -88,7 +88,7 @@ target_include_directories(giga-edge-enhance
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-if(WIN32)
+if(WIN32 AND GEE_SHARED_LIBS)
   target_link_libraries(giga-edge-enhance PRIVATE gee_build_config ${GEE_DEPS})
 else()
   target_link_libraries(giga-edge-enhance PRIVATE $<BUILD_INTERFACE:gee_build_config>)

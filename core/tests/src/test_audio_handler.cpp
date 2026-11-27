@@ -83,10 +83,14 @@ TEST_CASE("FAIL Run denoiser handler with exception from inference runner [denoi
 }
 
 TEST_CASE("FAIL Run denoiser handler with exception for incorrect config path [denoiser handler]") {
+  const std::filesystem::path config_file{"config.json"};
+  const auto path = std::filesystem::path{"data/"} / "config" / config_file;
+  const auto expected = "Config file load error: bad file: " + path.string();
+
   REQUIRE_THROWS_WITH(
       (TestHandler().InitHandlerFromFile<giga_edge::enhance::DenoiserAudioHandler, giga_edge::enhance::DenoiserConfig>(
-          "config.json")),
-      "Config file load error: bad file: data/config/config.json");
+          config_file)),
+      expected);
 }
 
 TEST_CASE("SUCCEED Create frame [denoiser handler]") {
