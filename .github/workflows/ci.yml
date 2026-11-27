@@ -80,7 +80,6 @@ jobs:
           toolchain-identity: ${{ needs.toolchain-python.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-python.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   python-linux:
     needs: [toolchain-python, deps-python]
@@ -432,7 +431,6 @@ jobs:
           toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-native.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   deps-native-tflite:
     name: Build Native TFLite Release dependency OCI
@@ -461,7 +459,6 @@ jobs:
           toolchain-identity: ${{ needs.toolchain-native.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-native.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   native-onnx:
     name: Build and test Native Release (ONNX)
@@ -540,7 +537,6 @@ jobs:
           toolchain-identity: ${{ needs.toolchain-web.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-web.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   web:
     name: Build Web and test unit
@@ -569,7 +565,10 @@ jobs:
         env:
           GEE_TOOLCHAIN_IDENTITY: ${{ needs.toolchain-web.outputs.identity }}
           GEE_CONTAINER_IMAGE_WEB: ${{ needs.toolchain-web.outputs.image }}
-          GEE_SITE_BASE: ${{ github.event_name == 'pull_request' && format('/enhance/pr/{0}/', github.event.number) || '/enhance/' }}
+          GEE_SITE_BASE: >-
+            ${{ github.event_name == 'pull_request'
+                && format('/{0}/pr/{1}/', github.event.repository.name, github.event.number)
+                || format('/{0}/', github.event.repository.name) }}
         run: tools/build web
       - name: Test Web SDK unit
         env:
@@ -711,7 +710,6 @@ jobs:
           toolchain-identity: ${{ needs.toolchain-android.outputs.identity }}
           toolchain-image: ${{ needs.toolchain-android.outputs.image }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
       - name: Report Android dependency failure resources
         if: failure()
         run: |
@@ -820,7 +818,6 @@ jobs:
           target: macos-arm64-release-onnx
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   deps-macos-arm64-tflite:
     name: Build macOS arm64 TFLite Release dependency OCI
@@ -846,7 +843,6 @@ jobs:
           target: macos-arm64-release-tflite
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   macos-arm64-onnx:
     name: Build and test macOS arm64 Release (ONNX)
@@ -914,7 +910,6 @@ jobs:
           target: macos-x86_64-release-onnx
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   deps-macos-intel-tflite:
     name: Build macOS x86_64 TFLite Release dependency OCI
@@ -940,7 +935,6 @@ jobs:
           target: macos-x86_64-release-tflite
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   macos-intel-onnx:
     name: Build and test macOS x86_64 Release (ONNX)
@@ -1008,7 +1002,6 @@ jobs:
           target: windows-x64-release-onnx
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   deps-windows-tflite:
     name: Build Windows x86_64 TFLite Release dependency OCI
@@ -1034,7 +1027,6 @@ jobs:
           target: windows-x64-release-tflite
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   windows-onnx:
     name: Build and test Windows x86_64 Release (ONNX)
@@ -1106,7 +1098,6 @@ jobs:
           target: ios-${{ matrix.slice }}-release
           toolchain-identity: ${{ steps.toolchain.outputs.identity }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          github-source-token: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
 
   ios:
     name: Build and test iOS Release

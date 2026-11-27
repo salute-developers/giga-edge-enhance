@@ -54,7 +54,6 @@ def run(command: list[str], *, container_stage: str | None = None,
     if container_stage is None:
         process_environment = os.environ.copy()
         process_environment.update(environment or {})
-        add_github_git_auth(process_environment)
         subprocess.run(command, cwd=workdir, check=True, env=process_environment)
         return
 
@@ -108,20 +107,10 @@ def run(command: list[str], *, container_stage: str | None = None,
     build_environment.update(environment or {})
     for name, value in build_environment.items():
         container_command.extend(("--env", f"{name}={value}"))
-    container_git_environment = {
-        "GIT_CONFIG_COUNT": "1",
-        "GIT_CONFIG_KEY_0": "safe.directory",
-        "GIT_CONFIG_VALUE_0": "*",
-    }
-    if header := os.environ.get("GEE_GITHUB_AUTH_HEADER"):
-        container_git_environment["GEE_GITHUB_AUTH_HEADER"] = header
-    add_github_git_auth(container_git_environment)
-    container_environment = os.environ.copy()
-    container_environment.pop("GEE_GITHUB_AUTH_HEADER", None)
-    container_environment.update(container_git_environment)
-    for name in sorted(container_git_environment):
-        container_command.extend(("--env", name))
     container_command.extend((
+        "--env", "GIT_CONFIG_COUNT=1",
+        "--env", "GIT_CONFIG_KEY_0=safe.directory",
+        "--env", "GIT_CONFIG_VALUE_0=*",
         image,
         "sh",
         "-c",
@@ -129,24 +118,9 @@ def run(command: list[str], *, container_stage: str | None = None,
         "sh",
         *command,
     ))
-    process = subprocess.run(
-        container_command, check=not interactive, env=container_environment)
+    process = subprocess.run(container_command, check=not interactive)
     if interactive and process.returncode:
         raise SystemExit(process.returncode)
-
-
-def add_github_git_auth(environment: dict[str, str]) -> None:
-    """Add ephemeral GitHub HTTPS authentication without persisting credentials."""
-    header = environment.pop("GEE_GITHUB_AUTH_HEADER", "")
-    if not header:
-        return
-    try:
-        index = int(environment.get("GIT_CONFIG_COUNT", "0"))
-    except ValueError as error:
-        raise SystemExit("GIT_CONFIG_COUNT must be an integer.") from error
-    environment[f"GIT_CONFIG_KEY_{index}"] = "http.https://github.com/.extraheader"
-    environment[f"GIT_CONFIG_VALUE_{index}"] = header
-    environment["GIT_CONFIG_COUNT"] = str(index + 1)
 
 
 def compiler_cache_environment(container: bool) -> dict[str, str]:

@@ -203,7 +203,9 @@ Workflows have event-specific responsibilities and narrowly scoped permissions:
   Release configurations only, uploads tested job artifacts, and never deploys.
 - `ci.yml` publishes same-repository pull-request previews immediately after the
   Web build and unit tests. `pages.yml` publishes the default-branch artifact,
-  while `preview-cleanup.yml` handles only a closed pull request.
+  while `preview-cleanup.yml` handles only a closed pull request. Derive the
+  site's base URL from the repository name and append `pr/<number>/` for
+  previews so asset URLs match their GitHub Pages publication paths.
 - `release-assets.yml` and `release-please.yml`: release-only packaging and
   publication. They never run as pull-request checks.
 
@@ -280,6 +282,8 @@ uploaded and downloaded between runners.
   ONNX optimizer target. Its libstdc++ variant/function copy path triggers this
   diagnostic under optimization; do not weaken warnings on SDK-owned targets.
 - Build one dependency bundle with `tools/ci prepare-deps <concrete-target>`.
+  Fetch public dependency sources without a personal token so a cache miss
+  can be built in Dependabot CI. Use the job's `GITHUB_TOKEN` for GHCR access.
   Package it as a checksummed tar archive and push it to GHCR as an OCI artifact
   with ORAS. Do not wrap dependency files in a runnable Docker image.
 - Tag toolchain images by Dockerfile/toolchain content, never by commit SHA.

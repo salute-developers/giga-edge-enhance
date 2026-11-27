@@ -30,7 +30,7 @@ rather than overwrite an existing version with different content.
 
 ## GitHub Pages
 
-The default-branch Pages workflow publishes the Web artifact under `/enhance/`. Pull-request CI
-publishes the artifact immediately after the Web build and unit tests under `/enhance/pr/<number>/`;
-Playwright remains an independent check and does not delay the preview. The preview-cleanup workflow
-removes that directory when the pull request closes.
+CI uses the repository name to build the default-branch site at `/<repository>/` and pull-request
+previews at `/<repository>/pr/<number>/`. Pull-request CI publishes the preview as soon as the Web
+build and unit tests pass. Playwright runs independently. The preview-cleanup workflow removes the
+preview directory when the pull request closes.
