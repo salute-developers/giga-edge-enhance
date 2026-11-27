@@ -15,9 +15,6 @@ inputs:
   token:
     description: GitHub token with packages:write.
     required: true
-  github-source-token:
-    description: Public-read GitHub token used for authenticated dependency clones.
-    required: true
 
 outputs:
   reference:
@@ -69,31 +66,6 @@ runs:
         else
           echo "exists=false" >> "$GITHUB_OUTPUT"
         fi
-
-    - name: Configure authenticated GitHub source fetches
-      if: steps.metadata.outputs.exists != 'true'
-      shell: bash
-      env:
-        GH_PUBLIC_READ_TOKEN: ${{ inputs.github-source-token }}
-      run: |
-        python_command=python3
-        if [[ "${RUNNER_OS}" == "Windows" ]]; then
-          python_command=python
-        fi
-        "$python_command" - <<'PY'
-        import base64
-        import os
-
-        token = os.environ.get("GH_PUBLIC_READ_TOKEN")
-        if not token:
-            raise SystemExit("GH_PUBLIC_READ_TOKEN is required to build dependency bundles.")
-        encoded = base64.b64encode(f"x-access-token:{token}".encode()).decode()
-        header = f"AUTHORIZATION: basic {encoded}"
-        print(f"::add-mask::{encoded}")
-        print(f"::add-mask::{header}")
-        with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
-            output.write(f"GEE_GITHUB_AUTH_HEADER={header}\n")
-        PY
 
     - name: Build dependency bundle
       if: steps.metadata.outputs.exists != 'true'

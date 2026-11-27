@@ -37,7 +37,6 @@ class PythonWorkflowTest(unittest.TestCase):
             with (
                 mock.patch.object(execution, "ROOT", root),
                 mock.patch.object(execution, "ensure_container_image", return_value="python-image"),
-                mock.patch.object(execution, "add_github_git_auth"),
                 mock.patch.object(execution.subprocess, "run") as run,
             ):
                 execution.run(

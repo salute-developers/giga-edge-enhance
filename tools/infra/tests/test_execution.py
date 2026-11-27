@@ -8,27 +8,6 @@ from infra import execution
 
 
 class ExecutionTest(unittest.TestCase):
-    def test_add_github_git_auth_consumes_secret_header(self):
-        environment = {
-            "GIT_CONFIG_COUNT": "1",
-            "GIT_CONFIG_KEY_0": "safe.directory",
-            "GEE_GITHUB_AUTH_HEADER": "AUTHORIZATION: basic secret",
-        }
-        execution.add_github_git_auth(environment)
-        self.assertNotIn("GEE_GITHUB_AUTH_HEADER", environment)
-        self.assertEqual(environment["GIT_CONFIG_COUNT"], "2")
-        self.assertEqual(environment["GIT_CONFIG_KEY_1"],
-                         "http.https://github.com/.extraheader")
-        self.assertEqual(environment["GIT_CONFIG_VALUE_1"], "AUTHORIZATION: basic secret")
-
-    def test_add_github_git_auth_rejects_invalid_count(self):
-        environment = {
-            "GIT_CONFIG_COUNT": "invalid",
-            "GEE_GITHUB_AUTH_HEADER": "secret",
-        }
-        with self.assertRaisesRegex(SystemExit, "must be an integer"):
-            execution.add_github_git_auth(environment)
-
     def test_host_run_passes_workdir_and_environment(self):
         with tempfile.TemporaryDirectory() as directory, \
              mock.patch.object(execution.subprocess, "run") as subprocess_run, \
@@ -63,6 +42,9 @@ class ExecutionTest(unittest.TestCase):
         self.assertEqual(command[:3], ["docker", "run", "--rm"])
         self.assertIn("gigaedge-enhance:test", command)
         self.assertIn("KEY=value", command)
+        self.assertIn("GIT_CONFIG_COUNT=1", command)
+        self.assertIn("GIT_CONFIG_KEY_0=safe.directory", command)
+        self.assertIn("GIT_CONFIG_VALUE_0=*", command)
         self.assertEqual(command[-2:], ["cmake", "--version"])
 
     def test_container_run_preserves_build_resource_limits(self):

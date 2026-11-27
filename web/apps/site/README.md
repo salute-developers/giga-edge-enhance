@@ -57,7 +57,7 @@ Set `GEE_SITE_BASE` to the repository path, including surrounding slashes, when 
 site. For example:
 
 ```bash
-GEE_SITE_BASE=/enhance/ npm run build --workspace=@gigaedge/enhance-site
+GEE_SITE_BASE=/giga-edge-enhance/ npm run build --workspace=@gigaedge/enhance-site
 ```
 
 GitHub Pages does not expose COOP/COEP response-header configuration. The built site therefore
