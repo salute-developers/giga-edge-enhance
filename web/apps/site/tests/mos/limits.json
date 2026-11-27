@@ -23,7 +23,7 @@
     "normhybrid48": {
       "test1_24_noised.wav": {
         "control": 1.937393,
-        "processed": 2.571007
+        "processed": 2.273915
       },
       "test1_48_noised.wav": {
         "control": 1.715631,
