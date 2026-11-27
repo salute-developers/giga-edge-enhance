@@ -111,7 +111,7 @@ TEST_CASE("SUCCEED Run frame detector and find out 2 gap frames [metric]") {
 
   bool detected = false;
   detected = std::search(detector_out.begin(), detector_out.end(), detection_pattern.begin(),
-                         detection_pattern.end()) != audio.end();
+                         detection_pattern.end()) != detector_out.end();
 
   REQUIRE(detected == true);
 }

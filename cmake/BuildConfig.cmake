@@ -22,7 +22,7 @@ if(BUILD_WITH_ADDRESS_SANITIZER)
 
   if(WIN32)
     target_compile_options(gee_build_config INTERFACE /fsanitize=address)
-    target_link_options(gee_build_config INTERFACE /fsanitize=address)
+    target_link_options(gee_build_config INTERFACE /INCREMENTAL:NO)
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT APPLE)
     execute_process(
       COMMAND ${CMAKE_CXX_COMPILER} -print-resource-dir
