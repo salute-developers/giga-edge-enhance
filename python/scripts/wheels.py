@@ -121,9 +121,28 @@ def configure() -> None:
     write_dependency_cache(WORKSPACE / f"dependencies-{target}.cmake")
     interpreters = WORKSPACE / "interpreters"
     interpreters.mkdir(exist_ok=True)
-    (interpreters / f"{interpreter_key()}.txt").write_text(
-        str(getattr(sys, "_base_executable", sys.executable))
-    )
+    key = interpreter_key()
+    executable = Path(getattr(sys, "_base_executable", sys.executable))
+    if sys.platform == "darwin":
+        # Framework Python can report the temporary cibuildwheel launcher as
+        # _base_executable. The versioned executable lives in the base installation.
+        version = f"{sys.version_info.major}.{sys.version_info.minor}"
+        executable = Path(sys.base_prefix) / "bin" / f"python{version}"
+        if not executable.is_file():
+            raise SystemExit(f"Missing base interpreter for {key}: {executable}")
+        actual = subprocess.check_output(
+            [
+                str(executable),
+                "-c",
+                "from workflow import interpreter_key; print(interpreter_key())",
+            ],
+            cwd=ROOT / "python/scripts",
+            text=True,
+        ).strip()
+        if actual != key:
+            raise SystemExit(f"Expected {key}, but {executable} reports {actual}")
+    (interpreters / f"{key}.txt").write_text(str(executable))
+    print(f"Recorded test interpreter for {key}: {executable}", flush=True)
     if sys.platform == "win32":
         execute([sys.executable, "-m", "pip", "install", "delvewheel==1.11.2"])
 
@@ -385,7 +404,9 @@ def test() -> None:
             executable = Path(marker.read_text()) if marker.is_file() else None
             if executable is None or not executable.is_file():
                 if abi != f"cp{sys.version_info.major}{sys.version_info.minor}":
-                    raise SystemExit(f"Missing test interpreter for {abi}; rebuild its wheel")
+                    raise SystemExit(
+                        f"Missing test interpreter for {abi}: {marker} -> {executable}"
+                    )
                 executable = Path(sys.executable)
             execute([str(executable), "python/scripts/wheels.py", "test-one", str(wheel)])
 
