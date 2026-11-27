@@ -49,7 +49,6 @@ function normalizeForDocusaurus(content, sourcePath) {
     const normalizedLinks = content
         .replace('src="web/apps/site/static/img/', `src="${siteImages}`)
         .replace('(LICENSE.txt)', '(./LICENSE.md)')
-        .replace('(samples/README.md)', `(${sdk}/samples/README.md)`)
         .replace('(python/readme.md#quick-start)', `(${sdk}/python/readme.md#quick-start)`)
         .replace(/\(tools\/README\.md\)/g, `(${toolsLink})`)
         .replace(/\(web\/apps\/site\/docs\//g, '(../');

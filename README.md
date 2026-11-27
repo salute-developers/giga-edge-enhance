@@ -3,7 +3,7 @@
   <a href="https://github.com/salute-developers/giga-edge-enhance#gh-dark-mode-only"><img src="web/apps/site/static/img/enhance-logo-dark.svg" alt="GigaEdge Enhance" width="180"></a>
 </h1>
 
-[Audio demo (15 s)](samples/README.md) · [Models](https://huggingface.co/ai-sage/GigaEdge-Enhance) · [Paper](https://arxiv.org/abs/2611.13243)
+[Models](https://huggingface.co/ai-sage/GigaEdge-Enhance) · [Paper](https://arxiv.org/abs/2611.13243)
 
 GigaEdge Enhance is a cross-platform SDK for real-time speech enhancement. It adds neural noise
 suppression, loudness normalization, and, on supported platforms, acoustic echo cancellation to

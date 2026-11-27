@@ -58,6 +58,8 @@ public documentation or release notes.
 - Never commit credentials, private model URLs, or downloaded model binaries.
   Repository model and media assets are restored through Git LFS as described
   in `README.md`; there is no DVC or submodule setup step.
+- Public quickstarts use user-provided recordings. Keep listening-demo audio
+  out of the source tree so these examples do not depend on bundled demo media.
 - Avoid destructive Git commands. Do not delete caches or build directories
   merely to work around a failure; diagnose the failure first.
 - Record durable product, platform, release, and CI decisions in this file in

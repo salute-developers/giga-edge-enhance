@@ -12,11 +12,13 @@ git lfs pull
 python -m pip install ".[io]"
 ```
 
+Place your recording at `input.wav`, or replace that path in the example below.
+
 ```python
 from giga_edge_enhance import Denoiser
 
 with Denoiser.from_pretrained("models") as model:
-    model.process_file("samples/input-48k.wav", "enhanced.wav")
+    model.process_file("input.wav", "enhanced.wav")
 ```
 
 The default is `quality48` with ONNX. Select `model="hybrid48"` for full-band speech refinement or `model="fast8"` for 8 kHz speech. Both 48 kHz models also support `backend="tflite"`.
