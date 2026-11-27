@@ -206,6 +206,9 @@ Workflows have event-specific responsibilities and narrowly scoped permissions:
   while `preview-cleanup.yml` handles only a closed pull request. Derive the
   site's base URL from the repository name and append `pr/<number>/` for
   previews so asset URLs match their GitHub Pages publication paths.
+  Only successful default-branch pushes to this repository may enter the
+  Pages deployment concurrency group and publish the main site. This keeps
+  pull-request artifacts and cancellations isolated from production.
 - `release-assets.yml` and `release-please.yml`: release-only packaging and
   publication. They never run as pull-request checks.
 
@@ -224,6 +227,8 @@ toolchain images and dependency bundles still use GHCR independently.
 
 Do not combine pull-request validation and publishing in one workflow. Forked
 pull requests must never receive release secrets or write permissions.
+Run Python lint from external pull requests on a GitHub-hosted runner with
+read-only contents access and disable checkout credential persistence.
 
 ### CI job order
 

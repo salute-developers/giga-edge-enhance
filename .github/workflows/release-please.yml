@@ -37,4 +37,3 @@ jobs:
     with:
       ci-run-id: ${{ github.event.workflow_run.id }}
       tag: ${{ needs.release-please.outputs.tag-name }}
-    secrets: inherit
