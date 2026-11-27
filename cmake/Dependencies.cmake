@@ -15,6 +15,9 @@ endif()
 
 if(NOT TARGET dsplib)
   CPMGetPackage(dsplib)
+  if(MSVC AND BUILD_WITH_ADDRESS_SANITIZER)
+    target_compile_options(dsplib PRIVATE /fsanitize=address)
+  endif()
 endif()
 
 CPMGetPackage(speexdsp_gee_core)
@@ -22,6 +25,9 @@ CPMGetPackage(spdlog)
 
 if(NOT TARGET yaml-cpp)
   CPMGetPackage(yaml-cpp)
+  if(MSVC AND BUILD_WITH_ADDRESS_SANITIZER)
+    target_compile_options(yaml-cpp PRIVATE /fsanitize=address)
+  endif()
 endif()
 
 CPMGetPackage(rnnoise)

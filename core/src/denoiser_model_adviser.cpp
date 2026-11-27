@@ -25,6 +25,10 @@ T DenoiserModelAdviser<T>::calc_snr_estimation(const ComplexNumber<T>& input_spe
     return static_cast<T>(0.0);
   }
 
+  if (input_spec.real.size() == 0) {
+    return T{0};
+  }
+
   double e1 = (enhanced_spec.real * enhanced_spec.real + enhanced_spec.imag * enhanced_spec.imag).sum() + eps;
 
   double e2 = (input_spec.real * input_spec.real + input_spec.imag * input_spec.imag).sum() + eps;
