@@ -72,4 +72,5 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "13.0" }
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
-repair-wheel-command = "delvewheel repair --analyze-existing -w {dest_dir} {wheel}"
+# Resolve the engine DLLs already staged in giga_edge_enhance/lib during repair.
+repair-wheel-command = "delvewheel repair --ignore-existing --analyze-existing -w {dest_dir} {wheel}"
