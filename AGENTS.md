@@ -170,6 +170,8 @@ blocker. Do not silently substitute a weaker check.
 - On macOS, record the installed CPython interpreter for each wheel ABI and
   architecture. The separate wheel test step runs after cibuildwheel removes its
   temporary build environments.
+- On Windows, delvewheel must resolve and inspect the engine DLLs staged in
+  `giga_edge_enhance/lib`, where the installed SDK loads them at runtime.
 
 ## Web rules
 
