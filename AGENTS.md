@@ -283,6 +283,12 @@ uploaded and downloaded between runners.
 - Treat CPM and compiler caches only as accelerators. A cache miss must remain a
   correct build, and release artifacts must never be published directly from a
   mutable cache.
+- Android lint and release cache Gradle's downloaded modules and resolution
+  metadata to reduce Maven Central traffic. Each job saves a distinct entry
+  after a successful default-branch push and can restore compatible entries
+  from either job. Pull requests only restore these caches. Android resolves
+  both plugin and project dependencies through Google Cloud's Maven Central
+  mirror before Maven Central to reduce rate limiting on cold builds.
 - ONNX Runtime uses its pinned FetchContent Eigen revision. Disable its optional
   `find_package(Eigen3)` lookup so a user's CMake package registry cannot inject
   headers from an unrelated or still-incomplete TFLite build.

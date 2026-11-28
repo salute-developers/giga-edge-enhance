@@ -1,0 +1,41 @@
+name: Cache Android Gradle dependencies
+description: Reuse Maven artifacts and resolution metadata in the Android container's Gradle home.
+
+runs:
+  using: composite
+  steps:
+    - name: Compute Gradle cache key
+      id: cache
+      shell: bash
+      env:
+        WRAPPER_HASH: ${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
+        BUILD_HASH: ${{ hashFiles('android/**/*.gradle.kts', 'android/gradle/libs.versions.toml', 'android/gradle.properties') }}
+      run: |
+        prefix="gee-gradle-v1-${RUNNER_OS}-${RUNNER_ARCH}-${WRAPPER_HASH}-"
+        # Lint and release resolve different artifacts and each needs its own immutable entry.
+        echo "key=${prefix}${GITHUB_JOB}/${BUILD_HASH}" >> "$GITHUB_OUTPUT"
+        echo "prefix=${prefix}" >> "$GITHUB_OUTPUT"
+
+    - name: Restore Gradle dependencies for pull requests
+      if: github.event_name == 'pull_request'
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          out/cache/gradle/caches/modules-2/files-2.1
+          out/cache/gradle/caches/modules-2/metadata-*
+        key: ${{ steps.cache.outputs.key }}
+        restore-keys: |
+          ${{ steps.cache.outputs.prefix }}${{ github.job }}/
+          ${{ steps.cache.outputs.prefix }}
+
+    - name: Restore and save Gradle dependencies on the default branch
+      if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+      uses: actions/cache@v6
+      with:
+        path: |
+          out/cache/gradle/caches/modules-2/files-2.1
+          out/cache/gradle/caches/modules-2/metadata-*
+        key: ${{ steps.cache.outputs.key }}
+        restore-keys: |
+          ${{ steps.cache.outputs.prefix }}${{ github.job }}/
+          ${{ steps.cache.outputs.prefix }}
